@@ -1,3 +1,23 @@
+# Reporting back to Frank
+
+Answer in three headed sections, in this order, with bullet points. Not prose
+blocks — a wall of text with no structure is extremely hard to read.
+
+## Progress
+
+- What landed. Numbers where there are numbers.
+
+## What's wrong
+
+- Defects, gaps, things that failed. "Nothing blocking" is a valid answer.
+
+## What I need from you
+
+- Decisions only he can make, one bullet each, each answerable in a word.
+- If there is nothing, say so and keep going rather than inventing a question.
+
+Keep it short. He has said so more than once.
+
 # Instructions
 
 ## Writing
