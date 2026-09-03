@@ -33,7 +33,7 @@ import unicodedata
 import zipfile
 from pathlib import Path
 
-TOOL_VERSION = 4
+TOOL_VERSION = 6
 DEVICE = "ssd"
 ROMS = Path("/Volumes/Retro/Roms")
 DB = Path(__file__).resolve().parent.parent / "inventory.db"
@@ -57,6 +57,13 @@ OPAQUE = {
 # Not games. Recorded so the row count matches the tree, flagged so they are
 # easy to exclude.
 NON_GAME = {".txt", ".xml", ".lnk", ".jar", ".m3u", ".cue", ".sbi", ".dat"}
+
+# Support archives that are emphatically not dumps. `0_BIOS/mame/cheat.7z` holds
+# 138,834 members and its listing alone was 8.5 MB of the database -- two of
+# these were a third of the whole file. Container hashes still get recorded,
+# because a corrupt cheat archive is worth knowing about; the member list does
+# not, because nothing will ever ask what is in it.
+CHEAT_STEMS = ("cheat", "cheats", "cheats_ws", "cheats_ni")
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS files (
@@ -300,8 +307,14 @@ def read_chd_header(p):
         return {"error": f"chd: {e}"}
 
 
+def is_cheat_db(p):
+    return os.path.splitext(p.name)[0].lower() in CHEAT_STEMS
+
+
 def fmt_of(p):
     e = p.suffix.lower()
+    if is_cheat_db(p):
+        return "support"
     if e in ZIP_EXT:
         return "zip"
     if e in SEVENZ_EXT:
@@ -340,7 +353,17 @@ def record(p, system, rel):
         return row
 
     fmt = row["container_format"]
-    if fmt == "zip":
+    if fmt == "support":
+        # Explicit NULLs, not omissions: the upsert only writes columns the row
+        # carries, so a file that was enumerated under an older version would
+        # keep its stale 8.5 MB listing forever.
+        row.update(
+            inner_status="cheat-db, not enumerated",
+            members_json=None, member_count=None,
+            inner_crc32=None, inner_md5=None, inner_sha1=None,
+            inner_name=None, inner_size=None,
+        )
+    elif fmt == "zip":
         row.update(read_zip(p))
     elif fmt == "7z":
         row.update(read_7z(p))

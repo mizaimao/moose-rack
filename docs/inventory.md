@@ -30,9 +30,23 @@ later — a wrong BIOS breaks emulation silently, so it is worth knowing.
 
 ## Where it lives
 
-`/Volumes/Retro/_inventory/` — SQLite plus a JSON export. On the SSD rather
-than in this repo: it is data, it is large, and another session works in the
-repo.
+`inventory.db` in the repo root, gitignored. Built by `tools/inventory.py`.
+
+    tools/inventory.py                 hash whatever is not already recorded
+    tools/inventory.py --systems gb,gba
+    tools/inventory.py --status        what is done, per system
+
+This used to say `/Volumes/Retro/_inventory/`, on the reasoning that it is data
+and the repo is for code. It is in the repo now because Frank asked for it
+there, and the practical argument went the same way: the SSD is not always
+plugged in, and an index you cannot read without the disk it describes is not
+much of an index. It is 34 MB and ignored, so it costs the repo nothing.
+
+The run is resumable. The fingerprint is `(system, path, size, mtime,
+tool_version)` — an unchanged file is never read twice, so interrupting it is
+free. `tool_version` is in there deliberately: when the hasher learns something
+new the old rows are stale even though the files are not, and leaving it out
+would have silently kept every row written before the header fix below.
 
 ## Schema
 
@@ -58,6 +72,12 @@ identifies the dump. Half of one night's confusion came from conflating them.
 | `status`, `error` | `ok`, `truncated`, `unreadable`, `no-dat-match`, … |
 | `group_id` | links multi-disc sets: an `.m3u` and its discs share one |
 | `hashed_at` | so it is obvious which rows predate a later change |
+| `container_crc32`, `inner_crc32`, `stripped_crc32` | No-Intro keys on CRC, Redump on SHA-1, and all three cost one read |
+| `members_json` | every member of an archive: name, size, CRC. So "what is in this zip" never needs the zip again |
+| `inner_status` | `ok`, `multi-member`, `opaque`, `cheat-db`, `n/a`. Says *why* an inner hash is missing rather than leaving a NULL that reads as an oversight |
+| `stripped_kind` | `ines` or `copier`, so it is clear which rule applied |
+| `chd_version`, `chd_hunkbytes`, `chd_logicalbytes`, `chd_sha1`, `chd_datasha1`, `chd_truncated` | read out of the header directly |
+| `mtime`, `ctime`, `ext`, `tool_version` | the resume fingerprint, and which build wrote the row |
 
 When loose files are zipped later, the row keeps its inner hash and gains a
 container hash. Nothing has to be recomputed.
@@ -166,6 +186,15 @@ Frank reviews per system before anything moves.
 - NES and Famicom stay separate systems. So do SNES and SFC. Merging later is
   easy; splitting is not.
 - `_hidden` folder names are kept exactly as they are.
+- **The `_superset` folders stay.** `gba` and `gba_superset` hold 1,434
+  byte-identical dumps between them, about 0.5 GB. That is not waste to
+  reclaim: `gbx` is what gets used and `gbx_superset` is the reference copy.
+  Neither is ever deleted, and a duplicate report that suggests otherwise is
+  wrong rather than useful.
+- **Cheat archives are hashed but not enumerated.** `0_BIOS/mame/cheat.7z` and
+  `mess/cheat.7z` hold 138,834 members each; their listings alone were 17 MB of
+  a 53 MB database. They are recorded as `container_format = support` with a
+  container hash — a corrupt one is worth knowing about — and no member list.
 
 ## First run — 2026-08-30
 
@@ -509,3 +538,49 @@ There is no community "avoid" list to download. RetroAchievements has sets for
 not what is good.
 
 Next: arcade (663 gaps, filename-based hashing), `0_BIOS` (3,339), saturn (4).
+
+## Full run — 2026-09-03
+
+Every system, not the 31 the first run covered. **59,319 files, 1.76 TB read,
+zero errors**, in one pass at up to 440 MB/s. Systems are hashed smallest-first
+so the cartridges — the part with DAT coverage — land in the first three minutes
+rather than behind half a terabyte of PS3.
+
+| format | files | size |
+| --- | --: | --: |
+| `raw` | 41,353 | 68.9 GB |
+| `zip` | 15,678 | 90.9 GB |
+| `non-game` | 1,553 | 1.9 GB |
+| `chd` | 403 | 383.1 GB |
+| `opaque` | 277 | 635.6 GB |
+| `iso` | 47 | 617.9 GB |
+| `support` | 4 | 0.0 GB |
+| `7z` | 4 | 0.1 GB |
+
+Coverage: 59,319 container hashes,
+13,111 inner hashes,
+2,783 header-stripped,
+15,682 member listings.
+
+**403 CHDs, none truncated.** The `Amplitude (USA).chd` case that motivated the
+header parse does not reproduce, so it was fixed at some point between runs. The
+check stays: it costs one read of 124 bytes and it is the only thing that finds
+a short CHD before an extraction fails hours later.
+
+**1,891 archives hold more than ten members.** Only 59 hold two or three. That
+ratio is the folder-is-a-game problem in `library-service.md` measured rather
+than estimated, and it is much larger than it looked from the first few systems.
+
+635 GB is in formats nothing here opens — `.xci`, `.zcci`, `.rvz`, `.wux`.
+Container hashes are recorded and `inner_status` says which decompressor is
+missing, so those rows are a known gap rather than a silent one.
+
+### Two bugs this run had
+
+Header stripping ran on the container. Every cartridge here is zipped, so the
+iNES header sat on the member inside and a full NES pass produced **zero**
+stripped hashes before anyone looked. It reads the inner name now.
+
+The upsert only wrote columns the row carried, so nulling a field was impossible
+— rows re-hashed as `support` kept their old 8.5 MB member listings. Support
+rows now null the archive fields explicitly.

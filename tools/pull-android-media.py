@@ -26,6 +26,7 @@ round trips.
 import argparse
 import os
 import subprocess
+import time
 import sys
 import unicodedata
 from pathlib import Path
@@ -113,9 +114,30 @@ def main():
     ap.add_argument("--videos", action="store_true", help="include videos (large)")
     ap.add_argument("--root", help="Android media root, if auto-detection fails")
     ap.add_argument("--dest", default=str(SSD_MEDIA))
+    ap.add_argument(
+        "--wait",
+        type=int,
+        metavar="MINUTES",
+        help="poll until the device is authorized, then run. Arm this and walk away: "
+        "the prompt needs a hand on the device, but nothing after it does.",
+    )
     args = ap.parse_args()
 
     ok, info = device_ready()
+    if not ok and args.wait:
+        # The whole reason this exists: reporting "unauthorized" and stopping
+        # wastes however long it takes somebody to notice. Waiting costs a poll
+        # every ten seconds.
+        deadline = time.time() + args.wait * 60
+        last = None
+        while time.time() < deadline:
+            ok, info = device_ready()
+            if ok:
+                break
+            if info != last:
+                print(f"  waiting: {info}", flush=True)
+                last = info
+            time.sleep(10)
     if not ok:
         print(f"  {info}")
         return 1
