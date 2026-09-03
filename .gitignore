@@ -144,3 +144,4 @@ assets/fonts/*
 /inventory.db
 /inventory.db-wal
 /inventory.db-shm
+/dats/
