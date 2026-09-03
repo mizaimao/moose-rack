@@ -1,5 +1,6 @@
+# Parked
 
----
+**Deferred, with a cost.** Work that was scoped, priced, and put down on purpose.
 
 ## Strict renaming of the 1,559 cosmetically-misnamed files
 
@@ -31,4 +32,7 @@ Move the old files aside rather than deleting, then one scan, then
 `cleanup_missing_roms`.
 
 **Not to be confused with** the 126 genuinely wrong names in
-[wrong-names.md](wrong-names.md); the 90 Mega Drive ones are fixed, 36 remain.
+[archive/wrong-names.md](archive/wrong-names.md). Those are all fixed — this
+note used to say "36 remain", which was true when it was written on 2026-08-27
+and stopped being true the next day. All 126 appear as `renamed` rows in
+[lists/audit-sync-applied.tsv](lists/audit-sync-applied.tsv).

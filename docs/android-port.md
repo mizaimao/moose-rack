@@ -1,5 +1,7 @@
 # Porting to Android
 
+**Plan, 2026-08-24.** Not built. The Thor.
+
 Written 2026-08-24, for the **AYN Thor**: Snapdragon 8 Gen 2, Android 13,
 8–16 GB RAM, a 6" 1080x1920 top panel and a 3.92" 1080x1240 bottom one.
 
@@ -17,7 +19,7 @@ roughly.
 Two things have changed since, and both point the other way.
 
 **Android has a webview, and the Miyoo Flip does not.** That is the entire
-reason `handheld-frontend.md` reaches for SDL: the Flip runs its frontend on
+reason `archive/handheld-frontend.md` reaches for SDL: the Flip runs its frontend on
 DRM/KMS with no display server at all, and Tauri needs webkit2gtk + GTK3, which
 needs one. Android ships Chromium WebView and Tauri v2 targets it directly. So
 the SDL front end is the right answer for the Flip and the wrong answer for the
@@ -251,6 +253,6 @@ browsing only. Browsing is now cheaper than that and launching is dearer, and
 launching was always the half that was a second project rather than a port.
 
 **The decision that gates everything** is still this: if Android is the
-handheld target, the RK3566 work in `handheld-device.md` and
-`handheld-frontend.md` task 3 is replaced rather than joined. That is worth
+handheld target, the RK3566 work in `devices.md` and
+`archive/handheld-frontend.md` task 3 is replaced rather than joined. That is worth
 settling before any of the above is started.

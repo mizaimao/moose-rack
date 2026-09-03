@@ -1,5 +1,7 @@
 # Making games start faster
 
+**Measurement, 2026-08-28, and the fix in progress.** The launcher is `src-fastlaunch/`.
+
 Measured on the Flip, 2026-08-28. A warm GBA launch takes **4.26 s**, and the
 emulator is not the problem.
 

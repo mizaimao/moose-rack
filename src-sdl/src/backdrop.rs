@@ -3,7 +3,7 @@
 // `ui/js/backdrop.js` is not CSS — it is WebGL2 with GLSL fragment shaders, a
 // full-screen quad, and a handful of uniforms. On Mali-G52 the shading
 // language maps to it one for one, which is why
-// docs/handheld-frontend.md says not to leave this until last: it is the most
+// docs/archive/handheld-frontend.md says not to leave this until last: it is the most
 // portable thing in the whole front end, and getting it up early is what
 // proves the GL context works on the device at all.
 //

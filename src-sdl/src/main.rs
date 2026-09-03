@@ -1,6 +1,6 @@
 // The SDL front end: a window, a loop, and input.
 //
-// Phase one of docs/handheld-frontend.md task 3. There is nothing to look at
+// Phase one of docs/archive/handheld-frontend.md task 3. There is nothing to look at
 // yet beyond proof that the parts fit — what this establishes is the shape
 // everything after it is written against:
 //

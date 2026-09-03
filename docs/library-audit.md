@@ -1,5 +1,7 @@
 # Library audit, 2026-08-28
 
+**Record, 2026-08-28.** A snapshot of one audit, not a description of how things are now.
+
 Every ROM on this machine and on the server, hashed and looked up in No-Intro
 and Redump. What follows is what disagrees with those databases, what is
 duplicated, and where the two copies of the library have drifted apart.
@@ -24,7 +26,7 @@ either recoverable or a decision waiting to be made.
 * CHDs are identified by the SHA1 in their own header, and separately verified
   with `chdman verify`.
 * Databases: libretro-database's No-Intro and Redump sets, version 2026.08.01 —
-  the same vintage as the ones behind `wrong-names.md`.
+  the same vintage as the ones behind `archive/wrong-names.md`.
 * RomM itself was read over its API (9,238 entries) and its records compared
   against the files actually on the server's disk.
 
@@ -64,7 +66,7 @@ beside it.
 ## The files named as a game they do not contain
 
 190 of them, listed in [lists/audit-name-vs-content.tsv](lists/audit-name-vs-content.tsv).
-108 are Mega Drive, which is the set `wrong-names.md` and `md-rename-plan.md`
+108 are Mega Drive, which is the set `archive/wrong-names.md` and `archive/md-rename-plan.md`
 already describe — and the important new fact is that **that plan has been
 carried out on the server and never applied here.** Of the 190, the server holds
 155 under the correct name and the other 35 under a different correct name
@@ -364,6 +366,6 @@ Steps 1, 5 and 6 are done, along with the duplicate half of 4. The rest stands.
 8. **Re-export artwork for the 162 games** whose exported picture is of the game
    they used to be misnamed as. RomM has the right cover for every one.
 
-`wrong-names.md` and `md-rename-plan.md` describe step 1 from the server's side
+`archive/wrong-names.md` and `archive/md-rename-plan.md` describe step 1 from the server's side
 and are now finished business on both: the renames they ask for were done there,
 and this machine has taken them.

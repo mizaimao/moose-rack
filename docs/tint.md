@@ -1,5 +1,7 @@
 # The tint
 
+**Fixed.** Kept because the cause was not where it looked.
+
 A flat wash over the whole app on the AYN Thor, Android 13. **Fixed.** It was
 Android's default focus highlight, drawn over the entire webview from the first
 press of the stick or the d-pad.

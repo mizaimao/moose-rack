@@ -1,5 +1,7 @@
 # Everything we have changed on the Flip
 
+**Current.** The Flip's actual state, read back off the device. Read before changing it.
+
 The Miyoo Flip, running **KNULLI** (Batocera 42). This is the record of what
 has been done to it and why, read back off the device rather than written from
 memory. If you are picking this up cold, read this and

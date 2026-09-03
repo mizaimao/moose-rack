@@ -1,8 +1,10 @@
 # The handheld OS — base, decision, and build plan
 
+**Current, with one superseded section.** The ROCKNIX decision at the top lost to KNULLI on 2026-08-24 and is kept for history; everything from the Wi-Fi helper onward was verified on-device and is live.
+
 The device is the **Miyoo Flip** (RK3566, quad A55 @ 1.8 GHz, Mali-G52 2EE,
 1 GB LPDDR4, 3.5" **640×480**, clamshell, ~3000 mAh). This file is the OS/base
-decision. `handheld-frontend.md` is the front end that runs on it.
+decision. `archive/handheld-frontend.md` is the front end that runs on it.
 
 Prior device work (dArkOS / MiniLoong) was removed on 2026-08-23 — that device
 was returned. Do not reintroduce it.
@@ -237,7 +239,7 @@ they exist; only drop to sysfs for what they don't cover.
 The four hardware items below were answered on-device; see **Hardware layer**.
 The two remaining Step 0 items (`ls /userdata/roms`, RetroArch paths) were
 measured on the device the same day — see *Step 0, closed on the device* in
-`port-plan.md`. Nothing is outstanding.
+`archive/port-plan.md`. Nothing is outstanding.
 
 ## Decision update
 **Base = KNULLI (Batocera 42, BSP 5.10), verified working.** Trade vs the old
