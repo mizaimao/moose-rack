@@ -1,0 +1,40 @@
+# Arcade Essentials
+# 38 games, exported 2026-09-03 from RomM
+Arkanoid
+Armed Police Batrider
+Asteroids
+Batsugun
+Battle Garegga
+Battlezone
+Bubble Bobble
+Bust-a-Move
+Centipede
+Contra
+Darius Gaiden - Silver Hawk Extra Version
+Deathsmiles
+Defender
+DoDonPachi
+DoDonPachi Resurrection
+Donkey Kong
+Double Dragon
+ESP Ra.De.
+Espgaluda
+Final Fight
+Frogger
+Galaga
+Gauntlet
+Ghosts'n Goblins
+Gunlock
+Missile Command
+Mortal Kombat
+Mortal Kombat 2
+Mushihime-Sama
+Mushihime-Sama Futari
+Pac-Man
+Progear
+R-Type
+Samurai Shodown V Special
+Sky Shark
+Space Invaders / Space Invaders M
+Star Wars
+Tempest
