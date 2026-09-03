@@ -1,6 +1,6 @@
 {
   "name": "moose-rack",
-  "version": "0.1.12",
+  "private": true,
   "description": "",
   "main": "index.js",
   "scripts": {
