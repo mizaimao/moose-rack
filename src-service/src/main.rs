@@ -24,6 +24,8 @@
 //!     moose-service --root /home/frank/moose-library/ES-DE \
 //!                   --roms /home/frank/moose-library/ROMs
 
+mod saves;
+
 use std::net::SocketAddr;
 use std::sync::Arc;
 
@@ -54,6 +56,9 @@ struct Args {
     /// Address to bind. Use this to restrict the interface as well as the port.
     #[arg(long, env = "MOOSE_SERVICE_BIND", default_value = "0.0.0.0:8001")]
     bind: String,
+    /// Where saves live. Defaults to <root>/saves.
+    #[arg(long, env = "MOOSE_SERVICE_SAVES")]
+    saves: Option<String>,
     /// inventory.db, for the hashes. Without it downloads are size-checked only.
     #[arg(long, env = "MOOSE_SERVICE_INVENTORY")]
     inventory: Option<String>,
@@ -71,6 +76,11 @@ struct Args {
 /// than an Arc.
 struct Library {
     games: Vec<esde::Game>,
+    /// Saves, and the per-device bookkeeping that makes a conflict detectable.
+    ///
+    /// A Mutex rather than an RwLock: writes are rare and a save upload must
+    /// not interleave with the negotiate that decided to send it.
+    sync: std::sync::Mutex<SyncState>,
     /// `(system, relative path)` -> `(md5, sha1, crc32)`, out of inventory.db.
     ///
     /// The client already knows how to verify a download — `verify()` in
@@ -79,6 +89,53 @@ struct Library {
     /// first transfers here unverified. The hashes were computed once over
     /// 1.76 TB; not serving them was the whole gap.
     hashes: std::collections::HashMap<(String, String), (Option<String>, Option<String>, Option<String>)>,
+}
+
+/// Device registrations and what each last agreed with the server.
+///
+/// Persisted as JSON beside the saves. Losing it is not fatal — every save
+/// becomes a conflict on the next differing sync, which is the safe direction to
+/// fail in.
+#[derive(Default, Serialize, Deserialize)]
+struct Persisted {
+    devices: std::collections::HashMap<String, String>,
+    /// `device\0rom_id\0file` -> hash last agreed. Flattened because JSON keys
+    /// cannot be tuples.
+    seen: std::collections::HashMap<String, String>,
+}
+
+struct SyncState {
+    store: saves::SaveStore,
+    path: std::path::PathBuf,
+    data: Persisted,
+}
+
+impl SyncState {
+    fn seen_map(&self) -> saves::Seen {
+        self.data
+            .seen
+            .iter()
+            .filter_map(|(k, v)| {
+                let mut it = k.split('\0');
+                let d = it.next()?.to_owned();
+                let r: i64 = it.next()?.parse().ok()?;
+                Some(((d, r, it.next()?.to_owned()), v.clone()))
+            })
+            .collect()
+    }
+
+    fn agree(&mut self, device: &str, rom_id: i64, file: &str, hash: &str) {
+        self.data
+            .seen
+            .insert(format!("{device}\0{rom_id}\0{file}"), hash.to_owned());
+        self.flush();
+    }
+
+    fn flush(&self) {
+        if let Ok(j) = serde_json::to_vec_pretty(&self.data) {
+            let _ = std::fs::write(&self.path, j);
+        }
+    }
 }
 
 #[derive(Serialize)]
@@ -338,6 +395,151 @@ async fn rom_content(
     }
 }
 
+#[derive(Deserialize)]
+struct DeviceReq {
+    #[serde(default)]
+    name: Option<String>,
+    #[serde(default)]
+    hostname: Option<String>,
+}
+
+/// Register a device, or hand back the one already registered under this name.
+///
+/// `allow_existing` is why the client sends a name at all: minting a fresh id
+/// every call would give each one empty bookkeeping, and every save would then
+/// look like a first-time upload.
+async fn register_device(
+    State(lib): State<Arc<Library>>,
+    Json(req): Json<DeviceReq>,
+) -> Json<serde_json::Value> {
+    let name = req.name.or(req.hostname).unwrap_or_else(|| "unnamed".into());
+    let mut st = lib.sync.lock().unwrap();
+    let id = st
+        .data
+        .devices
+        .iter()
+        .find(|(_, n)| **n == name)
+        .map(|(i, _)| i.clone())
+        .unwrap_or_else(|| {
+            let id = format!("{:016x}", saves::save_id(0, &name));
+            st.data.devices.insert(id.clone(), name.clone());
+            st.flush();
+            id
+        });
+    Json(serde_json::json!({ "id": id, "name": name }))
+}
+
+#[derive(Deserialize)]
+struct SavesQuery {
+    #[serde(default)]
+    rom_id: Option<i64>,
+}
+
+async fn list_saves(
+    State(lib): State<Arc<Library>>,
+    Query(q): Query<SavesQuery>,
+) -> Json<Vec<saves::ServerSave>> {
+    Json(lib.sync.lock().unwrap().store.list(q.rom_id))
+}
+
+#[derive(Deserialize)]
+struct NegotiateReq {
+    device_id: String,
+    #[serde(default)]
+    saves: Vec<saves::ClientSaveState>,
+}
+
+async fn negotiate(
+    State(lib): State<Arc<Library>>,
+    Json(req): Json<NegotiateReq>,
+) -> Json<saves::SyncPlan> {
+    let st = lib.sync.lock().unwrap();
+    let server = st.store.list(None);
+    let mut plan = saves::plan(&req.device_id, &req.saves, &server, &st.seen_map());
+    // A session id the client can quote back. Nothing is reserved by it -- it
+    // exists so `complete_session` has something to close.
+    plan.session_id = Some(1);
+    Json(plan)
+}
+
+async fn save_content(
+    State(lib): State<Arc<Library>>,
+    AxPath(id): AxPath<i64>,
+) -> axum::response::Response {
+    match lib.sync.lock().unwrap().store.read(id) {
+        Some(b) => ([(axum::http::header::CONTENT_TYPE, "application/octet-stream")], b).into_response(),
+        None => axum::http::StatusCode::NOT_FOUND.into_response(),
+    }
+}
+
+#[derive(Deserialize)]
+struct UploadQuery {
+    rom_id: i64,
+    device_id: String,
+    #[serde(default)]
+    overwrite: Option<bool>,
+}
+
+/// Accept a save, unless the server's copy moved since this device last agreed.
+///
+/// Refusing is the point: 409 is how the client discovers a conflict at all.
+/// `overwrite=true` is not a retry, it is the user having been shown the
+/// conflict and chosen.
+async fn upload_save(
+    State(lib): State<Arc<Library>>,
+    Query(q): Query<UploadQuery>,
+    mut form: axum::extract::Multipart,
+) -> axum::response::Response {
+    let mut name = String::new();
+    let mut bytes = Vec::new();
+    while let Ok(Some(field)) = form.next_field().await {
+        if field.name() == Some("saveFile") {
+            name = field.file_name().unwrap_or("save.srm").to_owned();
+            bytes = field.bytes().await.map(|b| b.to_vec()).unwrap_or_default();
+        }
+    }
+    if name.is_empty() {
+        return (axum::http::StatusCode::BAD_REQUEST, "no saveFile part").into_response();
+    }
+
+    let mut st = lib.sync.lock().unwrap();
+    let existing = st.store.list(Some(q.rom_id)).into_iter().find(|s| s.file_name == name);
+    if !q.overwrite.unwrap_or(false) {
+        if let Some(cur) = &existing {
+            let agreed = st
+                .data
+                .seen
+                .get(&format!("{}\0{}\0{}", q.device_id, q.rom_id, name))
+                .cloned();
+            if agreed.as_deref() != cur.content_hash.as_deref() {
+                return (
+                    axum::http::StatusCode::CONFLICT,
+                    format!(
+                        "the server copy of {name} changed since this device last agreed \
+                         (server {}, last agreed {})",
+                        cur.content_hash.clone().unwrap_or_default(),
+                        agreed.unwrap_or_else(|| "never".into())
+                    ),
+                )
+                    .into_response();
+            }
+        }
+    }
+
+    match st.store.write(q.rom_id, &name, &bytes) {
+        Ok(s) => {
+            let h = s.content_hash.clone().unwrap_or_default();
+            st.agree(&q.device_id, q.rom_id, &name, &h);
+            Json(s).into_response()
+        }
+        Err(e) => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+    }
+}
+
+async fn complete_session() -> axum::http::StatusCode {
+    axum::http::StatusCode::OK
+}
+
 async fn rom_by_id(
     State(lib): State<Arc<Library>>,
     AxPath(id): AxPath<i64>,
@@ -361,6 +563,11 @@ fn app(lib: Arc<Library>, media_dir: std::path::PathBuf) -> Router {
             .route("/api/roms/{id}", get(rom_by_id))
             .route("/api/roms/{id}/content/{*name}", get(rom_content))
             .route("/api/collections", get(collections))
+        .route("/api/devices", axum::routing::post(register_device))
+        .route("/api/saves", get(list_saves).post(upload_save))
+        .route("/api/saves/{id}/content", get(save_content))
+        .route("/api/sync/negotiate", axum::routing::post(negotiate))
+        .route("/api/sync/sessions/{id}/complete", axum::routing::post(complete_session))
             // Artwork straight off the tree. ES-DE and Skraper already scraped it;
             // re-serving it through a database would gain nothing.
             //
@@ -421,7 +628,30 @@ async fn main() -> Result<()> {
             Default::default()
         }
     };
-    let lib = Arc::new(Library { games, hashes });
+    let saves_root = args
+        .saves
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| std::path::Path::new(&args.root).join("saves"));
+    std::fs::create_dir_all(&saves_root)?;
+    let state_path = saves_root.join("sync-state.json");
+    let data: Persisted = std::fs::read(&state_path)
+        .ok()
+        .and_then(|b| serde_json::from_slice(&b).ok())
+        .unwrap_or_default();
+    println!(
+        "saves      {} ({} devices known)",
+        saves_root.display(),
+        data.devices.len()
+    );
+    let lib = Arc::new(Library {
+        games,
+        hashes,
+        sync: std::sync::Mutex::new(SyncState {
+            store: saves::SaveStore::new(&saves_root),
+            path: state_path,
+            data,
+        }),
+    });
 
     let app = app(lib, media_dir);
 
@@ -468,7 +698,18 @@ mod tests {
 
         let layout = esde::Layout::new(dir, Some(&dir.join("ROMs")));
         let (games, _) = esde::scan(&layout, &CoreMap::embedded()).unwrap();
-        (Arc::new(Library { games, hashes: Default::default() }), layout.media)
+        let saves_root = dir.join("saves");
+        std::fs::create_dir_all(&saves_root).unwrap();
+        let lib = Library {
+            games,
+            hashes: Default::default(),
+            sync: std::sync::Mutex::new(SyncState {
+                store: saves::SaveStore::new(&saves_root),
+                path: saves_root.join("sync-state.json"),
+                data: Default::default(),
+            }),
+        };
+        (Arc::new(lib), layout.media)
     }
 
     async fn get(app: &Router, uri: &str) -> (StatusCode, String) {
@@ -604,5 +845,129 @@ mod tests {
         let v: serde_json::Value = serde_json::from_str(&body).unwrap();
         let nes = v.as_array().unwrap().iter().find(|p| p["fs_slug"] == "nes").unwrap();
         assert_eq!(nes["rom_count"], 2);
+    }
+
+    async fn post_json(app: &Router, uri: &str, body: serde_json::Value) -> (StatusCode, String) {
+        let r = app.clone().oneshot(
+            Request::builder().method("POST").uri(uri)
+                .header("content-type", "application/json")
+                .body(Body::from(body.to_string())).unwrap()).await.unwrap();
+        let s = r.status();
+        let b = axum::body::to_bytes(r.into_body(), usize::MAX).await.unwrap();
+        (s, String::from_utf8_lossy(&b).into_owned())
+    }
+
+    /// A multipart body with one `saveFile` part, built by hand so the test does
+    /// not depend on a client library to describe the wire format.
+    async fn post_save(app: &Router, uri: &str, name: &str, bytes: &[u8]) -> (StatusCode, String) {
+        let b = "X-BOUND";
+        let mut body = Vec::new();
+        body.extend_from_slice(format!(
+            "--{b}\r\nContent-Disposition: form-data; name=\"saveFile\"; filename=\"{name}\"\r\n\r\n"
+        ).as_bytes());
+        body.extend_from_slice(bytes);
+        body.extend_from_slice(format!("\r\n--{b}--\r\n").as_bytes());
+        let r = app.clone().oneshot(
+            Request::builder().method("POST").uri(uri)
+                .header("content-type", format!("multipart/form-data; boundary={b}"))
+                .body(Body::from(body)).unwrap()).await.unwrap();
+        let s = r.status();
+        let rb = axum::body::to_bytes(r.into_body(), usize::MAX).await.unwrap();
+        (s, String::from_utf8_lossy(&rb).into_owned())
+    }
+
+    /// Minting a fresh id per call would give each one empty bookkeeping, and
+    /// every save would then look like a first-time upload.
+    #[tokio::test]
+    async fn registering_the_same_device_twice_returns_one_id() {
+        let (_d, app) = built();
+        let (s1, b1) = post_json(&app, "/api/devices", serde_json::json!({"name": "flip"})).await;
+        let (_, b2) = post_json(&app, "/api/devices", serde_json::json!({"name": "flip"})).await;
+        assert_eq!(s1, StatusCode::OK);
+        let id = |b: &str| serde_json::from_str::<serde_json::Value>(b).unwrap()["id"].clone();
+        assert_eq!(id(&b1), id(&b2), "same name must not mint a second device");
+        let (_, b3) = post_json(&app, "/api/devices", serde_json::json!({"name": "mac"})).await;
+        assert_ne!(id(&b1), id(&b3), "different names are different devices");
+    }
+
+    #[tokio::test]
+    async fn an_uploaded_save_can_be_listed_and_read_back() {
+        let (_d, app) = built();
+        let (s, body) = post_save(&app, "/api/saves?rom_id=1&device_id=dev", "a.srm", b"save-bytes").await;
+        assert_eq!(s, StatusCode::OK, "{body}");
+        let saved: serde_json::Value = serde_json::from_str(&body).unwrap();
+        let id = saved["id"].as_i64().unwrap();
+
+        let (_, listed) = get(&app, "/api/saves?rom_id=1").await;
+        let v: serde_json::Value = serde_json::from_str(&listed).unwrap();
+        assert_eq!(v.as_array().unwrap().len(), 1);
+
+        let (s2, content) = get(&app, &format!("/api/saves/{id}/content")).await;
+        assert_eq!(s2, StatusCode::OK);
+        assert_eq!(content, "save-bytes");
+    }
+
+    /// Refusing is the point: 409 is how the client discovers a conflict at all.
+    #[tokio::test]
+    async fn a_second_device_overwriting_blind_is_refused() {
+        let (_d, app) = built();
+        let (s1, _) = post_save(&app, "/api/saves?rom_id=1&device_id=alice", "a.srm", b"from-alice").await;
+        assert_eq!(s1, StatusCode::OK);
+        // Bob never agreed on alice's bytes, so his upload must not land.
+        let (s2, body) = post_save(&app, "/api/saves?rom_id=1&device_id=bob", "a.srm", b"from-bob").await;
+        assert_eq!(s2, StatusCode::CONFLICT, "{body}");
+        // and the bytes are untouched
+        let (_, listed) = get(&app, "/api/saves?rom_id=1").await;
+        let v: serde_json::Value = serde_json::from_str(&listed).unwrap();
+        let id = v[0]["id"].as_i64().unwrap();
+        assert_eq!(get(&app, &format!("/api/saves/{id}/content")).await.1, "from-alice");
+    }
+
+    /// Overwrite is not a retry — it carries out a decision already shown to a
+    /// person.
+    #[tokio::test]
+    async fn overwrite_true_lands_after_a_conflict() {
+        let (_d, app) = built();
+        post_save(&app, "/api/saves?rom_id=1&device_id=alice", "a.srm", b"from-alice").await;
+        let (s, _) = post_save(
+            &app, "/api/saves?rom_id=1&device_id=bob&overwrite=true", "a.srm", b"from-bob").await;
+        assert_eq!(s, StatusCode::OK);
+        let (_, listed) = get(&app, "/api/saves?rom_id=1").await;
+        let id = serde_json::from_str::<serde_json::Value>(&listed).unwrap()[0]["id"].as_i64().unwrap();
+        assert_eq!(get(&app, &format!("/api/saves/{id}/content")).await.1, "from-bob");
+    }
+
+    /// The device that just uploaded has agreed on those bytes, so its next
+    /// negotiate is a no-op rather than a conflict with itself.
+    #[tokio::test]
+    async fn uploading_records_agreement_so_the_next_sync_is_quiet() {
+        let (_d, app) = built();
+        post_save(&app, "/api/saves?rom_id=1&device_id=alice", "a.srm", b"bytes").await;
+        let hash = "b1946ac92492d2347c6235b4d2611184"; // md5 of "bytes\n"? no: of "bytes"
+        let (_, listed) = get(&app, "/api/saves?rom_id=1").await;
+        let server_hash = serde_json::from_str::<serde_json::Value>(&listed).unwrap()[0]
+            ["content_hash"].as_str().unwrap().to_owned();
+        let _ = hash;
+        let (s, body) = post_json(&app, "/api/sync/negotiate", serde_json::json!({
+            "device_id": "alice",
+            "saves": [{"rom_id": 1, "file_name": "a.srm", "content_hash": server_hash,
+                       "updated_at": "now", "file_size_bytes": 5}]
+        })).await;
+        assert_eq!(s, StatusCode::OK);
+        let plan: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(plan["total_no_op"], 1, "same bytes both sides");
+        assert_eq!(plan["total_conflict"], 0);
+    }
+
+    #[tokio::test]
+    async fn negotiate_tells_a_new_device_to_download() {
+        let (_d, app) = built();
+        post_save(&app, "/api/saves?rom_id=1&device_id=alice", "a.srm", b"bytes").await;
+        let (_, body) = post_json(&app, "/api/sync/negotiate", serde_json::json!({
+            "device_id": "flip", "saves": []
+        })).await;
+        let plan: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(plan["total_download"], 1);
+        assert_eq!(plan["operations"][0]["action"], "download");
     }
 }
