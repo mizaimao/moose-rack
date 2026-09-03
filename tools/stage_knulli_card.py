@@ -37,7 +37,7 @@ import tomllib
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
-# RomM slug -> ArkOS folder. Only systems asked for; ArkOS keeps nes/famicom and
+# Platform slug -> ArkOS folder. Only systems asked for; ArkOS keeps nes/famicom and
 # snes/sfc separate, so unlike the MinUI-family cards there are no collisions.
 DEST = [
     ("famicom", "nes"), ("gb", "gb"), ("nes", "nes"), ("gbc", "gbc"),
@@ -155,7 +155,7 @@ def main():
     ap.add_argument("--pico8", default="cfw/pico-8_0.2.7_raspi.zip")
     ap.add_argument("--cache", default="cache.sqlite3")
     ap.add_argument("--config", default="config.toml")
-    ap.add_argument("--only", help="one RomM slug")
+    ap.add_argument("--only", help="one platform slug")
     ap.add_argument("--apply", action="store_true")
     args = ap.parse_args()
 

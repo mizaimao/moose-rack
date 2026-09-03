@@ -24,7 +24,8 @@ JOBS="${1:-4}"
 
 /usr/bin/ssh -o BatchMode=yes "$HOST" "JOBS=$JOBS bash -s" <<'REMOTE'
 set -euo pipefail
-ROMS="/home/frank/romm/assets/roms/arcade"
+# Inside RomM's volume today; one line to move when the service replaces it.
+ROMS="${MOOSE_LIBRARY_ROOT:-/home/frank/romm/assets/roms}/arcade"
 CORES="/home/frank/.config/retroarch/cores"
 OUT="/home/frank/probe-results.tsv"
 

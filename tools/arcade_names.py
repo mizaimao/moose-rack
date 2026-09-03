@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build `data/arcade-names.json` — romset short name → real title.
 
-RomM names a ROM from whatever metadata it matched, and falls back to the file
+The server names a ROM from whatever metadata it matched, and falls back to the file
 name when nothing matched. On arcade platforms that fallback is the romset short
 name, so the library ends up showing `kof98`, `samsho4`, `tophuntr`.
 

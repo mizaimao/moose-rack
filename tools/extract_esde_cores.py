@@ -33,8 +33,8 @@ OUT = REPO / "data" / "esde-core-map.json"
 CORE_RE = re.compile(r"/cores/([A-Za-z0-9_\-]+)_libretro_android\.so")
 EMU_RE = re.compile(r"%EMULATOR_([A-Za-z0-9_\-]+)%")
 
-# ES-DE base system name -> RomM platform slug, for the 24 platforms in
-# library/. ES-DE and RomM disagree on several names (dreamcast/dc,
+# ES-DE base system name -> platform slug, for the 24 platforms in
+# library/. ES-DE and the library's slugs disagree on several names (dreamcast/dc,
 # neogeo/neogeoaes, ngp/neo-geo-pocket, gc/ngc, megadrive is shared).
 BUNDLED_TO_SERVER: dict[str, str] = {
     "3do": "3do",
@@ -63,7 +63,7 @@ BUNDLED_TO_SERVER: dict[str, str] = {
     "wonderswancolor": "wonderswancolor",
 }
 
-# ES-DE system name -> RomM platform slug(s) present in this library.
+# ES-DE system name -> platform slug(s) present in this library.
 # The "hack" systems (nesh, snesh, ...) are ROM-hack variants that use exactly
 # the same cores as their base system, so they map onto the base platforms.
 ESDE_TO_SERVER: dict[str, list[str]] = {
@@ -76,7 +76,7 @@ ESDE_TO_SERVER: dict[str, list[str]] = {
     "genh": ["megadrive"],
     "msu-md": ["megadrive"],
     "gc": ["ngc"],
-    # Present in the export but not in this RomM library:
+    # Present in the export but not in this library:
     "wii": [],
     "n3ds": [],
     "ps2": [],
@@ -85,7 +85,7 @@ ESDE_TO_SERVER: dict[str, list[str]] = {
     "switch": [],
 }
 
-# Every RomM platform slug in library/, so we can report what is still missing.
+# Every platform slug in library/, so we can report what is still missing.
 SERVER_PLATFORMS = [
     "3do", "arcade", "dc", "famicom", "gamegear", "gb", "gba", "gbc", "ngc",
     "megadrive", "mame", "mastersystem", "n64", "nds", "neogeoaes", "nes",
@@ -151,14 +151,14 @@ def parse_systems(path: Path, only: set[str] | None = None) -> dict:
             for e in (s.findtext("extension", "") or "").split()
             if e.startswith(".")
         })
-        romm = ESDE_TO_SERVER.get(name)
-        if romm is None:
+        slugs = ESDE_TO_SERVER.get(name)
+        if slugs is None:
             slug = BUNDLED_TO_SERVER.get(name)
-            romm = [slug] if slug else []
+            slugs = [slug] if slug else []
         systems[name] = {
             "fullname": s.findtext("fullname", "").strip(),
             "extensions": exts,
-            "server_platforms": romm,
+            "server_platforms": slugs,
             "emulators": emulators,
         }
     return systems
@@ -215,7 +215,7 @@ def main() -> int:
     custom = parse_systems(systems_xml)
     systems = {**bundled, **custom}
 
-    # Which RomM platforms do we have a default libretro core for?
+    # Which platforms do we have a default libretro core for?
     covered: dict[str, str] = {}
     for name, sysdef in systems.items():
         default = next(
@@ -278,10 +278,10 @@ def main() -> int:
 
     print(f"wrote {OUT.relative_to(REPO)}")
     print(f"\n{len(systems)} ES-DE systems parsed")
-    print(f"\ndefault core for {len(covered)} RomM platforms:")
+    print(f"\ndefault core for {len(covered)} platforms:")
     for slug, core in sorted(covered.items()):
         print(f"  {slug:<16} {core}")
-    print(f"\n{len(missing)} RomM platforms still unmapped:")
+    print(f"\n{len(missing)} platforms still unmapped:")
     print("  " + ", ".join(missing))
     return 0
 

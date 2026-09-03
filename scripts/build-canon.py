@@ -98,8 +98,8 @@ def headings(url, pattern=r"<h2[^>]*>(.*?)</h2>", drop=()):
     return out
 
 
-# Platform -> RomM slug, and the sources that serve it.
-# RomM slug -> (Time Extension guide slug, the tag its headings carry).
+# Platform -> slug, and the sources that serve it.
+# Platform slug -> (Time Extension guide slug, the tag its headings carry).
 # Slugs come from the site's own sitemap, not from guessing: eleven of fourteen
 # guesses 404'd, and a 404 here is a platform silently reporting zero games.
 PLATFORMS = {

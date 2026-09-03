@@ -31,7 +31,7 @@ import tomllib
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
-# RomM slug -> spruce Roms folder, smallest system first.
+# Platform slug -> spruce Roms folder, smallest system first.
 DEST = [
     ("famicom", "FC"), ("gb", "GB"), ("nes", "FC"), ("gbc", "GBC"),
     ("snes", "SFC"), ("n64", "N64"), ("sfc", "SFC"), ("megadrive", "MD"),
@@ -109,7 +109,7 @@ def main():
     ap.add_argument("--saves", default="backups/saves")
     ap.add_argument("--cache", default="cache.sqlite3")
     ap.add_argument("--config", default="config.toml")
-    ap.add_argument("--skip", default="", help="comma-separated RomM slugs to leave out")
+    ap.add_argument("--skip", default="", help="comma-separated platform slugs to leave out")
     ap.add_argument("--no-art", action="store_true")
     ap.add_argument("--apply", action="store_true")
     args = ap.parse_args()
