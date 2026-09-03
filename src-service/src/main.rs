@@ -291,9 +291,12 @@ async fn roms(State(lib): State<Arc<Library>>, Query(p): Query<Page>) -> Json<Ro
 /// The client's only way to notice a deletion: `updated_after` reports changes
 /// and never removals. Cheap — one array of ints.
 ///
-/// Registered before `/api/roms/{id}`, because otherwise axum hands the literal
-/// "identifiers" to the i64 extractor and answers 400. That is exactly what a
-/// first sync against this service did.
+/// Its absence is not a 404. Without this route `/api/roms/{id}` matches, the
+/// literal "identifiers" goes to the i64 extractor and the answer is 400 --
+/// which is what a first sync against this service got, and why the client
+/// silently skipped pruning. Order does not matter: axum prefers a static
+/// segment to a dynamic one however they are registered. The test asserts the
+/// route exists, having been checked to fail when it is removed.
 async fn rom_identifiers(State(lib): State<Arc<Library>>) -> Json<Vec<i64>> {
     Json((1..=lib.games.len() as i64).collect())
 }
@@ -346,6 +349,34 @@ async fn rom_by_id(
         .ok_or(axum::http::StatusCode::NOT_FOUND)
 }
 
+/// The routes, as a function so tests can build one without a socket.
+fn app(lib: Arc<Library>, media_dir: std::path::PathBuf) -> Router {
+        Router::new()
+            .route("/api/heartbeat", get(heartbeat))
+            .route("/api/config", get(config))
+            .route("/api/users/me", get(users_me))
+            .route("/api/platforms", get(platforms))
+            .route("/api/roms", get(roms))
+            .route("/api/roms/identifiers", get(rom_identifiers))
+            .route("/api/roms/{id}", get(rom_by_id))
+            .route("/api/roms/{id}/content/{*name}", get(rom_content))
+            .route("/api/collections", get(collections))
+            // Artwork straight off the tree. ES-DE and Skraper already scraped it;
+            // re-serving it through a database would gain nothing.
+            //
+            // Two mounts for one directory. `media.rs` builds artwork URLs itself
+            // from a hardcoded `/assets/romm/resources/esde-media`, so serving that
+            // path is what makes an unmodified client show covers at all. The
+            // neutral mount is what the client should use once that constant is
+            // retired, and having both means that can happen without a flag day.
+            .nest_service(
+                "/assets/romm/resources/esde-media",
+                tower_http::services::ServeDir::new(media_dir.clone()),
+            )
+            .nest_service("/assets/media", tower_http::services::ServeDir::new(media_dir))
+            .with_state(lib)
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Args::parse();
@@ -392,30 +423,7 @@ async fn main() -> Result<()> {
     };
     let lib = Arc::new(Library { games, hashes });
 
-    let app = Router::new()
-        .route("/api/heartbeat", get(heartbeat))
-        .route("/api/config", get(config))
-        .route("/api/users/me", get(users_me))
-        .route("/api/platforms", get(platforms))
-        .route("/api/roms", get(roms))
-        .route("/api/roms/identifiers", get(rom_identifiers))
-        .route("/api/roms/{id}", get(rom_by_id))
-        .route("/api/roms/{id}/content/{*name}", get(rom_content))
-        .route("/api/collections", get(collections))
-        // Artwork straight off the tree. ES-DE and Skraper already scraped it;
-        // re-serving it through a database would gain nothing.
-        //
-        // Two mounts for one directory. `media.rs` builds artwork URLs itself
-        // from a hardcoded `/assets/romm/resources/esde-media`, so serving that
-        // path is what makes an unmodified client show covers at all. The
-        // neutral mount is what the client should use once that constant is
-        // retired, and having both means that can happen without a flag day.
-        .nest_service(
-            "/assets/romm/resources/esde-media",
-            tower_http::services::ServeDir::new(media_dir.clone()),
-        )
-        .nest_service("/assets/media", tower_http::services::ServeDir::new(media_dir))
-        .with_state(lib);
+    let app = app(lib, media_dir);
 
     let mut addr: SocketAddr = args
         .bind
@@ -428,4 +436,173 @@ async fn main() -> Result<()> {
     println!("listening  http://{addr}");
     axum::serve(listener, app).await?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::body::Body;
+    use axum::http::{Request, StatusCode};
+    use tower::ServiceExt as _;
+
+    /// A two-game ES-DE tree on disk, because the scan reads real files and a
+    /// mock of it would test the mock.
+    fn fixture(dir: &std::path::Path) -> (Arc<Library>, std::path::PathBuf) {
+        let roms = dir.join("ROMs/nes");
+        let lists = dir.join("gamelists/nes");
+        let media = dir.join("downloaded_media/nes/miximages");
+        for d in [&roms, &lists, &media] {
+            std::fs::create_dir_all(d).unwrap();
+        }
+        std::fs::write(roms.join("Alpha (USA).zip"), b"alpha-bytes").unwrap();
+        std::fs::write(roms.join("Beta (USA).zip"), b"beta").unwrap();
+        std::fs::write(media.join("Alpha (USA).png"), b"PNG").unwrap();
+        std::fs::write(
+            lists.join("gamelist.xml"),
+            r#"<?xml version="1.0"?><gameList>
+                 <game><path>./Alpha (USA).zip</path><name>Alpha</name></game>
+                 <game><path>./Beta (USA).zip</path><name>Beta</name></game>
+               </gameList>"#,
+        )
+        .unwrap();
+
+        let layout = esde::Layout::new(dir, Some(&dir.join("ROMs")));
+        let (games, _) = esde::scan(&layout, &CoreMap::embedded()).unwrap();
+        (Arc::new(Library { games, hashes: Default::default() }), layout.media)
+    }
+
+    async fn get(app: &Router, uri: &str) -> (StatusCode, String) {
+        let r = app
+            .clone()
+            .oneshot(Request::builder().uri(uri).body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        let status = r.status();
+        let bytes = axum::body::to_bytes(r.into_body(), usize::MAX).await.unwrap();
+        (status, String::from_utf8_lossy(&bytes).into_owned())
+    }
+
+    fn built() -> (tempdir::TempDir, Router) {
+        let d = tempdir::TempDir::new("svc").unwrap();
+        let (lib, media) = fixture(d.path());
+        let r = app(lib, media);
+        (d, r)
+    }
+
+    #[tokio::test]
+    async fn the_scan_is_what_the_api_reports() {
+        let (_d, app) = built();
+        let (s, body) = get(&app, "/api/roms").await;
+        assert_eq!(s, StatusCode::OK);
+        let v: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(v["total"], 2);
+        assert_eq!(v["items"].as_array().unwrap().len(), 2);
+    }
+
+    /// The bug a real sync found. With no such route `/api/roms/{id}` matches,
+    /// "identifiers" reaches the i64 extractor and the answer is 400, so the
+    /// client cannot list ids and skips pruning -- its only way to notice a
+    /// deletion. Verified to fail when the route is removed.
+    #[tokio::test]
+    async fn identifiers_is_not_swallowed_by_the_id_route() {
+        let (_d, app) = built();
+        let (s, body) = get(&app, "/api/roms/identifiers").await;
+        assert_eq!(s, StatusCode::OK, "identifiers must not hit the i64 extractor");
+        assert_eq!(serde_json::from_str::<Vec<i64>>(&body).unwrap(), vec![1, 2]);
+    }
+
+    #[tokio::test]
+    async fn ids_are_one_based_and_out_of_range_is_404() {
+        let (_d, app) = built();
+        assert_eq!(get(&app, "/api/roms/1").await.0, StatusCode::OK);
+        // Zero is what a missing field deserializes to; it must not resolve.
+        assert_eq!(get(&app, "/api/roms/0").await.0, StatusCode::NOT_FOUND);
+        assert_eq!(get(&app, "/api/roms/99").await.0, StatusCode::NOT_FOUND);
+    }
+
+    /// The client reads an empty list as "none yet" and a 404 as an error, and
+    /// an ES-DE tree genuinely has no collections.
+    #[tokio::test]
+    async fn collections_is_empty_not_missing() {
+        let (_d, app) = built();
+        let (s, body) = get(&app, "/api/collections").await;
+        assert_eq!(s, StatusCode::OK);
+        assert_eq!(body, "[]");
+    }
+
+    /// Saying "no hashes" when there are none is right; saying it when there are
+    /// would leave every download size-checked.
+    #[tokio::test]
+    async fn skip_hash_tracks_whether_an_inventory_was_loaded() {
+        let d = tempdir::TempDir::new("svc").unwrap();
+        let (lib, media) = fixture(d.path());
+        let (s, body) = get(&app(lib, media.clone()), "/api/config").await;
+        assert_eq!(s, StatusCode::OK);
+        assert_eq!(serde_json::from_str::<serde_json::Value>(&body).unwrap()
+            ["SKIP_HASH_CALCULATION"], true, "no inventory -> true");
+
+        let (mut lib2, _) = fixture(d.path());
+        let l = Arc::get_mut(&mut lib2).unwrap();
+        l.hashes.insert(
+            ("nes".into(), "Alpha (USA).zip".into()),
+            (Some("abc".into()), None, None),
+        );
+        let (_, body) = get(&app(lib2, media), "/api/config").await;
+        assert_eq!(serde_json::from_str::<serde_json::Value>(&body).unwrap()
+            ["SKIP_HASH_CALCULATION"], false, "inventory loaded -> false");
+    }
+
+    #[tokio::test]
+    async fn a_hash_is_served_when_the_inventory_has_one() {
+        let d = tempdir::TempDir::new("svc").unwrap();
+        let (mut lib, media) = fixture(d.path());
+        Arc::get_mut(&mut lib).unwrap().hashes.insert(
+            ("nes".into(), "Alpha (USA).zip".into()),
+            (Some("deadbeef".into()), Some("cafe".into()), None),
+        );
+        let (_, body) = get(&app(lib, media), "/api/roms").await;
+        let v: serde_json::Value = serde_json::from_str(&body).unwrap();
+        let alpha = v["items"].as_array().unwrap().iter()
+            .find(|i| i["fs_name"] == "Alpha (USA).zip").unwrap();
+        assert_eq!(alpha["md5_hash"], "deadbeef");
+        assert_eq!(alpha["sha1_hash"], "cafe");
+        // A game the inventory has not seen gets no hash rather than a wrong one.
+        let beta = v["items"].as_array().unwrap().iter()
+            .find(|i| i["fs_name"] == "Beta (USA).zip").unwrap();
+        assert!(beta.get("md5_hash").is_none(), "unknown file must publish no hash");
+    }
+
+    #[tokio::test]
+    async fn content_serves_the_bytes_and_honours_range() {
+        let (_d, app) = built();
+        let (s, body) = get(&app, "/api/roms/1/content/Alpha%20(USA).zip").await;
+        assert_eq!(s, StatusCode::OK);
+        assert_eq!(body, "alpha-bytes");
+
+        // 206 with a correct tail, or the client discards its partial and
+        // re-downloads the whole file without ever reporting a problem.
+        let r = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/roms/1/content/Alpha%20(USA).zip")
+                    .header("Range", "bytes=6-")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(r.status(), StatusCode::PARTIAL_CONTENT);
+        let bytes = axum::body::to_bytes(r.into_body(), usize::MAX).await.unwrap();
+        assert_eq!(&bytes[..], b"bytes");
+    }
+
+    #[tokio::test]
+    async fn platform_counts_come_from_the_scan() {
+        let (_d, app) = built();
+        let (_, body) = get(&app, "/api/platforms").await;
+        let v: serde_json::Value = serde_json::from_str(&body).unwrap();
+        let nes = v.as_array().unwrap().iter().find(|p| p["fs_slug"] == "nes").unwrap();
+        assert_eq!(nes["rom_count"], 2);
+    }
 }
