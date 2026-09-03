@@ -61,6 +61,7 @@ The client reads a missing endpoint as an error and an empty list as "none yet".
 
 | route | notes |
 | --- | --- |
+| `GET /` | a status page, for a person who typed the address. Was a 404, which reads as "server down" |
 | `GET /api/heartbeat` | `{"SYSTEM":{"VERSION":…}}`, the crate version |
 | `GET /api/config` | excluded files/exts, and `SKIP_HASH_CALCULATION` |
 | `GET /api/users/me` | single local user |
