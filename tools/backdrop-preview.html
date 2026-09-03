@@ -1,0 +1,221 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Backdrop preview</title>
+<!--
+  A window onto ui/js/backdrop.js, so a shader can be looked at without
+  building anything.
+
+  The loop it replaces was: edit the shader, cargo build, bundle the app,
+  relaunch, look. Two minutes, and the app has to be restarted to see one
+  number change. This imports the real module straight off disk and watches it
+  for edits, so the same change is on screen in under a second.
+
+  It imports rather than copies. `fragmentFor` assembles the shared frame and
+  the style body exactly as the app does; a preview that reassembled those
+  itself would be a second place the frame lives, and the first thing it would
+  fail to notice is a change to the frame.
+
+  Not under ui/. That directory is `frontendDist` and every file in it is
+  compiled into the app binary; this is a tool, not part of the product.
+-->
+<style>
+  :root { color-scheme: dark; }
+  html, body { margin: 0; height: 100%; background: #000; color: #e6e8ec;
+               font: 13px/1.4 -apple-system, BlinkMacSystemFont, system-ui, sans-serif; }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  #panel { position: fixed; top: 12px; left: 12px; z-index: 2; width: 250px;
+           background: rgba(16,18,22,.86); border: 1px solid #2c313a; border-radius: 10px;
+           padding: 12px 14px; backdrop-filter: blur(8px); }
+  #panel h1 { margin: 0 0 10px; font-size: 13px; font-weight: 600; letter-spacing: .02em; }
+  label { display: block; margin: 9px 0 3px; color: #8b93a1; font-size: 11px;
+          text-transform: uppercase; letter-spacing: .06em; }
+  select, input[type=range] { width: 100%; }
+  select { background: #21252c; color: inherit; border: 1px solid #2c313a;
+           border-radius: 6px; padding: 4px 6px; }
+  .row { display: flex; align-items: center; gap: 8px; }
+  .row output { min-width: 42px; text-align: right; font-variant-numeric: tabular-nums;
+                color: #8b93a1; }
+  button { background: #21252c; color: inherit; border: 1px solid #2c313a;
+           border-radius: 6px; padding: 5px 9px; font: inherit; cursor: pointer; }
+  button:hover { background: #2b303a; }
+  #note { margin-top: 10px; color: #6a7280; font-size: 11px; }
+  #err { position: fixed; left: 12px; bottom: 12px; right: 12px; z-index: 3;
+         background: rgba(60,16,16,.94); border: 1px solid #7a2b2b; border-radius: 8px;
+         padding: 10px 12px; white-space: pre-wrap; font-family: ui-monospace, monospace;
+         font-size: 11px; display: none; max-height: 40vh; overflow: auto; }
+</style>
+<canvas id="gl"></canvas>
+<div id="panel">
+  <h1>Backdrop preview</h1>
+  <label for="style">Style</label>
+  <select id="style"></select>
+  <label for="scheme">Scheme</label>
+  <select id="scheme"></select>
+  <label for="strength">Brightness</label>
+  <div class="row"><input id="strength" type="range" min="0" max="1" step="0.01"><output id="so"></output></div>
+  <label for="speed">Motion</label>
+  <div class="row"><input id="speed" type="range" min="0" max="7" step="0.1"><output id="po"></output></div>
+  <label for="time">Time</label>
+  <div class="row"><input id="time" type="range" min="0" max="240" step="0.1"><output id="to"></output></div>
+  <div class="row" style="margin-top:10px">
+    <button id="play">Pause</button>
+    <button id="shot">Save PNG</button>
+  </div>
+  <div id="note">Watching ui/js/backdrop.js — edits appear on their own.</div>
+</div>
+<pre id="err"></pre>
+<script type="module">
+const $ = (id) => document.getElementById(id);
+const canvas = $("gl");
+const gl = canvas.getContext("webgl2", { antialias: false, alpha: false });
+if (!gl) { $("err").style.display = "block"; $("err").textContent = "No WebGL2 in this browser."; }
+
+const SRC = "../ui/js/backdrop.js";
+let mod = null, prog = null, uni = null, lastText = "";
+let t = 0, playing = true, last = performance.now();
+
+function fail(msg) { const e = $("err"); e.style.display = "block"; e.textContent = msg; }
+function clear() { $("err").style.display = "none"; }
+
+function compile(type, src) {
+  const sh = gl.createShader(type);
+  gl.shaderSource(sh, src);
+  gl.compileShader(sh);
+  if (gl.getShaderParameter(sh, gl.COMPILE_STATUS)) return sh;
+  // The app logs this to a console nobody has open and silently keeps the old
+  // style. Here it is the whole point: a shader that does not compile is the
+  // thing being looked at.
+  const log = gl.getShaderInfoLog(sh);
+  const lines = src.split("\n");
+  const at = /ERROR: \d+:(\d+)/.exec(log);
+  const near = at ? lines.slice(Math.max(0, at[1] - 3), Number(at[1]) + 2)
+                        .map((l, i) => String(Number(at[1]) - 2 + i).padStart(4) + " | " + l).join("\n") : "";
+  fail(log + (near ? "\n\n" + near : ""));
+  gl.deleteShader(sh);
+  return null;
+}
+
+const VERT = "#version 300 es\nin vec2 pos;\nvoid main(){gl_Position=vec4(pos,0.,1.);}";
+let vs = null, buf = null;
+
+function link(styleId) {
+  const fs = compile(gl.FRAGMENT_SHADER, mod.fragmentFor(styleId));
+  if (!fs) return false;
+  const p = gl.createProgram();
+  gl.attachShader(p, vs); gl.attachShader(p, fs); gl.linkProgram(p);
+  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) { fail(gl.getProgramInfoLog(p)); return false; }
+  prog = p;
+  gl.useProgram(p);
+  // Asked for rather than assumed. The linker decides where `pos` lands, and
+  // binding attribute zero because it is the only one works right up until it
+  // does not, on some driver, with nothing on screen to say why.
+  const pos = gl.getAttribLocation(p, "pos");
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.enableVertexAttribArray(pos);
+  gl.vertexAttribPointer(pos, 2, gl.FLOAT, false, 0, 0);
+  uni = Object.fromEntries(["u_size","u_time","u_low","u_mid","u_high","u_strength","u_speed"]
+    .map((n) => [n, gl.getUniformLocation(p, n)]));
+  clear();
+  return true;
+}
+
+const rgb = (hex) => {
+  const n = parseInt(String(hex).replace("#", ""), 16);
+  return [(n >> 16) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
+};
+
+function draw() {
+  const dpr = Math.min(devicePixelRatio || 1, 2);
+  const w = Math.floor(innerWidth * dpr), h = Math.floor(innerHeight * dpr);
+  if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+  gl.viewport(0, 0, w, h);
+
+  const style = mod.backdropStyle($("style").value);
+  const scheme = mod.ALL_SCHEMES.filter(Boolean).find((s) => s.id === $("scheme").value);
+  const lo = rgb(scheme.low ?? "#0b0d16"), hi = rgb(scheme.high ?? "#2a3566");
+  // A two-colour scheme has no middle, so the midpoint of the pair stands in —
+  // the same rule the app uses, or the preview is a different picture.
+  const md = scheme.mid ? rgb(scheme.mid) : lo.map((v, i) => (v + hi[i]) / 2);
+
+  gl.uniform2f(uni.u_size, w, h);
+  gl.uniform1f(uni.u_time, t);
+  gl.uniform3fv(uni.u_low, lo);
+  gl.uniform3fv(uni.u_mid, md);
+  gl.uniform3fv(uni.u_high, hi);
+  gl.uniform1f(uni.u_strength, Number($("strength").value));
+  // Scaled by the style's own pace, exactly as the app scales it.
+  gl.uniform1f(uni.u_speed, Number($("speed").value) * (style.pace ?? 1));
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+}
+
+function frame(now) {
+  const dt = (now - last) / 1000; last = now;
+  if (playing) { t = (t + dt) % 240; $("time").value = t.toFixed(1); }
+  $("to").textContent = t.toFixed(1) + "s";
+  if (prog) draw();
+  requestAnimationFrame(frame);
+}
+
+/// Re-read the module when the file on disk changes.
+///
+/// Polled rather than pushed: a watcher would mean a server that does more than
+/// hand over files, and one fetch a second of a local file is nothing. The
+/// query string is what forces a re-evaluation — an ES module is cached by URL,
+/// so without it the second import is the first import.
+async function watch() {
+  try {
+    const text = await (await fetch(SRC, { cache: "no-store" })).text();
+    if (text !== lastText) {
+      lastText = text;
+      const stamp = text.length + "-" + text.length.toString(36) + "-" + Date.now();
+      mod = await import(`${SRC}?v=${stamp}`);
+      if (!$("style").options.length) fillMenus();
+      link($("style").value);
+    }
+  } catch (e) { fail(String(e)); }
+  setTimeout(watch, 1000);
+}
+
+function fillMenus() {
+  $("style").innerHTML = mod.BACKDROPS.map((b) => `<option value="${b.id}">${b.label}</option>`).join("");
+  $("scheme").innerHTML = mod.ALL_SCHEMES.filter(Boolean).filter((s) => s.id !== "custom")
+    .map((s) => `<option value="${s.id}">${s.label}</option>`).join("");
+  $("scheme").value = "midnight";
+  applyStyleDefaults();
+}
+
+/// Each style carries its own brightness and motion, and the app applies them.
+/// Without this the preview shows every style at whatever the last one wanted,
+/// which is how Ribbon looked switched off next to Cubes.
+function applyStyleDefaults() {
+  const d = mod.backdropStyle($("style").value).defaults ?? {};
+  $("strength").value = d.strength ?? 0.32;
+  $("speed").value = d.speed ?? 4;
+  sync();
+}
+
+const sync = () => { $("so").textContent = Number($("strength").value).toFixed(2);
+                     $("po").textContent = Number($("speed").value).toFixed(1); };
+
+$("style").addEventListener("change", () => { link($("style").value); applyStyleDefaults(); });
+$("strength").addEventListener("input", sync);
+$("speed").addEventListener("input", sync);
+$("time").addEventListener("input", () => { t = Number($("time").value); playing = false; $("play").textContent = "Play"; });
+$("play").addEventListener("click", () => { playing = !playing; $("play").textContent = playing ? "Pause" : "Play"; });
+$("shot").addEventListener("click", () => {
+  // Drawn again immediately before reading: the buffer is not preserved between
+  // frames, so a canvas read on any other tick comes back empty.
+  draw();
+  const a = document.createElement("a");
+  a.download = `${$("style").value}-${t.toFixed(0)}s.png`;
+  a.href = canvas.toDataURL("image/png");
+  a.click();
+});
+
+vs = compile(gl.VERTEX_SHADER, VERT);
+buf = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+watch();
+requestAnimationFrame(frame);
+</script>

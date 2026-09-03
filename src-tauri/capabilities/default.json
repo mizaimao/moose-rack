@@ -1,0 +1,15 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Commands the window may call. Plugin commands are denied unless listed here; the app's own #[tauri::command] functions are not gated. core:window:allow-close is needed for the settings window to close itself — core:default does not grant it, and without it the call is rejected at runtime rather than at build time.",
+  "windows": [
+    "main",
+    "settings"
+  ],
+  "permissions": [
+    "core:default",
+    "dialog:allow-open",
+    "core:window:allow-start-dragging",
+    "core:window:allow-close"
+  ]
+}

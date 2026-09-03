@@ -1,0 +1,3 @@
+# moose-patch. Shimmerless everywhere, no scanlines and no grid.
+default:
+  shader: moose/1-sharp-shimmerless

@@ -1,0 +1,16 @@
+# moose-patch. zfast-crt is a single pass and was written for hardware weaker
+# than this; the handhelds keep the LCD grid instead of a scanline mask.
+default:
+  shader: moose/4-zfast-crt
+gb:
+  shader: moose/3-sharp-shimmerless-lcd
+gbc:
+  shader: moose/3-sharp-shimmerless-lcd
+gba:
+  shader: moose/3-sharp-shimmerless-lcd
+gamegear:
+  shader: moose/3-sharp-shimmerless-lcd
+n64:
+  shader: moose/1-sharp-shimmerless
+dreamcast:
+  shader: moose/1-sharp-shimmerless

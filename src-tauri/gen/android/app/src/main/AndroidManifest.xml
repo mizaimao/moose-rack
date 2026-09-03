@@ -1,0 +1,261 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!--
+      Read the ES-DE folders.
+
+      ES-DE on Android keeps its library in ordinary places — /storage/emulated/0/ES-DE
+      and /storage/emulated/0/ROMs — and this app is pointed at them rather than
+      keeping a second copy. Since Android 11 an app cannot open arbitrary files
+      there with the ordinary storage permissions; it needs this one, which the
+      user grants by a toggle in system settings rather than a dialog. ES-DE's
+      own Android app asks for exactly the same thing.
+
+      maxSdkVersion on the legacy pair: they do nothing from Android 13 on, and
+      leaving them unbounded reads as if they still did.
+    -->
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="29" />
+
+    <!-- AndroidTV support -->
+    <uses-feature android:name="android.software.leanback" android:required="false" />
+
+    <!--
+      The emulators this app talks to.
+
+      Since Android 11 an app cannot see that another package exists unless it
+      says so here: `getPackageInfo` throws NameNotFoundException and the answer
+      is indistinguishable from "not installed". That is exactly what happened —
+      the settings page reported RetroArch missing on a device it was installed
+      on.
+
+      Both RetroArch names, because a device may carry either build. This is
+      also what a launch will need: an Intent to a package you cannot see does
+      not resolve.
+    -->
+    <queries>
+        <!--
+          Every emulator ES-DE knows how to start, so this app can see which of
+          them are here.
+
+          Since Android 11 a package it cannot see is a package that does not
+          exist: `getPackageInfo` throws and `resolveActivity` answers null, so
+          a standalone emulator that is installed reads as missing and the
+          launch silently falls back to RetroArch. That is why this app could
+          only ever start RetroArch.
+
+          The list is `android_packages` in data/esde-core-map.json, which is
+          ES-DE's own `es_find_rules.xml`. Regenerate both together.
+        -->
+        <package android:name="Ali.Xanite" />
+        <package android:name="Ali.Xanite.green" />
+        <package android:name="aenu.aps3e" />
+        <package android:name="aenu.aps3e.premium" />
+        <package android:name="aenu.ax360e" />
+        <package android:name="aenu.ax360e.free" />
+        <package android:name="app.gamenative" />
+        <package android:name="com.PceEmu" />
+        <package android:name="com.amigan.droidarcadia" />
+        <package android:name="com.androidemu.nes" />
+        <package android:name="com.andromeda.androbench2" />
+        <package android:name="com.antutu.ABenchMark" />
+        <package android:name="com.antutu.ABenchMark.ea" />
+        <package android:name="com.antutu.benchmark.full" />
+        <package android:name="com.armsx2" />
+        <package android:name="com.armsx3" />
+        <package android:name="com.bachatas4.android" />
+        <package android:name="com.cmodded.winlator" />
+        <package android:name="com.dsemu.drastic" />
+        <package android:name="com.dsmile.emulator" />
+        <package android:name="com.emulator.fpse" />
+        <package android:name="com.emulator.fpse64" />
+        <package android:name="com.epsxe.ePSXe" />
+        <package android:name="com.explusalpha.A2600Emu" />
+        <package android:name="com.explusalpha.C64Emu" />
+        <package android:name="com.explusalpha.GbaEmu" />
+        <package android:name="com.explusalpha.GbcEmu" />
+        <package android:name="com.explusalpha.LynxEmu" />
+        <package android:name="com.explusalpha.MdEmu" />
+        <package android:name="com.explusalpha.MsxEmu" />
+        <package android:name="com.explusalpha.NeoEmu" />
+        <package android:name="com.explusalpha.NesEmu" />
+        <package android:name="com.explusalpha.NgpEmu" />
+        <package android:name="com.explusalpha.SaturnEmu" />
+        <package android:name="com.explusalpha.Snes9xPlus" />
+        <package android:name="com.explusalpha.SwanEmu" />
+        <package android:name="com.fastemulator.gba" />
+        <package android:name="com.fastemulator.gbc" />
+        <package android:name="com.flycast.emulator" />
+        <package android:name="com.fms.colem" />
+        <package android:name="com.fms.colem.deluxe" />
+        <package android:name="com.fms.fmsx" />
+        <package android:name="com.fms.fmsx.deluxe" />
+        <package android:name="com.fms.ines.free" />
+        <package android:name="com.fms.mg" />
+        <package android:name="com.fms.speccy" />
+        <package android:name="com.fms.speccy.deluxe" />
+        <package android:name="com.github.eka2l1" />
+        <package android:name="com.github.stenzek.duckstation" />
+        <package android:name="com.hydra.noods" />
+        <package android:name="com.issess.flashplayer" />
+        <package android:name="com.issess.flashplayerpro" />
+        <package android:name="com.izzy2lost.super3" />
+        <package android:name="com.izzy2lost.x1box" />
+        <package android:name="com.karin.idTech4Amm" />
+        <package android:name="com.ludashi.aibench" />
+        <package android:name="com.miHoYo.Yuanshen" />
+        <package android:name="com.miHoYo.Yuanshen.nightly" />
+        <package android:name="com.nanodata.armsx" />
+        <package android:name="com.panda3ds.pandroid" />
+        <package android:name="com.pixelrespawn.linkboy" />
+        <package android:name="com.retroarch" />
+        <package android:name="com.retroarch.aarch64" />
+        <package android:name="com.retroarch.ra32" />
+        <package android:name="com.rfandango.haku_x" />
+        <package android:name="com.sbro.emucorec" />
+        <package android:name="com.sbro.emucorev" />
+        <package android:name="com.sbro.emucorex" />
+        <package android:name="com.seedlessds.app" />
+        <package android:name="com.seleuco.mame4d2024" />
+        <package android:name="com.seleuco.mame4droid" />
+        <package android:name="com.simongellis.vvb" />
+        <package android:name="com.sky.SkyEmu" />
+        <package android:name="com.tencent.ig" />
+        <package android:name="com.virtualapplications.play" />
+        <package android:name="com.winlator" />
+        <package android:name="com.winlator.cmod" />
+        <package android:name="come.nanodata.armsx2" />
+        <package android:name="come.nanodata.armsx2.debug" />
+        <package android:name="dev.eden.eden_emulator" />
+        <package android:name="dev.eden.eden_emulator.nightly" />
+        <package android:name="dev.legacy.eden_emulator" />
+        <package android:name="dev.legacy.eden_emulator.nightly" />
+        <package android:name="dev.suyu.suyu_emu" />
+        <package android:name="dev.suyu.suyu_emu.relWithDebInfo" />
+        <package android:name="emuready.gamehub.lite" />
+        <package android:name="gamehub.lite" />
+        <package android:name="info.cemu.Cemu" />
+        <package android:name="info.cemu.cemu" />
+        <package android:name="io.github.azaharplus.android" />
+        <package android:name="io.github.borked3ds.android" />
+        <package android:name="io.github.lime3ds.android" />
+        <package android:name="io.github.mandarine3ds.mandarine" />
+        <package android:name="io.recompiled.redream" />
+        <package android:name="io.wip.pico8" />
+        <package android:name="it.dbtecno.pizzaboy" />
+        <package android:name="it.dbtecno.pizzaboygba" />
+        <package android:name="it.dbtecno.pizzaboygbapro" />
+        <package android:name="it.dbtecno.pizzaboypro" />
+        <package android:name="it.dbtecno.pizzaboyscbasic" />
+        <package android:name="it.dbtecno.pizzaboyscpro" />
+        <package android:name="me.dt2dev.infinity" />
+        <package android:name="me.magnum.melonds" />
+        <package android:name="me.magnum.melonds.nightly" />
+        <package android:name="me.magnum.melondualds" />
+        <package android:name="net.rpcsx" />
+        <package android:name="org.Ziunx.Ziunx_emu.ea" />
+        <package android:name="org.azahar_emu.azahar" />
+        <package android:name="org.citra.citra_emu" />
+        <package android:name="org.citra.citra_emu.canary" />
+        <package android:name="org.citra.emu" />
+        <package android:name="org.citron.citron_emu" />
+        <package android:name="org.citron.citron_emu.ea" />
+        <package android:name="org.cytrus.cytrus_emu" />
+        <package android:name="org.devmiyax.yabasanshioro2" />
+        <package android:name="org.devmiyax.yabasanshioro2.pro" />
+        <package android:name="org.dolphinemu.dolphinemu" />
+        <package android:name="org.dolphinemu.mmjr" />
+        <package android:name="org.force9.starboard" />
+        <package android:name="org.gamerytb.citra.canary" />
+        <package android:name="org.kenjinx.android" />
+        <package android:name="org.mm.j" />
+        <package android:name="org.mm.jr" />
+        <package android:name="org.mupen64plusae.v3.alpha" />
+        <package android:name="org.mupen64plusae.v3.fzurita" />
+        <package android:name="org.mupen64plusae.v3.fzurita.amazon" />
+        <package android:name="org.mupen64plusae.v3.fzurita.pro" />
+        <package android:name="org.openbor.engine" />
+        <package android:name="org.ppsspp.ppsspp" />
+        <package android:name="org.ppsspp.ppssppgold" />
+        <package android:name="org.scummvm.scummvm" />
+        <package android:name="org.scummvm.scummvm.debug" />
+        <package android:name="org.shiiion.primehack" />
+        <package android:name="org.sudachi.sudachi_emu" />
+        <package android:name="org.sudachi.sudachi_emu.ea" />
+        <package android:name="org.suyu.suyu_emu" />
+        <package android:name="org.uzuy.uzuy_emu" />
+        <package android:name="org.uzuy.uzuy_emu.ea" />
+        <package android:name="org.uzuy.uzuy_emu.mmjr" />
+        <package android:name="org.vita3k.emulator" />
+        <package android:name="org.vita3k.emulator.ikhoeyZX" />
+        <package android:name="org.vpinball.app" />
+        <package android:name="org.vpinball.app.gl" />
+        <package android:name="org.vpinball.vpinball_bgfx" />
+        <package android:name="org.yuzu.yuzu_emu" />
+        <package android:name="org.yuzu.yuzu_emu.ea" />
+        <package android:name="rs.ruffle" />
+        <package android:name="ru.playsoftware.j2meloader" />
+        <package android:name="ru.vastness.altmer.iratajaguar" />
+        <package android:name="ru.vastness.altmer.real3doplayer" />
+        <package android:name="ru.woesss.j2meloader" />
+        <package android:name="skyline.emu" />
+        <package android:name="xendroid.compose" />
+        <package android:name="xyz.aethersx2.android" />
+        <package android:name="xyz.aethersx2.cturnip" />
+        <package android:name="xyz.aethersx2.custom" />
+        <package android:name="xyz.aethersx2.tturnip" />
+
+        <!--
+          And whatever opens a manual, a video or a link.
+
+          The same Android 11 rule as above, in its other form. A package can be
+          named outright when it is known; for "whichever app reads PDFs" the
+          declaration is the *intent* instead. Without these
+          `resolveActivity` answers null for every one of them — measured:
+          `openExternal` reported "nothing on this device opens that" even for
+          https://example.com, on a device with a browser.
+        -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:mimeType="*/*" />
+        </intent>
+    </queries>
+
+    <application
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:theme="@style/Theme.moose_gui"
+        android:usesCleartextTraffic="${usesCleartextTraffic}">
+        <activity
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
+            android:launchMode="singleTask"
+            android:label="@string/main_activity_title"
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <!-- AndroidTV support -->
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <provider
+          android:name="androidx.core.content.FileProvider"
+          android:authorities="${applicationId}.fileprovider"
+          android:exported="false"
+          android:grantUriPermissions="true">
+          <meta-data
+            android:name="android.support.FILE_PROVIDER_PATHS"
+            android:resource="@xml/file_paths" />
+        </provider>
+    </application>
+</manifest>

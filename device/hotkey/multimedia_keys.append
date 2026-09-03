@@ -1,0 +1,4 @@
+# moose-patch: L2+R2 opens the addon. Both orderings, because either shoulder
+# may go down first; the launcher takes an atomic lock so only one runs.
+BTN_TR2+BTN_TL2 1            /userdata/system/moose-patch/moose-launch.sh
+BTN_TL2+BTN_TR2 1            /userdata/system/moose-patch/moose-launch.sh

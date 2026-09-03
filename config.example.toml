@@ -1,0 +1,268 @@
+# Moose Rack.
+#
+#   cp config.example.toml config.toml
+#
+# Lines marked REQUIRED are the ones the app cannot start without: a server
+# url and one credential. Everything else already has a working default.
+# config.toml is gitignored; this template is not.
+
+# ---------------------------------------------------------------------------
+# Your details
+# ---------------------------------------------------------------------------
+
+[server]
+# REQUIRED. An empty url, or no credential at all, is refused on startup with
+# a message saying which — not a silent empty library.
+url = "http://dev.lan"
+
+# REQUIRED: a token, or else username and password below.
+#
+# A client token is preferred and beats username/password. Create one in RomM
+# under API tokens with these nine scopes — nothing here writes to your
+# library, so leave every other box unchecked:
+#
+#   me.read  roms.read  platforms.read  collections.read
+#   assets.read  assets.write  devices.read  devices.write  firmware.read
+#
+# A token can be revoked from the server without changing your password.
+# Basic auth still works and is used when no token is set.
+# token = "moose_..."
+username = ""
+password = ""
+
+# Nothing below this point has to be filled in for the app to start.
+
+[achievements]
+# Optional — leave enabled = false to skip it.
+# RetroAchievements. Both fields are needed: a token with no username
+# authenticates nothing, which looks configured and never activates.
+#
+# The token is what RetroArch stores after a successful login — `cheevos_token`
+# in its config. Credentials live here rather than in your retroarch.cfg, so
+# this file behaves the same against any RetroArch install, including a fresh
+# one that has never logged in. [cheevos] is still accepted as the section name.
+enabled = false
+username = ""
+token = ""
+
+# Disables save states, fast-forward and rewind, which are four of the gamepad
+# hotkeys this app binds (Select + LB/RB/RT and the save-slot d-pad).
+hardcore = false
+
+# Unofficial / in-development achievement sets.
+# test_unofficial = false
+
+[library]
+# Optional; the default below works.
+# EVERYTHING this app downloads lives under here — ROMs, cover art, videos. A
+# plain folder rather than ~/Library, so it is easy to find and delete;
+# deleting it reclaims all the space and loses nothing unrecoverable.
+#
+#   <local_root>/roms/<platform>/<game>          downloaded ROMs
+#   <local_root>/downloaded_media/<platform>/    covers, screenshots, videos
+#
+# Relative paths resolve against the project root, not the shell's cwd.
+local_root = "./library"
+
+[retroarch]
+# Optional.
+# Your own RetroArch settings — button maps, filters, hotkeys. Appended at
+# launch AFTER our defaults, so anything in it wins. Your real retroarch.cfg is
+# never touched. Created with commented examples on first run.
+user_config = "./library/retroarch-user.cfg"
+
+# Rapid fire for arcade shooters: "off", "lb" or "rb". Hold that shoulder on
+# its own and the game fires by itself. Nothing is remapped either way.
+# autofire = "lb"
+# Shots a second. Six divides 60 exactly, so it is delivered as asked; ten is
+# what most shmup players use. The +/- on a game's page moves it for that
+# session only.
+# autofire_hz = 6
+
+# Optional: with no entries at all, the usual install locations are probed.
+# Tried top to bottom like a boot order — the first enabled entry that
+# actually contains RetroArch is used. Set enabled = false to skip one
+# without deleting it.
+[[retroarch.installs]]
+label = "Portable (Data/Games)"
+path = "~/Data/Games/Emulators/RetroArch"
+enabled = true
+
+[[retroarch.installs]]
+label = "Applications"
+path = "/Applications"
+enabled = true
+
+[[retroarch.installs]]
+label = "User Applications"
+path = "~/Applications"
+enabled = true
+
+# ---------------------------------------------------------------------------
+# Defaults — change only if something misbehaves
+# ---------------------------------------------------------------------------
+
+[cores.overrides]
+# Platform slug -> libretro core, overriding the ES-DE default.
+#
+# Arcade romsets are version-locked to a MAME release and no single core runs a
+# whole collection, so the default matches the romset vintage. Neo Geo titles
+# need neogeo.zip in the system directory; the launcher copies it there when it
+# sits beside the ROMs. Use `launch --core <name>` for anything a default
+# refuses.
+arcade = "mame2003_plus"
+mame = "mame2003_plus"
+
+[cores.per_game]
+# "<platform>/<file>" -> core, for a game its platform default cannot run.
+# Written by the game detail pane. The verified arcade table ships separately
+# in data/arcade-core-map.toml; anything set here wins over that.
+
+# Index an ES-DE install on a local or external disk instead of a RomM server.
+# Nothing is downloaded — the ROMs and artwork are already there. Run
+# `moose-rack scan-esde` after setting it.
+#
+# `root` is the ES-DE data directory, the one holding `gamelists/` and
+# `downloaded_media/`. `roms` is only needed when the ROMs live elsewhere,
+# which is the usual arrangement.
+#
+# What you lose against a RomM server: collections and save sync.
+# [esde]
+# root = "~/ES-DE"
+# roms = "/Volumes/Games/ROMs"
+
+[icons]
+# Which look the platform grid draws, from the chosen set's own list — themes
+# offer between one and nine. Common ids: hardware, controller, styled-text.
+# See data/icon-set-art.toml for what each set has.
+# The Appearance pane and the Select button write here.
+style = "hardware"
+
+# Whose artwork, chosen in Settings -> Icon sets. Empty means the default set,
+# Meringue, which "Get console pictures" fetches and writes here.
+set = ""
+
+[shaders]
+# Black frame insertion, chained on top of each system's own shader. A preset
+# path under shaders_slang/ with no extension, or "none". Needs a display at a
+# fixed refresh that is a multiple of the content rate — on ProMotion
+# (48–120Hz) it flickers rather than sharpening motion.
+#   motion = "subframe-bfi/adaptive_strobe-koko"
+motion = "none"
+
+[media]
+# What each game shows in the list and grid:
+#   physicalmedia     the cartridge or disc
+#   miximages         box, screenshot and logo in one
+#   covers            box art
+#   3dboxes           box art rendered as a box
+#   titlescreens
+#   screenshots
+#   marquees
+list_art = "miximages"
+
+[saves]
+# Where RetroArch keeps saves/ and states/. In a portable install this is the
+# portable root itself.
+root = "./Saves"
+
+# Pull before a game starts and push after it exits, Steam-cloud style. Every
+# overwrite copies the previous file into library/saves-backup/ first — ten per
+# game and slot — so a wrong result is recoverable rather than final. Off means
+# syncing only when you ask, with `moose-rack sync-saves`.
+#
+# A conflict is never resolved automatically: if both sides changed since the
+# last sync, both are left alone and it says so.
+auto_sync = true
+
+[lightgun.by_platform]
+# Systems to play with the mouse as a light gun. Easier to set from
+# Settings -> Systems, which is where the switch lives.
+#
+# Off everywhere, deliberately: on the NES, SNES and Mega Drive the gun goes in
+# the *second* controller port, so switching one on turns player two's pad into
+# a gun and two-player games stop working.
+#
+# The mouse is bound to the trigger at all times — left button fires, right
+# shoots off-screen, which is how most gun games reload — so it needs no
+# setting.
+#
+#   nes = "on"
+#   arcade = "on"
+
+[scraper]
+# ScreenScraper. NOT READ BY THE APP YET — kept so the credentials and the
+# explanation live with the rest of the configuration.
+#
+# Four fields, not two. ssid/sspassword are your ordinary screenscraper.fr
+# login; devid/devpassword are separate credentials issued to a registered
+# application. A normal account cannot call the API on its own. Without a
+# devid, scrape through ES-DE instead — it ships with its own.
+ssid = ""
+sspassword = ""
+devid = ""
+devpassword = ""
+softname = "moose-rack"
+max_threads = 1
+
+# Last in the file because a section the app writes for the first time is
+# appended at the end, and config.toml has to keep diffing against this one.
+[appearance]
+# Which icon the app wears, in the Dock and the switcher. One of the ids in
+# src/appicon.rs — "arcade" (the default) or "shelf", the row of game cases the
+# app shipped with before. Settings -> Appearance -> App icon writes here.
+# An id this build does not ship falls back to the default rather than to
+# nothing at all.
+app_icon = "arcade"
+
+# How far away the screen is held, in centimetres. Absent means a desk, 60cm.
+#
+# The one number that makes a layout written in points come out the right
+# physical size on a monitor and on a handheld both. A panel's DPI says how
+# fine its pixels are and nothing about how close somebody's face is, and that
+# is most of what decides how big a thing should be drawn.
+#
+# A 4" 960x720 handheld is around 300 DPI. Left at the desk default that works
+# out to a scale of three, which is a screen with room for two covers on it. At
+# 30 it is 1.5, and the screen is 640 points wide. The handheld image ships
+# with this set; a desktop should leave it alone.
+#
+# Read by the SDL front end. The webview has the browser's own scaling.
+#
+#   viewing_distance_cm = 30
+
+
+# Written by Settings -> Control. Every key and controller button starts on the
+# default in src/binds.rs, and only what has been changed appears here — so an
+# empty pair of tables means nothing has been rebound.
+#
+# An entry present but empty means "deliberately unbound", which is not the
+# same as absent: a rebind clears whichever key or button used to hold the
+# action by writing an empty value over it, and the default would otherwise
+# come straight back on the next launch.
+#
+# Here rather than in the browser's own storage because the TUI reads the same
+# file, and because Settings runs in a second window that used to keep its own
+# copy. Bindings left in an older build's storage are adopted once, at startup.
+[bindings.keys]
+# Action id -> key, as the browser names it.
+#
+#   sortMenu = "s"
+#   left = ""            # unbound on purpose
+
+[bindings.pad]
+# Controller button index -> action id, by W3C "standard mapping" position: 0
+# is the bottom face button, which is A on Xbox, Cross on PlayStation and B on
+# a Nintendo pad. See src/binds.rs for the full table and the defaults.
+#
+#   3 = "activate"
+#   0 = ""               # cleared by rebinding activate onto 3
+
+# How the left column is ordered, per kind of list. Remembered, unlike the sort
+# on a game list — the order of a game list is a question about one console and
+# is deliberately forgotten when you leave it, while the order of the column is
+# the shape of the app.
+#
+# Consoles are alphabetical and offer no choice; only collections do.
+[picker_order]
+# collections = "count"   # name | count | fewest | here

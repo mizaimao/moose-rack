@@ -1,0 +1,184 @@
+name: Release
+
+# Tag a commit to publish:  git tag v0.1.0 && git push origin v0.1.0
+# Or run manually from the Actions tab to get artifacts without a release.
+#
+# Three targets: Linux x86_64, Windows x86_64, macOS on Apple silicon. Intel
+# macOS is deliberately absent — see the matrix below for why.
+#
+# The macOS build is unsigned, so it arrives quarantined and needs one xattr
+# call before it opens; the release notes say so. For your own machine, build
+# it locally instead — scripts/build-macos.sh takes about a minute and a
+# locally-produced bundle carries no quarantine attribute at all.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # Nothing ships without the tests that guard it passing on the tagged commit.
+  #
+  # This workflow used to build and publish without running a single test, so a
+  # tag on a red commit produced a real release with real download links. It is
+  # the CI workflow itself rather than a copy of it: a duplicated matrix drifts,
+  # and the copy that drifts is always the one nobody is watching.
+  verify:
+    uses: ./.github/workflows/ci.yml
+
+  build:
+    needs: verify
+    name: ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            label: Linux
+            target: x86_64-unknown-linux-gnu
+          - os: windows-latest
+            label: Windows
+            target: x86_64-pc-windows-msvc
+            # No installer. The app is portable — the UI and the core map are
+            # both compiled into it — so the NSIS setup only ever added a Start
+            # menu entry, and building one every release for a download nobody
+            # took is a slow job to keep. `--no-bundle` rather than editing
+            # `bundle.targets`, which is shared with the local macOS build.
+            no_bundle: true
+          # Apple silicon only. Unsigned, so it arrives quarantined and needs
+          # one xattr call before it opens — the release notes say so. That is
+          # a worse first run than a signed build and a better one than no
+          # build at all, which is what a Mac user without this repo checked
+          # out had.
+          #
+          # Intel is deliberately absent, and it was tried: the macos-13
+          # runners are being retired, and a dispatched build sat queued for
+          # twenty-two minutes without ever starting while every other job
+          # finished. `release` waits on all of `build`, so one runner nobody
+          # can get hold of holds up the whole publish. Anyone on an Intel Mac
+          # can still build it: scripts/build-macos.sh takes about a minute.
+          - os: macos-14
+            label: macOS (Apple silicon)
+            target: aarch64-apple-darwin
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # @master honours rust-toolchain.toml, so the runners use the pinned
+      # version rather than whatever `stable` resolves to that week.
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.97.1"
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      # Tauri v2 on Linux. webkit2gtk-4.1 is why this pins 22.04 rather than
+      # 24.04, where the package names differ.
+      - name: Install Linux GUI dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev \
+            libayatana-appindicator3-dev patchelf
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      # The desktop app. `bundle.targets` in tauri.conf.json picks the right
+      # format per platform: .deb and AppImage on Linux, .app and .dmg on
+      # macOS. Windows gets the binary alone — see `no_bundle` in the matrix.
+      - name: Build desktop app
+        run: npx tauri build --target ${{ matrix.target }} ${{ matrix.no_bundle && '--no-bundle' || '' }}
+
+      - name: Collect artifacts
+        shell: bash
+        run: |
+          mkdir -p dist
+          # The app, published as `moose-rack`. Cargo still calls it
+          # moose-gui: the CLI crate already owns the moose-rack bin name, and
+          # two targets of the same name collide in one target directory.
+          # Renaming on the way out avoids that without a confusing download.
+          GUI=target/${{ matrix.target }}/release/moose-gui
+          [ -f "$GUI.exe" ] && cp "$GUI.exe" "dist/moose-rack-${{ matrix.target }}.exe" || true
+          [ -f "$GUI" ] && cp "$GUI" "dist/moose-rack-${{ matrix.target }}" || true
+          # The CLI is not shipped. It is the same subcommands the app has
+          # buttons for, plus a TUI, and it stayed a build-it-yourself tool:
+          # `cargo build --release --bin moose-rack` from a checkout. It is
+          # still built and tested by CI on all three platforms — this is about
+          # what the release page offers, not about dropping it.
+          B=target/${{ matrix.target }}/release/bundle
+          find "$B" -maxdepth 3 \
+            \( -name '*.deb' -o -name '*.AppImage' -o -name '*.dmg' \) \
+            -exec cp {} dist/ \; 2>/dev/null || true
+          # The .app is a directory, so it travels as a tarball. Zip would lose
+          # the executable bit on the binary inside and the bundle would not
+          # open at all.
+          APP=$(find "$B" -maxdepth 3 -name '*.app' -print -quit 2>/dev/null || true)
+          if [ -n "$APP" ]; then
+            tar -czf "dist/Moose-Rack-${{ matrix.target }}.app.tar.gz" \
+              -C "$(dirname "$APP")" "$(basename "$APP")"
+          fi
+          ls -la dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Publish
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*
+          generate_release_notes: true
+          # Not a draft: a draft is invisible on the Releases page and in the
+          # repo sidebar unless you are signed in as a maintainer, which makes
+          # it look like the build produced nothing.
+          draft: false
+          make_latest: true
+          name: ${{ github.ref_name }}
+          body: |
+            Download below. Nothing here needs installing unless you want it to.
+
+            **Windows** — `moose-rack-x86_64-pc-windows-msvc.exe` is the
+            app, portable: the UI and the core map are both compiled into it,
+            so just run it. There is no installer.
+
+            **Linux** — `moose-rack-x86_64-unknown-linux-gnu` is the app;
+            `*.AppImage` and `*.deb` are the packaged forms.
+
+            **macOS** — `*.dmg`, or the `.app.tar.gz` if you would rather not
+            mount anything. Apple silicon only; on an Intel Mac, build it with
+            `scripts/build-macos.sh`. These are unsigned, so macOS quarantines them: after moving the app
+            to /Applications, run
+
+                xattr -dr com.apple.quarantine "/Applications/Moose Rack.app"
+
+            once, and it opens normally from then on. Building it yourself with
+            `scripts/build-macos.sh` avoids the quarantine entirely, since a
+            bundle that never came through a browser is never marked.
+
+            Copy `config.example.toml` to `config.toml` and set `[server]`
+            before first run.

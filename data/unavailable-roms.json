@@ -1,0 +1,51 @@
+{
+ "_comment": [
+  "Games whose romset cannot run under any installed core, and which are not",
+  "worth reporting as gaps because nothing here can fix them: the zip holds a",
+  "different regional revision than the driver of that name expects, so the",
+  "fix is a different dump, not a scrape or a setting.",
+  "Verified by launching each headless against fbneo, mame2003_plus and mame.",
+  "See docs/arcade-missing-roms.md for the file and CRC each one wants."
+ ],
+ "arcade": {
+  "avengers.zip": {
+   "needs": "avu_04d.10n"
+  },
+  "vball.zip": {
+   "needs": "25a2-4.124"
+  },
+  "drgninja.zip": {
+   "needs": "eg25.15h"
+  },
+  "catacomb.zip": {
+   "needs": "74s288.bin"
+  },
+  "chuckieegg.zip": {
+   "needs": "ppokoj2.bin"
+  },
+  "iganinju.zip": {
+   "needs": ""
+  },
+  "jojoba.zip": {
+   "needs": ""
+  },
+  "kikikai.zip": {
+   "needs": ""
+  },
+  "lordgun.zip": {
+   "needs": ""
+  },
+  "maniacsq.zip": {
+   "needs": ""
+  },
+  "strahl.zip": {
+   "needs": ""
+  },
+  "touchgo.zip": {
+   "needs": ""
+  },
+  "typhoon.zip": {
+   "needs": ""
+  }
+ }
+}

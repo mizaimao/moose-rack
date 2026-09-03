@@ -1,0 +1,31 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme.
+
+         Everything below is about one thing: the window must be this app's
+         background colour, opaquely, from the first frame.
+
+         Left bare, `Theme.MaterialComponents.DayNight` supplies its own window
+         background and its own splash. On this device that composited over the
+         launcher wallpaper as a pale rectangle for the first frame of every
+         launch.
+
+         That first frame is all this fixes. It was set while chasing the flat
+         wash over the whole app, which is a different thing and is not here —
+         see docs/tint.md and `stopFocusHighlight` in MainActivity.kt.
+
+         `windowSplashScreenBackground` is the Android 12+ splash; `windowBackground`
+         is what is drawn before and behind the webview. Both are set, because
+         either one left at its default is another frame of the wrong colour.
+
+         The bars are transparent because `goFullScreen` hides them; a colour
+         here would flash during the swipe that brings them back. -->
+    <style name="Theme.moose_gui" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="android:windowBackground">@color/app_bg</item>
+        <item name="android:colorBackground">@color/app_bg</item>
+        <item name="android:windowSplashScreenBackground" tools:targetApi="s">@color/app_bg</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowIsTranslucent">false</item>
+        <item name="android:windowDisablePreview">false</item>
+    </style>
+</resources>
