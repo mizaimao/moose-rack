@@ -1,5 +1,7 @@
 # The library rules
 
+**Current. These are the rules.** Read before touching the library.
+
 **Every file hash-verified. Every filename the consensus database-registered
 name.** Both halves, always — renaming is part of the job, not a separate
 question to ask.

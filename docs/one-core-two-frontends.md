@@ -1,5 +1,7 @@
 # One core, two frontends, three devices
 
+**Current.** The shape the project settled into, 2026-08-24.
+
 Written 2026-08-24, when the answer stopped being "Flip **or** Thor" and became
 both.
 
@@ -161,7 +163,7 @@ before anything else.
   Manuals and gameplay videos are reasonable to drop here and keep on Android.
 * **The console-art grid**, probably. 640x480 wants a list more than a wall.
 * **Backdrop shader** — keep it. `backdrop.js` is WebGL2 with GLSL fragment
-  shaders and maps 1:1 onto Mali-G52's GLES 3.2; `handheld-frontend.md` already
+  shaders and maps 1:1 onto Mali-G52's GLES 3.2; `archive/handheld-frontend.md` already
   worked this out. It is one of the few effects that gets *cheaper* in SDL.
 * **Text is the quiet cost.** Font fallback across a library with Japanese sets
   is not optional and SDL_ttf does not do it for free.

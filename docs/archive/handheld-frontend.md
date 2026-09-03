@@ -8,7 +8,7 @@ the command that produced it is given so it can be re-checked rather than
 trusted.
 
 The machine it ends up on — the OS, the boot chain, why we ship an image rather
-than a zip, and what is already installed — is `handheld-device.md`.
+than a zip, and what is already installed — is `../devices.md`.
 
 ## Why this exists
 
@@ -304,7 +304,7 @@ them is a rewrite:
   happens while somebody drags an edge, and it is the fastest way to find every
   place a pixel got hardcoded.
 
-See `handheld-device.md` for the machine, the image, and what is already
+See `../devices.md` for the machine, the image, and what is already
 installed on it.
 
 ### The original position, for the record
@@ -352,7 +352,7 @@ and getting it up early proves the GL context works on the device.
 * ~~Font fallback strategy for Japanese and translated titles under SDL_ttf.~~
   **Answered 2026-08-21:** the rootfs already ships `fonts-noto-cjk`,
   `libfreetype6` and `libfontconfig1-dev`, so we resolve fallback through
-  fontconfig and bundle nothing. See `handheld-device.md`. What is *not*
+  fontconfig and bundle nothing. See `../devices.md`. What is *not*
   answered is the shaping and line-breaking above it, which is task 3's
   highest-stakes item now that SDL is meant to be the only front end.
 * ~~Whether video is worth libmpv on the handheld, or simply absent there.~~
@@ -409,4 +409,4 @@ and getting it up early proves the GL context works on the device.
   a strength slider and per-shape settings to hang that off.
 * Whether the desktop app writes `config.toml` onto the card when it is
   mounted, so a handheld never has to be told its own server. Strongly
-  recommended in `handheld-device.md`; not built.
+  recommended in `../devices.md`; not built.

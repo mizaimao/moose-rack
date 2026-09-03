@@ -793,7 +793,7 @@ Settled since:
 - ~~Arcade core compatibility.~~ **Resolved.** The three arcade platforms are three
   different romset vintages and want different cores: `arcade`→fbneo, `mame`→mame2003_plus,
   `neogeoaes`→fbneo. Measuring them as one thing is why every earlier attempt contradicted
-  itself. 97% of 3,295 games now launch; see [docs/arcade-coverage.md](docs/arcade-coverage.md).
+  itself. 97% of 3,295 games now launch; see [docs/coverage.md](docs/coverage.md).
   Method: CRC32 comparison against each core's DAT, validated 14/14 against real launches.
   Two traps: romset *name* matching proves nothing (MAME knows `sfiii` and still refuses
   it — the set needs a CHD), and requiring a full BIOS set marks every Neo Geo game broken
@@ -882,7 +882,7 @@ only `track_meta`.
 We do not depend on it — `GET /api/roms/{id}?with_files=true` returns the same per-file
 data and works. Note the differing ids: `/files` takes a `RomFile.id`, the other a `Rom.id`.
 
-A write-up ready to post is in [`docs/upstream-romfile-500.md`](docs/upstream-romfile-500.md).
+A write-up ready to post is in [`docs/outbox.md`](docs/outbox.md).
 Not filed: `gh` is not authenticated here, and posting is Frank's call.
 
 ## 17. Settings — what is done and what is not

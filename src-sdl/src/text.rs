@@ -1,6 +1,6 @@
 // Drawing words.
 //
-// The item docs/handheld-frontend.md calls "the least glamorous here and the
+// The item docs/archive/handheld-frontend.md calls "the least glamorous here and the
 // one most likely to make the result feel cheap", and it is right. A webview
 // wraps, ellipsises and falls back across fonts without being asked. Nothing
 // below that does any of it for free.
@@ -141,7 +141,7 @@ impl Fonts {
     ///
     /// The same directories fontconfig reads, which is how the handheld's
     /// `fonts-noto-cjk` is found without us shipping or naming it — see
-    /// docs/handheld-device.md.
+    /// docs/devices.md.
     pub fn load() -> Result<Self> {
         let mut system = FontSystem::new();
         // The faces we ship, on top of whatever the machine has. On the
@@ -225,7 +225,7 @@ impl Fonts {
     /// known to be Chinese can ask for `Family::Name("Noto Sans CJK SC")`
     /// outright. What is missing is knowing that it *is* Chinese — the ROM's
     /// region is in the library metadata, and that is where the answer will
-    /// come from. See docs/handheld-frontend.md.
+    /// come from. See docs/archive/handheld-frontend.md.
     pub fn face_for(&mut self, text: &str) -> Option<String> {
         let spec = Spec::new(text, 16.0, 1.0);
         let size = spec.size_px();

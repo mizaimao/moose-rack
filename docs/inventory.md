@@ -1,5 +1,7 @@
 # Hashing the library and checking every dump
 
+**Current, re-runnable procedure** plus the record of the first run, 2026-08-30.
+
 A per-file hash store for the Retro SSD, matched against No-Intro, Redump,
 TOSEC and MAME, so that every game gets two answers: **is this a good dump**,
 and **what should it be called**.

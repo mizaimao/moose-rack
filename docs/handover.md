@@ -1,5 +1,7 @@
 # Handover
 
+**START HERE.** How the work goes, what has already cost days, and where things stand.
+
 For whoever picks this up next, human or otherwise. `README.md` says how to
 run it and `PLAN.md` says why it is shaped the way it is; this is the part that
 is neither — how the work is done here, and what has already been learned the
@@ -229,12 +231,14 @@ The next things worth doing, in the order I would take them. The top two:
    editing the user's RetroArch directory breaks the promise the README makes.
    A prompt is the honest version, and it is not built.
 
-Work that has been **scoped but not built** gets its own file per subject rather
-than one shared list, and each is indexed in [README.md](README.md) with "not
-built" in its line. Today that is [attract-mode.md](attract-mode.md) and
-[cartridge-shelf.md](cartridge-shelf.md). If Frank defers something, write it
-down that way — in his words — rather than leaving it in a chat summary he
-cannot search.
+Work that has been **scoped but not built** goes in
+[not-built.md](not-built.md), one section per subject, and the design is
+written out in full — the design is the expensive part and it is what makes the
+thing pickup-able cold. If Frank defers something, write it down that way — in
+his words — rather than leaving it in a chat summary he cannot search. Work
+that is deferred *with a reason and a cost* goes in [parked.md](parked.md)
+instead; work that is finished or superseded moves to
+[archive/](archive/README.md).
 
 ## One last thing
 
