@@ -11,7 +11,7 @@
 // screen, it answers "if I press left from here, what should light up" for
 // every thing on it at once — a table, computed when the screen is drawn and
 // then walked without asking again, which is the same bargain `gridnav` makes
-// and for the same reason (`docs/handheld-frontend.md`: nothing per keypress
+// and for the same reason (`docs/archive/handheld-frontend.md`: nothing per keypress
 // crosses a boundary).
 //
 // `gridnav` is not this. It assumes a wall of equal cards in rows and answers

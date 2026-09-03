@@ -1,5 +1,7 @@
 # Preparing a card — standard procedure
 
+**Current.** Standard procedure, four firmwares in.
+
 Four firmwares done this way so far: NextUI (RG SP), spruceOS (Miyoo A30, Miyoo
 Flip), dArkOS (MiniLoong Pocket 1), KNULLI (RK3566). The steps are the same
 every time; only the layout table changes.
@@ -188,7 +190,7 @@ not Mega Drive — check the contents before mapping by core name alone.
 
 ## BIOS — copying, and why a manifest-driven copy under-delivers
 
-The step that looks finished and is not. `bios-coverage.md` covers *what the
+The step that looks finished and is not. `coverage.md` covers *what the
 collection holds*; this is *what a card needs and where it goes*.
 
 **The firmware's own checker is the authority, not our manifest.** Two lists

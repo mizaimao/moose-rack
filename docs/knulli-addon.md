@@ -1,5 +1,7 @@
 # The addon
 
+**Current.** `moose-patch`, as shipped.
+
 Frank, 2026-08-26: "SDL app will not be our romm anymore, it's going to be an
 'addon' thing to vanilla Kunulli that would survive upgrades and we add manual
 patches to it, inclduing our hotkeys, bazels and sync and shit so that's the

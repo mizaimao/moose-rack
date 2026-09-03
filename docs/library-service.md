@@ -1,5 +1,7 @@
 # Replacing RomM
 
+**Design, not built.** The backend that replaces the dependency on a RomM server.
+
 Written 2026-09-01, at the end of a day spent syncing 12,370 files onto RomM
 and finding that 1,254 of them were invisible when it finished.
 

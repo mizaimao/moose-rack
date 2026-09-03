@@ -1,5 +1,7 @@
 # The four copies of the library
 
+**Current.** Read before touching any of the four copies.
+
 Server, Retro SSD, Android and the Flip. Same games, four different layouts,
 four different ways in. This is where each one keeps its ROMs, its artwork, its
 gamelists and its hashes, so the next person does not have to find out by

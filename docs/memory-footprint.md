@@ -1,5 +1,7 @@
 # What the app weighs, and why
 
+**Measurement, 2026-08-22 to 08-24.** 192 MB, and 106 MB of it is WebKit.
+
 > **The decomposition, 2026-08-24 — start here.** Everything the app cannot
 > avoid on macOS is 192 MB, and it is not our document.
 

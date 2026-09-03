@@ -1,5 +1,7 @@
 # A Wayland compositor on the Miyoo Flip
 
+**Finding, 2026-08-25.** Closed — the cause was found and a working driver swap demonstrated. Not applied.
+
 **Finding, 2026-08-25.** KNULLI on the Miyoo Flip ships a build of the Mali
 driver with **no Wayland support and an old GBM ABI**, and that — not the
 hardware, not the GPU, not the kernel — is why no compositor starts. Swapping in

@@ -1,5 +1,7 @@
 # The Miyoo A30 card — spruceOS
 
+**Current.** Procedure, carried out 2026-08-19.
+
 How this card was built, and the things that cost time. `handover.md` is the
 wider brief for the app; this is one device, start to finish, written so it can
 be reproduced or audited without rediscovering the traps.

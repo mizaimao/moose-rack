@@ -1,5 +1,7 @@
 # Keeping four copies of the library in step
 
+**Current.** How the four copies are kept in step.
+
 Server, Retro SSD, Android and the Flip. This is what was done on 2026-08-29,
 and — more useful — the things that turned out to be true about comparing ROM
 sets, which are not obvious and cost time to learn.

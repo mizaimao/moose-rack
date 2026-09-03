@@ -8,7 +8,7 @@
 // remembered position stay what they would have been with the whole list
 // there.
 //
-// This is `ui/js/visible.js` ported, as `docs/handheld-frontend.md` task 3
+// This is `ui/js/visible.js` ported, as `docs/archive/handheld-frontend.md` task 3
 // says to do early: a 1 GB handheld needs it more than a Mac does, and the
 // webview's copy has fourteen tests behind it that are worth keeping rather
 // than rediscovering against a 4" screen.
