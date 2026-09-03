@@ -2687,11 +2687,11 @@ dependencies = [
 
 [[package]]
 name = "moose-fastlaunch"
-version = "0.4.204"
+version = "0.4.212"
 
 [[package]]
 name = "moose-gui"
-version = "0.4.204"
+version = "0.4.212"
 dependencies = [
  "moose-rack",
  "serde",
@@ -2704,7 +2704,7 @@ dependencies = [
 
 [[package]]
 name = "moose-patch"
-version = "0.4.204"
+version = "0.4.212"
 dependencies = [
  "anyhow",
  "moose-rack",
@@ -2717,7 +2717,7 @@ dependencies = [
 
 [[package]]
 name = "moose-rack"
-version = "0.4.204"
+version = "0.4.212"
 dependencies = [
  "anyhow",
  "base64 0.23.0",
@@ -2743,7 +2743,7 @@ dependencies = [
 
 [[package]]
 name = "moose-sdl"
-version = "0.4.204"
+version = "0.4.212"
 dependencies = [
  "anyhow",
  "cosmic-text",

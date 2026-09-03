@@ -28,7 +28,7 @@ EXTS = ["png", "jpg", "webp"]
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--slugs", required=True, help="comma-separated RomM slugs")
+    ap.add_argument("--slugs", required=True, help="comma-separated platform slugs")
     ap.add_argument("--media", default="library/downloaded_media")
     ap.add_argument("--out", default="library/media-640")
     ap.add_argument("--px", type=int, default=640)

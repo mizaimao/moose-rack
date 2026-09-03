@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Build a small, RomM-shaped test library by sampling an ES-DE collection.
+"""Build a small, slug-shaped test library by sampling an ES-DE collection.
 
 Samples N "game units" per platform from an ES-DE roms tree and clones them --
-plus their ES-DE downloaded_media -- into a local library laid out the way RomM
-expects (``roms/<platform_slug>/``, RomM's "struct_a").
+plus their ES-DE downloaded_media -- into a local library laid out flat by
+platform slug (``roms/<platform_slug>/``, one directory per platform).
 
 On APFS (macOS) files are copied with ``cp -c``, so clones are copy-on-write:
 near-instant and costing almost no extra disk. Falls back to a real copy when
@@ -54,15 +54,15 @@ NON_ROM_NAMES = {".DS_Store", "systeminfo.txt", "gamelist.xml"}
 
 @dataclass(frozen=True)
 class Platform:
-    """One platform in the ES-DE source, mapped onto its RomM identity.
+    """One platform in the ES-DE source, mapped onto its library slug.
 
     Attributes:
         esde_dir: Directory name in the ES-DE roms tree.
-        server_slug: Platform slug RomM uses. This is what the destination
-            directory is named, so a RomM scan of the output creates the right
+        server_slug: The library's platform slug. This is what the destination
+            directory is named, so a scan of the output creates the right
             platform instead of e.g. ``gamegear_hidden``.
         media_dirs: Candidate ``downloaded_media/`` directories, searched in
-            order. ES-DE and RomM disagree on several names, and a few systems
+            order. ES-DE and the slugs disagree on several names, and a few systems
             have media filed under more than one (``snes`` + ``snesna``).
     """
 
@@ -72,11 +72,11 @@ class Platform:
 
 
 # The intersection of platforms present in the ES-DE source and platforms the
-# RomM server recognises (its FS_PLATFORMS, read from /api/heartbeat).
+# server recognises (its FS_PLATFORMS, read from /api/heartbeat).
 #
 # Excluded on purpose:
 #   0_BIOS, downloaded_media  - not platforms
-#   N64_All                   - no RomM slug; nested Europe/USA, not flat
+#   N64_All                   - no platform slug; nested Europe/USA, not flat
 #   easyrpg, ports, saturn    - present but empty (systeminfo.txt only)
 PLATFORMS: tuple[Platform, ...] = (
     Platform("3do", "3do"),  # no downloaded_media/3do exists
@@ -272,7 +272,7 @@ def main() -> int:
         "source": str(source),
         "seed": args.seed,
         "per_platform": args.per_platform,
-        "layout": "roms/<server_slug>/ (RomM struct_a); media keyed by server_slug",
+        "layout": "roms/<server_slug>/ flat by platform; media keyed by server_slug",
         "platforms": [],
     }
     total_rom_bytes = total_media_bytes = 0
@@ -313,7 +313,7 @@ def main() -> int:
                 media_files = find_media(media_root, platform.media_dirs, unit.name)
                 for rel in media_files:
                     src_file = media_root / rel
-                    # Re-key media under the RomM slug, dropping the ES-DE
+                    # Re-key media under the platform slug, dropping the ES-DE
                     # system name so roms and media share one vocabulary.
                     out_rel = Path(platform.server_slug) / Path(*rel.parts[1:])
                     if not args.dry_run:

@@ -280,7 +280,7 @@ server was still sitting here. A second pass mirrored the server properly:
 
 | | files | |
 | --- | --- | --- |
-| `mame/` | 750 | the server has no `mame` platform any more; `tools/romm_sync.py` still carries code for one, so it did once. 638 of these duplicate `arcade/` romsets already here |
+| `mame/` | 750 | the server has no `mame` platform any more; `tools/romm-transition/romm_sync.py` still carries code for one, so it did once. 638 of these duplicate `arcade/` romsets already here |
 | `neogeoaes/` extras | 131 | arcade romsets filed under Neo Geo AES, which the server keeps in `arcade/` |
 | `arcade/` strays | 86 | of which 53 are the Japanese quiz purge recorded in `data/removed-japanese-quiz.json` — all 49 romsets were still here |
 | cartridges and discs | 9 | mostly the same game in a different wrapper than the server uses |

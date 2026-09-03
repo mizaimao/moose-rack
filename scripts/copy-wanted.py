@@ -18,7 +18,9 @@ import subprocess
 import sys
 
 HOST = "dev.lan"
-DEST = "/home/frank/romm/assets/roms"
+# The library root on the server. It sits inside RomM's volume today; when the
+# library service replaces RomM this is the one line that moves.
+DEST = os.environ.get("MOOSE_LIBRARY_ROOT", "/home/frank/romm/assets/roms")
 SSH = ["/usr/bin/ssh", "-o", "BatchMode=yes"]
 
 

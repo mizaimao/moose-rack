@@ -2,7 +2,7 @@
 """Copy games the server has and the ES-DE card does not, onto the card.
 
 Two hops, because there is no one-shot path. `get` writes into the configured
-library root under RomM's slug (`dc`, `ngc`, `megadrive`), and the card is an
+library root under the platform slug (`dc`, `ngc`, `megadrive`), and the card is an
 ES-DE tree that reads `dreamcast`, `gc`, `genesis`. Pointing the library root at
 the card would fill folders the device never looks in. So: download into
 `library/roms/<slug>/` first, then copy across under the ES-DE name. The local

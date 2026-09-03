@@ -2,16 +2,16 @@
 """Copy ES-DE artwork off the handheld's card into this app's media cache.
 
 The card is the authority. It sits at 97% coverage across the library while the
-RomM server sits at 71%, because the server holds a partial, differently
+server sits at 71%, because the server holds a partial, differently
 organised copy — arcade under `mame` rather than `arcade`, and thousands of
 games absent entirely. Scraping those back one at a time from ScreenScraper took
 51 minutes to bring one console to 87%; the card had it at 99% the whole time.
 
 Two things this has to get right.
 
-**Folder names.** ES-DE names systems its own way and RomM names them another:
+**Folder names.** ES-DE names systems its own way and the library uses another:
 `genesis` against `megadrive`, `neogeo` against `neogeoaes`, `gc` against `ngc`,
-`dreamcast` against `dc`. The app looks under RomM's name, so the copy renames
+`dreamcast` against `dc`. The app looks under the platform slug, so the copy renames
 on the way in. The mapping is derived by matching filenames rather than typed
 out, because a wrong pair is silent — the files land somewhere nothing looks.
 
