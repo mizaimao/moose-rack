@@ -291,6 +291,16 @@ async fn main() -> Result<()> {
         .route("/api/collections", get(collections))
         // Artwork straight off the tree. ES-DE and Skraper already scraped it;
         // re-serving it through a database would gain nothing.
+        //
+        // Two mounts for one directory. `media.rs` builds artwork URLs itself
+        // from a hardcoded `/assets/romm/resources/esde-media`, so serving that
+        // path is what makes an unmodified client show covers at all. The
+        // neutral mount is what the client should use once that constant is
+        // retired, and having both means that can happen without a flag day.
+        .nest_service(
+            "/assets/romm/resources/esde-media",
+            tower_http::services::ServeDir::new(media_dir.clone()),
+        )
         .nest_service("/assets/media", tower_http::services::ServeDir::new(media_dir))
         .with_state(lib);
 
