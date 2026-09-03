@@ -27,7 +27,7 @@
 use std::net::SocketAddr;
 use std::sync::Arc;
 
-use anyhow::Result;
+use anyhow::{Context as _, Result};
 use axum::{
     extract::{Path as AxPath, Query, State},
     routing::get,
@@ -49,8 +49,14 @@ struct Args {
     /// Artwork directory, if it is not <root>/downloaded_media
     #[arg(long)]
     media: Option<String>,
-    #[arg(long, default_value = "0.0.0.0:8000")]
+    /// Address to bind. Use this to restrict the interface as well as the port.
+    #[arg(long, env = "MOOSE_SERVICE_BIND", default_value = "0.0.0.0:8001")]
     bind: String,
+    /// Port only, overriding whatever `--bind` says. The common case is wanting
+    /// a different port on the same interface, and rewriting the whole address
+    /// to do that is a good way to bind to localhost by accident.
+    #[arg(short, long, env = "MOOSE_SERVICE_PORT")]
+    port: Option<u16>,
 }
 
 /// The scan, held for the process lifetime.
@@ -265,7 +271,13 @@ async fn main() -> Result<()> {
         .nest_service("/assets/media", tower_http::services::ServeDir::new(media_dir))
         .with_state(lib);
 
-    let addr: SocketAddr = args.bind.parse()?;
+    let mut addr: SocketAddr = args
+        .bind
+        .parse()
+        .with_context(|| format!("--bind {:?} is not host:port", args.bind))?;
+    if let Some(p) = args.port {
+        addr.set_port(p);
+    }
     let listener = tokio::net::TcpListener::bind(addr).await?;
     println!("listening  http://{addr}");
     axum::serve(listener, app).await?;
