@@ -102,6 +102,23 @@ impl Layout {
             media: esde_root.join("downloaded_media"),
         }
     }
+
+    /// Point artwork somewhere other than `<root>/downloaded_media`.
+    ///
+    /// The two are usually siblings and this is not needed. A *portable* ES-DE
+    /// install breaks that: it keeps `downloaded_media/` inside `support/`
+    /// while `gamelists/` stays in the data directory beside it, so no single
+    /// root derives both. Without an override such a library cannot be indexed
+    /// at all — every game resolves its metadata and none of its art.
+    ///
+    /// `None` leaves the derived path alone, so callers can pass an optional
+    /// config value straight through.
+    pub fn with_media(mut self, media: Option<&Path>) -> Self {
+        if let Some(m) = media {
+            self.media = m.to_path_buf();
+        }
+        self
+    }
 }
 
 /// Metadata for one game out of a gamelist.
@@ -842,6 +859,14 @@ mod tests {
         assert_eq!(default.roms, Path::new("/esde/ROMs"));
         assert_eq!(default.gamelists, Path::new("/esde/gamelists"));
         assert_eq!(default.media, Path::new("/esde/downloaded_media"));
+
+        let split = Layout::new(Path::new("/esde"), None)
+            .with_media(Some(Path::new("/esde/support/downloaded_media")));
+        assert_eq!(split.gamelists, Path::new("/esde/gamelists"), "gamelists stay put");
+        assert_eq!(split.media, Path::new("/esde/support/downloaded_media"));
+
+        let untouched = Layout::new(Path::new("/esde"), None).with_media(None);
+        assert_eq!(untouched.media, Path::new("/esde/downloaded_media"), "None overrides nothing");
 
         let custom = Layout::new(Path::new("/esde"), Some(Path::new("/Volumes/SD/games")));
         assert_eq!(custom.roms, Path::new("/Volumes/SD/games"));
