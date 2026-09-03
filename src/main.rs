@@ -379,7 +379,7 @@ async fn cmd_check() -> Result<()> {
             } else {
                 format!("UNVERIFIED — client was checked against {}", moose_rack::VERIFIED_AGAINST)
             };
-            println!("version   RomM {v} ({note})");
+            println!("version   server {v} ({note})");
         }
         Err(e) => println!("version   unknown ({e})"),
     }
@@ -587,7 +587,7 @@ async fn cmd_sync(full: bool) -> Result<()> {
                 && v != moose_rack::VERIFIED_AGAINST
             {
                 eprintln!(
-                    "warning: server is RomM {v}, but this client's server-specific behavior\n\
+                    "warning: server reports version {v}, but this client's server-specific behavior\n\
                      (archive hashing, query params) was verified against {}. Re-check\n\
                      `hash-parity` and a download or two.",
                     moose_rack::VERIFIED_AGAINST
