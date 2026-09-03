@@ -1240,13 +1240,14 @@ async fn update_cores(ra: &RetroArch, segment: &str) -> Result<()> {
 }
 
 /// Index a local ES-DE library into the cache.
-fn cmd_scan_esde(root: Option<&str>, roms: Option<&str>) -> Result<()> {
+fn cmd_scan_esde(root: Option<&str>, roms: Option<&str>, media: Option<&str>) -> Result<()> {
     let cfg = Config::load()?;
     let layout = match root {
         Some(r) => moose_rack::esde::Layout::new(
             &moose_rack::util::expand_tilde(r),
             roms.map(moose_rack::util::expand_tilde).as_deref(),
-        ),
+        )
+        .with_media(media.map(moose_rack::util::expand_tilde).as_deref()),
         // No --root: the configured library, or this install's own folders,
         // which have the same shape. There is always somewhere to look.
         None => cfg.esde_layout(),
@@ -1796,6 +1797,9 @@ enum Command {
         /// ROMs directory, if not <root>/ROMs
         #[arg(long)]
         roms: Option<String>,
+        /// Artwork directory, if not <root>/downloaded_media (portable installs)
+        #[arg(long)]
+        media: Option<String>,
     },
     /// List collections mirrored from the server
     Collections {
@@ -2093,7 +2097,9 @@ async fn main() -> Result<()> {
         Command::Sync { full } => cmd_sync(full).await,
         Command::Browse => cmd_browse(),
         Command::Collections { group } => cmd_collections(group.as_deref()),
-        Command::ScanEsde { root, roms } => cmd_scan_esde(root.as_deref(), roms.as_deref()),
+        Command::ScanEsde { root, roms, media } => {
+            cmd_scan_esde(root.as_deref(), roms.as_deref(), media.as_deref())
+        }
         Command::Probe { term, platform, sample, cores, frames, i_know_it_opens_windows } => {
             if !i_know_it_opens_windows {
                 bail!(

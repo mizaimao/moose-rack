@@ -305,6 +305,11 @@ pub struct EsdeCfg {
     /// and configurable, so it usually is.
     #[serde(default)]
     pub roms: Option<String>,
+    /// Artwork directory, if it is not `<root>/downloaded_media`. A portable
+    /// ES-DE install files it under `support/` while `gamelists/` stays in the
+    /// data directory, and then no single root derives both.
+    #[serde(default)]
+    pub media: Option<String>,
 }
 
 impl EsdeCfg {
@@ -321,7 +326,8 @@ impl EsdeCfg {
     pub fn layout(&self) -> Option<crate::esde::Layout> {
         let root = crate::util::expand_tilde(self.root.as_deref()?);
         let roms = self.roms.as_deref().map(crate::util::expand_tilde);
-        Some(crate::esde::Layout::new(&root, roms.as_deref()))
+        let media = self.media.as_deref().map(crate::util::expand_tilde);
+        Some(crate::esde::Layout::new(&root, roms.as_deref()).with_media(media.as_deref()))
     }
 }
 
@@ -804,7 +810,13 @@ impl Config {
             // Spelled out rather than calling `local_roms_dir`, which is now
             // defined in terms of this function and would recurse.
             .unwrap_or_else(|| PathBuf::from(&self.library.local_root).join("roms"));
-        crate::esde::Layout::new(&root, Some(&roms))
+        // `media` overrides the derived `<root>/downloaded_media` for a portable
+        // ES-DE install, where artwork sits under `support/` and gamelists do
+        // not. Applied here as well as in `EsdeCfg::layout`, because this is the
+        // path everything that is not a separately-configured second library
+        // goes through — including `scan-esde` with no `--root`.
+        let media = self.esde.media.as_deref().map(crate::util::expand_tilde);
+        crate::esde::Layout::new(&root, Some(&roms)).with_media(media.as_deref())
     }
 
     /// Where games live — the folder set in Settings, not a folder of our own.

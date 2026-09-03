@@ -127,9 +127,13 @@ mame = "mame2003_plus"
 # which is the usual arrangement.
 #
 # What you lose against a RomM server: collections and save sync.
+# `media` is only needed when artwork is not at `<root>/downloaded_media`. A
+# portable ES-DE install files it under `support/` while `gamelists/` stays in
+# the data directory, so no single root derives both.
 # [esde]
 # root = "~/ES-DE"
 # roms = "/Volumes/Games/ROMs"
+# media = "~/ES-DE/support/downloaded_media"
 
 [icons]
 # Which look the platform grid draws, from the chosen set's own list — themes
