@@ -1,49 +1,49 @@
 # Arcade Ball and Paddle
 # 47 games, exported 2026-09-03 from RomM
-Arkanoid
-Arkanoid - Revenge Of Doh
-Arkanoid Returns
-Avalanche
-Bal Cube
-Block Block
-Block Carnival
-Block Gal
-Blocken
-Bomb Bee
-Cannon Ball
-Cuby Bop
-Cutie Q
-Flying Ball
-Free Kick
-Gee Bee
-Gee Bee
-Ghox
-Gigas
-Gigas Mark II
-Goindol
-Graplop
-Gunbarich
-Jumping Break
-Jumping Pop
-Kick
-Monkey Magic
-Omega
-Peek-a-boo!
-Play Girls
-Playball!
-Plump Pop
-Poosho Poosho
-Pop 'n Bounce
-Power Balls
-Puchi Carat
-Quester
-Reaktor
-Riddle Of Pythagoras
-Thunder & Lightning
-Tournament Arkanoid
-Twin Squash
-Vs Block Breaker
-Wall Crash
-Warlords
-Wiggie Waggie
-Zip & Zap
+arcade/arkanoid    # Arkanoid
+arcade/arkatour    # Tournament Arkanoid
+arcade/arknoid2    # Arkanoid - Revenge Of Doh
+arcade/arkretrn    # Arkanoid Returns
+arcade/avalnche    # Avalanche
+arcade/balcube    # Bal Cube
+arcade/block    # Block Block
+arcade/blockcar    # Block Carnival
+arcade/blocken    # Blocken
+arcade/blockgal    # Block Gal
+arcade/bombbee    # Bomb Bee
+arcade/cannonbp    # Cannon Ball
+arcade/cflyball    # Flying Ball
+arcade/cgraplop    # Graplop
+arcade/cubybop    # Cuby Bop
+arcade/cutieq    # Cutie Q
+arcade/freekick    # Free Kick
+arcade/geebee    # Gee Bee
+arcade/geebeeg    # Gee Bee
+arcade/ghox    # Ghox
+arcade/gigas    # Gigas
+arcade/gigasm2    # Gigas Mark II
+arcade/gnbarich    # Gunbarich
+arcade/goindol    # Goindol
+arcade/jmpbreak    # Jumping Break
+arcade/jpopnics    # Jumping Pop
+arcade/kick    # Kick
+arcade/mmagic    # Monkey Magic
+arcade/omega    # Omega
+arcade/peekaboo    # Peek-a-boo!
+arcade/playball    # Playball!
+arcade/plgirls    # Play Girls
+arcade/plumppop    # Plump Pop
+arcade/poosho    # Poosho Poosho
+arcade/popbounc    # Pop 'n Bounce
+arcade/powerbal    # Power Balls
+arcade/puchicar    # Puchi Carat
+arcade/quester    # Quester
+arcade/reaktor    # Reaktor
+arcade/ridleofp    # Riddle Of Pythagoras
+arcade/thunderl    # Thunder & Lightning
+arcade/twinsqua    # Twin Squash
+arcade/vblokbrk    # Vs Block Breaker
+arcade/wallc    # Wall Crash
+arcade/warlords    # Warlords
+arcade/wiggie    # Wiggie Waggie
+arcade/zipzap    # Zip & Zap

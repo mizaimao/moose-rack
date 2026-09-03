@@ -1,108 +1,108 @@
 # Arcade Classics
 # 106 games, exported 2026-09-03 from RomM
-1942
-1943 Kai: Midway Kaisen
-Alien vs. Predator
-Altered Beast
-Arkanoid
-Armed Police Batrider
-Asteroids
-Batsugun
-Battle Garegga
-Battletoads
-Battlezone
-Berzerk
-Black Tiger
-Bubble Bobble
-Burger Time
-Bust-a-Move
-Cadillacs and Dinosaurs
-Centipede
-Choplifter
-Commando
-Contra
-Darius Gaiden - Silver Hawk Extra Version
-Deathsmiles
-Defender
-Dig Dug
-DoDonPachi
-DoDonPachi Resurrection
-Donkey Kong
-Donkey Kong 3
-Donkey Kong Junior
-Double Dragon
-Double Dragon
-Elevator Action
-ESP Ra.De.
-Espgaluda
-Final Fight
-Frogger
-Galaga
-Galaxian
-Gauntlet
-Ghosts'n Goblins
-Ghouls'n Ghosts
-Golden Axe
-Gradius III
-Gunlock
-Gyruss
-In the Hunt
-Joust
-Karate Champ
-Marble Man: Marble Madness II
-Metal Slug 6
-Missile Command
-Moon Cresta
-Moon Patrol
-Mortal Kombat
-Mortal Kombat 2
-Mr. Do!
-Ms. Pac-man/Galaga - 20th Anniversary Class of 1981 Reunion
-Mushihime-Sama
-Mushihime-Sama Futari
-Narc
-Nba Jam
-Operation Wolf
-Out Run
-Pac-Man
-Pengo
-Phoenix
-Popeye
-Progear
-Punch-out!!
-Q*bert
-R-Type
-Raiden
-Rampage
-Robocop
-Robotron: 2084
-Rolling Thunder
-Samurai Shodown V Special
-Scramble
-Shinobi
-Sinistar
-Sky Shark
-Smash T.V.
-Space Invaders / Space Invaders M
-Splatter House
-Spy Hunter
-Star Wars
-Street Fighter II : The World Warrior
-Sunset Riders
-Tapper
-Teenage Mutant Ninja Turtles
-Tempest
-Tetris / Bloxeed
-The King of Fighters '98 - The Slugfest
-The Outfoxies
-The Simpsons
-Time Pilot
-Toki
-Track & Field
-Tron
-Wonder Boy
-Wwf Wrestlefest
-X-Men
-Xevious
-Yie Ar Kung-Fu
-Zaxxon
+arcade/1942
+arcade/1943kai    # 1943 Kai: Midway Kaisen
+arcade/20pacgal    # Ms. Pac-man/Galaga - 20th Anniversary Class of 1981 Reunion
+arcade/altbeast    # Altered Beast
+arcade/arkanoid    # Arkanoid
+arcade/asteroid    # Asteroids
+arcade/avsp    # Alien vs. Predator
+arcade/batrider    # Armed Police Batrider
+arcade/batsugun    # Batsugun
+arcade/berzerk    # Berzerk
+arcade/bgaregga    # Battle Garegga
+arcade/blktiger    # Black Tiger
+arcade/btoads    # Battletoads
+arcade/bublbobl    # Bubble Bobble
+arcade/bzone    # Battlezone
+arcade/cbtime    # Burger Time
+arcade/centiped    # Centipede
+arcade/choplift    # Choplifter
+arcade/commsega    # Commando
+arcade/contra    # Contra
+arcade/dariusgx    # Darius Gaiden - Silver Hawk Extra Version
+arcade/ddonpach    # DoDonPachi
+arcade/ddpdfk    # DoDonPachi Resurrection
+arcade/ddragonj    # Double Dragon
+arcade/deathsml    # Deathsmiles
+arcade/defender    # Defender
+arcade/digdug    # Dig Dug
+arcade/dino    # Cadillacs and Dinosaurs
+arcade/dkong    # Donkey Kong
+arcade/dkong3    # Donkey Kong 3
+arcade/dkongjr    # Donkey Kong Junior
+arcade/doubledr    # Double Dragon
+arcade/elevator    # Elevator Action
+arcade/espgal    # Espgaluda
+arcade/esprade    # ESP Ra.De.
+arcade/ffight    # Final Fight
+arcade/frogger    # Frogger
+arcade/fshark    # Sky Shark
+arcade/futari15    # Mushihime-Sama Futari
+arcade/galaga    # Galaga
+arcade/galaxian    # Galaxian
+arcade/gauntlet    # Gauntlet
+arcade/ghouls    # Ghouls'n Ghosts
+arcade/gng    # Ghosts'n Goblins
+arcade/goldnaxe    # Golden Axe
+arcade/gradius3    # Gradius III
+arcade/gunlock    # Gunlock
+arcade/gyruss    # Gyruss
+arcade/inthunt    # In the Hunt
+arcade/invaders    # Space Invaders / Space Invaders M
+arcade/joust    # Joust
+arcade/kchamp    # Karate Champ
+arcade/kof98    # The King of Fighters '98 - The Slugfest
+arcade/marblmd2    # Marble Man: Marble Madness II
+arcade/missile    # Missile Command
+arcade/mk    # Mortal Kombat
+arcade/mk2    # Mortal Kombat 2
+arcade/mooncrst    # Moon Cresta
+arcade/mpatrol    # Moon Patrol
+arcade/mrdo    # Mr. Do!
+arcade/mslug3b6    # Metal Slug 6
+arcade/mushisam    # Mushihime-Sama
+arcade/narc    # Narc
+arcade/nbajam    # Nba Jam
+arcade/opwolf    # Operation Wolf
+arcade/outfxies    # The Outfoxies
+arcade/outrun    # Out Run
+arcade/pacman    # Pac-Man
+arcade/pbobblen    # Bust-a-Move
+arcade/pengo    # Pengo
+arcade/phoenix    # Phoenix
+arcade/popeye    # Popeye
+arcade/progear    # Progear
+arcade/punchout    # Punch-out!!
+arcade/qbert    # Q*bert
+arcade/raidenj    # Raiden
+arcade/rampage    # Rampage
+arcade/robocop    # Robocop
+arcade/robotron    # Robotron: 2084
+arcade/rthunder    # Rolling Thunder
+arcade/rtype    # R-Type
+arcade/samsh5sp    # Samurai Shodown V Special
+arcade/scramble    # Scramble
+arcade/sf2    # Street Fighter II : The World Warrior
+arcade/shinobi    # Shinobi
+arcade/simpsons    # The Simpsons
+arcade/sinistar    # Sinistar
+arcade/smashtv    # Smash T.V.
+arcade/splatter    # Splatter House
+arcade/spyhunt    # Spy Hunter
+arcade/ssriders    # Sunset Riders
+arcade/starwars    # Star Wars
+arcade/tapper    # Tapper
+arcade/tempest    # Tempest
+arcade/tetrbx    # Tetris / Bloxeed
+arcade/timeplt    # Time Pilot
+arcade/tmnt2pj    # Teenage Mutant Ninja Turtles
+arcade/toki    # Toki
+arcade/trackfld    # Track & Field
+arcade/tron    # Tron
+arcade/wboy    # Wonder Boy
+arcade/wwfwfest    # Wwf Wrestlefest
+arcade/xevious    # Xevious
+arcade/xmen2pa    # X-Men
+arcade/yiear    # Yie Ar Kung-Fu
+arcade/zaxxon    # Zaxxon

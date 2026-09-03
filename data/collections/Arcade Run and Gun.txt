@@ -1,121 +1,121 @@
 # Arcade Run and Gun
 # 119 games, exported 2026-09-03 from RomM
-Act-Fancer: Cybernetick Hyper Weapon
-Alien Storm
-Aliens
-Asylum
-Battle Rangers
-Bay Route
-Biomechanical Toy
-Bionic Commando
-Bonze Adventure
-Boomer Rang'r
-Bucky O'Hare
-Bullet
-Butasan - Pig's & Bomber's
-Caliber 50
-Caveman Ninja
-Charlie Ninja
-Chelnov - Atomic Runner
-Commando
-Contra
-Contra
-Cop 01
-Crazy Fight
-Crime City
-Cyber-Lip
-Demon Front
-Demon's World
-Desert Assault
-Desert Assault
-Desert Breaker
-Devil World
-E-swat - Cyber Police
-Equites
-Extermination
-Fantasy Land
-Finest Hour
-FixEight
-Front Line
-Gain Ground
-Gang Busters
-Garyo Retsuden
-Guerrilla War
-Gun.Smoke
-Gundhara
-Gunforce - Battle Fire Engulfed Terror Island
-GunForce II
-Guwange
-Heated Barrel
-Heavy Barrel
-Ikari III - The Rescue
-Ikari Warriors
-Iron Horse
-J. J. Squawkers
-Jail Break
-Karnov
-Magical Cat Adventure
-Magician Lord
-Mercs
-Metal Slug - Super Vehicle-001
-Metal Slug 2 - Super Vehicle-001/II
-Metal Slug 3
-Metal Slug 4
-Metal Slug 5
-Metal Slug 5
-Metal Slug 6
-Metal Slug X - Super Vehicle-001
-Midnight Resistance
-Mirai Ninja
-Mister Viking
-Narc
-Ninja Commando
-Ninja-Kid II
-Ninja-kun: Adventure of Devil Castle
-Nitro Ball
-Out Zone
-Psycho-Nics Oscar
-Robocop
-Rohga Armor Force
-Rolling Thunder
-Rolling Thunder 2
-Rush'n Attack
-Rush'n Attack
-SAR: Search And Rescue
-SD Gundam Psycho Salamander no Kyoui
-SD Gundam Sangokushi Rainbow Tairiku Senki
-Sega Ninja
-Shadowland
-Shock Troopers
-Shock Troopers : 2nd Squad
-Sky Robo
-Sly Spy
-Sly Spy
-Soldier Girl Amazon
-Soldier of Light
-Son Son
-Spark Man
-Sunset Riders
-Sunset Riders
-Super Contra
-Super Ranger
-Surprise Attack
-Tazz-Mania
-The Real Ghostbusters
-Thunder Hoop
-Time Soldiers
-Toki
-Toki no Senshi: Chrono-Soldier
-Total Carnage
-Trick Trap
-Valkyrie no Densetsu
-Victory Road
-Wild West C.o.w.-boys Of Moo Mesa
-Willow
-Wiz
-Wonder Boy
-Wonder Boy III - Monster Lair
-Wonder Boy In Monster Land
-Xain'd Sleena
-Xenophobe
-Youjyuden
+arcade/actfancr    # Act-Fancer: Cybernetick Hyper Weapon
+arcade/aliens    # Aliens
+arcade/amazon    # Soldier Girl Amazon
+arcade/astorm    # Alien Storm
+arcade/asylum    # Asylum
+arcade/battlera    # Battle Rangers
+arcade/bayroute    # Bay Route
+arcade/biomtoy    # Biomechanical Toy
+arcade/bionicc    # Bionic Commando
+arcade/bonzeadv    # Bonze Adventure
+arcade/boomrang    # Boomer Rang'r
+arcade/bucky    # Bucky O'Hare
+arcade/bullet    # Bullet
+arcade/butasan    # Butasan - Pig's & Bomber's
+arcade/calibr50    # Caliber 50
+arcade/charlien    # Charlie Ninja
+arcade/chelnov    # Chelnov - Atomic Runner
+arcade/cninja    # Caveman Ninja
+arcade/commando    # Commando
+arcade/contra    # Contra
+arcade/contraj    # Contra
+arcade/cop01    # Cop 01
+arcade/crazyfgt    # Crazy Fight
+arcade/crimec    # Crime City
+arcade/cyberlip    # Cyber-Lip
+arcade/dassault    # Desert Assault
+arcade/demonwld    # Demon's World
+arcade/desertbr    # Desert Breaker
+arcade/devilw    # Devil World
+arcade/dmnfrnt    # Demon Front
+arcade/equites    # Equites
+arcade/eswat    # E-swat - Cyber Police
+arcade/extrmatn    # Extermination
+arcade/fantland    # Fantasy Land
+arcade/finehour    # Finest Hour
+arcade/fixeight    # FixEight
+arcade/frontlin    # Front Line
+arcade/garyoret    # Garyo Retsuden
+arcade/gberet    # Rush'n Attack
+arcade/gbusters    # Gang Busters
+arcade/gground    # Gain Ground
+arcade/ghostb    # The Real Ghostbusters
+arcade/grainbow    # SD Gundam Sangokushi Rainbow Tairiku Senki
+arcade/gundhara    # Gundhara
+arcade/gunforc2    # GunForce II
+arcade/gunforce    # Gunforce - Battle Fire Engulfed Terror Island
+arcade/gunsmoke    # Gun.Smoke
+arcade/guwange    # Guwange
+arcade/gwar    # Guerrilla War
+arcade/hbarrel    # Heavy Barrel
+arcade/heatbrl    # Heated Barrel
+arcade/ikari    # Ikari Warriors
+arcade/ikari3    # Ikari III - The Rescue
+arcade/ironhors    # Iron Horse
+arcade/jailbrek    # Jail Break
+arcade/jjsquawk    # J. J. Squawkers
+arcade/karnov    # Karnov
+arcade/maglord    # Magician Lord
+arcade/mcatadv    # Magical Cat Adventure
+arcade/mercs    # Mercs
+arcade/midres    # Midnight Resistance
+arcade/mirninja    # Mirai Ninja
+arcade/moomesa    # Wild West C.o.w.-boys Of Moo Mesa
+arcade/mrviking    # Mister Viking
+arcade/ms5pcb    # Metal Slug 5
+arcade/mslug    # Metal Slug - Super Vehicle-001
+arcade/mslug2    # Metal Slug 2 - Super Vehicle-001/II
+arcade/mslug3    # Metal Slug 3
+arcade/mslug3b6    # Metal Slug 6
+arcade/mslug4    # Metal Slug 4
+arcade/mslug5    # Metal Slug 5
+arcade/mslugx    # Metal Slug X - Super Vehicle-001
+arcade/narc    # Narc
+arcade/ncommand    # Ninja Commando
+arcade/ninjakd2    # Ninja-Kid II
+arcade/ninjakun    # Ninja-kun: Adventure of Devil Castle
+arcade/nitrobal    # Nitro Ball
+arcade/oscar    # Psycho-Nics Oscar
+arcade/outzone    # Out Zone
+arcade/robocop    # Robocop
+arcade/rohga    # Rohga Armor Force
+arcade/rthun2    # Rolling Thunder 2
+arcade/rthunder    # Rolling Thunder
+arcade/rushatck    # Rush'n Attack
+arcade/scontra    # Super Contra
+arcade/sdgndmps    # SD Gundam Psycho Salamander no Kyoui
+arcade/searchar    # SAR: Search And Rescue
+arcade/secretag    # Sly Spy
+arcade/seganinj    # Sega Ninja
+arcade/shadowld    # Shadowland
+arcade/shocktr2    # Shock Troopers : 2nd Squad
+arcade/shocktro    # Shock Troopers
+arcade/skyrobo    # Sky Robo
+arcade/slyspy    # Sly Spy
+arcade/solrwarr    # Soldier of Light
+arcade/sonson    # Son Son
+arcade/sparkman    # Spark Man
+arcade/sranger    # Super Ranger
+arcade/ssriders    # Sunset Riders
+arcade/ssridersubc    # Sunset Riders
+arcade/suratk    # Surprise Attack
+arcade/tazmania    # Tazz-Mania
+arcade/thndzone    # Desert Assault
+arcade/thoop    # Thunder Hoop
+arcade/timesold    # Time Soldiers
+arcade/toki    # Toki
+arcade/tokisens    # Toki no Senshi: Chrono-Soldier
+arcade/totcarn    # Total Carnage
+arcade/tricktrp    # Trick Trap
+arcade/valkyrie    # Valkyrie no Densetsu
+arcade/victroad    # Victory Road
+arcade/wb3    # Wonder Boy III - Monster Lair
+arcade/wbml    # Wonder Boy In Monster Land
+arcade/wboy    # Wonder Boy
+arcade/willow    # Willow
+arcade/wiz    # Wiz
+arcade/xenophob    # Xenophobe
+arcade/xsleena    # Xain'd Sleena
+arcade/youjyudn    # Youjyuden

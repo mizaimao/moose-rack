@@ -1,88 +1,88 @@
 # ★ Best of nes
 # 86 games, exported 2026-09-03 from RomM
-1943: The Battle of Midway
-Adventure Island II
-Batman: The Video Game
-Battletoads
-Bionic Commando
-Blades of Steel
-Blaster Master
-Bubble Bobble
-Castlevania
-Castlevania II: Simon's Quest
-Castlevania III: Dracula's Curse
-Cobra Triangle
-Contra
-Crystalis
-Double Dragon
-Double Dragon II: The Revenge
-Double Dribble
-Dr. Mario
-Dragon Warrior III
-Dragon Warrior IV
-Duck Hunt
-Excitebike
-Faxanadu
-Fester's Quest
-Final Fantasy
-Ghosts 'n Goblins
-Golgo 13: Top Secret Episode
-Gradius
-Ice Climber
-Ice Hockey
-Ikari Warriors
-Ironsword: Wizards & Warriors II
-Jackal
-Kid Icarus
-Kirby's Adventure
-Kung Fu
-Legendary Wings
-Life Force
-Little Nemo: The Dream Master
-Little Samson
-Lode Runner
-Maniac Mansion
-Mega Man
-Mega Man 2
-Mega Man 3
-Mega Man 4
-Mega Man 5
-Mega Man 6
-Metal Gear
-Metroid
-Micro Machines
-Mighty Final Fight
-Ninja Gaiden
-Ninja Gaiden II: The Dark Sword of Chaos
-Power Blade
-Pro Wrestling
-Punch-Out!!
-R.B.I. Baseball
-R.C. Pro-Am
-Rad Racer
-Ring King
-River City Ransom
-Rush'n Attack
-Rygar
-Section-Z
-Shadowgate
-Snake Rattle 'n' Roll
-Spy Hunter
-StarTropics
-Stinger
-Super C
-Super Mario Bros.
-Super Mario Bros. 2
-Super Mario Bros. 3
-Tecmo Super Bowl
-Teenage Mutant Ninja Turtles II: The Arcade Game
-Teenage Mutant Ninja Turtles III: The Manhattan Project
-Tetris
-The Goonies II
-The Guardian Legend
-The Legend of Zelda
-Vice: Project Doom
-Wizards & Warriors
-Zanac
-Zelda II: The Adventure of Link
-Zoda's Revenge: StarTropics II
+nes/1943 - The Battle of Midway (USA)    # 1943: The Battle of Midway
+nes/Adventure Island II (USA)    # Adventure Island II
+nes/Batman - The Video Game (USA)    # Batman: The Video Game
+nes/Battletoads (USA)    # Battletoads
+nes/Bionic Commando (USA)    # Bionic Commando
+nes/Blades of Steel (USA)    # Blades of Steel
+nes/Blaster Master (USA)    # Blaster Master
+nes/Bubble Bobble (USA)    # Bubble Bobble
+nes/Castlevania (USA) (Rev 1)    # Castlevania
+nes/Castlevania II - Simon's Quest (USA)    # Castlevania II: Simon's Quest
+nes/Castlevania III - Dracula's Curse (USA)    # Castlevania III: Dracula's Curse
+nes/Cobra Triangle (USA)    # Cobra Triangle
+nes/Contra (USA)    # Contra
+nes/Crystalis (U) [a2]    # Crystalis
+nes/Double Dragon (USA)    # Double Dragon
+nes/Double Dragon II - The Revenge (USA) (Rev 1)    # Double Dragon II: The Revenge
+nes/Double Dribble (USA) (Rev 1)    # Double Dribble
+nes/Dr Mario (JU) [a2]    # Dr. Mario
+nes/Dragon Warrior III (USA)    # Dragon Warrior III
+nes/Dragon Warrior IV (USA)    # Dragon Warrior IV
+nes/Duck Hunt (World)    # Duck Hunt
+nes/Excitebike (Japan, USA) (En)    # Excitebike
+nes/Faxanadu (USA)    # Faxanadu
+nes/Fester's Quest (USA)    # Fester's Quest
+nes/Final Fantasy (USA)    # Final Fantasy
+nes/Ghosts'n Goblins (USA)    # Ghosts 'n Goblins
+nes/Golgo 13 - Top Secret Episode (USA)    # Golgo 13: Top Secret Episode
+nes/Goonies II, The (USA)    # The Goonies II
+nes/Gradius (USA)    # Gradius
+nes/Guardian Legend, The (USA)    # The Guardian Legend
+nes/Ice Climber (USA, Europe, Asia) (En)    # Ice Climber
+nes/Ice Hockey (USA)    # Ice Hockey
+nes/Ikari Warriors (USA) (Rev 1)    # Ikari Warriors
+nes/IronSword - Wizards & Warriors II (USA)    # Ironsword: Wizards & Warriors II
+nes/Jackal (U) [a1]    # Jackal
+nes/Kid Icarus (USA, Europe)    # Kid Icarus
+nes/Kirby's Adventure (USA) (Rev 1)    # Kirby's Adventure
+nes/Kung Fu (Japan, USA) (En)    # Kung Fu
+nes/Legend of Zelda, The (USA) (Rev 1)    # The Legend of Zelda
+nes/Legendary Wings (USA)    # Legendary Wings
+nes/Life Force (USA)    # Life Force
+nes/Little Nemo - The Dream Master (USA)    # Little Nemo: The Dream Master
+nes/Little Samson (USA)    # Little Samson
+nes/Lode Runner (USA)    # Lode Runner
+nes/Maniac Mansion (USA)    # Maniac Mansion
+nes/Mega Man (USA)    # Mega Man
+nes/Mega Man 2 (USA)    # Mega Man 2
+nes/Mega Man 3 (USA)    # Mega Man 3
+nes/Mega Man 4 (USA) (Rev 1)    # Mega Man 4
+nes/Mega Man 5 (USA)    # Mega Man 5
+nes/Mega Man 6 (USA)    # Mega Man 6
+nes/Metal Gear (USA)    # Metal Gear
+nes/Metroid (USA)    # Metroid
+nes_unlicensed/Micro Machines (USA) (v1.1) (Unl)    # Micro Machines
+nes/Mighty Final Fight (USA)    # Mighty Final Fight
+nes/Ninja Gaiden (USA)    # Ninja Gaiden
+nes/Ninja Gaiden II - The Dark Sword of Chaos (USA)    # Ninja Gaiden II: The Dark Sword of Chaos
+nes/Power Blade (USA)    # Power Blade
+nes/Pro Wrestling (USA) (Rev 1)    # Pro Wrestling
+nes/Punch-Out!! (USA)    # Punch-Out!!
+nes/R.B.I. Baseball (USA)    # R.B.I. Baseball
+nes/R.C. Pro-Am (USA) (Rev 1)    # R.C. Pro-Am
+nes/Rad Racer (USA)    # Rad Racer
+nes/Ring King (USA)    # Ring King
+nes/River City Ransom (USA)    # River City Ransom
+nes/Rush'n Attack (USA)    # Rush'n Attack
+nes/Rygar (USA)    # Rygar
+nes/Section-Z (USA)    # Section-Z
+nes/Shadowgate (USA)    # Shadowgate
+nes/Snake Rattle n Roll (USA)    # Snake Rattle 'n' Roll
+nes/Spy Hunter (USA)    # Spy Hunter
+nes/StarTropics (USA)    # StarTropics
+nes/Stinger (USA)    # Stinger
+nes/Super C (USA)    # Super C
+nes/Super Mario Bros. (World)    # Super Mario Bros.
+nes/Super Mario Bros. 2 (USA)    # Super Mario Bros. 2
+nes/Super Mario Bros. 3 (USA) (Rev 1)    # Super Mario Bros. 3
+nes/Tecmo Super Bowl (USA)    # Tecmo Super Bowl
+nes/Teenage Mutant Ninja Turtles II - The Arcade Game (USA)    # Teenage Mutant Ninja Turtles II: The Arcade Game
+nes/Teenage Mutant Ninja Turtles III - The Manhattan Project (USA)    # Teenage Mutant Ninja Turtles III: The Manhattan Project
+nes/Tetris (USA)    # Tetris
+nes/Vice - Project Doom (USA)    # Vice: Project Doom
+nes/Wizards & Warriors (USA)    # Wizards & Warriors
+nes/Zanac (USA)    # Zanac
+nes/Zelda II - The Adventure of Link (USA)    # Zelda II: The Adventure of Link
+nes/Zoda's Revenge - StarTropics II (USA)    # Zoda's Revenge: StarTropics II

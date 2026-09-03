@@ -29,7 +29,8 @@ these look like to-do lists and are not.
 | [one-core-two-frontends.md](one-core-two-frontends.md) | **Current.** The shape the project settled into once the answer became "Flip **and** Thor" |
 | [memory-footprint.md](memory-footprint.md) | **Measurement.** What the app weighs and why — 192 MB, and 106 MB of it is WebKit |
 | [fast-launch.md](fast-launch.md) | **Measurement + work in progress.** Why a game took 4.26 s to start, and the launcher written to fix it |
-| [library-service.md](library-service.md) | **Design, not built.** Replacing RomM — why it is the wrong shape for this library, and the 24 method/path pairs a drop-in has to answer |
+| [service-api.md](service-api.md) | **Current, built and running.** The service that replaces RomM — its routes, the rules for adding one, and the traps that each cost something |
+| [library-service.md](library-service.md) | **Design, now largely built —** see service-api.md. Replacing RomM — why it is the wrong shape for this library, and the 24 method/path pairs a drop-in has to answer |
 | [not-built.md](not-built.md) | **Designed, not built.** The arcade screensaver, the cartridge shelf, and the features a retro frontend normally has and this one does not. A menu, not a queue |
 
 ## The library

@@ -1,92 +1,92 @@
 # Arcade Light Gun
 # 90 games, exported 2026-09-03 from RomM
-Alien 3: The Gun
-Alligator Hunt
-Alligator Hunt
-Bang!
-Bank Panic
-Battlantis
-Beast Busters
-Blasted
-Blood Bros.
-Bradley Trainer
-Bubble Trouble
-Buster Bros.
-Buster Bros.
-Cabal
-Cheyenne
-Chiller
-Choky! Choky!
-Clay Pigeon
-Combat
-Combat Hawk
-Crackshot
-Crossbow
-Cyber Tank
-Cycle Shooting
-Dead Angle
-Deer Hunting Usa V4.3
-Devastators
-Dragon Gun
-Dynamite Duke
-Empire City: 1931
-Exterminator
-G.I. Joe
-Ganbare! Marine Kun
-Genix Family
-Golly! Ghost!
-Gridlee
-Gunbuster
-Hard Times
-Hit 'n Miss
-Hole Land
-Jurassic Park
-Kamniari Kishi Riot
-Laser Ghost
-Last Survivor
-Lethal Enforcers
-Line Of Fire / Bakudan Yarou
-Lucky Boom
-Mechanized Attack
-Mighty! Pang
-Mobile Suit Gundam Final Shooting
-Monsters World
-N.y. Captor
-NAM-1975
-One Shot One Kill
-Operation Thunderbolt
-Operation Wolf
-Operation Wolf 3
-Pang! 3
-Pirates
-Point Blank
-Pooyan
-Rail Chase
-Rambo III
-Revolution X
-Sasuke Vs. Commander
-Senjyo
-Shoot Out
-Shooting Master
-Space Gun
-Spinal Breakers
-Steel Gunner
-Steel Gunner 2
-Super Pang
-SWAT Police
-Target Hits
-Terminator 2 - Judgment Day
-The Double Dynamites
-The Tin Star
-Tornado
-Trophy Hunting - Bear & Moose V1.0
-Turkey Hunting Usa V1.0
-Under Fire
-Wanted
-Who Dunit
-Wild Pilot
-Wing Shooting Championship V2.00
-Zero Point
-Zero Point 2
-Zombie Raid
-Zunzunkyou no Yabou
+arcade/alien3    # Alien 3: The Gun
+arcade/aligator    # Alligator Hunt
+arcade/aligatorun    # Alligator Hunt
+arcade/bang    # Bang!
+arcade/bankp    # Bank Panic
+arcade/battlnts    # Battlantis
+arcade/bbros    # Buster Bros.
+arcade/bbusters    # Beast Busters
+arcade/blasted    # Blasted
+arcade/bloodbro    # Blood Bros.
+arcade/bradley    # Bradley Trainer
+arcade/bubbletr    # Bubble Trouble
+arcade/cabal    # Cabal
+arcade/cheyenne    # Cheyenne
+arcade/chiller    # Chiller
+arcade/chokchok    # Choky! Choky!
+arcade/claypign    # Clay Pigeon
+arcade/combat    # Combat
+arcade/combh    # Combat Hawk
+arcade/cracksht    # Crackshot
+arcade/crossbow    # Crossbow
+arcade/ctornado    # Tornado
+arcade/cybertnk    # Cyber Tank
+arcade/cyclshtg    # Cycle Shooting
+arcade/dbldynj    # The Double Dynamites
+arcade/deadang    # Dead Angle
+arcade/deerhunt    # Deer Hunting Usa V4.3
+arcade/devstors    # Devastators
+arcade/dragngun    # Dragon Gun
+arcade/dynduke    # Dynamite Duke
+arcade/empcity    # Empire City: 1931
+arcade/exterm    # Exterminator
+arcade/ganbare    # Ganbare! Marine Kun
+arcade/gdfs    # Mobile Suit Gundam Final Shooting
+arcade/genix    # Genix Family
+arcade/gijoe    # G.I. Joe
+arcade/gollygho    # Golly! Ghost!
+arcade/gridlee    # Gridlee
+arcade/gunbustr    # Gunbuster
+arcade/hitnmiss    # Hit 'n Miss
+arcade/holeland    # Hole Land
+arcade/hrdtimes    # Hard Times
+arcade/jpark    # Jurassic Park
+arcade/lastsurv    # Last Survivor
+arcade/lethalen    # Lethal Enforcers
+arcade/lghost    # Laser Ghost
+arcade/loffire    # Line Of Fire / Bakudan Yarou
+arcade/luckboom    # Lucky Boom
+arcade/mechatt    # Mechanized Attack
+arcade/mpang    # Mighty! Pang
+arcade/mstworld    # Monsters World
+arcade/nam1975    # NAM-1975
+arcade/nycaptor    # N.y. Captor
+arcade/oneshot    # One Shot One Kill
+arcade/opwolf    # Operation Wolf
+arcade/opwolf3    # Operation Wolf 3
+arcade/othunder    # Operation Thunderbolt
+arcade/pang    # Buster Bros.
+arcade/pang3    # Pang! 3
+arcade/pirates    # Pirates
+arcade/pooyan    # Pooyan
+arcade/ptblank    # Point Blank
+arcade/rambo3    # Rambo III
+arcade/rchase    # Rail Chase
+arcade/revx    # Revolution X
+arcade/riot    # Kamniari Kishi Riot
+arcade/sasuke    # Sasuke Vs. Commander
+arcade/senjyo    # Senjyo
+arcade/sgunner    # Steel Gunner
+arcade/sgunner2    # Steel Gunner 2
+arcade/shootout    # Shoot Out
+arcade/shtngmst    # Shooting Master
+arcade/spacegun    # Space Gun
+arcade/spang    # Super Pang
+arcade/spinlbrk    # Spinal Breakers
+arcade/swatpolc    # SWAT Police
+arcade/targeth    # Target Hits
+arcade/term2    # Terminator 2 - Judgment Day
+arcade/tinstar    # The Tin Star
+arcade/trophyh    # Trophy Hunting - Bear & Moose V1.0
+arcade/turkhunt    # Turkey Hunting Usa V1.0
+arcade/undrfire    # Under Fire
+arcade/wanted    # Wanted
+arcade/whodunit    # Who Dunit
+arcade/wildplt    # Wild Pilot
+arcade/wschamp    # Wing Shooting Championship V2.00
+arcade/zeropnt    # Zero Point
+arcade/zeropnt2    # Zero Point 2
+arcade/zombraid    # Zombie Raid
+arcade/zunkyou    # Zunzunkyou no Yabou

@@ -1,65 +1,65 @@
 # ★ Best of megadrive
 # 63 games, exported 2026-09-03 from RomM
-Alex Kidd in the Enchanted Castle
-Alien Soldier
-Alisia Dragoon
-Altered Beast
-Beyond Oasis
-Castle of Illusion Starring Mickey Mouse
-Castlevania: Bloodlines
-Columns
-Comix Zone
-Contra: Hard Corps
-Crusader of Centy
-Dr. Robotnik's Mean Bean Machine
-Dynamite Headdy
-Earthworm Jim
-Ecco the Dolphin
-Gain Ground
-Ghouls 'n Ghosts
-Golden Axe
-Golden Axe II
-Gunstar Heroes
-Herzog Zwei
-James Pond 2: Codename - RoboCod
-John Madden Football '93
-Jungle Strike
-Kid Chameleon
-Mega Bomberman
-Michael Jackson's Moonwalker
-Mortal Kombat II
-MUSHA - Metallic Uniframe Super Hybrid Armor
-NBA Jam
-NHL '94
-Phantasy Star II
-Phantasy Star IV
-QuackShot Starring Donald Duck
-Ranger X
-Ristar
-Road Rash
-Rocket Knight Adventures
-Samurai Shodown
-Shadow Dancer: The Secret of Shinobi
-Shadowrun
-Shining in the Darkness
-Shinobi III: Return of the Ninja Master
-Sonic & Knuckles
-Sonic the Hedgehog
-Sonic the Hedgehog 2
-Sonic the Hedgehog 3
-Steel Empire
-Streets of Rage 2
-Strider
-Super Hang-On
-Sword of Vermilion
-Teenage Mutant Ninja Turtles: The HyperStone Heist
-The Revenge of Shinobi
-Thunder Force IV
-ToeJam & Earl
-ToeJam & Earl in Panic on Funkotron
-VectorMan
-Virtua Racing
-Warsong
-Wonder Boy in Monster World
-Xeno Crisis
-Zero Wing
+megadrive/Alex Kidd in the Enchanted Castle (USA)    # Alex Kidd in the Enchanted Castle
+megadrive/Alien Soldier (Europe)    # Alien Soldier
+megadrive/Alisia Dragoon (USA)    # Alisia Dragoon
+megadrive/Altered Beast (USA, Europe) (Rev 2)    # Altered Beast
+megadrive/Beyond Oasis (USA)    # Beyond Oasis
+megadrive/Castle of Illusion Starring Mickey Mouse (USA, Europe)    # Castle of Illusion Starring Mickey Mouse
+megadrive/Castlevania - Bloodlines (USA)    # Castlevania: Bloodlines
+megadrive/Columns (Japan) (En)    # Columns
+megadrive/Comix Zone (USA)    # Comix Zone
+megadrive/Contra - Hard Corps (USA, Korea) (En)    # Contra: Hard Corps
+megadrive/Crusader of Centy (USA)    # Crusader of Centy
+megadrive/Dr. Robotnik's Mean Bean Machine (USA)    # Dr. Robotnik's Mean Bean Machine
+megadrive/Dynamite Headdy (USA, Europe)    # Dynamite Headdy
+megadrive/Earthworm Jim (USA)    # Earthworm Jim
+megadrive/Ecco the Dolphin (USA, Europe, Korea) (En)    # Ecco the Dolphin
+megadrive/Gain Ground (USA)    # Gain Ground
+megadrive/Ghouls'n Ghosts (World) (En,Ja) (Rev A)    # Ghouls 'n Ghosts
+megadrive/Golden Axe (World) (Rev A)    # Golden Axe
+megadrive/Golden Axe II (World)    # Golden Axe II
+megadrive/Gunstar Heroes (Japan)    # Gunstar Heroes
+megadrive/Herzog Zwei (Japan)    # Herzog Zwei
+megadrive/James Pond II - Codename - Robocod (USA, Europe)    # James Pond 2: Codename - RoboCod
+megadrive/John Madden Football '93 (USA, Europe)    # John Madden Football '93
+megadrive/Jungle Strike (USA, Europe)    # Jungle Strike
+megadrive/Kid Chameleon (USA, Europe)    # Kid Chameleon
+megadrive/Mega Bomberman (USA)    # Mega Bomberman
+megadrive/Michael Jackson's Moonwalker (Japan, USA) (En)    # Michael Jackson's Moonwalker
+megadrive/Mortal Kombat II (World)    # Mortal Kombat II
+megadrive/MUSHA - Metallic Uniframe Super Hybrid Armor (USA)    # MUSHA - Metallic Uniframe Super Hybrid Armor
+megadrive/NBA Jam (USA, Europe)    # NBA Jam
+megadrive/NHL '94 (USA, Europe)    # NHL '94
+megadrive/Phantasy Star II (USA, Europe)    # Phantasy Star II
+megadrive/Phantasy Star IV (USA)    # Phantasy Star IV
+megadrive/QuackShot Starring Donald Duck (World) (En,Ja)    # QuackShot Starring Donald Duck
+megadrive/Ranger X (USA)    # Ranger X
+megadrive/Revenge of Shinobi, The (USA, Europe) (Rev B)    # The Revenge of Shinobi
+megadrive/Ristar (USA, Europe)    # Ristar
+megadrive/Road Rash (USA, Europe)    # Road Rash
+megadrive/Rocket Knight Adventures (Europe)    # Rocket Knight Adventures
+megadrive/Samurai Shodown (Europe)    # Samurai Shodown
+megadrive/Shadow Dancer - The Secret of Shinobi (World)    # Shadow Dancer: The Secret of Shinobi
+megadrive/Shadowrun (USA)    # Shadowrun
+megadrive/Shining in the Darkness (USA, Europe)    # Shining in the Darkness
+megadrive/Shinobi III - Return of the Ninja Master (USA)    # Shinobi III: Return of the Ninja Master
+megadrive/Sonic & Knuckles (World)    # Sonic & Knuckles
+megadrive/Sonic The Hedgehog (USA, Europe)    # Sonic the Hedgehog
+megadrive/Sonic The Hedgehog 2 (World) (Rev A)    # Sonic the Hedgehog 2
+megadrive/Sonic The Hedgehog 3 (USA)    # Sonic the Hedgehog 3
+megadrive/Steel Empire (USA)    # Steel Empire
+megadrive/Streets of Rage 2 (USA)    # Streets of Rage 2
+megadrive/Strider (USA, Europe)    # Strider
+megadrive/Super Hang-On (Europe) (En,Ja) (Rev A)    # Super Hang-On
+megadrive/Sword of Vermilion (USA, Europe)    # Sword of Vermilion
+megadrive/Teenage Mutant Ninja Turtles - The Hyperstone Heist (USA)    # Teenage Mutant Ninja Turtles: The HyperStone Heist
+megadrive/Thunder Force IV (Europe)    # Thunder Force IV
+megadrive/ToeJam & Earl (Japan, Europe) (En) (Rev A)    # ToeJam & Earl
+megadrive/ToeJam & Earl in Panic on Funkotron (USA)    # ToeJam & Earl in Panic on Funkotron
+megadrive/Vectorman (USA, Europe) (Beta 2)    # VectorMan
+megadrive/Virtua Racing (USA)    # Virtua Racing
+megadrive/Warsong (USA)    # Warsong
+megadrive/Wonder Boy in Monster World (USA, Europe)    # Wonder Boy in Monster World
+megadrive/Xeno Crisis (World) (En,Ja,Fr,De,Es,It,Nl,Pt) (Unl)    # Xeno Crisis
+megadrive/Zero Wing (Europe)    # Zero Wing
