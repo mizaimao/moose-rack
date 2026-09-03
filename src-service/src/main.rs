@@ -54,6 +54,9 @@ struct Args {
     /// Address to bind. Use this to restrict the interface as well as the port.
     #[arg(long, env = "MOOSE_SERVICE_BIND", default_value = "0.0.0.0:8001")]
     bind: String,
+    /// inventory.db, for the hashes. Without it downloads are size-checked only.
+    #[arg(long, env = "MOOSE_SERVICE_INVENTORY")]
+    inventory: Option<String>,
     /// Port only, overriding whatever `--bind` says. The common case is wanting
     /// a different port on the same interface, and rewriting the whole address
     /// to do that is a good way to bind to localhost by accident.
@@ -68,6 +71,14 @@ struct Args {
 /// than an Arc.
 struct Library {
     games: Vec<esde::Game>,
+    /// `(system, relative path)` -> `(md5, sha1, crc32)`, out of inventory.db.
+    ///
+    /// The client already knows how to verify a download — `verify()` in
+    /// download.rs hashes what it got and compares. It falls back to a size
+    /// check only when the server publishes nothing, which is what made the
+    /// first transfers here unverified. The hashes were computed once over
+    /// 1.76 TB; not serving them was the whole gap.
+    hashes: std::collections::HashMap<(String, String), (Option<String>, Option<String>, Option<String>)>,
 }
 
 #[derive(Serialize)]
@@ -111,6 +122,12 @@ struct Platform {
 #[derive(Serialize)]
 struct Rom {
     id: i64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    md5_hash: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    sha1_hash: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    crc_hash: Option<String>,
     name: Option<String>,
     fs_name: String,
     missing_from_fs: bool,
@@ -142,9 +159,16 @@ fn default_limit() -> usize {
 ///
 /// One-based because zero is what a missing field deserializes to, and a game
 /// that silently becomes "game 0" is the kind of bug that takes an evening.
-fn to_rom(i: usize, g: &esde::Game) -> Rom {
+fn to_rom(i: usize, g: &esde::Game, lib: &Library) -> Rom {
+    // The dump's hash, not the container's: the client hashes the file it just
+    // wrote, which is the zip, so the container hash is the one that compares.
+    let key = (g.system.clone(), rel_of(g));
+    let (md5, sha1, crc) = lib.hashes.get(&key).cloned().unwrap_or((None, None, None));
     Rom {
         id: i as i64 + 1,
+        md5_hash: md5,
+        sha1_hash: sha1,
+        crc_hash: crc,
         name: Some(g.name.clone()),
         fs_name: g.fs_name.clone(),
         // The scan only reports files it found, so anything listed exists. RomM
@@ -154,6 +178,44 @@ fn to_rom(i: usize, g: &esde::Game) -> Rom {
         platform_fs_slug: Some(g.platform_slug.clone()),
         summary: g.summary.clone(),
     }
+}
+
+/// The game's path relative to its system directory, which is how inventory.db
+/// keys its rows.
+fn rel_of(g: &esde::Game) -> String {
+    if g.rel_dir.is_empty() {
+        g.fs_name.clone()
+    } else {
+        format!("{}/{}", g.rel_dir, g.fs_name)
+    }
+}
+
+/// Load `(system, path) -> hashes` out of inventory.db.
+///
+/// Container hashes, because the client hashes the file it wrote. Missing rows
+/// are not an error: a game the inventory has not seen simply gets no hash and
+/// falls back to a size check, which is what happens today for everything.
+fn load_hashes(
+    path: &str,
+) -> Result<std::collections::HashMap<(String, String), (Option<String>, Option<String>, Option<String>)>>
+{
+    let conn = rusqlite::Connection::open(path)?;
+    let mut out = std::collections::HashMap::new();
+    let mut stmt = conn.prepare(
+        "SELECT system, path, container_md5, container_sha1, container_crc32 \
+         FROM files WHERE status = 'ok'",
+    )?;
+    let rows = stmt.query_map([], |r| {
+        Ok((
+            (r.get::<_, String>(0)?, r.get::<_, String>(1)?),
+            (r.get(2)?, r.get(3)?, r.get(4)?),
+        ))
+    })?;
+    for row in rows {
+        let (k, v) = row?;
+        out.insert(k, v);
+    }
+    Ok(out)
 }
 
 async fn heartbeat() -> Json<Heartbeat> {
@@ -166,16 +228,18 @@ async fn heartbeat() -> Json<Heartbeat> {
     })
 }
 
-async fn config() -> Json<ServerConfig> {
+async fn config(State(lib): State<Arc<Library>>) -> Json<ServerConfig> {
     Json(ServerConfig {
         // Nothing is excluded here: the tree is the library, and a file that
         // should not be in it should not be on disk. RomM needed these because
         // it scanned directories it did not own.
         files: vec![],
         exts: vec![],
-        // Hashes come from inventory.db, computed once. The service does not
-        // rehash on request and must not claim it can.
-        skip_hash: true,
+        // True only when no inventory was loaded. The client reads this as
+        // "size checks are all you get" and says so out loud, which is the
+        // right thing for it to do -- but it should only hear it when it is
+        // true, or a corrupt transfer goes unnoticed.
+        skip_hash: lib.hashes.is_empty(),
     })
 }
 
@@ -214,7 +278,7 @@ async fn roms(State(lib): State<Arc<Library>>, Query(p): Query<Page>) -> Json<Ro
         .enumerate()
         .skip(p.offset)
         .take(p.limit)
-        .map(|(i, g)| to_rom(i, g))
+        .map(|(i, g)| to_rom(i, g, &lib))
         .collect();
     Json(RomPage {
         items,
@@ -278,7 +342,7 @@ async fn rom_by_id(
     let idx = usize::try_from(id - 1).map_err(|_| axum::http::StatusCode::NOT_FOUND)?;
     lib.games
         .get(idx)
-        .map(|g| Json(to_rom(idx, g)))
+        .map(|g| Json(to_rom(idx, g, &lib)))
         .ok_or(axum::http::StatusCode::NOT_FOUND)
 }
 
@@ -308,7 +372,25 @@ async fn main() -> Result<()> {
     }
 
     let media_dir = layout.media.clone();
-    let lib = Arc::new(Library { games });
+    let hashes = match args.inventory.as_deref() {
+        Some(p) => match load_hashes(p) {
+            Ok(h) => {
+                println!("hashes     {} rows from {p}", h.len());
+                h
+            }
+            // Not fatal: the library still serves, downloads just fall back to
+            // a size check. Saying so beats refusing to start.
+            Err(e) => {
+                eprintln!("hashes     could not read {p}: {e} -- size checks only");
+                Default::default()
+            }
+        },
+        None => {
+            println!("hashes     none (--inventory not given) -- size checks only");
+            Default::default()
+        }
+    };
+    let lib = Arc::new(Library { games, hashes });
 
     let app = Router::new()
         .route("/api/heartbeat", get(heartbeat))
