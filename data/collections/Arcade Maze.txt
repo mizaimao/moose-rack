@@ -1,201 +1,201 @@
 # Arcade Maze
 # 199 games, exported 2026-09-03 from RomM
-'96 Flag Rally
-005
-600
-Action Hollywood
-Agent Super Bond
-Ali Baba And 40 Thieves
-Alien Arena
-Alien Syndrome
-Amidar
-Anteater
-Armored Car
-Atomic Punk
-BanBam
-Berzerk
-Blasto
-Blockade
-Blue Print
-Borench
-Botanic
-Boulder Dash
-Boulder Dash / Boulder Dash Part 2
-Bubbles
-Burglar X
-Calipso
-Calorie Kun Vs Moguranian
-Cavelon
-Changes
-Cheese Chase
-Comotion
-Counter Run
-Counter Run
-Crack Down
-Crazy Balloon
-Crazy War
-Crystal Castles
-Dacholer
-Dangerous Dungeons
-Dark Seal
-Devil Fish
-Diamond Run
-Dig Dug
-Dig Dug II
-Digger Man
-Dingo
-Disco No.1
-Do! Run Run
-Dommy
-Dorachan
-Dorodon
-Dottori Kun
-Eggor
-Escape From The Planet Of The Robot Monsters
-Exvania
-Eyes
-Fantasy
-Fast Lane
-Fire Ball
-Freeze
-Frenzy
-Frisky Tom
-Frogger
-Gauntlet
-Gauntlet
-Gauntlet 2
-Gauntlet II
-Go Go! Mile Smile
-Grobda
-Guzzler
-Head On
-Heiankyo Alien
-Hell Out
-Hero
-Hot Shocker
-Hustle
-Hyper Pacman
-I'm Sorry
-Igmo
-Ikki
-Intrepid
-Iron Fortress
-Joinem
-Jolly Jogger
-Journey
-Jr. Pac-Man
-Jungler
-Kamikaze Cabbie
-Kick Boy
-Kid No Hore Hore Daisakusen
-Knightmare
-Kram
-Lady Bug
-Lady Frog
-Light Bringer
-Lock 'n' Chase
-Lock'n'Chase (DECO Cassette)
-Lost Tomb
-Lover Boy
-Macho Mouse
-Mad Donna
-Magical Crystals
-Make Trax
-Marchen Maze
-Marvin's Maze
-Maze Invaders
-Maze Of Flott
-Merlin's Money Maze
-Michael Jackson's Moonwalker
-Mikie
-Minesweeper
-Mogu Chan
-Money Money
-Mr. Do!
-Mr. Kicker
-Mr. TNT
-Ms. Pac-Man
-Mustache Boy
-Mysterious Stones - Dr. John's Adventure
-NATO Defense
-Naughty Boy
-Neo Bomberman
-Neo Mr. Do!
-Net Wars
-New Atomic Punk - Global Quest
-New Rally X
-New Sinbad 7
-Nibbler
-Pac & Pal
-Pac-Man
-Pac-man Plus
-Pac-Mania
-Pacman Club / Club Lambada
-Pass
-Pengo
-Performan
-Pirate Ship Higemaru
-Pop Flamer
-Power Surge
-Puck Man
-Pushman
-Quartet
-Quartet
-Raiders5
-Raimais
-Rally X
-Reactor
-Rock Duck
-Rock'n Rage
-Rompers
-Rootin' Tootin' / La-pa-pa
-Round-up
-Route 16
-Rumba Lumber
-Safari Rally
-Scrambled Egg
-Sel Feena
-Shackled
-Shocking
-Snapper
-Snezhnaja Koroleva
-Solar Fox
-Spatter
-Steel Force
-Streaking
-Super Locomotive
-Super Pac-Man
-Super Toffy
-Tank Busters
-Tank Force
-Taxi Driver
-The Electric Yo-Yo
-The Hand
-The Irritating Maze
-The Pit
-The Return of Ishtar
-The Tower of Druaga
-Thief
-Time Tunnel
-Tinkle Pit
-Toffy
-Touche Me
-Toypop
-Treasure Island
-Triple Punch
-Trog
-Tutankham
-Twin Brats
-Twinkle
-Tylz
-UFO Senshi Yoko-chan
-Uncle Poo
-Up'n Down
-Van-Van Car
-Vs. Battle City
-Wiping
-Wit's
-Xybots
-Zeroize
-Zig Zag
-Zzyzzyxx
+arcade/005
+arcade/actionhw    # Action Hollywood
+arcade/alibaba    # Ali Baba And 40 Thieves
+arcade/alienar    # Alien Arena
+arcade/aliensyn    # Alien Syndrome
+arcade/amidar    # Amidar
+arcade/anteater    # Anteater
+arcade/armorcar    # Armored Car
+arcade/banbam    # BanBam
+arcade/bbmanw    # New Atomic Punk - Global Quest
+arcade/berzerk    # Berzerk
+arcade/blasto    # Blasto
+arcade/blockade    # Blockade
+arcade/blueprnt    # Blue Print
+arcade/borench    # Borench
+arcade/botanic    # Botanic
+arcade/bouldash    # Boulder Dash / Boulder Dash Part 2
+arcade/btlecity    # Vs. Battle City
+arcade/bubbles    # Bubbles
+arcade/burglarx    # Burglar X
+arcade/calipso    # Calipso
+arcade/calorie    # Calorie Kun Vs Moguranian
+arcade/cavelon    # Cavelon
+arcade/cbdash    # Boulder Dash
+arcade/ccastles    # Crystal Castles
+arcade/changes    # Changes
+arcade/cheesech    # Cheese Chase
+arcade/clapapa    # Rootin' Tootin' / La-pa-pa
+arcade/clocknch    # Lock'n'Chase (DECO Cassette)
+arcade/clubpacm    # Pacman Club / Club Lambada
+arcade/comotion    # Comotion
+arcade/countrun    # Counter Run
+arcade/countrunb    # Counter Run
+arcade/crazywar    # Crazy War
+arcade/crbaloon    # Crazy Balloon
+arcade/crkdown    # Crack Down
+arcade/crush    # Make Trax
+arcade/ctisland    # Treasure Island
+arcade/czeroize    # Zeroize
+arcade/dacholer    # Dacholer
+arcade/darkseal    # Dark Seal
+arcade/ddungeon    # Dangerous Dungeons
+arcade/devilfsh    # Devil Fish
+arcade/diamond    # Diamond Run
+arcade/digdug    # Dig Dug
+arcade/digdug2    # Dig Dug II
+arcade/diggerma    # Digger Man
+arcade/dingo    # Dingo
+arcade/disco    # Disco No.1
+arcade/dommy    # Dommy
+arcade/dorachan    # Dorachan
+arcade/dorodon    # Dorodon
+arcade/dorunrun    # Do! Run Run
+arcade/dotrikun    # Dottori Kun
+arcade/dynablst    # Atomic Punk
+arcade/eggor    # Eggor
+arcade/elecyoyo    # The Electric Yo-Yo
+arcade/eprom    # Escape From The Planet Of The Robot Monsters
+arcade/exvania    # Exvania
+arcade/eyes    # Eyes
+arcade/fantasyu    # Fantasy
+arcade/fastlane    # Fast Lane
+arcade/fball    # Fire Ball
+arcade/flagrall    # '96 Flag Rally
+arcade/freeze    # Freeze
+arcade/frenzy    # Frenzy
+arcade/friskyt    # Frisky Tom
+arcade/frogger    # Frogger
+arcade/gaunt2    # Gauntlet 2
+arcade/gaunt22p    # Gauntlet II
+arcade/gauntlet    # Gauntlet
+arcade/gauntlet2p    # Gauntlet
+arcade/gogomile    # Go Go! Mile Smile
+arcade/grobda    # Grobda
+arcade/guzzler    # Guzzler
+arcade/headon    # Head On
+arcade/heiankyo    # Heiankyo Alien
+arcade/hero    # Hero
+arcade/higemaru    # Pirate Ship Higemaru
+arcade/horekid    # Kid No Hore Hore Daisakusen
+arcade/hotshock    # Hot Shocker
+arcade/hustle    # Hustle
+arcade/hyperpac    # Hyper Pacman
+arcade/igmo    # Igmo
+arcade/ikki    # Ikki
+arcade/imsorry    # I'm Sorry
+arcade/intrepid    # Intrepid
+arcade/ironfort    # Iron Fortress
+arcade/irrmaze    # The Irritating Maze
+arcade/joinem    # Joinem
+arcade/jollyjgr    # Jolly Jogger
+arcade/journey    # Journey
+arcade/jrpacman    # Jr. Pac-Man
+arcade/jungler    # Jungler
+arcade/kamikcab    # Kamikaze Cabbie
+arcade/kickboy    # Kick Boy
+arcade/kngtmare    # Knightmare
+arcade/koroleva    # Snezhnaja Koroleva
+arcade/kram    # Kram
+arcade/ladybug    # Lady Bug
+arcade/ladyfrog    # Lady Frog
+arcade/lightbr    # Light Bringer
+arcade/lnc    # Lock 'n' Chase
+arcade/losttomb    # Lost Tomb
+arcade/loverboy    # Lover Boy
+arcade/machomou    # Macho Mouse
+arcade/maddonna    # Mad Donna
+arcade/marvins    # Marvin's Maze
+arcade/mazeinv    # Maze Invaders
+arcade/merlinmm    # Merlin's Money Maze
+arcade/mgcrystl    # Magical Crystals
+arcade/mikie    # Mikie
+arcade/mineswpr    # Minesweeper
+arcade/mmaze    # Marchen Maze
+arcade/mofflott    # Maze Of Flott
+arcade/moguchan    # Mogu Chan
+arcade/monymony    # Money Money
+arcade/mrdo    # Mr. Do!
+arcade/mrkicker    # Mr. Kicker
+arcade/mrtnt    # Mr. TNT
+arcade/mspacman    # Ms. Pac-Man
+arcade/mustache    # Mustache Boy
+arcade/mwalk    # Michael Jackson's Moonwalker
+arcade/mystston    # Mysterious Stones - Dr. John's Adventure
+arcade/natodef    # NATO Defense
+arcade/naughtyb    # Naughty Boy
+arcade/neobombe    # Neo Bomberman
+arcade/neomrdo    # Neo Mr. Do!
+arcade/netwars    # Net Wars
+arcade/newsin7    # New Sinbad 7
+arcade/nibbler    # Nibbler
+arcade/nrallyx    # New Rally X
+arcade/pacman    # Pac-Man
+arcade/pacmania    # Pac-Mania
+arcade/pacnpal    # Pac & Pal
+arcade/pacplus    # Pac-man Plus
+arcade/pass    # Pass
+arcade/pengo    # Pengo
+arcade/perfrman    # Performan
+arcade/popflame    # Pop Flamer
+arcade/psurge    # Power Surge
+arcade/puckman    # Puck Man
+arcade/pushman    # Pushman
+arcade/quartet    # Quartet
+arcade/quartet2    # Quartet
+arcade/raiders5    # Raiders5
+arcade/raimais    # Raimais
+arcade/rallyx    # Rally X
+arcade/reactor    # Reactor
+arcade/rockduck    # Rock Duck
+arcade/rockrage    # Rock'n Rage
+arcade/roishtar    # The Return of Ishtar
+arcade/rompers    # Rompers
+arcade/roundup    # Round-up
+arcade/route16    # Route 16
+arcade/rumba    # Rumba Lumber
+arcade/safarir    # Safari Rally
+arcade/scregg    # Scrambled Egg
+arcade/selfeena    # Sel Feena
+arcade/shackled    # Shackled
+arcade/shocking    # Shocking
+arcade/snapper    # Snapper
+arcade/solarfox    # Solar Fox
+arcade/spatter    # Spatter
+arcade/stlforce    # Steel Force
+arcade/stoffy    # Super Toffy
+arcade/streakng    # Streaking
+arcade/supduck    # Hell Out
+arcade/superbon    # Agent Super Bond
+arcade/superpac    # Super Pac-Man
+arcade/suprloco    # Super Locomotive
+arcade/tankbust    # Tank Busters
+arcade/tankfrce    # Tank Force
+arcade/taxidriv    # Taxi Driver
+arcade/thehand    # The Hand
+arcade/thepit    # The Pit
+arcade/thief    # Thief
+arcade/timetunl    # Time Tunnel
+arcade/tinklpit    # Tinkle Pit
+arcade/todruaga    # The Tower of Druaga
+arcade/toffy    # Toffy
+arcade/toucheme    # Touche Me
+arcade/toypop    # Toypop
+arcade/triplep    # Triple Punch
+arcade/trog    # Trog
+arcade/turtles    # 600
+arcade/tutankhm    # Tutankham
+arcade/twinbrat    # Twin Brats
+arcade/twinkle    # Twinkle
+arcade/tylz    # Tylz
+arcade/ufosensi    # UFO Senshi Yoko-chan
+arcade/unclepoo    # Uncle Poo
+arcade/upndown    # Up'n Down
+arcade/vanvan    # Van-Van Car
+arcade/wiping    # Wiping
+arcade/wits    # Wit's
+arcade/xybots    # Xybots
+arcade/zigzagb    # Zig Zag
+arcade/zzyzzyxx    # Zzyzzyxx

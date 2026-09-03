@@ -80,7 +80,20 @@ def main():
         if not items:
             break
         for r in items:
-            names[r["id"]] = (r.get("name") or r.get("fs_name") or "").strip()
+            # The *filename* stem, not RomM's display title.
+            #
+            # RomM names a game from whatever metadata it matched -- "1943: The
+            # Battle of Midway" -- and ES-DE names it from the file on disk --
+            # "1943 (Japan) (FamicomBox)". A list keyed on the first matches
+            # nothing anywhere else, which is what a first export produced: 58
+            # of 86 for Best of nes, and those 28 were all present.
+            #
+            # The filename is the one identifier both sides already agree on,
+            # and it is the No-Intro name, so it is the canonical one.
+            fs = (r.get("fs_name") or "").strip()
+            stem = fs.rsplit(".", 1)[0] if "." in fs else fs
+            plat = (r.get("platform_fs_slug") or "").strip()
+            names[r["id"]] = (plat, stem, (r.get("name") or "").strip())
         offset += limit
         if offset >= page.get("total", 0):
             break
@@ -99,7 +112,15 @@ def main():
         for i in ids:
             n = names.get(i)
             if n:
-                lines.append(n)
+                plat, stem, title = n
+                # `platform/name`, because a name alone is not unique: the
+                # library holds arcade Contra and Famicom Contra, and an
+                # un-prefixed list resolved Arcade Classics to the Famicom one.
+                #
+                # The title travels as a trailing comment so the list stays
+                # readable, without being the primary key.
+                entry = f"{plat}/{stem}" if plat else stem
+                lines.append(f"{entry}    # {title}" if title and title != stem else entry)
             else:
                 # Recorded rather than dropped: a membership pointing at a rom
                 # the server no longer lists is exactly the rot worth seeing.

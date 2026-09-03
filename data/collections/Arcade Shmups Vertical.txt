@@ -1,240 +1,240 @@
 # Arcade Shmups Vertical
 # 238 games, exported 2026-09-03 from RomM
-1941: Counter Attack
-1942
-1943 Kai: Midway Kaisen
-1943: The Battle Of Midway
-1943: The Battle Of Midway Mark II
-1944: The Loop Master
-1945k III
-19XX: The War Against Destiny
-Acrobat Mission
-Aero Fighters
-Aero Fighters 2
-Aero Fighters 3
-Air Assault
-Air Assault
-Air Attack
-Air Duel
-Air Gallet
-Ajax
-Ajax
-Alcon
-Alpha Mission
-Alpha Mission II
-Android
-Arbalester
-Arcadia
-Argus
-Armed Formation
-Armed Police Batrider
-Ashura Blaster
-Asuka & Asuka
-Bakuretsu Breaker
-Baryon: Future Assault
-Batsugun
-Battle Bakraid: Unlimited Version
-Battle Garegga
-Battle Wings
-Bells & Whistles
-Bermuda Triangle
-Bio Attack
-Blast Off
-Blazing Lazers
-Blue Hawk
-Brave Blade
-Captain Tomaday
-Change Air Blade
-Chopper I
-Cybattler
-Cyvern: The Dragon Weapons
-Daioh
-Dangerous Seed
-Darwin 4078
-Desert War
-Dimahoo
-DoDonPachi
-DoDonPachi Dai-Fukkatsu Black Label
-DoDonPachi DaiOuJou
-DoDonPachi DaiOuJou
-DoDonPachi II - Bee Storm
-DoDonPachi Resurrection
-Dogyuun
-DonPachi
-Double Wings
-Dr. Toppel's Adventure
-Dragon Blaze
-Dragon Saber
-Dragon Spirit
-Dyger
-Eight Forces
-ESP Ra.De.
-Espgaluda
-Espgaluda II
-Espial
-Exed Exes
-Explorer
-Explosive Breaker
-Fever SOS
-Fighter & Attacker
-Fighting Hawk
-Final Star Force
-Finalizer - Super Transformation
-Fire Battle
-Fire Hawk
-Fire Shark
-Flash Boy
-Flower
-Flying Tiger
-Funky Bee
-G-Stream G2020
-Gaia: The Last Choice of Earth
-Galaxy Gunners
-Galmedes
-Gardia
-Gekirindan
-Gemini Wing
-Ghost Pilots
-Giga Wing
-Gondomania
-Grid Seeker: Project Storm Hammer
-Grind Stormer
-Grind Stormer
-Guardian Storm
-Gulf War II
-Gun & Frontier
-Gunbird
-Gunbird 2
-Gunlock
-GunNail
-Gyrodine
-Hal21
-Halley's Comet
-Hammer Away
-Hotdog Storm
-Ibara
-Ibara Kuro Black Label
-Image Fight
-Ketsui: Kizuna Jigoku Tachi
-Kingdom Grandprix
-Kingdom Grandprix
-Legendary Wings
-Legion: Spinner-87
-Lethal Thunder
-Lightning Fighters
-Macross Plus
-Mad Shark
-Mars Matrix: Hyper Solid Shooting
-Master of Weapon
-Mazinger Z
-Meta Fox
-Metal Freezer
-Mission 660
-Mission Craft
-Mission-X
-Muchi Muchi Pork!
-Mushihime-Sama
-Mushihime-Sama Futari
-Mushihime-Sama Futari Black Label
-Nebulas Ray
-Night Star
-Nostradamus
-Omega Fighter
-Phelios
-Pink Sweets: Ibara Sorekara
-Plus Alpha
-Pollux
-R-Shark
-Rafflesia
-Raiden DX
-Raiden Fighters
-Raiden Fighters 2 - Operation Hell Dive
-Raiden Fighters Jet
-Raiden II
-Raiden II New / Raiden DX
-Rapid Hero
-Red Clash
-Red Hawk
-Ryu Jin
-S.R.D. Mission
-S.S. Mission
-Samurai Aces
-Sand Scorpion
-Scion
-Scramble Spirits
-SD Gundam Neo Battling
-Sega Sonic Cosmo Fighter
-Sengeki Striker
-Sengoku Ace
-Silver Millennium
-Skull Fang
-Sky Adventure
-Sky Alert
-Sky Shark
-Sky Smasher
-Sky Soldiers
-Sonic Boom
-Sonic Wings Reunion
-Sorcer Striker
-Sorcer Striker
-Star Fighter
-Star Force
-Star Jacker
-Storm Blade
-Strike Gunner S.T.G
-Strikers 1945
-Strikers 1945 II
-Strikers 1945 III
-Strikers 1945 Plus
-Stunt Air
-Super Real Darwin
-Super Spacefortress Macross
-Super Xevious
-Super-x
-Tac/scan
-Task Force Harrier
-Terra Cresta
-The Game Paradise - Master of Shooting!
-The Last Day
-The Next Space
-Thunder Dragon
-Thunder Dragon
-Thunder Dragon 2
-Tiger Heli
-Tokio
-Truxton
-Truxton II
-Turbo Force
-Twin Bee Yahhoo!
-Twin Cobra
-Twin Cobra
-Twin Cobra II
-Twin Cobra II
-Twin Eagle - Revenge Joe's Brother
-Twin Eagle II - The Rescue Mission
-Twin Hawk
-Twinbee
-Twinkle Star Sprites
-U.N. Defense Force: Earth Joker
-UFO Robo Dangar
-Ultra X Weapons
-Vapor Trail: Hyper Offence Formation
-Varia Metal
-Varth: Operation Thunderstorm
-Vasara
-Vasara 2
-Vimana
-Viper Phase 1
-Vulgus
-War of Aero: Project MEIOU
-Wing Force
-Wivern Wings
-Wonder Planet
-World Wars
-Wyvern F-0
-X2222
-Xevious
-XX Mission
-Zing Zing Zip
-Zoar
-Zodiack
+arcade/1941    # 1941: Counter Attack
+arcade/1942
+arcade/1943    # 1943: The Battle Of Midway
+arcade/1943kai    # 1943 Kai: Midway Kaisen
+arcade/1943mii    # 1943: The Battle Of Midway Mark II
+arcade/1944    # 1944: The Loop Master
+arcade/1945kiii    # 1945k III
+arcade/19xx    # 19XX: The War Against Destiny
+arcade/acrobatm    # Acrobat Mission
+arcade/aerofgt    # Aero Fighters
+arcade/agallet    # Air Gallet
+arcade/airass    # Air Assault
+arcade/airattck    # Air Attack
+arcade/airduel    # Air Duel
+arcade/ajax    # Ajax
+arcade/alcon    # Alcon
+arcade/alpham2    # Alpha Mission II
+arcade/androidp    # Android
+arcade/arbalest    # Arbalester
+arcade/arcadian    # Arcadia
+arcade/argus    # Argus
+arcade/armedf    # Armed Formation
+arcade/ashura    # Ashura Blaster
+arcade/aso    # Alpha Mission
+arcade/asuka    # Asuka & Asuka
+arcade/bakubrkr    # Bakuretsu Breaker
+arcade/baryon    # Baryon: Future Assault
+arcade/batrider    # Armed Police Batrider
+arcade/batsugun    # Batsugun
+arcade/bbakraid    # Battle Bakraid: Unlimited Version
+arcade/bermudat    # Bermuda Triangle
+arcade/bgaregga    # Battle Garegga
+arcade/bioatack    # Bio Attack
+arcade/blastoff    # Blast Off
+arcade/blazlaz    # Blazing Lazers
+arcade/blswhstl    # Bells & Whistles
+arcade/bluehawk    # Blue Hawk
+arcade/brvblade    # Brave Blade
+arcade/bwings    # Battle Wings
+arcade/cairblad    # Change Air Blade
+arcade/cexplore    # Explorer
+arcade/cfboy0a1    # Flash Boy
+arcade/chopper    # Chopper I
+arcade/cmissnx    # Mission-X
+arcade/cnightst    # Night Star
+arcade/ctomaday    # Captain Tomaday
+arcade/cybattlr    # Cybattler
+arcade/cyvern    # Cyvern: The Dragon Weapons
+arcade/daioh    # Daioh
+arcade/dangar    # UFO Robo Dangar
+arcade/dangseed    # Dangerous Seed
+arcade/darwin    # Darwin 4078
+arcade/dblewing    # Double Wings
+arcade/ddonpach    # DoDonPachi
+arcade/ddp2    # DoDonPachi II - Bee Storm
+arcade/ddp3    # DoDonPachi DaiOuJou
+arcade/ddpdfk    # DoDonPachi Resurrection
+arcade/ddpdoj    # DoDonPachi DaiOuJou
+arcade/desertwr    # Desert War
+arcade/dfkbl    # DoDonPachi Dai-Fukkatsu Black Label
+arcade/dimahoo    # Dimahoo
+arcade/dogyuun    # Dogyuun
+arcade/donpachi    # DonPachi
+arcade/dragnblz    # Dragon Blaze
+arcade/drtoppel    # Dr. Toppel's Adventure
+arcade/dsaber    # Dragon Saber
+arcade/dspirit    # Dragon Spirit
+arcade/dyger    # Dyger
+arcade/earthjkr    # U.N. Defense Force: Earth Joker
+arcade/eightfrc    # Eight Forces
+arcade/espgal    # Espgaluda
+arcade/espgal2    # Espgaluda II
+arcade/espial    # Espial
+arcade/esprade    # ESP Ra.De.
+arcade/exedexes    # Exed Exes
+arcade/explbrkr    # Explosive Breaker
+arcade/feversos    # Fever SOS
+arcade/fghtatck    # Fighter & Attacker
+arcade/fhawk    # Fighting Hawk
+arcade/finalizr    # Finalizer - Super Transformation
+arcade/firebarr    # Air Assault
+arcade/firebatl    # Fire Battle
+arcade/fireshrk    # Fire Shark
+arcade/flower    # Flower
+arcade/flytiger    # Flying Tiger
+arcade/fshark    # Sky Shark
+arcade/fstarfrc    # Final Star Force
+arcade/funkybee    # Funky Bee
+arcade/futari15    # Mushihime-Sama Futari
+arcade/futaribl    # Mushihime-Sama Futari Black Label
+arcade/gaialast    # Gaia: The Last Choice of Earth
+arcade/galaxygn    # Galaxy Gunners
+arcade/galmedes    # Galmedes
+arcade/gametngk    # The Game Paradise - Master of Shooting!
+arcade/gardia    # Gardia
+arcade/gekiridn    # Gekirindan
+arcade/gemini    # Gemini Wing
+arcade/gigawing    # Giga Wing
+arcade/gondo    # Gondomania
+arcade/gpilots    # Ghost Pilots
+arcade/grdnstrm    # Guardian Storm
+arcade/grindstm    # Grind Stormer
+arcade/gseeker    # Grid Seeker: Project Storm Hammer
+arcade/gstream    # G-Stream G2020
+arcade/gulfwar2    # Gulf War II
+arcade/gunbird    # Gunbird
+arcade/gunbird2    # Gunbird 2
+arcade/gunfront    # Gun & Frontier
+arcade/gunlock    # Gunlock
+arcade/gunnail    # GunNail
+arcade/gyrodine    # Gyrodine
+arcade/hal21    # Hal21
+arcade/halleysc    # Halley's Comet
+arcade/hamaway    # Hammer Away
+arcade/hotdogst    # Hotdog Storm
+arcade/ibara    # Ibara
+arcade/ibarablk    # Ibara Kuro Black Label
+arcade/imgfight    # Image Fight
+arcade/ket    # Ketsui: Kizuna Jigoku Tachi
+arcade/kingdmgp    # Kingdom Grandprix
+arcade/ktiger    # Twin Cobra
+arcade/ktiger2    # Twin Cobra II
+arcade/lastday    # The Last Day
+arcade/legion    # Legion: Spinner-87
+arcade/lethalth    # Lethal Thunder
+arcade/lgtnfght    # Lightning Fighters
+arcade/lwings    # Legendary Wings
+arcade/m660    # Mission 660
+arcade/macross    # Super Spacefortress Macross
+arcade/macrossp    # Macross Plus
+arcade/madshark    # Mad Shark
+arcade/mahoudai    # Sorcer Striker
+arcade/masterw    # Master of Weapon
+arcade/mazinger    # Mazinger Z
+arcade/metafox    # Meta Fox
+arcade/metlfrzr    # Metal Freezer
+arcade/misncrft    # Mission Craft
+arcade/mmatrix    # Mars Matrix: Hyper Solid Shooting
+arcade/mmpork    # Muchi Muchi Pork!
+arcade/mushisam    # Mushihime-Sama
+arcade/nebulray    # Nebulas Ray
+arcade/neobattl    # SD Gundam Neo Battling
+arcade/nost    # Nostradamus
+arcade/omegaf    # Omega Fighter
+arcade/phelios    # Phelios
+arcade/pinkswts    # Pink Sweets: Ibara Sorekara
+arcade/plusalph    # Plus Alpha
+arcade/pollux    # Pollux
+arcade/r2dx_v33    # Raiden II New / Raiden DX
+arcade/raflesia    # Rafflesia
+arcade/raiden2    # Raiden II
+arcade/raidendx    # Raiden DX
+arcade/raphero    # Rapid Hero
+arcade/rdft    # Raiden Fighters
+arcade/rdft2    # Raiden Fighters 2 - Operation Hell Dive
+arcade/redclash    # Red Clash
+arcade/rfjet    # Raiden Fighters Jet
+arcade/rshark    # R-Shark
+arcade/ryujin    # Ryu Jin
+arcade/s1945    # Strikers 1945
+arcade/s1945ii    # Strikers 1945 II
+arcade/s1945iii    # Strikers 1945 III
+arcade/s1945p    # Strikers 1945 Plus
+arcade/samuraia    # Samurai Aces
+arcade/sandscrp    # Sand Scorpion
+arcade/scion    # Scion
+arcade/sengekis    # Sengeki Striker
+arcade/shippumd    # Kingdom Grandprix
+arcade/silvmil    # Silver Millennium
+arcade/skullfng    # Skull Fang
+arcade/skyadvnt    # Sky Adventure
+arcade/skyalert    # Sky Alert
+arcade/skysmash    # Sky Smasher
+arcade/skysoldr    # Sky Soldiers
+arcade/sngkace    # Sengoku Ace
+arcade/sonicbom    # Sonic Boom
+arcade/sonicfgt    # Sega Sonic Cosmo Fighter
+arcade/sonicwi    # Sonic Wings Reunion
+arcade/sonicwi2    # Aero Fighters 2
+arcade/sonicwi3    # Aero Fighters 3
+arcade/spec2k    # Fire Hawk
+arcade/srdarwin    # Super Real Darwin
+arcade/srdmissn    # S.R.D. Mission
+arcade/ssmissin    # S.S. Mission
+arcade/sspirits    # Scramble Spirits
+arcade/sstriker    # Sorcer Striker
+arcade/stagger1    # Red Hawk
+arcade/starfigh    # Star Fighter
+arcade/starforc    # Star Force
+arcade/starjack    # Star Jacker
+arcade/stg    # Strike Gunner S.T.G
+arcade/stmblade    # Storm Blade
+arcade/stuntair    # Stunt Air
+arcade/superx    # Super-x
+arcade/sxevious    # Super Xevious
+arcade/tacscan    # Tac/scan
+arcade/tbyahhoo    # Twin Bee Yahhoo!
+arcade/tcobra2    # Twin Cobra II
+arcade/tdragon    # Thunder Dragon
+arcade/tdragon2    # Thunder Dragon 2
+arcade/tdragonb    # Thunder Dragon
+arcade/terracre    # Terra Cresta
+arcade/tharrier    # Task Force Harrier
+arcade/tigerh    # Tiger Heli
+arcade/tnextspc    # The Next Space
+arcade/tokio    # Tokio
+arcade/truxton    # Truxton
+arcade/truxton2    # Truxton II
+arcade/turbofrc    # Turbo Force
+arcade/twinbee    # Twinbee
+arcade/twincobr    # Twin Cobra
+arcade/twineag2    # Twin Eagle II - The Rescue Mission
+arcade/twineagl    # Twin Eagle - Revenge Joe's Brother
+arcade/twinhawk    # Twin Hawk
+arcade/twinspri    # Twinkle Star Sprites
+arcade/typhoon    # Ajax
+arcade/ultrax    # Ultra X Weapons
+arcade/vaportra    # Vapor Trail: Hyper Offence Formation
+arcade/varth    # Varth: Operation Thunderstorm
+arcade/vasara    # Vasara
+arcade/vasara2    # Vasara 2
+arcade/vfive    # Grind Stormer
+arcade/vimana    # Vimana
+arcade/viprp1    # Viper Phase 1
+arcade/vmetal    # Varia Metal
+arcade/vulgus    # Vulgus
+arcade/wingforc    # Wing Force
+arcade/wivernwg    # Wivern Wings
+arcade/wndrplnt    # Wonder Planet
+arcade/worldwar    # World Wars
+arcade/wrofaero    # War of Aero: Project MEIOU
+arcade/wyvernf0    # Wyvern F-0
+arcade/x2222    # X2222
+arcade/xevious    # Xevious
+arcade/xxmissio    # XX Mission
+arcade/zingzip    # Zing Zing Zip
+arcade/zoar    # Zoar
+arcade/zodiack    # Zodiack

@@ -1,67 +1,67 @@
 # ★ Best of snes
 # 65 games, exported 2026-09-03 from RomM
-ActRaiser
-ActRaiser 2
-Alien 3
-Axelay
-Batman Returns
-Breath of Fire
-Chrono Trigger
-Demon's Crest
-Donkey Kong Country
-Donkey Kong Country 2: Diddy's Kong Quest
-EarthBound
-Earthworm Jim
-F-Zero
-Fatal Fury 2
-Final Fantasy III
-Final Fight
-Flashback: The Quest for Identity
-Gradius III
-Harvest Moon
-Illusion of Gaia
-International Superstar Soccer Deluxe
-Killer Instinct
-Lemmings
-Lemmings 2: The Tribes
-Lufia II: Rise of the Sinistrals
-Mega Man X
-Mega Man X2
-Mortal Kombat II
-NBA Jam
-Ogre Battle: The March of the Black Queen
-Out of This World
-Pilotwings
-Plok
-R-Type III: The Third Lightning
-Rock n' Roll Racing
-Saturday Night Slam Masters
-Secret of Evermore
-Secret of Mana
-Shadowrun
-Side Pocket
-SimCity
-Soul Blazer
-Street Fighter II
-Street Fighter II' Turbo
-Super Bomberman
-Super Castlevania IV
-Super Ghouls'n Ghosts
-Super Mario All-Stars + Super Mario World
-Super Mario Kart
-Super Mario World
-Super Mario World 2: Yoshi's Island
-Super Metroid
-Super Punch-Out!!
-Super Star Wars
-Super Star Wars: The Empire Strikes Back
-Super Tennis
-Teenage Mutant Ninja Turtles IV: Turtles in Time
-Teenage Mutant Ninja Turtles: Tournament Fighters
-Terranigma
-Tetris Attack
-The Adventures of Batman & Robin
-The Legend of the Mystical Ninja
-The Magical Quest Starring Mickey Mouse
-U.N. Squadron
-Zombies Ate My Neighbors
+snes/ActRaiser (USA)    # ActRaiser
+snes/ActRaiser 2 (USA)    # ActRaiser 2
+snes/Adventures of Batman & Robin, The (USA)    # The Adventures of Batman & Robin
+snes/Alien 3 (USA)    # Alien 3
+snes/Axelay (USA)    # Axelay
+snes/Batman Returns (USA)    # Batman Returns
+snes/Breath of Fire (USA)    # Breath of Fire
+snes/Chrono Trigger (USA)    # Chrono Trigger
+snes/Demon's Crest (USA)    # Demon's Crest
+snes/Donkey Kong Country (USA) (Rev 2)    # Donkey Kong Country
+snes/Donkey Kong Country 2 - Diddy's Kong Quest (USA) (En,Fr) (Rev 1)    # Donkey Kong Country 2: Diddy's Kong Quest
+snes/EarthBound (USA)    # EarthBound
+snes/Earthworm Jim (USA)    # Earthworm Jim
+snes/F-Zero (USA)    # F-Zero
+snes/Fatal Fury 2 (USA)    # Fatal Fury 2
+snes/Final Fantasy III (USA) (Rev 1)    # Final Fantasy III
+snes/Final Fight (USA)    # Final Fight
+snes/Flashback - The Quest for Identity (USA) (En,Fr,De)    # Flashback: The Quest for Identity
+snes/Gradius III (USA)    # Gradius III
+snes/Harvest Moon (USA)    # Harvest Moon
+snes/Illusion of Gaia (USA)    # Illusion of Gaia
+snes/International Superstar Soccer Deluxe (USA)    # International Superstar Soccer Deluxe
+snes/Killer Instinct (USA) (Rev 1)    # Killer Instinct
+snes/Legend of the Mystical Ninja, The (USA)    # The Legend of the Mystical Ninja
+snes/Lemmings (USA) (Rev 1)    # Lemmings
+snes/Lemmings 2 - The Tribes (USA)    # Lemmings 2: The Tribes
+snes/Lufia II - Rise of the Sinistrals (USA)    # Lufia II: Rise of the Sinistrals
+snes/Magical Quest Starring Mickey Mouse, The (USA)    # The Magical Quest Starring Mickey Mouse
+snes/Mega Man X (USA) (Rev 1)    # Mega Man X
+snes/Mega Man X2 (USA)    # Mega Man X2
+snes/Mortal Kombat II (USA) (Rev 1)    # Mortal Kombat II
+snes/NBA Jam (USA) (Rev 1)    # NBA Jam
+snes/Ogre Battle - The March of the Black Queen (USA)    # Ogre Battle: The March of the Black Queen
+snes/Out of This World (USA)    # Out of This World
+snes/Pilotwings (USA)    # Pilotwings
+snes/Plok (USA)    # Plok
+snes/R-Type III (USA)    # R-Type III: The Third Lightning
+snes/Rock N' Roll Racing (USA)    # Rock n' Roll Racing
+snes/Saturday Night Slam Masters (USA)    # Saturday Night Slam Masters
+snes/Secret of Evermore (USA)    # Secret of Evermore
+snes/Secret of Mana (USA)    # Secret of Mana
+snes/Shadowrun (USA)    # Shadowrun
+snes/Side Pocket (USA)    # Side Pocket
+snes/SimCity (USA)    # SimCity
+snes/Soul Blazer (USA)    # Soul Blazer
+snes/Street Fighter II (USA)    # Street Fighter II
+snes/Street Fighter II Turbo (USA)    # Street Fighter II' Turbo
+snes/Super Bomberman (USA)    # Super Bomberman
+snes/Super Castlevania IV (USA)    # Super Castlevania IV
+snes/Super Ghouls 'N Ghosts (USA)    # Super Ghouls'n Ghosts
+snes/Super Mario All-Stars + Super Mario World (USA)    # Super Mario All-Stars + Super Mario World
+snes/Super Mario Kart (USA)    # Super Mario Kart
+snes/Super Mario World (USA)    # Super Mario World
+snes/Super Mario World 2 - Yoshi's Island (USA) (Rev 1)    # Super Mario World 2: Yoshi's Island
+snes/Super Metroid (Japan, USA) (En,Ja)    # Super Metroid
+snes/Super Punch-Out!! (USA)    # Super Punch-Out!!
+snes/Super Star Wars (USA)    # Super Star Wars
+snes/Super Star Wars - The Empire Strikes Back (USA) (Rev 1)    # Super Star Wars: The Empire Strikes Back
+snes/Super Tennis (USA)    # Super Tennis
+snes/Teenage Mutant Ninja Turtles - Tournament Fighters (USA)    # Teenage Mutant Ninja Turtles: Tournament Fighters
+snes/Teenage Mutant Ninja Turtles IV - Turtles in Time (USA)    # Teenage Mutant Ninja Turtles IV: Turtles in Time
+snes/Terranigma (Europe)    # Terranigma
+snes/Tetris Attack (USA) (En,Ja)    # Tetris Attack
+snes/U.N. Squadron (USA)    # U.N. Squadron
+snes/Zombies Ate My Neighbors (USA)    # Zombies Ate My Neighbors

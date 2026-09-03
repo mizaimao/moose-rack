@@ -1,223 +1,223 @@
 # Arcade Puzzle
 # 221 games, exported 2026-09-03 from RomM
-3x3 Puzzle
-4 En Raya
-Agress - Missile Daisenryaku
-Aqua Rush
-Aquarium
-Atomic Point
-Balloon Brothers
-Bang Bang Ball
-Barrier
-Beezer
-Big Twin
-Bikkuri Card
-Block Hole
-Block Out
-Bloxeed
-Bouncing Balls
-Boxy Boy
-Bubble 2000
-Bust-a-Move
-Bust-A-Move Again
-Bust-A-Move Again
-Candy Candy
-Cannon Ball
-Canvas Croquis
-Carrera
-Casanova
-Chain Reaction
-Check Man
-Chicken Shift
-China Town
-Chuugokuryuu 2001 [dragon World 2001]
-Chuugokuryuu Pretty Chance [dragon World Pretty Chance]
-Cleopatra Fortune
-Columns
-Columns II: The Voyage Through Time
-Cookie & Bibi
-Cookie & Bibi 2
-Cookie & Bibi 3
-Cosmo Gang The Puzzle
-Cross Pang
-Cue Brick
-Daitoride
-Deroon Derodero
-Dharma Doujou
-Disco No.1 (DECO Cassette)
-Dolmen
-Domino Man
-Double Point
-Dr. Tomy
-Dragon World 3
-Dragon World 3 Ex
-Dragon World II
-Dream Shopper
-Egg Hunt
-Emeraldia
-Fantasia
-Fantasia II
-Final Tetris
-Flash Point
-Funny Bubble
-Gals Panic
-Gals Panic 3
-Gals Panic 4
-Gals Panic S - Extra Edition
-Gals Panic S2
-Gals Panic S3
-Ghostlop
-Grand Tour
-Gumbo
-Gun Dealer '94
-Gururin
-Guts'n
-Hasamu
-Hatch Catch
-Hatris
-Hebereke No Popoon
-Hexa
-Hexion
-Hidden Catch
-Hidden Catch 2
-Hidden Catch 2000
-Hidden Catch 3
-Honey Dolls
-Hot Mind
-Iq-block
-Itazura Tenshi
-Janpai Puzzle Choukou
-Jin
-Karian Cross
-Kickle Cubicle / Meikyu Jima
-Kitten Kaboodle
-Klax
-Kokontouzai Eto Monogatari
-Lady Killer
-Land Breaker
-Land Maker
-Las Vegas Girl
-Last Fortress - Toride
-Lemmings
-Libble Rabble
-Linky Pipe
-Loco-motion
-Logic Pro
-Logic Pro 2
-Lot Lot
-Magic Bubble
-Magical Drop II
-Magical Drop III
-Magical Error Wo Sagase
-Magix / Rock
-Mang-Chi
-Many Block
-Match It
-Match It II
-Minky Monkey
-Miss Bingo
-Miss Puzzle
-Miss World '96
-Money Puzzle Exchanger
-Monster Slider
-Mosaic
-Mosaic (F2 System)
-Motos
-Mouse Shooter Gogo
-Mr. Dig
-Mr. Jong
-Naname De Magic!
-New Cross Pang
-New Fantasia
-New Hidden Catch
-News
-Oh My God!
-One + Two
-Orbs
-Pairs - Featuring The Giffy Girls
-Pairs Love
-Pairs Redemption
-Palamedes
-Panic Bomber
-Panic Street
-Paparazzi
-Party Time: Gonta the Diver II
-Penfan Girls - Step1. Mild Mind
-Photo Y2k
-Photo Y2k 2
-Phozon
-Pickin'
-Pipe Dream
-Plotting
-Pnickies
-Pochi and Nyaa
-Poitto!
-Pop Bingo
-Pop'n Pop
-Poto Poto
-Puyo Puyo
-Puyo Puyo 2
-Puzz Loop
-Puzz Loop 2
-Puzzle Bobble 3
-Puzzle Bobble 4
-Puzzle Break
-Puzzle De Bowling
-Puzzle De Pon!
-Puzzle De Pon! R!
-Puzzle King (Dance & Puzzle)
-Puzzle Star
-Puzzle Uo Poko
-Puzzle! Mushihime-Tama
-Puzzled
-Puzzli
-Puzzli 2
-Puzznic
-Qix
-Quantum
-Risky Challenge
-Rock Tris
-Rolling Crush
-Ryukyu
-Sadari
-Sankokushi
-Search Eye
-Search Eye Plus V2.0
-Sen-know
-Senkyu
-Shan Liang San He Yi (Flash 3-in-1)
-Shanghai III
-Soldam
-Solomon's Key
-Sparkz
-Speed Coin
-Stack Columns
-Steal See
-Super Lup Lup Puzzle
-Super Model
-Super Puzzle Fighter II Turbo
-Super Shanghai Dragon's Eye
-Tetris
-Tetris
-Tetris
-Tetris (set 4, Japan, System 16a)
-Tetris / Bloxeed
-Tetris Plus
-Tetris Plus 2
-Tetris The Absolute The Grand Master 2
-Tetris: The Absolute - The Grand Master 2 Plus
-The Brain Washing Game
-Toride II Adauchi Gaiden
-Toryumon
-Triple Fun
-Tube-it
-Twin Qix
-Volfied
-Water Balls
-Welltris
-Wonder Stick
-Wow New Fantasia
-Xor World
-Xyonix
-Zero Zone
-Zintrick
+arcade/3kokushi    # Sankokushi
+arcade/3x3puzzl    # 3x3 Puzzle
+arcade/4enraya    # 4 En Raya
+arcade/agress    # Agress - Missile Daisenryaku
+arcade/aquarium    # Aquarium
+arcade/aquarush    # Aqua Rush
+arcade/atetris    # Tetris
+arcade/atomicp    # Atomic Point
+arcade/ballbros    # Balloon Brothers
+arcade/bangball    # Bang Bang Ball
+arcade/barrier    # Barrier
+arcade/bballs    # Bouncing Balls
+arcade/beezer    # Beezer
+arcade/bigtwin    # Big Twin
+arcade/bikkuric    # Bikkuri Card
+arcade/blockhl    # Block Hole
+arcade/blockout    # Block Out
+arcade/bloxeed    # Bloxeed
+arcade/boxyboy    # Boxy Boy
+arcade/bubl2000    # Bubble 2000
+arcade/cachat    # Tube-it
+arcade/candy    # Candy Candy
+arcade/cannball    # Cannon Ball
+arcade/canvas    # Canvas Croquis
+arcade/carrera    # Carrera
+arcade/casanova    # Casanova
+arcade/cdiscon1    # Disco No.1 (DECO Cassette)
+arcade/cgangpzl    # Cosmo Gang The Puzzle
+arcade/chainrec    # Chain Reaction
+arcade/checkman    # Check Man
+arcade/chinatwn    # China Town
+arcade/choko    # Janpai Puzzle Choukou
+arcade/cleopatr    # Cleopatra Fortune
+arcade/columns    # Columns
+arcade/columns2    # Columns II: The Voyage Through Time
+arcade/cookbib    # Cookie & Bibi
+arcade/cookbib2    # Cookie & Bibi 2
+arcade/cookbib3    # Cookie & Bibi 3
+arcade/croquis    # Logic Pro
+arcade/crospang    # Cross Pang
+arcade/cshift    # Chicken Shift
+arcade/cuebrick    # Cue Brick
+arcade/daitorid    # Daitoride
+arcade/dblpoint    # Double Point
+arcade/deroon    # Deroon Derodero
+arcade/dharma    # Dharma Doujou
+arcade/dolmen    # Dolmen
+arcade/domino    # Domino Man
+arcade/dremshpr    # Dream Shopper
+arcade/drgw2    # Dragon World II
+arcade/drgw3    # Dragon World 3
+arcade/drtomy    # Dr. Tomy
+arcade/dw2001    # Chuugokuryuu 2001 [dragon World 2001]
+arcade/dwex    # Dragon World 3 Ex
+arcade/dwpc    # Chuugokuryuu Pretty Chance [dragon World Pretty Chance]
+arcade/egghunt    # Egg Hunt
+arcade/emeralda    # Emeraldia
+arcade/eto    # Kokontouzai Eto Monogatari
+arcade/fantasia    # Fantasia
+arcade/fantsia2    # Fantasia II
+arcade/finalttr    # Final Tetris
+arcade/fpoint    # Flash Point
+arcade/funybubl    # Funny Bubble
+arcade/galpani3    # Gals Panic 3
+arcade/galpani4    # Gals Panic 4
+arcade/galpanic    # Gals Panic
+arcade/galpanis    # Gals Panic S - Extra Edition
+arcade/galpans2    # Gals Panic S2
+arcade/galpans3    # Gals Panic S3
+arcade/ghostlop    # Ghostlop
+arcade/grndtour    # Grand Tour
+arcade/gumbo    # Gumbo
+arcade/gundl94    # Gun Dealer '94
+arcade/gururin    # Gururin
+arcade/gutsn    # Guts'n
+arcade/hasamu    # Hasamu
+arcade/hatris    # Hatris
+arcade/heberpop    # Hebereke No Popoon
+arcade/hexa    # Hexa
+arcade/hexion    # Hexion
+arcade/hidctch2    # Hidden Catch 2
+arcade/hidctch3    # Hidden Catch 3
+arcade/hidnc2k    # Hidden Catch 2000
+arcade/hidnctch    # Hidden Catch
+arcade/honeydol    # Honey Dolls
+arcade/hotmind    # Hot Mind
+arcade/htchctch    # Hatch Catch
+arcade/iqblock    # Iq-block
+arcade/itaten    # Itazura Tenshi
+arcade/jin    # Jin
+arcade/joyjoy    # Puzzled
+arcade/karianx    # Karian Cross
+arcade/kikcubic    # Kickle Cubicle / Meikyu Jima
+arcade/kittenk    # Kitten Kaboodle
+arcade/klax    # Klax
+arcade/ladykill    # Lady Killer
+arcade/landbrk    # Land Breaker
+arcade/landmakr    # Land Maker
+arcade/lastfort    # Last Fortress - Toride
+arcade/lemmings    # Lemmings
+arcade/liblrabl    # Libble Rabble
+arcade/linkypip    # Linky Pipe
+arcade/locomotn    # Loco-motion
+arcade/logicpr2    # Logic Pro 2
+arcade/lotlot    # Lot Lot
+arcade/lvgirl94    # Las Vegas Girl
+arcade/magdrop2    # Magical Drop II
+arcade/magdrop3    # Magical Drop III
+arcade/magerror    # Magical Error Wo Sagase
+arcade/magicbub    # Magic Bubble
+arcade/magix    # Magix / Rock
+arcade/mangchi    # Mang-Chi
+arcade/manybloc    # Many Block
+arcade/matchit    # Match It
+arcade/matchit2    # Match It II
+arcade/miexchng    # Money Puzzle Exchanger
+arcade/missw96    # Miss World '96
+arcade/mmonkey    # Minky Monkey
+arcade/mosaic    # Mosaic
+arcade/mosaicf2    # Mosaic (F2 System)
+arcade/motos    # Motos
+arcade/mrdig    # Mr. Dig
+arcade/mrjong    # Mr. Jong
+arcade/msbingo    # Miss Bingo
+arcade/msgogo    # Mouse Shooter Gogo
+arcade/mslider    # Monster Slider
+arcade/mspuzzle    # Miss Puzzle
+arcade/mushitam    # Puzzle! Mushihime-Tama
+arcade/naname    # Naname De Magic!
+arcade/newfant    # New Fantasia
+arcade/news    # News
+arcade/newxpang    # New Cross Pang
+arcade/nhidctch    # New Hidden Catch
+arcade/ohmygod    # Oh My God!
+arcade/oisipuzl    # Triple Fun
+arcade/onetwo    # One + Two
+arcade/orbs    # Orbs
+arcade/pairlove    # Pairs Love
+arcade/pairs    # Pairs - Featuring The Giffy Girls
+arcade/pairsred    # Pairs Redemption
+arcade/palamed    # Palamedes
+arcade/panicbom    # Panic Bomber
+arcade/panicstr    # Panic Street
+arcade/paprazzi    # Paparazzi
+arcade/pbobbl2n    # Bust-A-Move Again
+arcade/pbobble2    # Bust-A-Move Again
+arcade/pbobble3    # Puzzle Bobble 3
+arcade/pbobble4    # Puzzle Bobble 4
+arcade/pbobblen    # Bust-a-Move
+arcade/penfan    # Penfan Girls - Step1. Mild Mind
+arcade/pgm3in1    # Shan Liang San He Yi (Flash 3-in-1)
+arcade/photoy2k    # Photo Y2k
+arcade/phozon    # Phozon
+arcade/pickin    # Pickin'
+arcade/pipedrm    # Pipe Dream
+arcade/plotting    # Plotting
+arcade/pnickj    # Pnickies
+arcade/pnyaa    # Pochi and Nyaa
+arcade/poitto    # Poitto!
+arcade/popbingo    # Pop Bingo
+arcade/popnpop    # Pop'n Pop
+arcade/potopoto    # Poto Poto
+arcade/prtytime    # Party Time: Gonta the Diver II
+arcade/puyo    # Puyo Puyo
+arcade/puyopuy2    # Puyo Puyo 2
+arcade/puzlstar    # Puzzle Star
+arcade/puzzldpr    # Puzzle De Pon! R!
+arcade/puzzledp    # Puzzle De Pon!
+arcade/puzzlekg    # Puzzle King (Dance & Puzzle)
+arcade/puzzli    # Puzzli
+arcade/puzzli2    # Puzzli 2
+arcade/puzzloop    # Puzz Loop
+arcade/puzznic    # Puzznic
+arcade/py2k2    # Photo Y2k 2
+arcade/pzlbowl    # Puzzle De Bowling
+arcade/pzlbreak    # Puzzle Break
+arcade/pzloop2    # Puzz Loop 2
+arcade/qix    # Qix
+arcade/quantum    # Quantum
+arcade/riskchal    # Risky Challenge
+arcade/rocktris    # Rock Tris
+arcade/rolcrush    # Rolling Crush
+arcade/ryukyu    # Ryukyu
+arcade/sadari    # Sadari
+arcade/searchey    # Search Eye
+arcade/searchp2    # Search Eye Plus V2.0
+arcade/senknow    # Sen-know
+arcade/senkyu    # Senkyu
+arcade/shangha3    # Shanghai III
+arcade/soldam    # Soldam
+arcade/solomon    # Solomon's Key
+arcade/sparkz    # Sparkz
+arcade/spdcoin    # Speed Coin
+arcade/spf2t    # Super Puzzle Fighter II Turbo
+arcade/sshangha    # Super Shanghai Dragon's Eye
+arcade/stealsee    # Steal See
+arcade/stkclmns    # Stack Columns
+arcade/suplup    # Super Lup Lup Puzzle
+arcade/supmodel    # Super Model
+arcade/tekipaki    # The Brain Washing Game
+arcade/tetrbx    # Tetris / Bloxeed
+arcade/tetris    # Tetris (set 4, Japan, System 16a)
+arcade/tetrisp    # Tetris Plus
+arcade/tetrisp2    # Tetris Plus 2
+arcade/tetrisse    # Tetris
+arcade/tetrsark    # Tetris
+arcade/tgm2    # Tetris The Absolute The Grand Master 2
+arcade/tgm2p    # Tetris: The Absolute - The Grand Master 2 Plus
+arcade/toride2g    # Toride II Adauchi Gaiden
+arcade/toryumon    # Toryumon
+arcade/twinqix    # Twin Qix
+arcade/uopoko    # Puzzle Uo Poko
+arcade/volfied    # Volfied
+arcade/watrball    # Water Balls
+arcade/welltris    # Welltris
+arcade/wondstck    # Wonder Stick
+arcade/wownfant    # Wow New Fantasia
+arcade/xorworld    # Xor World
+arcade/xyonix    # Xyonix
+arcade/zerozone    # Zero Zone
+arcade/zintrckb    # Zintrick

@@ -1,36 +1,36 @@
 # ★ Best of gbc
 # 34 games, exported 2026-09-03 from RomM
-Bionic Commando: Elite Forces
-Crystalis
-Donkey Kong Country
-Dragon Warrior I & II
-Dragon Warrior III
-Dragon Warrior Monsters
-Game & Watch Gallery 3
-Ghosts 'n Goblins
-Harvest Moon 2 GBC
-Harvest Moon 3 GBC
-Harvest Moon GBC
-Kirby Tilt 'n' Tumble
-Lufia: The Legend Returns
-Mario Golf
-Mega Man Xtreme
-Mega Man Xtreme 2
-Metal Gear: Ghost Babel
-Mr. Driller
-Pokémon Pinball
-Pokémon Puzzle Challenge
-Pokémon Trading Card Game
-R-Type DX
-Resident Evil Gaiden
-Shantae
-Street Fighter Alpha: Warriors' Dreams
-Super Mario Bros. Deluxe
-Survival Kids
-Tetris DX
-The Legend of Zelda: Link's Awakening DX
-The Legend of Zelda: Oracle of Ages
-The Legend of Zelda: Oracle of Seasons
-Toki Tori
-Wario Land 3
-Warlocked
+gbc/Bionic Commando - Elite Forces (USA, Australia)    # Bionic Commando: Elite Forces
+gbc/Crystalis (USA)    # Crystalis
+gbc/Donkey Kong Country (USA, Europe) (En,Fr,De,Es,It)    # Donkey Kong Country
+gbc/Dragon Warrior I & II (USA) (SGB Enhanced) (GB Compatible)    # Dragon Warrior I & II
+gbc/Dragon Warrior III (USA)    # Dragon Warrior III
+gbc/Dragon Warrior Monsters (USA, Europe) (SGB Enhanced) (GB Compatible)    # Dragon Warrior Monsters
+gbc/Game & Watch Gallery 3 (USA, Europe) (SGB Enhanced) (GB Compatible)    # Game & Watch Gallery 3
+gbc/Ghosts'n Goblins (USA, Europe) (GB Compatible)    # Ghosts 'n Goblins
+gbc/Harvest Moon 2 GBC (USA) (SGB Enhanced) (GB Compatible)    # Harvest Moon 2 GBC
+gbc/Harvest Moon 3 GBC (USA)    # Harvest Moon 3 GBC
+gbc/Harvest Moon GBC (USA) (SGB Enhanced) (GB Compatible)    # Harvest Moon GBC
+gbc/Kirby - Tilt 'n' Tumble (USA)    # Kirby Tilt 'n' Tumble
+gbc/Legend of Zelda, The - Link's Awakening DX (USA, Europe) (Rev 2) (SGB Enhanced) (GB Compatible)    # The Legend of Zelda: Link's Awakening DX
+gbc/Legend of Zelda, The - Oracle of Ages (USA, Australia)    # The Legend of Zelda: Oracle of Ages
+gbc/Legend of Zelda, The - Oracle of Seasons (USA, Australia)    # The Legend of Zelda: Oracle of Seasons
+gbc/Lufia - The Legend Returns (USA)    # Lufia: The Legend Returns
+gbc/Mario Golf (USA)    # Mario Golf
+gbc/Mega Man Xtreme (USA, Europe) (GB Compatible)    # Mega Man Xtreme
+gbc/Mega Man Xtreme 2 (USA, Europe)    # Mega Man Xtreme 2
+gbc/Metal Gear Solid (USA)    # Metal Gear: Ghost Babel
+gbc/Mr. Driller (USA)    # Mr. Driller
+gbc/Pokemon Pinball (USA, Australia) (Rumble Version) (SGB Enhanced) (GB Compatible)    # Pokémon Pinball
+gbc/Pokemon Puzzle Challenge (USA, Australia)    # Pokémon Puzzle Challenge
+gbc/Pokemon Trading Card Game (USA, Australia) (SGB Enhanced) (GB Compatible)    # Pokémon Trading Card Game
+gbc/R-Type DX (USA, Europe) (GB Compatible)    # R-Type DX
+gbc/Resident Evil Gaiden (USA)    # Resident Evil Gaiden
+gbc/Shantae (USA)    # Shantae
+gbc/Street Fighter Alpha - Warriors' Dreams (USA)    # Street Fighter Alpha: Warriors' Dreams
+gbc/Super Mario Bros. Deluxe (Europe) (Rev 2)    # Super Mario Bros. Deluxe
+gbc/Survival Kids (USA) (SGB Enhanced) (GB Compatible)    # Survival Kids
+gbc/Tetris DX (World) (SGB Enhanced) (GB Compatible)    # Tetris DX
+gbc/Toki Tori (USA, Europe) (En,Ja,Fr,De,Es)    # Toki Tori
+gbc/Wario Land 3 (World) (En,Ja)    # Wario Land 3
+gbc/Warlocked (USA)    # Warlocked

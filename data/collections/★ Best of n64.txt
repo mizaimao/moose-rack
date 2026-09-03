@@ -1,20 +1,20 @@
 # ★ Best of n64
 # 18 games, exported 2026-09-03 from RomM
-Banjo-Kazooie
-Banjo-Tooie
-Blast Corps
-Conker's Bad Fur Day
-Diddy Kong Racing
-Donkey Kong 64
-F-Zero X
-GoldenEye 007
-Mario Tennis
-Paper Mario
-Perfect Dark
-Star Fox 64
-Star Wars: Rogue Squadron
-Super Mario 64
-The Legend of Zelda: Majora's Mask
-The Legend of Zelda: Ocarina of Time
-Turok 2: Seeds of Evil
-WWF No Mercy
+n64/Banjo-Kazooie (USA) (Rev A)    # Banjo-Kazooie
+n64/Banjo-Tooie (USA)    # Banjo-Tooie
+n64/Blast Corps (USA)    # Blast Corps
+n64/Conker's Bad Fur Day (USA)    # Conker's Bad Fur Day
+n64/Diddy Kong Racing (USA) (En,Fr) (Rev 1)    # Diddy Kong Racing
+n64/Donkey Kong 64 (USA)    # Donkey Kong 64
+n64/F-Zero X (USA)    # F-Zero X
+n64/GoldenEye 007 (USA)    # GoldenEye 007
+n64/Legend of Zelda, The - Majora's Mask (USA)    # The Legend of Zelda: Majora's Mask
+n64/Legend of Zelda, The - Ocarina of Time (USA) (Rev 2)    # The Legend of Zelda: Ocarina of Time
+n64/Mario Tennis (USA)    # Mario Tennis
+n64/Paper Mario (USA)    # Paper Mario
+n64/Perfect Dark (USA) (Rev 1)    # Perfect Dark
+n64/Star Fox 64 (USA) (Rev A)    # Star Fox 64
+n64/Star Wars - Rogue Squadron (USA) (Rev A)    # Star Wars: Rogue Squadron
+n64/Super Mario 64 (USA)    # Super Mario 64
+n64/Turok 2 - Seeds of Evil (USA) (Rev A)    # Turok 2: Seeds of Evil
+n64/WWF No Mercy (USA) (Rev A)    # WWF No Mercy

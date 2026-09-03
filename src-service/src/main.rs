@@ -24,6 +24,7 @@
 //!     moose-service --root /home/frank/moose-library/ES-DE \
 //!                   --roms /home/frank/moose-library/ROMs
 
+mod collections;
 mod saves;
 
 use std::net::SocketAddr;
@@ -56,6 +57,9 @@ struct Args {
     /// Address to bind. Use this to restrict the interface as well as the port.
     #[arg(long, env = "MOOSE_SERVICE_BIND", default_value = "0.0.0.0:8001")]
     bind: String,
+    /// Collections directory of .txt lists. Defaults to <root>/collections.
+    #[arg(long, env = "MOOSE_SERVICE_COLLECTIONS")]
+    collections: Option<String>,
     /// BIOS / firmware directory. Without it /api/firmware is an empty list.
     #[arg(long, env = "MOOSE_SERVICE_FIRMWARE")]
     firmware: Option<String>,
@@ -79,6 +83,8 @@ struct Args {
 /// than an Arc.
 struct Library {
     games: Vec<esde::Game>,
+    /// The curated lists, resolved to ids at startup.
+    collections: Vec<collections::Collection>,
     /// The BIOS set, flattened.
     ///
     /// Flattened on purpose: the tree has `mame/`, `fbneo/` and so on, but
@@ -447,13 +453,12 @@ async fn rom_identifiers(State(lib): State<Arc<Library>>) -> Json<Vec<i64>> {
     Json((1..=lib.games.len() as i64).collect())
 }
 
-/// Collections, which an ES-DE tree does not have.
+/// The curated lists.
 ///
-/// Empty rather than 404: the client treats a missing endpoint as an error and
-/// an empty list as "none yet", and the second is the truth. `library-service.md`
-/// makes these text files under `collections/`; until that exists there are none.
-async fn collections() -> Json<Vec<serde_json::Value>> {
-    Json(vec![])
+/// Still empty rather than 404 when there is no directory: the client reads a
+/// missing endpoint as an error and an empty list as "none yet".
+async fn serve_collections(State(lib): State<Arc<Library>>) -> axum::response::Response {
+    Json(&lib.collections).into_response()
 }
 
 /// The bytes of a game.
@@ -651,7 +656,7 @@ fn app(lib: Arc<Library>, media_dir: std::path::PathBuf) -> Router {
             .route("/api/roms/identifiers", get(rom_identifiers))
             .route("/api/roms/{id}", get(rom_by_id))
             .route("/api/roms/{id}/content/{*name}", get(rom_content))
-            .route("/api/collections", get(collections))
+            .route("/api/collections", get(serve_collections))
         .route("/api/firmware", get(firmware))
         .route("/api/firmware/{id}/content/{*name}", get(firmware_content))
         .route("/api/devices", axum::routing::post(register_device))
@@ -745,8 +750,40 @@ async fn main() -> Result<()> {
             Vec::new()
         }
     };
+    // Name -> id, from the scan, so a list resolves without a database.
+    // Keyed on both the display name and the file stem. ES-DE uses the
+    // gamelist `<name>` where a scraper filled one in and the stem where it did
+    // not, so one key alone resolves part of the library and misses the rest.
+    let mut by_name: std::collections::HashMap<(String, String), i64> = Default::default();
+    for (i, g) in games.iter().enumerate() {
+        let id = i as i64 + 1;
+        let p = g.platform_slug.to_lowercase();
+        by_name.entry((p.clone(), g.name.to_lowercase())).or_insert(id);
+        let stem = g.fs_name.rsplit_once('.').map(|(s, _)| s).unwrap_or(&g.fs_name);
+        by_name.entry((p, stem.to_lowercase())).or_insert(id);
+    }
+    let col_dir = args
+        .collections
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| std::path::Path::new(&args.root).join("collections"));
+    let (cols, unmatched) = collections::load(&col_dir, &by_name);
+    println!(
+        "collections {} lists, {} memberships from {}",
+        cols.len(),
+        cols.iter().map(|c| c.rom_count).sum::<i64>(),
+        col_dir.display()
+    );
+    if !unmatched.is_empty() {
+        // Named, not counted: a line that stopped resolving is the rot this
+        // shape exists to make visible.
+        eprintln!("collections {} names did not resolve:", unmatched.len());
+        for u in unmatched.iter().take(10) {
+            eprintln!("            {} / {}", u.collection, u.name);
+        }
+    }
     let lib = Arc::new(Library {
         games,
+        collections: cols,
         hashes,
         firmware,
         sync: std::sync::Mutex::new(SyncState {
@@ -810,6 +847,7 @@ mod tests {
         std::fs::create_dir_all(&saves_root).unwrap();
         let lib = Library {
             games,
+            collections: Vec::new(),
             hashes: Default::default(),
             firmware: scan_firmware(&dir.join("bios")),
             sync: std::sync::Mutex::new(SyncState {
