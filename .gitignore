@@ -141,3 +141,6 @@ assets/fonts/*
 # The aarch64 cross toolchain, fetched by scripts/knulli.sh and removable
 # with `knulli.sh clean`. Large, and not ours.
 .toolchain/
+/inventory.db
+/inventory.db-wal
+/inventory.db-shm
