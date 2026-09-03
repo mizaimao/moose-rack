@@ -8,7 +8,7 @@ MinUI's layout is filename-driven, not database-driven:
 
 The folder's parenthesised TAG is what maps it to an emulator, so the folders
 NextUI created on first boot are used as-is rather than invented here. Several
-RomM platforms share one NextUI folder — NES and Famicom are both `(FC)`, SNES
+Platforms share one NextUI folder — NES and Famicom are both `(FC)`, SNES
 and Super Famicom both `(SFC)` — which is why the mapping is many-to-one.
 
 Art comes from the ES-DE miximages already in `library/downloaded_media`, which
@@ -30,7 +30,7 @@ import tomllib
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
-# RomM platform slug -> the folder NextUI created. Anything not here has no
+# Platform slug -> the folder NextUI created. Anything not here has no
 # folder on the card, and a folder invented for it would have no emulator.
 DEST = {
     "gba": "Game Boy Advance (GBA)",
@@ -93,7 +93,7 @@ def main():
     ap.add_argument("--media", default="library/downloaded_media")
     ap.add_argument("--cache", default="cache.sqlite3")
     ap.add_argument("--config", default="config.toml")
-    ap.add_argument("--platform", help="only this RomM slug")
+    ap.add_argument("--platform", help="only this platform slug")
     ap.add_argument("--no-art", action="store_true")
     ap.add_argument("--apply", action="store_true")
     args = ap.parse_args()
