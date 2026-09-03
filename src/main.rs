@@ -1266,6 +1266,12 @@ fn cmd_scan_esde(root: Option<&str>, roms: Option<&str>, media: Option<&str>) ->
 
     let mut store = cache::Cache::open(Path::new(CACHE_DB))?;
     let n = store.replace_from_esde(&games)?;
+    // Fold the scan into whatever a server sync already found. Without this the
+    // two halves of the library sit side by side and every game the server also
+    // knows about appears twice -- 11,062 server rows and 11,473 local ones, in
+    // a library of about 11,500 games. The GUI has always done this after a
+    // scan; the CLI did not, so `scan-esde` on its own doubled the grid.
+    let folded = store.absorb_local_into_server()?;
 
     let mut by_platform: std::collections::BTreeMap<&str, usize> = Default::default();
     let mut with_art = 0;
@@ -1276,7 +1282,12 @@ fn cmd_scan_esde(root: Option<&str>, roms: Option<&str>, media: Option<&str>) ->
             with_art += 1;
         }
     }
-    println!("\n{n} games in {:.1}s, {with_art} with cover art\n", started.elapsed().as_secs_f64());
+    println!("\n{n} games in {:.1}s, {with_art} with cover art", started.elapsed().as_secs_f64());
+    if folded > 0 {
+        println!("{folded} folded into rows the server already had — they launch from disk now\n");
+    } else {
+        println!();
+    }
     println!("{:<16}{:>7}", "platform", "games");
     for (slug, count) in &by_platform {
         println!("{slug:<16}{count:>7}");
