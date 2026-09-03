@@ -56,6 +56,9 @@ struct Args {
     /// Address to bind. Use this to restrict the interface as well as the port.
     #[arg(long, env = "MOOSE_SERVICE_BIND", default_value = "0.0.0.0:8001")]
     bind: String,
+    /// BIOS / firmware directory. Without it /api/firmware is an empty list.
+    #[arg(long, env = "MOOSE_SERVICE_FIRMWARE")]
+    firmware: Option<String>,
     /// Where saves live. Defaults to <root>/saves.
     #[arg(long, env = "MOOSE_SERVICE_SAVES")]
     saves: Option<String>,
@@ -76,6 +79,13 @@ struct Args {
 /// than an Arc.
 struct Library {
     games: Vec<esde::Game>,
+    /// The BIOS set, flattened.
+    ///
+    /// Flattened on purpose: the tree has `mame/`, `fbneo/` and so on, but
+    /// RetroArch wants every BIOS in one system directory, so the sub-path is
+    /// reported and not reproduced. A wrong BIOS breaks emulation silently,
+    /// which is why the hashes travel with the listing.
+    firmware: Vec<Firmware>,
     /// Saves, and the per-device bookkeeping that makes a conflict detectable.
     ///
     /// A Mutex rather than an RwLock: writes are rare and a save upload must
@@ -135,6 +145,85 @@ impl SyncState {
         if let Ok(j) = serde_json::to_vec_pretty(&self.data) {
             let _ = std::fs::write(&self.path, j);
         }
+    }
+}
+
+#[derive(Serialize, Clone)]
+struct Firmware {
+    id: i64,
+    file_name: String,
+    file_size_bytes: i64,
+    md5_hash: Option<String>,
+    sha1_hash: Option<String>,
+    /// Where it sits under the firmware root, e.g. `mame`. Reported so a
+    /// duplicate name is explicable, not so it can be recreated.
+    file_path: Option<String>,
+    /// True only when a hash was actually computed. Claiming verification
+    /// without one would be worse than admitting none.
+    is_verified: bool,
+    #[serde(skip)]
+    abs: std::path::PathBuf,
+}
+
+/// Walk a BIOS tree into a flat list, hashing as it goes.
+///
+/// Hashed once at startup rather than per request: the set is ~170 files and a
+/// few GB, and a BIOS that silently differs is the failure this exists to catch.
+fn scan_firmware(root: &std::path::Path) -> Vec<Firmware> {
+    use md5::Digest as _;
+    let mut out = Vec::new();
+    let mut stack = vec![root.to_path_buf()];
+    while let Some(d) = stack.pop() {
+        let Ok(rd) = std::fs::read_dir(&d) else { continue };
+        for e in rd.flatten() {
+            let p = e.path();
+            if p.is_dir() {
+                stack.push(p);
+                continue;
+            }
+            let Some(name) = p.file_name().and_then(|n| n.to_str()) else { continue };
+            if name.starts_with('.') {
+                continue;
+            }
+            let Ok(bytes) = std::fs::read(&p) else { continue };
+            let md5 = hex::encode(md5::Md5::digest(&bytes));
+            let sha1 = hex::encode(<sha1::Sha1 as sha1::Digest>::digest(&bytes));
+            let rel = p
+                .parent()
+                .and_then(|par| par.strip_prefix(root).ok())
+                .map(|r| r.to_string_lossy().into_owned())
+                .filter(|s| !s.is_empty());
+            out.push(Firmware {
+                id: saves::save_id(0, &p.to_string_lossy()),
+                file_name: name.to_owned(),
+                file_size_bytes: bytes.len() as i64,
+                md5_hash: Some(md5),
+                sha1_hash: Some(sha1),
+                file_path: rel,
+                is_verified: true,
+                abs: p,
+            });
+        }
+    }
+    out.sort_by(|a, b| (&a.file_path, &a.file_name).cmp(&(&b.file_path, &b.file_name)));
+    out
+}
+
+async fn firmware(State(lib): State<Arc<Library>>) -> Json<Vec<Firmware>> {
+    Json(lib.firmware.clone())
+}
+
+async fn firmware_content(
+    State(lib): State<Arc<Library>>,
+    AxPath((id, _name)): AxPath<(i64, String)>,
+    req: axum::extract::Request,
+) -> axum::response::Response {
+    let Some(f) = lib.firmware.iter().find(|f| f.id == id) else {
+        return axum::http::StatusCode::NOT_FOUND.into_response();
+    };
+    match tower::ServiceExt::oneshot(ServeFile::new(&f.abs), req).await {
+        Ok(r) => r.into_response(),
+        Err(_) => axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
 }
 
@@ -563,6 +652,8 @@ fn app(lib: Arc<Library>, media_dir: std::path::PathBuf) -> Router {
             .route("/api/roms/{id}", get(rom_by_id))
             .route("/api/roms/{id}/content/{*name}", get(rom_content))
             .route("/api/collections", get(collections))
+        .route("/api/firmware", get(firmware))
+        .route("/api/firmware/{id}/content/{*name}", get(firmware_content))
         .route("/api/devices", axum::routing::post(register_device))
         .route("/api/saves", get(list_saves).post(upload_save))
         .route("/api/saves/{id}/content", get(save_content))
@@ -643,9 +734,21 @@ async fn main() -> Result<()> {
         saves_root.display(),
         data.devices.len()
     );
+    let firmware = match args.firmware.as_deref() {
+        Some(f) => {
+            let list = scan_firmware(std::path::Path::new(f));
+            println!("firmware   {} files from {f}", list.len());
+            list
+        }
+        None => {
+            println!("firmware   none (--firmware not given)");
+            Vec::new()
+        }
+    };
     let lib = Arc::new(Library {
         games,
         hashes,
+        firmware,
         sync: std::sync::Mutex::new(SyncState {
             store: saves::SaveStore::new(&saves_root),
             path: state_path,
@@ -687,6 +790,11 @@ mod tests {
         std::fs::write(roms.join("Alpha (USA).zip"), b"alpha-bytes").unwrap();
         std::fs::write(roms.join("Beta (USA).zip"), b"beta").unwrap();
         std::fs::write(media.join("Alpha (USA).png"), b"PNG").unwrap();
+        // A BIOS tree with a subdirectory, because the real one has mame/ and
+        // fbneo/ and the flattening is the part worth testing.
+        std::fs::create_dir_all(dir.join("bios/mame")).unwrap();
+        std::fs::write(dir.join("bios/scph1001.bin"), b"psx-bios").unwrap();
+        std::fs::write(dir.join("bios/mame/neogeo.zip"), b"neogeo").unwrap();
         std::fs::write(
             lists.join("gamelist.xml"),
             r#"<?xml version="1.0"?><gameList>
@@ -703,6 +811,7 @@ mod tests {
         let lib = Library {
             games,
             hashes: Default::default(),
+            firmware: scan_firmware(&dir.join("bios")),
             sync: std::sync::Mutex::new(SyncState {
                 store: saves::SaveStore::new(&saves_root),
                 path: saves_root.join("sync-state.json"),
@@ -969,5 +1078,49 @@ mod tests {
         let plan: serde_json::Value = serde_json::from_str(&body).unwrap();
         assert_eq!(plan["total_download"], 1);
         assert_eq!(plan["operations"][0]["action"], "download");
+    }
+
+    /// The tree has subdirectories; RetroArch wants one flat system directory.
+    /// So the sub-path is reported and not reproduced.
+    #[tokio::test]
+    async fn firmware_is_flattened_but_remembers_where_it_came_from() {
+        let (_d, app) = built();
+        let (s, body) = get(&app, "/api/firmware").await;
+        assert_eq!(s, StatusCode::OK);
+        let v: serde_json::Value = serde_json::from_str(&body).unwrap();
+        let all = v.as_array().unwrap();
+        assert_eq!(all.len(), 2);
+        let nested = all.iter().find(|f| f["file_name"] == "neogeo.zip").unwrap();
+        assert_eq!(nested["file_path"], "mame", "sub-path is reported");
+        let top = all.iter().find(|f| f["file_name"] == "scph1001.bin").unwrap();
+        assert!(top["file_path"].is_null(), "a top-level file has no sub-path");
+    }
+
+    /// A wrong BIOS breaks emulation silently, so the hashes travel with the
+    /// listing rather than being fetched separately.
+    #[tokio::test]
+    async fn firmware_carries_hashes_and_serves_its_bytes() {
+        let (_d, app) = built();
+        let (_, body) = get(&app, "/api/firmware").await;
+        let v: serde_json::Value = serde_json::from_str(&body).unwrap();
+        let f = v.as_array().unwrap().iter()
+            .find(|f| f["file_name"] == "scph1001.bin").unwrap();
+        // md5 and sha1 of "psx-bios", computed with python rather than copied
+        // out of this code's own output -- otherwise the test only asserts the
+        // implementation agrees with itself.
+        assert_eq!(f["md5_hash"], "3400cfcc9a4e5a91adae128ed69ffab3");
+        assert_eq!(f["sha1_hash"], "5be58ba07567dcbe81b3a1c4e5af279a2e1d3dcd");
+        assert_eq!(f["file_size_bytes"], 8);
+        assert_eq!(f["is_verified"], true);
+        let id = f["id"].as_i64().unwrap();
+        let (s, bytes) = get(&app, &format!("/api/firmware/{id}/content/scph1001.bin")).await;
+        assert_eq!(s, StatusCode::OK);
+        assert_eq!(bytes, "psx-bios");
+    }
+
+    #[tokio::test]
+    async fn an_unknown_firmware_id_is_404() {
+        let (_d, app) = built();
+        assert_eq!(get(&app, "/api/firmware/999/content/x.bin").await.0, StatusCode::NOT_FOUND);
     }
 }
