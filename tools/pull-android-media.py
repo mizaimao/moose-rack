@@ -13,7 +13,7 @@ only a path diff:
 
     tools/pull-android-media.py --dry-run     what would come across
     tools/pull-android-media.py               copy it
-    tools/pull-android-media.py --videos      include videos, which are large
+    tools/pull-android-media.py --no-videos   artwork only, no videos
 
 Missing-only by default. A file already on the SSD is never overwritten, because
 the SSD is the copy that has been audited and the phone's is not.
@@ -111,7 +111,12 @@ def remote_listing(root):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dry-run", action="store_true")
-    ap.add_argument("--videos", action="store_true", help="include videos (large)")
+    ap.add_argument(
+        "--no-videos",
+        action="store_true",
+        help="skip videos. They are ~40%% of the bytes and the default is to take them: "
+        "artwork without them is not the media set, it is most of it.",
+    )
     ap.add_argument("--root", help="Android media root, if auto-detection fails")
     ap.add_argument("--dest", default=str(SSD_MEDIA))
     ap.add_argument(
@@ -164,7 +169,7 @@ def main():
     missing = []
     for r in remote:
         parts = r.split("/")
-        if not args.videos and len(parts) > 1 and parts[1] in VIDEO_DIRS:
+        if args.no_videos and len(parts) > 1 and parts[1] in VIDEO_DIRS:
             skipped_video += 1
             continue
         if not (dest / r).exists():
@@ -174,7 +179,7 @@ def main():
     print(f"\n  on device   {len(remote)}")
     print(f"  already ssd {have}")
     if skipped_video:
-        print(f"  videos      {skipped_video} skipped (--videos to include)")
+        print(f"  videos      {skipped_video} skipped (--no-videos was passed)")
     print(f"  to copy     {len(missing)}")
 
     if not missing:
