@@ -1,111 +1,111 @@
 # Arcade Shmups Horizontal
 # 109 games, exported 2026-09-03 from RomM
-4-D Warriors
-Air Buster: Trouble Specialty Raid Unit
-Airwolf
-Akai Katana
-Alien Sector
-Alpha One
-Andro Dunos
-Atomic Robo-Kid
-Bakutotsu Kijuutei
-Baraduke
-Bio-ship Paladin
-Black Heart
-Blaze On
-Blazing Star
-Brain
-Carrier Air Wing
-Chimera Beast
-Choplifter
-Choutetsu Brikin'ger - Iron Clad
-Chuka Taisen
-Cobra-command
-Cosmic Avenger
-Cosmic Cop
-Cotton: Fantastic Night Dreams
-Dambusters
-Darius
-Darius Gaiden - Silver Hawk
-Darius Gaiden - Silver Hawk Extra Version
-Darius II
-Deathsmiles
-Deathsmiles MegaBlack Label
-Defender
-Dodge Man
-Dragon Breed
-E.D.F. : Earth Defense Force
-Eco Fighters
-Exzisus
-Fantastic Journey
-Fantasy Zone
-Fantasy Zone II - The Tears of Opa-Opa (2008)
-Fantasy Zone II: The Tears of Opa-Opa
-Forgotten Worlds
-Gigandes
-Gradius III
-Gratia - Second Earth
-Hacha Mecha Fighter
-Heavy Unit
-Hellfire
-Hyper Duel
-Insector X
-Last Hope
-Last Resort
-Lock On
-Markham
-Mars
-Mayday
-Mega Blast
-Metal Black
-Mighty Monkey
-Moon Shuttle
-Mystic Riders
-Nemesis
-Opa Opa
-Ordyne
-P-47 Aces
-P47 Thunderbolt
-Parodius Da!
-Pioneer Balloon
-Pistol Daimyo no Bōken
-Prehistoric Isle 2
-Prehistoric Isle in 1930
-Progear
-Pulstar
-R-Type
-R-Type II
-R-Type Leo
-Rabio Lepus
-Raiga - Strato Fighter
-Saint Dragon
-Salamander 2
-Sauro
-Scorpion
-Scramble
-Side Arms - Hyper Dyne
-Sky Army
-Sky Kid
-Sky Kid Deluxe
-Sol Divide: Sword of Darkness
-Stinger
-Super Cobra
-Super Spacefortress Macross II
-Syvalion
-Tengai
-Thunder Cross
-Thunder Cross II
-Thunder Force AC
-Thunder Strike
-Transformer
-Turtle Ship
-Twin Action
-Twin Falcons
-U.N. Squadron
-USAAF Mustang
-Vastar
-Vulcan Venture
-X Multiply
-Xexex
-Zed Blade
-Zero Wing
+arcade/4dwarrio    # 4-D Warriors
+arcade/airbustr    # Air Buster: Trouble Specialty Raid Unit
+arcade/airwolf    # Airwolf
+arcade/akatana    # Akai Katana
+arcade/aliensec    # Alien Sector
+arcade/alpha1v    # Alpha One
+arcade/androdun    # Andro Dunos
+arcade/bakutotu    # Bakutotsu Kijuutei
+arcade/baraduke    # Baraduke
+arcade/bioship    # Bio-ship Paladin
+arcade/blazeon    # Blaze On
+arcade/blazstar    # Blazing Star
+arcade/blkheart    # Black Heart
+arcade/brain    # Brain
+arcade/cavenger    # Cosmic Avenger
+arcade/cawing    # Carrier Air Wing
+arcade/chimerab    # Chimera Beast
+arcade/choplift    # Choplifter
+arcade/chukatai    # Chuka Taisen
+arcade/cobracom    # Cobra-command
+arcade/cosmccop    # Cosmic Cop
+arcade/cotton    # Cotton: Fantastic Night Dreams
+arcade/dambustr    # Dambusters
+arcade/darius    # Darius
+arcade/darius2    # Darius II
+arcade/dariusg    # Darius Gaiden - Silver Hawk
+arcade/dariusgx    # Darius Gaiden - Silver Hawk Extra Version
+arcade/dbreed    # Dragon Breed
+arcade/deathsml    # Deathsmiles
+arcade/defender    # Defender
+arcade/dodgeman    # Dodge Man
+arcade/dsmbl    # Deathsmiles MegaBlack Label
+arcade/ecofghtr    # Eco Fighters
+arcade/edf    # E.D.F. : Earth Defense Force
+arcade/exzisus    # Exzisus
+arcade/fantzn2    # Fantasy Zone II: The Tears of Opa-Opa
+arcade/fantzn2x    # Fantasy Zone II - The Tears of Opa-Opa (2008)
+arcade/fantzone    # Fantasy Zone
+arcade/forgottn    # Forgotten Worlds
+arcade/gigandes    # Gigandes
+arcade/gokuparo    # Fantastic Journey
+arcade/gradius3    # Gradius III
+arcade/gratia    # Gratia - Second Earth
+arcade/hachamf    # Hacha Mecha Fighter
+arcade/hellfire    # Hellfire
+arcade/hvyunit    # Heavy Unit
+arcade/hyprduel    # Hyper Duel
+arcade/insectx    # Insector X
+arcade/ironclad    # Choutetsu Brikin'ger - Iron Clad
+arcade/lasthope    # Last Hope
+arcade/lockonph    # Lock On
+arcade/lresort    # Last Resort
+arcade/macross2    # Super Spacefortress Macross II
+arcade/markham    # Markham
+arcade/mars    # Mars
+arcade/mayday    # Mayday
+arcade/megablst    # Mega Blast
+arcade/metalb    # Metal Black
+arcade/mimonkey    # Mighty Monkey
+arcade/mshuttle    # Moon Shuttle
+arcade/mustang    # USAAF Mustang
+arcade/mysticri    # Mystic Riders
+arcade/nemesis    # Nemesis
+arcade/opaopa    # Opa Opa
+arcade/ordyne    # Ordyne
+arcade/p47    # P47 Thunderbolt
+arcade/p47aces    # P-47 Aces
+arcade/parodius    # Parodius Da!
+arcade/pballoon    # Pioneer Balloon
+arcade/pistoldm    # Pistol Daimyo no Bōken
+arcade/prehisle    # Prehistoric Isle in 1930
+arcade/preisle2    # Prehistoric Isle 2
+arcade/progear    # Progear
+arcade/pulstar    # Pulstar
+arcade/rabiolep    # Rabio Lepus
+arcade/robokid    # Atomic Robo-Kid
+arcade/rtype    # R-Type
+arcade/rtype2    # R-Type II
+arcade/rtypeleo    # R-Type Leo
+arcade/salmndr2    # Salamander 2
+arcade/sauro    # Sauro
+arcade/scobra    # Super Cobra
+arcade/scorpion    # Scorpion
+arcade/scramble    # Scramble
+arcade/sidearms    # Side Arms - Hyper Dyne
+arcade/skyarmy    # Sky Army
+arcade/skykid    # Sky Kid
+arcade/skykiddx    # Sky Kid Deluxe
+arcade/soldivid    # Sol Divide: Sword of Darkness
+arcade/stdragon    # Saint Dragon
+arcade/stinger    # Stinger
+arcade/stratof    # Raiga - Strato Fighter
+arcade/syvalion    # Syvalion
+arcade/tengai    # Tengai
+arcade/tfrceac    # Thunder Force AC
+arcade/thndrx2    # Thunder Cross II
+arcade/thunderx    # Thunder Cross
+arcade/transfrm    # Transformer
+arcade/tstrike    # Thunder Strike
+arcade/turtship    # Turtle Ship
+arcade/twinactn    # Twin Action
+arcade/twinfalc    # Twin Falcons
+arcade/unsquad    # U.N. Squadron
+arcade/vastar    # Vastar
+arcade/vulcan    # Vulcan Venture
+arcade/xexex    # Xexex
+arcade/xmultipl    # X Multiply
+arcade/zedblade    # Zed Blade
+arcade/zerowing    # Zero Wing

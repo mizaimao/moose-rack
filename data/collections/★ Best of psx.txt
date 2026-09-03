@@ -1,35 +1,35 @@
 # ★ Best of psx
 # 33 games, exported 2026-09-03 from RomM
-Ape Escape
-Castlevania: Symphony of the Night
-Colony Wars
-Crash Bandicoot
-Crash Bandicoot 2: Cortex Strikes Back
-Crash Team Racing
-Driver
-Final Fantasy IX
-Final Fantasy VII
-Final Fantasy VIII
-Gran Turismo
-Gran Turismo 2
-I.Q - Intelligent Qube
-Klonoa: Door to Phantomile
-Medal of Honor
-Medal of Honor: Underground
-Mega Man X4
-Metal Gear Solid
-Oddworld: Abe's Oddysee
-PaRappa the Rapper
-Rayman
-Silent Hill
-Spider-Man
-Spyro 2: Ripto's Rage!
-Spyro the Dragon
-Syphon Filter
-Syphon Filter 2
-Tekken 3
-Tenchu: Stealth Assassins
-Twisted Metal 2
-Vagrant Story
-Vib-Ribbon
-Wipeout XL
+psx/Ape Escape (USA)    # Ape Escape
+psx/Castlevania - Symphony of the Night (USA)    # Castlevania: Symphony of the Night
+psx/Colony Wars (USA)    # Colony Wars
+psx/Crash Bandicoot (USA)    # Crash Bandicoot
+psx/Crash Bandicoot 2 - Cortex Strikes Back (USA)    # Crash Bandicoot 2: Cortex Strikes Back
+psx/CTR - Crash Team Racing (USA)    # Crash Team Racing
+psx/Driver - You Are the Wheelman (USA) (Rev 1)    # Driver
+psx/Final Fantasy IX (USA) (Rev 1)    # Final Fantasy IX
+psx/Final Fantasy VII (USA)    # Final Fantasy VII
+psx/Final Fantasy VIII (USA)    # Final Fantasy VIII
+psx/Gran Turismo (USA) (Rev 1)    # Gran Turismo
+psx/Gran Turismo 2 (USA) (Arcade Mode) (Rev 1)    # Gran Turismo 2
+psx/I.Q - Intelligent Qube (USA)    # I.Q - Intelligent Qube
+psx/Klonoa - Door to Phantomile (USA)    # Klonoa: Door to Phantomile
+psx/Medal of Honor (USA)    # Medal of Honor
+psx/Medal of Honor - Underground (USA)    # Medal of Honor: Underground
+psx/Mega Man X4 (USA)    # Mega Man X4
+psx/Metal Gear Solid (USA) (Rev 1)    # Metal Gear Solid
+psx/Oddworld - Abe's Oddysee (USA) (Rev 2)    # Oddworld: Abe's Oddysee
+psx/PaRappa the Rapper (USA) (En,Fr,De,Es,It)    # PaRappa the Rapper
+psx/Rayman (USA)    # Rayman
+psx/Silent Hill (USA)    # Silent Hill
+psx/Spider-Man (USA)    # Spider-Man
+psx/Spyro 2 - Ripto's Rage! (USA)    # Spyro 2: Ripto's Rage!
+psx/Spyro the Dragon (USA)    # Spyro the Dragon
+psx/Syphon Filter (USA) (Rev 1)    # Syphon Filter
+psx/Syphon Filter 2 (USA)    # Syphon Filter 2
+psx/Tekken 3 (USA)    # Tekken 3
+psx/Tenchu - Stealth Assassins (USA) (Rev 1)    # Tenchu: Stealth Assassins
+psx/Twisted Metal 2 (USA)    # Twisted Metal 2
+psx/Vagrant Story (USA)    # Vagrant Story
+psx/Vib-Ribbon (Europe) (En,Fr,De,Es,It)    # Vib-Ribbon
+psx/Wipeout XL (USA)    # Wipeout XL

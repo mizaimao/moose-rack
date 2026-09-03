@@ -1,107 +1,107 @@
 # Arcade Shmups Other
 # 105 games, exported 2026-09-03 from RomM
-A. D. 2083
-Acrobatic Dog-Fight
-After Burner II
-Air Rescue
-Ambush
-Apache 3
-Ark Area
-Asteroids
-Asteroids Deluxe
-Aztarac
-Azurian Attack
-Battle Chopper
-Battle Cross
-Battle Shark
-Black Widow
-Blaster
-Blasteroids
-Bosconian
-Buck Rogers: Planet of Zoom
-Cerberus
-Cloak & Dagger
-D-day
-Daikaiju No Gyakushu
-Danger Zone
-Dark Planet
-Dead Connection
-Dog Fight
-Drakton
-Eliminator
-Excelsior
-Future Spy
-G-loc Air Battle
-Galaxy Force 2
-Gravitar
-Gyruss
-Harem
-Insector
-Ixion
-Kozmik Kroozr
-Krull
-Kyuukoukabakugekitai - Dive Bomber Squad
-Last Mission
-Liberation
-Lizard Wizard
-Lock-on
-Mad Planets
-Marine Boy
-Megadon
-Metal Hawk
-Mirax
-Moon War
-Moonwar
-Night Striker
-Nova 2001
-Omega Race
-Red Baron
-Rescue
-Revenger '84
-Robotron: 2084
-Salamander
-Sarge
-Scooter Shooter
-Screw Loose
-Section Z
-Sexy Parodius
-SF-X
-Sinistar
-Sky Destroyer
-Sky Skipper
-Smash T.V.
-Sos
-Space Duel
-Space Dungeon
-Space Fury
-Space Harrier
-Space Seeker
-Splat!
-Star Guards
-Star Trek
-Star Wars
-Stargate
-Strike Fighter
-Strike Force
-Subroc-3d
-Super Zaxxon
-SWAT
-Terra Force
-The Empire Strikes Back
-The Percussor
-The Three Stooges In Brides Is Brides
-Thunder Blade
-Thunder Ceptor
-Time Fighter
-Time Pilot
-Time Pilot '84
-Tube Panic
-Two Tigers
-Ultraman Club - Tatakae! Ultraman Kyoudai!!
-Vanguard
-Vanguard II
-Victory
-Viewpoint
-Wacko
-Zaxxon
-Zektor
+arcade/3stooges    # The Three Stooges In Brides Is Brides
+arcade/aburner2    # After Burner II
+arcade/ad2083    # A. D. 2083
+arcade/ambush    # Ambush
+arcade/apache3    # Apache 3
+arcade/arescue    # Air Rescue
+arcade/arkarea    # Ark Area
+arcade/astdelux    # Asteroids Deluxe
+arcade/asteroid    # Asteroids
+arcade/aztarac    # Aztarac
+arcade/azurian    # Azurian Attack
+arcade/battlex    # Battle Cross
+arcade/bchopper    # Battle Chopper
+arcade/blaster    # Blaster
+arcade/blstroid    # Blasteroids
+arcade/bosco    # Bosconian
+arcade/bshark    # Battle Shark
+arcade/buckrog    # Buck Rogers: Planet of Zoom
+arcade/bwidow    # Black Widow
+arcade/cerberus    # Cerberus
+arcade/cloak    # Cloak & Dagger
+arcade/daikaiju    # Daikaiju No Gyakushu
+arcade/dangerz    # Danger Zone
+arcade/darkplnt    # Dark Planet
+arcade/ddayjlc    # D-day
+arcade/deadconx    # Dead Connection
+arcade/divebomb    # Kyuukoukabakugekitai - Dive Bomber Squad
+arcade/dogfgt    # Acrobatic Dog-Fight
+arcade/dogfight    # Dog Fight
+arcade/drakton    # Drakton
+arcade/elim2    # Eliminator
+arcade/esb    # The Empire Strikes Back
+arcade/excelsr    # Excelsior
+arcade/futspy    # Future Spy
+arcade/gforce2    # Galaxy Force 2
+arcade/gloc    # G-loc Air Battle
+arcade/gravitar    # Gravitar
+arcade/gyruss    # Gyruss
+arcade/harem    # Harem
+arcade/insector    # Insector
+arcade/ixion    # Ixion
+arcade/kroozr    # Kozmik Kroozr
+arcade/krull    # Krull
+arcade/lastmisn    # Last Mission
+arcade/liberate    # Liberation
+arcade/lizwiz    # Lizard Wizard
+arcade/lockon    # Lock-on
+arcade/marineb    # Marine Boy
+arcade/megadon    # Megadon
+arcade/metlhawk    # Metal Hawk
+arcade/mirax    # Mirax
+arcade/moonwar    # Moonwar
+arcade/moonwarp    # Moon War
+arcade/mplanets    # Mad Planets
+arcade/nightstr    # Night Striker
+arcade/nova2001    # Nova 2001
+arcade/omegrace    # Omega Race
+arcade/percuss    # The Percussor
+arcade/redbaron    # Red Baron
+arcade/rescue    # Rescue
+arcade/revngr84    # Revenger '84
+arcade/robotron    # Robotron: 2084
+arcade/salamand    # Salamander
+arcade/sarge    # Sarge
+arcade/scotrsht    # Scooter Shooter
+arcade/screwloo    # Screw Loose
+arcade/sdungeon    # Space Dungeon
+arcade/sectionz    # Section Z
+arcade/sexyparo    # Sexy Parodius
+arcade/sfx    # SF-X
+arcade/sharrier    # Space Harrier
+arcade/sinistar    # Sinistar
+arcade/skydest    # Sky Destroyer
+arcade/skyskipr    # Sky Skipper
+arcade/smashtv    # Smash T.V.
+arcade/sos    # Sos
+arcade/spacduel    # Space Duel
+arcade/spaceskr    # Space Seeker
+arcade/spacfury    # Space Fury
+arcade/splat    # Splat!
+arcade/stargate    # Stargate
+arcade/stargrds    # Star Guards
+arcade/startrek    # Star Trek
+arcade/starwars    # Star Wars
+arcade/strkfgtr    # Strike Fighter
+arcade/strkforc    # Strike Force
+arcade/subroc3d    # Subroc-3d
+arcade/swat    # SWAT
+arcade/szaxxon    # Super Zaxxon
+arcade/tceptor    # Thunder Ceptor
+arcade/terraf    # Terra Force
+arcade/thndrbld    # Thunder Blade
+arcade/timefgtr    # Time Fighter
+arcade/timeplt    # Time Pilot
+arcade/tp84    # Time Pilot '84
+arcade/tubep    # Tube Panic
+arcade/twotiger    # Two Tigers
+arcade/umanclub    # Ultraman Club - Tatakae! Ultraman Kyoudai!!
+arcade/vangrd2    # Vanguard II
+arcade/vanguard    # Vanguard
+arcade/victoryc    # Victory
+arcade/viewpoin    # Viewpoint
+arcade/wacko    # Wacko
+arcade/zaxxon    # Zaxxon
+arcade/zektor    # Zektor

@@ -1,6 +1,6 @@
 # Arcade Rhythm
 # 4 games, exported 2026-09-03 from RomM
-Rock'n 3
-Rock'n 4
-Rock'n Tread
-Rock'n Tread 2
+arcade/rockn    # Rock'n Tread
+arcade/rockn2    # Rock'n Tread 2
+arcade/rockn3    # Rock'n 3
+arcade/rockn4    # Rock'n 4

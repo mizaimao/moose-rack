@@ -1,257 +1,257 @@
 # Arcade Sports
 # 255 games, exported 2026-09-03 from RomM
-'88 Games
-10-Yard Fight
-18 Holes Pro Golf
-2 On 2 Open Ice Challenge
-2020 Super Baseball
-3 Count Bout
-3 On 3 Dunk Madness
-720 Degrees
-9 Ball Shootout
-Ace Attacker
-Ah Eikou No Koshien
-All American Football
-Alley Master
-Alpine Ski
-American Horseshoes
-Angler Dangler
-Appoooh
-Arch Rivals
-Arm Champs II v2.6
-Arm Wrestling
-Back Street Soccer
-Bang Bead
-Baseball Stars 2
-Baseball Stars Professional
-Baseball: The Season II
-Battle Flip Shot
-Best Bout Boxing
-Big Striker
-Billiard
-Birdie King
-Birdie King 2
-Birdie King 3
-Birdie Try
-Blades Of Steel
-Blazing Tornado
-Body Slam
-Boot Camp
-Bottom Of The Ninth
-Bowl-O-Rama
-Bullfight
-Capcom baseball
-Capcom Bowling
-Capcom Sports Club
-Carket Ball
-Champion Base Ball
-Champion Base Ball Part-2
-Champion Boxing
-Champion Pro Wrestling
-Champion Wrestler
-Championship Bowling
-Chance Kun
-Clutch Hitter
-Competition Golf Final Round
-Country Club
-Crowns Golf
-Crowns Golf In Hawaii
-Curve Ball
-Cyberball
-Discs Of Tron
-Dokaben
-Double Dribble
-Dream Soccer '94
-Dribbling
-Dunk Shot
-Dynamic Country Club
-Dynamic Ski
-Dynamite League
-Eagle Shot Golf
-Eight Ball Action
-Escape Kids
-Euro Champ '92
-Euro League
-Excite League
-Extreme Downhill
-Face Off
-Fighting Basketball
-Fighting Ice Hockey
-Fighting Soccer
-Final Blow
-Fly-boy
-Football Champ
-Football Frenzy
-Forty-Love
-Goal! Goal! Goal!
-Gold Medalist
-Golden Tee '97
-Golden Tee '98
-Golden Tee '99
-Golden Tee 2k
-Golden Tee 3d Golf
-Golden Tee Classic
-Grand Striker 2
-Great Sluggers
-Great Sluggers '94
-Hard Dunk
-Hard Yardage
-Heavy Smash
-Heavyweight Champ
-High Impact Football
-Hit The Ice
-Hoccer
-Hoops
-Hunchback at the Olympics
-Hyper Sports
-In Your Face
-International Cup '94
-J-league Soccer V-shoot
-Jitsuryoku!! Pro Yakyuu
-Jump Shot
-Kick And Run
-Kick Goal
-Kick Off
-Konami's Ping-pong
-Krazy Bowl
-Kusayakyuu
-Kyuukai Douchuuki
-Last Striker
-League Bowling
-Lee Trevino's Fighting Golf
-Mach Breakers
-Magicball Fighting
-Main Event
-Major League
-Major Title
-Major Title 2
-Mania Challenge
-Mat Mania
-Muhanseungbu
-Muscle Bomber Duo : Ultimate Team Battle
-Mvp
-Nba Hangtime
-Nba Jam
-NBA Jam Tournament Edition
-Nba Maximum Hangtime
-Neo Turf Masters
-Neo-Geo Cup '98 - The Road to the Victory
-Numan Athletics
-Oozumou - The Grand Sumo
-Paddle Mania
-Parallel Turn
-Passing Shot
-Penguin-kun Wars
-Perfect Billiard
-Pigskin 621ad
-Ping Pong Masters '93
-Pk Scramble
-Pleasure Goal
-Pocket Gal
-Pocket Gal Deluxe
-Pocket Gals V.i.p
-Pound For Pound
-Power Spikes
-Power Spikes II
-Pro Bowling
-Pro Soccer
-Pro Tennis
-Punch-out!!
-Punk Shot
-Punk Shot
-Rack 'em Up
-Rack + Roll
-Recordbreaker
-Relief Pitcher
-Ring King
-Ring King
-Ring of Destruction: Slam Masters II
-Ring Rage
-Robo Wres 2001
-Rollergames
-Saturday Night Slam Masters
-Scrum Try
-Shuffleshot
-Shuuz
-Side Pocket
-Skater
-Slap Shooter
-Slap Shot
-Snow Board Championship
-Soccer Brawl
-Speed Ball
-Speed Spin
-Squash
-Squash
-Stadium Hero
-Stadium Hero '96
-Stakes Winner
-Stakes Winner 2
-Stone Ball
-Street Slam
-Strength & Skill
-Success Joe
-Super Basketball
-Super Champion Baseball
-Super Cup Finals
-Super Dodge Ball
-Super Dodge Ball
-Super Doubles Tennis
-Super League
-Super Masters Golf
-Super Punch-out!!
-Super Sidekicks
-Super Sidekicks 2 - The World Championship
-Super Sidekicks 3 - The Next Glory
-Super Visual Football: European Sega Cup
-Super Volleyball
-Super World Court
-Super World Stadium
-Super World Stadium '92
-Super World Stadium '93
-Super World Stadium '95
-Super World Stadium '96
-Super World Stadium '97
-Swimmer
-Syusse Oozumou
-Tag Team Wrestling
-Taito Cup Finals
-Taito Power Goal
-Tecmo Bowl
-Tecmo World Soccer '96
-The Final Round
-The Main Event
-The Main Event
-The Ultimate 11: SNK Football Championship
-Title Fight
-Toobin'
-Top Player's Golf
-Top Ranking Stars
-Top Shooter
-Touchdown Fever
-Tournament Pro Golf
-Track & Field
-Tri-pool
-Tropical Angel
-U.s. Classic
-Ultimate Tennis
-Victorious Nine
-Video Hustler
-Vs Gong Fight
-Wai Wai Jockey Gate-in!
-Water Match
-Water Ski
-Windjammers
-Wonder League '96
-Wonder League Star - Sok-magicball Fighting
-World Beach Volley
-World Class Bowling
-World Class Bowling Deluxe
-World Court
-World Cup Volley '95
-World Pk Soccer V2
-World Stadium
-Wrestle War
-Wwf Superstars
-Wwf Wrestlefest
-WWF: Wrestlemania
+arcade/10yard    # 10-Yard Fight
+arcade/2020bb    # 2020 Super Baseball
+arcade/3countb    # 3 Count Bout
+arcade/3on3dunk    # 3 On 3 Dunk Madness
+arcade/40love    # Forty-Love
+arcade/720    # 720 Degrees
+arcade/88games    # '88 Games
+arcade/8ballact    # Eight Ball Action
+arcade/9ballsht    # 9 Ball Shootout
+arcade/aafb    # All American Football
+arcade/aceattac    # Ace Attacker
+arcade/alleymas    # Alley Master
+arcade/alpine    # Alpine Ski
+arcade/appoooh    # Appoooh
+arcade/archrivl    # Arch Rivals
+arcade/armchmp2    # Arm Champs II v2.6
+arcade/armwrest    # Arm Wrestling
+arcade/bangbead    # Bang Bead
+arcade/basebal2    # Baseball: The Season II
+arcade/bbbxing    # Best Bout Boxing
+arcade/bigprowr    # Tag Team Wrestling
+arcade/bigstrik    # Big Striker
+arcade/bilyard    # Billiard
+arcade/birdtry    # Birdie Try
+arcade/bking    # Birdie King
+arcade/bking2    # Birdie King 2
+arcade/bking3    # Birdie King 3
+arcade/bladestl    # Blades Of Steel
+arcade/blzntrnd    # Blazing Tornado
+arcade/bodyslam    # Body Slam
+arcade/bottom9    # Bottom Of The Ninth
+arcade/bowlrama    # Bowl-O-Rama
+arcade/bssoccer    # Back Street Soccer
+arcade/bstars    # Baseball Stars Professional
+arcade/bstars2    # Baseball Stars 2
+arcade/bullfgt    # Bullfight
+arcade/cadanglr    # Angler Dangler
+arcade/capbowl    # Capcom Bowling
+arcade/carket    # Carket Ball
+arcade/cbasebal    # Capcom baseball
+arcade/cfghtice    # Fighting Ice Hockey
+arcade/champbas    # Champion Base Ball
+arcade/champbb2    # Champion Base Ball Part-2
+arcade/champbwl    # Championship Bowling
+arcade/champwr    # Champion Wrestler
+arcade/chboxing    # Champion Boxing
+arcade/chkun    # Chance Kun
+arcade/chwrestl    # Champion Pro Wrestling
+arcade/cltchitr    # Clutch Hitter
+arcade/combatsc    # Boot Camp
+arcade/compgolf    # Competition Golf Final Round
+arcade/coozumou    # Oozumou - The Grand Sumo
+arcade/countryc    # Country Club
+arcade/cprobowl    # Pro Bowling
+arcade/cprogolf    # Tournament Pro Golf
+arcade/cpsoccer    # Pro Soccer
+arcade/cptennis    # Pro Tennis
+arcade/crgolf    # Crowns Golf
+arcade/crgolfhi    # Crowns Golf In Hawaii
+arcade/csclub    # Capcom Sports Club
+arcade/cscrtry    # Scrum Try
+arcade/csdtenis    # Super Doubles Tennis
+arcade/cskater    # Skater
+arcade/cupfinal    # Taito Cup Finals
+arcade/curvebal    # Curve Ball
+arcade/cyberbal    # Cyberball
+arcade/dcclub    # Dynamic Country Club
+arcade/ddribble    # Double Dribble
+arcade/dleague    # Dynamite League
+arcade/dokaben    # Dokaben
+arcade/dotron    # Discs Of Tron
+arcade/dribling    # Dribbling
+arcade/dsoccr94    # Dream Soccer '94
+arcade/dunkshot    # Dunk Shot
+arcade/dynamski    # Dynamic Ski
+arcade/eaglshot    # Eagle Shot Golf
+arcade/esckids    # Escape Kids
+arcade/euroch92    # Euro Champ '92
+arcade/exctleag    # Excite League
+arcade/extdwnhl    # Extreme Downhill
+arcade/faceoff    # Face Off
+arcade/fbfrenzy    # Football Frenzy
+arcade/fghtbskt    # Fighting Basketball
+arcade/finalb    # Final Blow
+arcade/fitegolf    # Lee Trevino's Fighting Golf
+arcade/flipshot    # Battle Flip Shot
+arcade/flyboy    # Fly-boy
+arcade/footchmp    # Football Champ
+arcade/fround    # The Final Round
+arcade/fsoccer    # Fighting Soccer
+arcade/goalx3    # Goal! Goal! Goal!
+arcade/goldmedl    # Gold Medalist
+arcade/gslgr94u    # Great Sluggers '94
+arcade/gslugrsj    # Great Sluggers
+arcade/gstrik2    # Grand Striker 2
+arcade/gt2k    # Golden Tee 2k
+arcade/gt3d    # Golden Tee 3d Golf
+arcade/gt97    # Golden Tee '97
+arcade/gt98    # Golden Tee '98
+arcade/gt99    # Golden Tee '99
+arcade/gtclassc    # Golden Tee Classic
+arcade/harddunk    # Hard Dunk
+arcade/hardyard    # Hard Yardage
+arcade/hiimpact    # High Impact Football
+arcade/hitice    # Hit The Ice
+arcade/hoccer    # Hoccer
+arcade/hoops96    # Hoops
+arcade/horshoes    # American Horseshoes
+arcade/huncholy    # Hunchback at the Olympics
+arcade/hustler    # Video Hustler
+arcade/hvysmsh    # Heavy Smash
+arcade/hwchamp    # Heavyweight Champ
+arcade/hyperspt    # Hyper Sports
+arcade/intcup94    # International Cup '94
+arcade/inyourfa    # In Your Face
+arcade/jitsupro    # Jitsuryoku!! Pro Yakyuu
+arcade/jumpshot    # Jump Shot
+arcade/kickgoal    # Kick Goal
+arcade/kicknrun    # Kick And Run
+arcade/kickoff    # Kick Off
+arcade/kingofb    # Ring King
+arcade/koshien    # Ah Eikou No Koshien
+arcade/krzybowl    # Krazy Bowl
+arcade/ksayakyu    # Kusayakyuu
+arcade/kyukaidk    # Kyuukai Douchuuki
+arcade/kyustrkr    # Last Striker
+arcade/lbowling    # League Bowling
+arcade/machbrkr    # Mach Breakers
+arcade/magicbal    # Magicball Fighting
+arcade/mainevt    # The Main Event
+arcade/mainevt2p    # The Main Event
+arcade/mainsnk    # Main Event
+arcade/majtitl2    # Major Title 2
+arcade/majtitle    # Major Title
+arcade/maniach    # Mania Challenge
+arcade/matmania    # Mat Mania
+arcade/mbombrd    # Muscle Bomber Duo : Ultimate Team Battle
+arcade/mjleague    # Major League
+arcade/mvp    # Mvp
+arcade/nbahangt    # Nba Hangtime
+arcade/nbajam    # Nba Jam
+arcade/nbajamte    # NBA Jam Tournament Edition
+arcade/nbamht    # Nba Maximum Hangtime
+arcade/neocup98    # Neo-Geo Cup '98 - The Road to the Victory
+arcade/numanath    # Numan Athletics
+arcade/openice    # 2 On 2 Open Ice Challenge
+arcade/paddlema    # Paddle Mania
+arcade/passsht    # Passing Shot
+arcade/pbillrd    # Perfect Billiard
+arcade/pcktgal    # Pocket Gal
+arcade/pgalvip    # Pocket Gals V.i.p
+arcade/pgoal    # Pleasure Goal
+arcade/pigskin    # Pigskin 621ad
+arcade/pingpong    # Konami's Ping-pong
+arcade/pkscram    # Pk Scramble
+arcade/pktgaldx    # Pocket Gal Deluxe
+arcade/pkunwar    # Penguin-kun Wars
+arcade/poundfor    # Pound For Pound
+arcade/ppmast93    # Ping Pong Masters '93
+arcade/progolf    # 18 Holes Pro Golf
+arcade/pspikes    # Power Spikes
+arcade/pspikes2    # Power Spikes II
+arcade/pturn    # Parallel Turn
+arcade/punchout    # Punch-out!!
+arcade/punkshot    # Punk Shot
+arcade/punkshot2    # Punk Shot
+arcade/pwrgoal    # Taito Power Goal
+arcade/rackemup    # Rack 'em Up
+arcade/racknrol    # Rack + Roll
+arcade/recordbr    # Recordbreaker
+arcade/relief    # Relief Pitcher
+arcade/ringdest    # Ring of Destruction: Slam Masters II
+arcade/ringking    # Ring King
+arcade/ringrage    # Ring Rage
+arcade/robowres    # Robo Wres 2001
+arcade/rollerg    # Rollergames
+arcade/sbasebal    # Super Champion Baseball
+arcade/sbasketb    # Super Basketball
+arcade/scessjoe    # Success Joe
+arcade/scfinals    # Super Cup Finals
+arcade/sdodgeb    # Super Dodge Ball
+arcade/semibase    # Muhanseungbu
+arcade/sgmast    # Super Masters Golf
+arcade/shufshot    # Shuffleshot
+arcade/shuuz    # Shuuz
+arcade/sidepckt    # Side Pocket
+arcade/slammast    # Saturday Night Slam Masters
+arcade/slapshot    # Slap Shot
+arcade/slapshtr    # Slap Shooter
+arcade/snowboar    # Snow Board Championship
+arcade/socbrawl    # Soccer Brawl
+arcade/spdball    # Speed Ball
+arcade/spdodgeb    # Super Dodge Ball
+arcade/speedspn    # Speed Spin
+arcade/spnchout    # Super Punch-out!!
+arcade/squaitsa    # Squash
+arcade/squash    # Squash
+arcade/ssideki    # Super Sidekicks
+arcade/ssideki2    # Super Sidekicks 2 - The World Championship
+arcade/ssideki3    # Super Sidekicks 3 - The Next Glory
+arcade/ssideki4    # The Ultimate 11: SNK Football Championship
+arcade/ssozumo    # Syusse Oozumou
+arcade/stadhero    # Stadium Hero
+arcade/stadhr96    # Stadium Hero '96
+arcade/stakwin    # Stakes Winner
+arcade/stakwin2    # Stakes Winner 2
+arcade/stonebal    # Stone Ball
+arcade/strhoop    # Street Slam
+arcade/strnskil    # Strength & Skill
+arcade/suprleag    # Super League
+arcade/svf    # Super Visual Football: European Sega Cup
+arcade/svolley    # Super Volleyball
+arcade/swcourt    # Super World Court
+arcade/swimmer    # Swimmer
+arcade/sws    # Super World Stadium
+arcade/sws92    # Super World Stadium '92
+arcade/sws93    # Super World Stadium '93
+arcade/sws95    # Super World Stadium '95
+arcade/sws96    # Super World Stadium '96
+arcade/sws97    # Super World Stadium '97
+arcade/tbowl    # Tecmo Bowl
+arcade/tdfever    # Touchdown Fever
+arcade/titlef    # Title Fight
+arcade/toobin    # Toobin'
+arcade/topshoot    # Top Shooter
+arcade/tpgolf    # Top Player's Golf
+arcade/trackfld    # Track & Field
+arcade/tripool    # Tri-pool
+arcade/troangel    # Tropical Angel
+arcade/trstar    # Top Ranking Stars
+arcade/turfmast    # Neo Turf Masters
+arcade/twcup90    # Euro League
+arcade/twsoc96    # Tecmo World Soccer '96
+arcade/ultennis    # Ultimate Tennis
+arcade/usclssic    # U.s. Classic
+arcade/victnine    # Victorious Nine
+arcade/vsgongf    # Vs Gong Fight
+arcade/vshoot    # J-league Soccer V-shoot
+arcade/waterski    # Water Ski
+arcade/wbeachvl    # World Beach Volley
+arcade/wcbowl    # World Class Bowling
+arcade/wcbowldx    # World Class Bowling Deluxe
+arcade/wcvol95    # World Cup Volley '95
+arcade/wjammers    # Windjammers
+arcade/wldcourt    # World Court
+arcade/wlstar    # Wonder League Star - Sok-magicball Fighting
+arcade/wmatch    # Water Match
+arcade/wondl96    # Wonder League '96
+arcade/wpksocv2    # World Pk Soccer V2
+arcade/wrestwar    # Wrestle War
+arcade/ws    # World Stadium
+arcade/wwfmania    # WWF: Wrestlemania
+arcade/wwfsstar    # Wwf Superstars
+arcade/wwfwfest    # Wwf Wrestlefest
+arcade/wwjgtin    # Wai Wai Jockey Gate-in!

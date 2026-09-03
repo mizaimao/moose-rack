@@ -1,78 +1,78 @@
 # Arcade Gallery Shooters
 # 76 games, exported 2026-09-03 from RomM
-Alien Invaders
-Altair
-Astro Blaster
-Astro Fantasia
-Astro Fighter
-Battle Cruiser M-12
-Black Hole
-Canyon Bomber
-Carnival
-Centipede
-Challenger
-Cloud 9
-Commando
-Cosmic Alien
-Cosmic Guerilla
-Cosmo Gang The Video
-Cosmo Gang the Video
-D-day
-Defend the Terra Attack on the Red UFO
-Destroyer
-Diet Family
-Disco Boy
-Exerion
-Fantastic
-Field Combat
-Frog & Spiders
-Galaga
-Galaga '88
-Galaxian
-Gaplus
-Imago
-Juno First
-King & Balloon
-Millipede
-Mini Vaders
-Moon Alien Part 2
-Moon Cresta
-Moon Quasar
-N-sub
-Navarone
-Ozma Wars
-Ozon I
-Phoenix
-Pisces
-Planet Probe
-Pleiads
-Radar Scope
-Razzmatazz
-Repulse
-Return of the Invaders
-Satan Of Saturn
-Satan's Hollow
-Saturn
-Sky Base
-Sky Fox
-Slither
-Space Bomber
-Space Cruiser
-Space Firebird
-Space Invaders '95: The Attack Of Lunar Loonies
-Space Invaders / Space Invaders M
-Space Invaders DX
-Space Raider
-Space Stranger
-Speak & Rescue
-Super Astro Fighter
-Super Space Invaders '91
-Tactician
-Tempest
-Terranean
-The Deep
-The End
-UniWar S
-War of the Bugs or Monsterous Manouvers in a Mushr
-Wiz Warz
-Zero Hour
+arcade/alinvade    # Alien Invaders
+arcade/altair    # Altair
+arcade/astrob    # Astro Blaster
+arcade/astrof    # Astro Fighter
+arcade/bcruzm12    # Battle Cruiser M-12
+arcade/blkhole    # Black Hole
+arcade/canyon    # Canyon Bomber
+arcade/carnival    # Carnival
+arcade/castfant    # Astro Fantasia
+arcade/centiped    # Centipede
+arcade/challeng    # Challenger
+arcade/cloud9    # Cloud 9
+arcade/commsega    # Commando
+arcade/cosmica    # Cosmic Alien
+arcade/cosmicg    # Cosmic Guerilla
+arcade/cosmo    # Cosmo Gang the Video
+arcade/cosmogng    # Cosmo Gang The Video
+arcade/csuperas    # Super Astro Fighter
+arcade/cterrani    # Terranean
+arcade/dday    # D-day
+arcade/destryer    # Destroyer
+arcade/discoboy    # Disco Boy
+arcade/dtfamily    # Diet Family
+arcade/exerion    # Exerion
+arcade/fantastc    # Fantastic
+arcade/fcombat    # Field Combat
+arcade/fspiderb    # Frog & Spiders
+arcade/galaga    # Galaga
+arcade/galaga88    # Galaga '88
+arcade/galaxian    # Galaxian
+arcade/gaplus    # Gaplus
+arcade/imago    # Imago
+arcade/invaders    # Space Invaders / Space Invaders M
+arcade/junofrst    # Juno First
+arcade/kingball    # King & Balloon
+arcade/milliped    # Millipede
+arcade/minivadr    # Mini Vaders
+arcade/moonal2    # Moon Alien Part 2
+arcade/mooncrst    # Moon Cresta
+arcade/moonqsr    # Moon Quasar
+arcade/navarone    # Navarone
+arcade/nsub    # N-sub
+arcade/ozmawars    # Ozma Wars
+arcade/ozon1    # Ozon I
+arcade/phoenix    # Phoenix
+arcade/pisces    # Pisces
+arcade/pleiads    # Pleiads
+arcade/pprobe    # Planet Probe
+arcade/radarscp    # Radar Scope
+arcade/razmataz    # Razzmatazz
+arcade/redufo    # Defend the Terra Attack on the Red UFO
+arcade/repulse    # Repulse
+arcade/retofinv    # Return of the Invaders
+arcade/satansat    # Satan Of Saturn
+arcade/saturnzi    # Saturn
+arcade/sbomber    # Space Bomber
+arcade/shollow    # Satan's Hollow
+arcade/skybase    # Sky Base
+arcade/skyfox    # Sky Fox
+arcade/slither    # Slither
+arcade/spacecr    # Space Cruiser
+arcade/spacedx    # Space Invaders DX
+arcade/spacefb    # Space Firebird
+arcade/spcinv95    # Space Invaders '95: The Attack Of Lunar Loonies
+arcade/speakres    # Speak & Rescue
+arcade/sraider    # Space Raider
+arcade/ssi    # Super Space Invaders '91
+arcade/sstrangr    # Space Stranger
+arcade/tactcian    # Tactician
+arcade/tempest    # Tempest
+arcade/thedeep    # The Deep
+arcade/theend    # The End
+arcade/uniwars    # UniWar S
+arcade/warofbug    # War of the Bugs or Monsterous Manouvers in a Mushr
+arcade/wizwarz    # Wiz Warz
+arcade/zerohour    # Zero Hour

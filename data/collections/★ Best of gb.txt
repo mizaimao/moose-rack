@@ -1,46 +1,46 @@
 # ★ Best of gb
 # 44 games, exported 2026-09-03 from RomM
-Avenging Spirit
-Bionic Commando
-Bubble Bobble
-Castlevania II: Belmont's Revenge
-Catrap
-Contra: The Alien Wars
-Donkey Kong
-Donkey Kong Land
-Donkey Kong Land 2
-Donkey Kong Land III
-Dr. Mario
-Final Fantasy Adventure
-Final Fantasy Legend II
-Final Fantasy Legend III
-Game & Watch Gallery
-Gargoyle's Quest
-Harvest Moon GB
-Kid Dracula
-Kid Icarus: Of Myths and Monsters
-Kirby's Block Ball
-Kirby's Dream Land
-Kirby's Dream Land 2
-Kirby's Pinball Land
-Mario's Picross
-Mega Man IV
-Mega Man V
-Metroid II: Return of Samus
-Mole Mania
-Motocross Maniacs
-Ninja Gaiden Shadow
-Operation C
-R-Type
-Samurai Shodown
-Super Mario Land
-Super Mario Land 2: 6 Golden Coins
-Super R.C. Pro-Am
-Teenage Mutant Ninja Turtles: Fall of the Foot Clan
-Tetris
-Tetris Attack
-The Final Fantasy Legend
-The Legend of Zelda: Link's Awakening
-Trip World
-Wario Blast: Featuring Bomberman!
-Wario Land: Super Mario Land 3
+gb/Avenging Spirit (USA, Europe)    # Avenging Spirit
+gb/Bionic Commando (USA)    # Bionic Commando
+gb/Bubble Bobble (USA, Europe)    # Bubble Bobble
+gb/Castlevania II - Belmont's Revenge (USA, Europe)    # Castlevania II: Belmont's Revenge
+gb/Catrap (USA)    # Catrap
+gb/Contra - The Alien Wars (USA) (SGB Enhanced)    # Contra: The Alien Wars
+gb/Donkey Kong (World) (Rev 1) (SGB Enhanced)    # Donkey Kong
+gb/Donkey Kong Land (USA, Europe) (SGB Enhanced)    # Donkey Kong Land
+gb/Donkey Kong Land 2 (USA, Europe) (SGB Enhanced)    # Donkey Kong Land 2
+gb/Donkey Kong Land III (USA, Europe) (SGB Enhanced)    # Donkey Kong Land III
+gb/Dr. Mario (World) (Rev 1)    # Dr. Mario
+gb/Final Fantasy Adventure (USA)    # Final Fantasy Adventure
+gb/Final Fantasy Legend II (USA)    # Final Fantasy Legend II
+gb/Final Fantasy Legend III (USA)    # Final Fantasy Legend III
+gb/Final Fantasy Legend, The (USA)    # The Final Fantasy Legend
+gb/Game & Watch Gallery (USA) (Rev 1) (SGB Enhanced)    # Game & Watch Gallery
+gb/Gargoyle's Quest (USA, Europe)    # Gargoyle's Quest
+gb/Harvest Moon GB (USA) (SGB Enhanced)    # Harvest Moon GB
+gb/Kid Dracula (USA, Europe)    # Kid Dracula
+gb/Kid Icarus - Of Myths and Monsters (USA, Europe)    # Kid Icarus: Of Myths and Monsters
+gb/Kirby's Block Ball (USA, Europe) (SGB Enhanced)    # Kirby's Block Ball
+gb/Kirby's Dream Land (USA, Europe)    # Kirby's Dream Land
+gb/Kirby's Dream Land 2 (USA, Europe) (SGB Enhanced)    # Kirby's Dream Land 2
+gb/Kirby's Pinball Land (USA, Europe)    # Kirby's Pinball Land
+gb/Legend of Zelda, The - Link's Awakening (USA, Europe) (Rev 2)    # The Legend of Zelda: Link's Awakening
+gb/Mario's Picross (USA, Europe) (SGB Enhanced)    # Mario's Picross
+gb/Mega Man IV (USA)    # Mega Man IV
+gb/Mega Man V (USA) (SGB Enhanced)    # Mega Man V
+gb/Metroid II - Return of Samus (World)    # Metroid II: Return of Samus
+gb/Mole Mania (USA, Europe) (SGB Enhanced)    # Mole Mania
+gb/Motocross Maniacs (USA)    # Motocross Maniacs
+gb/Ninja Gaiden Shadow (USA)    # Ninja Gaiden Shadow
+gb/Operation C (USA)    # Operation C
+gb/R-Type (USA, Europe)    # R-Type
+gb/Samurai Shodown (USA, Europe) (SGB Enhanced)    # Samurai Shodown
+gb/Super Mario Land (World) (Rev 1)    # Super Mario Land
+gb/Super Mario Land 2 - 6 Golden Coins (USA, Europe)    # Super Mario Land 2: 6 Golden Coins
+gb/Super R.C. Pro-Am (USA, Europe)    # Super R.C. Pro-Am
+gb/Teenage Mutant Ninja Turtles - Fall of the Foot Clan (USA)    # Teenage Mutant Ninja Turtles: Fall of the Foot Clan
+gb/Tetris (World) (Rev 1)    # Tetris
+gb/Tetris Attack (USA, Europe) (Rev 1) (SGB Enhanced)    # Tetris Attack
+gb/Trip World (Europe)    # Trip World
+gb/Wario Blast Featuring Bomberman! (USA, Europe) (SGB Enhanced)    # Wario Blast: Featuring Bomberman!
+gb/Wario Land - Super Mario Land 3 (World)    # Wario Land: Super Mario Land 3

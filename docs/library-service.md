@@ -1,6 +1,9 @@
 # Replacing RomM
 
-**Design, not built.** The backend that replaces the dependency on a RomM server.
+**Largely built as of 2026-09-03 — [service-api.md](service-api.md) is what
+exists.** This file stays as the reasoning: why RomM was the wrong shape, and
+the five rules the service is built on. Where the two disagree, the other one
+is describing running code and this one is describing an intention.
 
 Written 2026-09-01, at the end of a day spent syncing 12,370 files onto RomM
 and finding that 1,254 of them were invisible when it finished.

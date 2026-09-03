@@ -1,66 +1,66 @@
 # Arcade Beat Em Ups
 # 64 games, exported 2026-09-03 from RomM
-Altered Beast
-Armored Warriors
-Athena
-Avenging Spirit
-Bad Dudes vs. Dragon Ninja
-Bad Dudes vs. Dragonninja
-Batman
-Beraboh Man
-Big Karnak
-Black Panther
-Black Tiger
-Blue's Journey
-Bomb Kick
-Cadash
-Captain Silver
-Castle of Dragon
-Cosmo Police Galivan
-Dragon Buster
-Dyna Gear
-Eight Man
-Express Raider
-Ganryu
-Genpei Toumaden
-Ghosts'n Goblins
-Ghouls'n Ghosts
-Ginga Ninkyouden
-Hammerin' Harry
-Haunted Castle
-Kid Niki - Radical Ninja
-Kuri Kinton
-Lady Master of Kung Fu
-Liquid Kids
-M.I.A.: Missing in Action
-Magic Sword: Heroic Fantasy
-Marvel Land
-Mega Twins
-Mr. Goemon
-Nastar
-Nemo
-Ninja Kazan
-Ninja Kazan
-Osman
-Psychic 5
-Psycho Soldier
-Rastan
-Rygar
-Shadow Dancer
-Shinobi
-Shinobi
-Spider-Man: The Videogame
-Spin Master
-Strider
-The Astyanax
-The Lost Castle In Darkmist
-Thunder Fox
-Tiger Road
-Top Hunter: Roddy & Cathy
-Trio The Punch - Never Forget Me...
-Trojan
-Two Crude
-Two Crude Dudes
-Vigilante
-Wardner
-Wild Fang
+arcade/altbeast    # Altered Beast
+arcade/armwar    # Armored Warriors
+arcade/astyanax    # The Astyanax
+arcade/athena    # Athena
+arcade/avspirit    # Avenging Spirit
+arcade/baddudes    # Bad Dudes vs. Dragonninja
+arcade/batman    # Batman
+arcade/berabohm    # Beraboh Man
+arcade/bigkarnk    # Big Karnak
+arcade/bjourney    # Blue's Journey
+arcade/blkpnthr    # Black Panther
+arcade/blktiger    # Black Tiger
+arcade/bombkick    # Bomb Kick
+arcade/cadash    # Cadash
+arcade/cbuster    # Two Crude
+arcade/csilver    # Captain Silver
+arcade/darkmist    # The Lost Castle In Darkmist
+arcade/drgnbstr    # Dragon Buster
+arcade/drgninja    # Bad Dudes vs. Dragon Ninja
+arcade/drgnunit    # Castle of Dragon
+arcade/dynagear    # Dyna Gear
+arcade/eightman    # Eight Man
+arcade/exprraid    # Express Raider
+arcade/galivan    # Cosmo Police Galivan
+arcade/ganryu    # Ganryu
+arcade/genpeitd    # Genpei Toumaden
+arcade/ghouls    # Ghouls'n Ghosts
+arcade/ginganin    # Ginga Ninkyouden
+arcade/gng    # Ghosts'n Goblins
+arcade/hcastle    # Haunted Castle
+arcade/hharry    # Hammerin' Harry
+arcade/iganinju    # Ninja Kazan
+arcade/kazan    # Ninja Kazan
+arcade/kidniki    # Kid Niki - Radical Ninja
+arcade/kurikint    # Kuri Kinton
+arcade/ladymstr    # Lady Master of Kung Fu
+arcade/liquidk    # Liquid Kids
+arcade/marvland    # Marvel Land
+arcade/mia    # M.I.A.: Missing in Action
+arcade/mrgoemon    # Mr. Goemon
+arcade/msword    # Magic Sword: Heroic Fantasy
+arcade/mtwins    # Mega Twins
+arcade/nastar    # Nastar
+arcade/nemo    # Nemo
+arcade/osman    # Osman
+arcade/psychic5    # Psychic 5
+arcade/psychos    # Psycho Soldier
+arcade/rastan    # Rastan
+arcade/rygar    # Rygar
+arcade/shdancer    # Shadow Dancer
+arcade/shinfz    # Shinobi
+arcade/shinobi    # Shinobi
+arcade/spidman    # Spider-Man: The Videogame
+arcade/spinmast    # Spin Master
+arcade/strider    # Strider
+arcade/thundfox    # Thunder Fox
+arcade/tigeroad    # Tiger Road
+arcade/tophuntr    # Top Hunter: Roddy & Cathy
+arcade/triothep    # Trio The Punch - Never Forget Me...
+arcade/trojan    # Trojan
+arcade/twocrude    # Two Crude Dudes
+arcade/vigilant    # Vigilante
+arcade/wardner    # Wardner
+arcade/wildfang    # Wild Fang

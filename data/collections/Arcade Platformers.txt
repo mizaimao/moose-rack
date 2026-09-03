@@ -1,160 +1,160 @@
 # Arcade Platformers
 # 158 games, exported 2026-09-03 from RomM
-Alex Kidd: The Lost Stars
-Arabian
-Bagman
-Baluba-louk No Densetsu
-Bang Bang Busters
-Beathead
-Ben Bero Beh
-Bogey Manor
-Boggy '84
-Bomb Jack
-Bomb Jack Twin
-Bonanza Bros.
-Bongo
-Bonk's Adventure - Arcade Version
-Bubble Bobble
-Bubble Memories: The Story of Bubble Bobble III
-Bubble Symphony
-Burger Time
-BurgerTime
-Chack'n Pop
-Chameleon
-China Gate
-China Gate
-Circus Charlie
-City Connection
-Come Back Toto
-Complex X
-Congo Bongo
-Crazy Kong
-Crazy Kong Part II
-Cycle Maabou
-Dark Tower
-Diet Go Go
-Diver Boy
-Dock Man
-Don Doko Don
-Donkey Kong
-Donkey Kong 3
-Donkey Kong Junior
-Dr. Micro
-Dream World
-Dynamite Bomber
-Eeekk!
-Elevator Action
-Elevator Action Returns
-Evil Stone
-Fancy World: Earth of Crisis
-Faster, Harder, More Challenging Q*bert
-Firebeast
-Flicky
-Funky Jet
-Gladiator 1984
-Grasspin
-Hard Head
-Hard Head 2
-Head Panic
-Hopper Robo
-Hopping Mappy
-Hunchback
-Jack Rabbit
-Joe & Mac Returns
-Joust
-Jump Bug
-Jump Coaster
-Jump Kids
-Jump Kun
-Jumping Jack
-Jumping Pop
-Jungle King
-Kangaroo
-Kero Kero Keroppi's Let's Play Together
-Kicker
-Knuckle Joe
-Konek-gorbunok
-Kong
-Kung-fu Taikun
-Levers
-Lightning Swords
-Lode Runner
-Lode Runner II - The Bungeling Strikes Back
-Lode Runner III - The Golden Labyrinth
-Lode Runner IV - Teikoku Karano Dasshutsu
-Lode Runner: The Dig Fight
-Mappy
-Mario Bros.
-Metal Saver
-Metro-cross
-Miss Bubble II
-Momoko 120%
-Mouser
-Mr. Do's Castle
-Mr. Do's Wild Ride
-Mr. Kougar
-Naughty Mouse
-Nightmare in the Dark
-Pac-Land
-Pandora's Palace
-Pang Pang
-Pang Pom's
-Penguin Adventure
-Penguin Brothers
-Peter Pepper's Ice Cream Factory
-Pipi & Bibi's
-Pitfall II
-Ponpoko
-Popeye
-Popper
-Q*bert
-Q-bert's Qubes
-Raccoon World
-Rainbow Islands
-Rainbow Islands - Extra Version
-Rampage
-Rampage: World Tour
-Recalhorn
-Red Robin
-Roc'n Rope
-Rod Land
-S.o.s.
-Saboten Bombers
-Segasonic The Hedgehog
-Snap Jack
-Snow Bros. - Nick & Tom
-Snow Bros. 2 : With New Elves
-Snow Brothers 3 - Magical Adventure
-Sokonuke Taisen Game
-Spelunker
-Spelunker II
-Springer
-Super Bagman
-Super Bubble 2003
-Super Burger Time
-Super Glob
-Super Mouse
-Super Rider
-Super Trio
-Tang Tang
-Tapper
-Teddyboy Blues
-The Amazing Adventures of Mr. F. Lea
-The Berlin Wall
-The FairyLand Story
-The NewZealand Story
-The Outfoxies
-Timber
-Time Limit
-Toppy & Rappy
-Toy Land Adventure
-Tricky Doc
-Tumble Pop
-Ultra Balloon
-Video Vince And The Game Factory
-Vs. Balloon Fight
-Wily Tower
-Woodpecker
-Zoo Keeper
-Zupapa!
-Zwackery
+arcade/alexkidd    # Alex Kidd: The Lost Stars
+arcade/arabian    # Arabian
+arcade/b2b    # Bang Bang Busters
+arcade/bagman    # Bagman
+arcade/balonfgt    # Vs. Balloon Fight
+arcade/baluba    # Baluba-louk No Densetsu
+arcade/beathead    # Beathead
+arcade/benberob    # Ben Bero Beh
+arcade/berlwall    # The Berlin Wall
+arcade/bjtwin    # Bomb Jack Twin
+arcade/bnzabros    # Bonanza Bros.
+arcade/bogeyman    # Bogey Manor
+arcade/boggy84    # Boggy '84
+arcade/bombjack    # Bomb Jack
+arcade/bongo    # Bongo
+arcade/bonkadv    # Bonk's Adventure - Arcade Version
+arcade/btime    # BurgerTime
+arcade/bubblem    # Bubble Memories: The Story of Bubble Bobble III
+arcade/bublbob2    # Bubble Symphony
+arcade/bublbobl    # Bubble Bobble
+arcade/cbtime    # Burger Time
+arcade/chaknpop    # Chack'n Pop
+arcade/chameleo    # Chameleon
+arcade/chinagat    # China Gate
+arcade/circusc    # Circus Charlie
+arcade/citycon    # City Connection
+arcade/ckong    # Crazy Kong
+arcade/ckongpt2    # Crazy Kong Part II
+arcade/complexx    # Complex X
+arcade/congo    # Congo Bongo
+arcade/cppicf    # Peter Pepper's Ice Cream Factory
+arcade/cyclemb    # Cycle Maabou
+arcade/darktowr    # Dark Tower
+arcade/dietgoe    # Diet Go Go
+arcade/diverboy    # Diver Boy
+arcade/dkong    # Donkey Kong
+arcade/dkong3    # Donkey Kong 3
+arcade/dkongjr    # Donkey Kong Junior
+arcade/docastle    # Mr. Do's Castle
+arcade/dockman    # Dock Man
+arcade/dondokod    # Don Doko Don
+arcade/dowild    # Mr. Do's Wild Ride
+arcade/dreamwld    # Dream World
+arcade/drmicro    # Dr. Micro
+arcade/dynabomb    # Dynamite Bomber
+arcade/eeekk    # Eeekk!
+arcade/elevator    # Elevator Action
+arcade/elvactr    # Elevator Action Returns
+arcade/evilston    # Evil Stone
+arcade/firebeas    # Firebeast
+arcade/flicky    # Flicky
+arcade/flstory    # The FairyLand Story
+arcade/fncywld    # Fancy World: Earth of Crisis
+arcade/funkyjet    # Funky Jet
+arcade/grasspin    # Grasspin
+arcade/hardhea2    # Hard Head 2
+arcade/hardhead    # Hard Head
+arcade/hedpanic    # Head Panic
+arcade/hopmappy    # Hopping Mappy
+arcade/hopprobo    # Hopper Robo
+arcade/hunchbak    # Hunchback
+arcade/jackrabt    # Jack Rabbit
+arcade/jjack    # Jumping Jack
+arcade/joemacr    # Joe & Mac Returns
+arcade/joust    # Joust
+arcade/jumpbug    # Jump Bug
+arcade/jumpcoas    # Jump Coaster
+arcade/jumpkids    # Jump Kids
+arcade/jumpkun    # Jump Kun
+arcade/jumppop    # Jumping Pop
+arcade/junglek    # Jungle King
+arcade/kangaroo    # Kangaroo
+arcade/keroppi    # Kero Kero Keroppi's Let's Play Together
+arcade/kicker    # Kicker
+arcade/kncljoe    # Knuckle Joe
+arcade/konek    # Konek-gorbunok
+arcade/kong    # Kong
+arcade/kungfut    # Kung-fu Taikun
+arcade/ldrun    # Lode Runner
+arcade/ldrun2    # Lode Runner II - The Bungeling Strikes Back
+arcade/ldrun3    # Lode Runner III - The Golden Labyrinth
+arcade/ldrun4    # Lode Runner IV - Teikoku Karano Dasshutsu
+arcade/levers    # Levers
+arcade/loderndf    # Lode Runner: The Dig Fight
+arcade/ltswords    # Lightning Swords
+arcade/mappy    # Mappy
+arcade/mario    # Mario Bros.
+arcade/metlsavr    # Metal Saver
+arcade/metrocrs    # Metro-cross
+arcade/missb2    # Miss Bubble II
+arcade/momoko    # Momoko 120%
+arcade/mouser    # Mouser
+arcade/mrflea    # The Amazing Adventures of Mr. F. Lea
+arcade/mrkougar    # Mr. Kougar
+arcade/nitd    # Nightmare in the Dark
+arcade/nmouse    # Naughty Mouse
+arcade/outfxies    # The Outfoxies
+arcade/pacland    # Pac-Land
+arcade/pandoras    # Pandora's Palace
+arcade/pangpang    # Pang Pang
+arcade/pangpoms    # Pang Pom's
+arcade/penbros    # Penguin Brothers
+arcade/pengadvb    # Penguin Adventure
+arcade/pipibibs    # Pipi & Bibi's
+arcade/pitfall2    # Pitfall II
+arcade/ponpoko    # Ponpoko
+arcade/popeye    # Popeye
+arcade/popper    # Popper
+arcade/qbert    # Q*bert
+arcade/qbertqub    # Q-bert's Qubes
+arcade/raccoon    # Raccoon World
+arcade/rampage    # Rampage
+arcade/rbisland    # Rainbow Islands
+arcade/rbislande    # Rainbow Islands - Extra Version
+arcade/recalh    # Recalhorn
+arcade/redrobin    # Red Robin
+arcade/rmpgwt    # Rampage: World Tour
+arcade/rocnrope    # Roc'n Rope
+arcade/rodland    # Rod Land
+arcade/sabotenb    # Saboten Bombers
+arcade/saiyugou    # China Gate
+arcade/sb2003    # Super Bubble 2003
+arcade/sbagman    # Super Bagman
+arcade/sgladiat    # Gladiator 1984
+arcade/snapjack    # Snap Jack
+arcade/snowbro2    # Snow Bros. 2 : With New Elves
+arcade/snowbro3    # Snow Brothers 3 - Magical Adventure
+arcade/snowbros    # Snow Bros. - Nick & Tom
+arcade/sokonuke    # Sokonuke Taisen Game
+arcade/sonic    # Segasonic The Hedgehog
+arcade/sosterm    # S.o.s.
+arcade/spelunk2    # Spelunker II
+arcade/spelunkr    # Spelunker
+arcade/springer    # Springer
+arcade/sqbert    # Faster, Harder, More Challenging Q*bert
+arcade/supbtime    # Super Burger Time
+arcade/suprglob    # Super Glob
+arcade/suprmous    # Super Mouse
+arcade/suprridr    # Super Rider
+arcade/suprtrio    # Super Trio
+arcade/tangtang    # Tang Tang
+arcade/tapper    # Tapper
+arcade/teddybb    # Teddyboy Blues
+arcade/timber    # Timber
+arcade/timelimt    # Time Limit
+arcade/tnzs    # The NewZealand Story
+arcade/toppyrap    # Toppy & Rappy
+arcade/toto    # Come Back Toto
+arcade/toyland    # Toy Land Adventure
+arcade/trckydoc    # Tricky Doc
+arcade/tumblep    # Tumble Pop
+arcade/uballoon    # Ultra Balloon
+arcade/vidvince    # Video Vince And The Game Factory
+arcade/wilytowr    # Wily Tower
+arcade/woodpeck    # Woodpecker
+arcade/zookeep    # Zoo Keeper
+arcade/zupapa    # Zupapa!
+arcade/zwackery    # Zwackery

@@ -1,40 +1,40 @@
 # Arcade Essentials
 # 38 games, exported 2026-09-03 from RomM
-Arkanoid
-Armed Police Batrider
-Asteroids
-Batsugun
-Battle Garegga
-Battlezone
-Bubble Bobble
-Bust-a-Move
-Centipede
-Contra
-Darius Gaiden - Silver Hawk Extra Version
-Deathsmiles
-Defender
-DoDonPachi
-DoDonPachi Resurrection
-Donkey Kong
-Double Dragon
-ESP Ra.De.
-Espgaluda
-Final Fight
-Frogger
-Galaga
-Gauntlet
-Ghosts'n Goblins
-Gunlock
-Missile Command
-Mortal Kombat
-Mortal Kombat 2
-Mushihime-Sama
-Mushihime-Sama Futari
-Pac-Man
-Progear
-R-Type
-Samurai Shodown V Special
-Sky Shark
-Space Invaders / Space Invaders M
-Star Wars
-Tempest
+arcade/arkanoid    # Arkanoid
+arcade/asteroid    # Asteroids
+arcade/batrider    # Armed Police Batrider
+arcade/batsugun    # Batsugun
+arcade/bgaregga    # Battle Garegga
+arcade/bublbobl    # Bubble Bobble
+arcade/bzone    # Battlezone
+arcade/centiped    # Centipede
+arcade/contra    # Contra
+arcade/dariusgx    # Darius Gaiden - Silver Hawk Extra Version
+arcade/ddonpach    # DoDonPachi
+arcade/ddpdfk    # DoDonPachi Resurrection
+arcade/deathsml    # Deathsmiles
+arcade/defender    # Defender
+arcade/dkong    # Donkey Kong
+arcade/doubledr    # Double Dragon
+arcade/espgal    # Espgaluda
+arcade/esprade    # ESP Ra.De.
+arcade/ffight    # Final Fight
+arcade/frogger    # Frogger
+arcade/fshark    # Sky Shark
+arcade/futari15    # Mushihime-Sama Futari
+arcade/galaga    # Galaga
+arcade/gauntlet    # Gauntlet
+arcade/gng    # Ghosts'n Goblins
+arcade/gunlock    # Gunlock
+arcade/invaders    # Space Invaders / Space Invaders M
+arcade/missile    # Missile Command
+arcade/mk    # Mortal Kombat
+arcade/mk2    # Mortal Kombat 2
+arcade/mushisam    # Mushihime-Sama
+arcade/pacman    # Pac-Man
+arcade/pbobblen    # Bust-a-Move
+arcade/progear    # Progear
+arcade/rtype    # R-Type
+arcade/samsh5sp    # Samurai Shodown V Special
+arcade/starwars    # Star Wars
+arcade/tempest    # Tempest

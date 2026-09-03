@@ -1,43 +1,43 @@
 # ★ Best of gba
 # 41 games, exported 2026-09-03 from RomM
-Advance Wars
-Advance Wars 2: Black Hole Rising
-Astro Boy: Omega Factor
-Bomberman Tournament
-Castlevania: Aria of Sorrow
-Castlevania: Circle of the Moon
-Castlevania: Harmony of Dissonance
-ChuChu Rocket!
-F-Zero: Maximum Velocity
-Final Fantasy IV Advance
-Final Fantasy Tactics Advance
-Fire Emblem
-Fire Emblem: The Sacred Stones
-Golden Sun
-Golden Sun: The Lost Age
-Klonoa: Empire of Dreams
-Mario & Luigi: Superstar Saga
-Mario Golf: Advance Tour
-Mario Kart: Super Circuit
-Metroid Fusion
-Metroid: Zero Mission
-Puyo Pop
-Racing Gears Advance
-Sonic Advance
-Spider-Man: Mysterio's Menace
-Super Mario Advance
-Super Mario Advance 4: Super Mario Bros. 3
-Super Mario World: Super Mario Advance 2
-Super Street Fighter II Turbo: Revival
-Tactics Ogre: The Knight of Lodis
-The Legend of Zelda: A Link to the Past & Four Swords
-The Legend of Zelda: The Minish Cap
-Tony Hawk's Pro Skater 2
-Tony Hawk's Pro Skater 3
-Tony Hawk's Pro Skater 4
-Tony Hawk's Underground
-Virtua Tennis
-Wario Land 4
-WarioWare, Inc.: Mega Microgame$!
-WarioWare: Twisted!
-Yoshi's Island: Super Mario Advance 3
+gba/Advance Wars (USA) (Rev 1)    # Advance Wars
+gba/Advance Wars 2 - Black Hole Rising (USA)    # Advance Wars 2: Black Hole Rising
+gba/Astro Boy - Omega Factor (USA) (En,Ja,Fr,De,Es,It)    # Astro Boy: Omega Factor
+gba/Bomberman Tournament (USA, Europe)    # Bomberman Tournament
+gba/Castlevania - Aria of Sorrow (USA)    # Castlevania: Aria of Sorrow
+gba/Castlevania - Circle of the Moon (USA)    # Castlevania: Circle of the Moon
+gba/Castlevania - Harmony of Dissonance (USA)    # Castlevania: Harmony of Dissonance
+gba/ChuChu Rocket! (USA) (En,Ja,Fr,De,Es)    # ChuChu Rocket!
+gba/F-Zero - Maximum Velocity (USA, Europe)    # F-Zero: Maximum Velocity
+gba/Final Fantasy IV Advance (USA)    # Final Fantasy IV Advance
+gba/Final Fantasy Tactics Advance (USA)    # Final Fantasy Tactics Advance
+gba/Fire Emblem (USA, Australia)    # Fire Emblem
+gba/Fire Emblem - The Sacred Stones (USA, Australia)    # Fire Emblem: The Sacred Stones
+gba/Golden Sun (USA, Europe)    # Golden Sun
+gba/Golden Sun - The Lost Age (USA, Europe)    # Golden Sun: The Lost Age
+gba/Klonoa - Empire of Dreams (USA)    # Klonoa: Empire of Dreams
+gba/Legend of Zelda, The - A Link to the Past & Four Swords (USA)    # The Legend of Zelda: A Link to the Past & Four Swords
+gba/Legend of Zelda, The - The Minish Cap (USA)    # The Legend of Zelda: The Minish Cap
+gba/Mario & Luigi - Superstar Saga (USA)    # Mario & Luigi: Superstar Saga
+gba/Mario Golf - Advance Tour (USA)    # Mario Golf: Advance Tour
+gba/Mario Kart - Super Circuit (USA)    # Mario Kart: Super Circuit
+gba/Metroid - Zero Mission (USA, Australia)    # Metroid: Zero Mission
+gba/Metroid Fusion (USA)    # Metroid Fusion
+gba/Puyo Pop (USA) (En,Ja)    # Puyo Pop
+gba/Racing Gears Advance (USA)    # Racing Gears Advance
+gba/Sonic Advance (USA) (En,Ja)    # Sonic Advance
+gba/Spider-Man - Mysterio's Menace (USA, Europe)    # Spider-Man: Mysterio's Menace
+gba/Super Mario Advance (USA, Europe)    # Super Mario Advance
+gba/Super Mario Advance 2 - Super Mario World (USA, Australia)    # Super Mario World: Super Mario Advance 2
+gba/Super Mario Advance 3 - Yoshi's Island (USA)    # Yoshi's Island: Super Mario Advance 3
+gba/Super Mario Advance 4 - Super Mario Bros. 3 (USA, Australia) (Rev 1)    # Super Mario Advance 4: Super Mario Bros. 3
+gba/Super Street Fighter II Turbo - Revival (USA)    # Super Street Fighter II Turbo: Revival
+gba/Tactics Ogre - The Knight of Lodis (USA)    # Tactics Ogre: The Knight of Lodis
+gba/Tony Hawk's Pro Skater 2 (USA, Europe)    # Tony Hawk's Pro Skater 2
+gba/Tony Hawk's Pro Skater 3 (USA, Europe)    # Tony Hawk's Pro Skater 3
+gba/Tony Hawk's Pro Skater 4 (USA, Europe)    # Tony Hawk's Pro Skater 4
+gba/Tony Hawk's Underground (USA, Europe)    # Tony Hawk's Underground
+gba/Virtua Tennis (USA)    # Virtua Tennis
+gba/Wario Land 4 (USA, Europe)    # Wario Land 4
+gba/WarioWare - Twisted! (USA, Australia)    # WarioWare: Twisted!
+gba/WarioWare, Inc. - Mega Microgame$! (USA)    # WarioWare, Inc.: Mega Microgame$!

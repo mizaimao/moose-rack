@@ -1,102 +1,102 @@
 # Arcade Racing
 # 100 games, exported 2026-09-03 from RomM
-1000 Miglia: Great 1000 Miles Rally
-280 Zzzap
-A.B. Cop
-American Speedway
-Apb - All Points Bulletin
-Backfire!
-Bad Lands
-Big Run
-Blomby Car
-Buggy Challenge
-Bump 'n' Jump
-Bump 'n' Jump
-Burnin' Rubber (DECO Cassette)
-Car Jamboree
-Championship Sprint
-Chase Bombers
-Chase H.Q.
-Chequered Flag
-Cisco Heat
-Clash-road
-Continental Circus
-Crazy Rally
-Demolition Derby
-Dirt Fox
-Double Axle
-Drift Out
-Drift Out '94 - The Hard Order
-Driving Force
-Enduro Racer
-F-1 Grand Prix
-F-1 Grand Prix Part II
-F-1 Grand Prix Star II
-F1 Exhaust Note
-F1 Super Lap
-Final Lap
-Final Lap 2
-Final Lap 3
-Four Trax
-Gp Rider
-Grand Prix Star
-Ground Effects / Super Ground Effects
-Hang-on
-Hang-on Jr.
-High Way Race
-Hot Chase
-Hot Rod
-Hyper Crash
-Joyful Road
-Jumping Cross
-Kick Rider
-Kick Start - Wheelie King
-Konami Gt
-Last Km
-Led Storm
-Led Storm Rally 2011
-Lethal Crash Race
-Lucky & Wild
-Lunar Lander
-Masked Riders Club Battle Race
-Max Rpm
-Mille Miglia 2: Great 1000 Miles Rally
-Neo Drift Out - New Technology
-Night Driver
-Out Run
-OutRunners
-Over Top
-Pit & Run - F-1 Race
-Power Drift
-Power Drive
-Racing Beat
-Racing Hero
-Rad Mobile
-Rad Rally
-Rally Bike / Dash Yarou
-Riding Hero
-River Patrol
-Road Fighter
-Rough Racer
-Shot Rider
-Slip Stream
-Space Position
-Stadium Cross
-Super Chase - Criminal Termination
-Super Cross II
-Super Hang-on
-Super Monaco GP
-Super Speed Race Junior
-Super Sprint
-Suzuka 8 Hours
-Suzuka 8 Hours 2
-Tail To Nose - Great Championship
-The Bounty
-Thrash Rally
-Top Speed
-Traverse Usa / Zippy Race
-Turbo
-Turbo Out Run
-Waku Waku Sonic Patrol Car
-Wec Le Mans 24
-Wheels Runner
+arcade/280zzzap    # 280 Zzzap
+arcade/abcop    # A.B. Cop
+arcade/amspdwy    # American Speedway
+arcade/apb    # Apb - All Points Bulletin
+arcade/backfire    # Backfire!
+arcade/badlands    # Bad Lands
+arcade/bigrun    # Big Run
+arcade/blmbycar    # Blomby Car
+arcade/bnj    # Bump 'n' Jump
+arcade/bounty    # The Bounty
+arcade/brubber    # Bump 'n' Jump
+arcade/buggychl    # Buggy Challenge
+arcade/carjmbre    # Car Jamboree
+arcade/cbombers    # Chase Bombers
+arcade/cburnrub    # Burnin' Rubber (DECO Cassette)
+arcade/chasehq    # Chase H.Q.
+arcade/chqflag    # Chequered Flag
+arcade/cischeat    # Cisco Heat
+arcade/clshroad    # Clash-road
+arcade/contcirc    # Continental Circus
+arcade/crshrace    # Lethal Crash Race
+arcade/crzrally    # Crazy Rally
+arcade/csprint    # Championship Sprint
+arcade/dblaxle    # Double Axle
+arcade/demoderb    # Demolition Derby
+arcade/dirtfoxj    # Dirt Fox
+arcade/drifto94    # Drift Out '94 - The Hard Order
+arcade/driftout    # Drift Out
+arcade/drivfrcp    # Driving Force
+arcade/enduror    # Enduro Racer
+arcade/f1en    # F1 Exhaust Note
+arcade/f1gp    # F-1 Grand Prix
+arcade/f1gp2    # F-1 Grand Prix Part II
+arcade/f1gpstar    # Grand Prix Star
+arcade/f1gpstr2    # F-1 Grand Prix Star II
+arcade/f1lap    # F1 Super Lap
+arcade/finalap2    # Final Lap 2
+arcade/finalap3    # Final Lap 3
+arcade/finallap    # Final Lap
+arcade/fourtrax    # Four Trax
+arcade/gprider    # Gp Rider
+arcade/groundfx    # Ground Effects / Super Ground Effects
+arcade/gtmr    # 1000 Miglia: Great 1000 Miles Rally
+arcade/gtmr2    # Mille Miglia 2: Great 1000 Miles Rally
+arcade/hangon    # Hang-on
+arcade/hangonjr    # Hang-on Jr.
+arcade/hcrash    # Hyper Crash
+arcade/hotchase    # Hot Chase
+arcade/hotrod    # Hot Rod
+arcade/hwrace    # High Way Race
+arcade/jcross    # Jumping Cross
+arcade/joyfulr    # Joyful Road
+arcade/kamenrid    # Masked Riders Club Battle Race
+arcade/kickridr    # Kick Rider
+arcade/kikstart    # Kick Start - Wheelie King
+arcade/konamigt    # Konami Gt
+arcade/lastkm    # Last Km
+arcade/leds2011    # Led Storm Rally 2011
+arcade/llander    # Lunar Lander
+arcade/luckywld    # Lucky & Wild
+arcade/madgear    # Led Storm
+arcade/maxrpm    # Max Rpm
+arcade/neodrift    # Neo Drift Out - New Technology
+arcade/nitedrvr    # Night Driver
+arcade/orunners    # OutRunners
+arcade/outrun    # Out Run
+arcade/overtop    # Over Top
+arcade/pdrift    # Power Drift
+arcade/pitnruna    # Pit & Run - F-1 Race
+arcade/powerdrv    # Power Drive
+arcade/rachero    # Racing Hero
+arcade/racingb    # Racing Beat
+arcade/radm    # Rad Mobile
+arcade/radr    # Rad Rally
+arcade/rallybik    # Rally Bike / Dash Yarou
+arcade/ridhero    # Riding Hero
+arcade/roadf    # Road Fighter
+arcade/roughrac    # Rough Racer
+arcade/rpatrol    # River Patrol
+arcade/scross    # Stadium Cross
+arcade/shangon    # Super Hang-on
+arcade/shtrider    # Shot Rider
+arcade/slipstrm    # Slip Stream
+arcade/smgp    # Super Monaco GP
+arcade/soniccar    # Waku Waku Sonic Patrol Car
+arcade/spcpostn    # Space Position
+arcade/sprcros2    # Super Cross II
+arcade/ssprint    # Super Sprint
+arcade/ssrj    # Super Speed Race Junior
+arcade/superchs    # Super Chase - Criminal Termination
+arcade/suzuk8h2    # Suzuka 8 Hours 2
+arcade/suzuka8h    # Suzuka 8 Hours
+arcade/tail2nos    # Tail To Nose - Great Championship
+arcade/topspeed    # Top Speed
+arcade/toutrun    # Turbo Out Run
+arcade/trally    # Thrash Rally
+arcade/travrusa    # Traverse Usa / Zippy Race
+arcade/turbo    # Turbo
+arcade/wecleman    # Wec Le Mans 24
+arcade/wheelrun    # Wheels Runner
