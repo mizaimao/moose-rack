@@ -220,6 +220,27 @@ async fn roms(State(lib): State<Arc<Library>>, Query(p): Query<Page>) -> Json<Ro
     })
 }
 
+/// Every id the service currently has.
+///
+/// The client's only way to notice a deletion: `updated_after` reports changes
+/// and never removals. Cheap — one array of ints.
+///
+/// Registered before `/api/roms/{id}`, because otherwise axum hands the literal
+/// "identifiers" to the i64 extractor and answers 400. That is exactly what a
+/// first sync against this service did.
+async fn rom_identifiers(State(lib): State<Arc<Library>>) -> Json<Vec<i64>> {
+    Json((1..=lib.games.len() as i64).collect())
+}
+
+/// Collections, which an ES-DE tree does not have.
+///
+/// Empty rather than 404: the client treats a missing endpoint as an error and
+/// an empty list as "none yet", and the second is the truth. `library-service.md`
+/// makes these text files under `collections/`; until that exists there are none.
+async fn collections() -> Json<Vec<serde_json::Value>> {
+    Json(vec![])
+}
+
 async fn rom_by_id(
     State(lib): State<Arc<Library>>,
     AxPath(id): AxPath<i64>,
@@ -265,7 +286,9 @@ async fn main() -> Result<()> {
         .route("/api/users/me", get(users_me))
         .route("/api/platforms", get(platforms))
         .route("/api/roms", get(roms))
+        .route("/api/roms/identifiers", get(rom_identifiers))
         .route("/api/roms/{id}", get(rom_by_id))
+        .route("/api/collections", get(collections))
         // Artwork straight off the tree. ES-DE and Skraper already scraped it;
         // re-serving it through a database would gain nothing.
         .nest_service("/assets/media", tower_http::services::ServeDir::new(media_dir))
