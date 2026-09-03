@@ -30,12 +30,14 @@ use std::sync::Arc;
 use anyhow::{Context as _, Result};
 use axum::{
     extract::{Path as AxPath, Query, State},
+    response::IntoResponse,
     routing::get,
     Json, Router,
 };
 use clap::Parser;
 use moose_rack::{coremap::CoreMap, esde};
 use serde::{Deserialize, Serialize};
+use tower_http::services::ServeFile;
 
 #[derive(Parser)]
 #[command(about = "Serve an ES-DE library over the API the app already speaks")]
@@ -241,6 +243,34 @@ async fn collections() -> Json<Vec<serde_json::Value>> {
     Json(vec![])
 }
 
+/// The bytes of a game.
+///
+/// `GET /api/roms/{id}/content/{name}` — the name is in the path because that
+/// is the shape the client already builds, and it is ignored here: the id
+/// decides which file is served. Checking it would only let a stale client name
+/// turn into a 404 for a file that is present.
+///
+/// Range is handled by `ServeFile`, which matters more than it looks. The
+/// client resumes a part-file by sending `Range: bytes=N-` and treats 200 as
+/// "the server ignored me, throw the partial away". Getting this wrong does not
+/// fail, it silently re-downloads gigabytes.
+async fn rom_content(
+    State(lib): State<Arc<Library>>,
+    AxPath((id, _name)): AxPath<(i64, String)>,
+    req: axum::extract::Request,
+) -> axum::response::Response {
+    let Ok(idx) = usize::try_from(id - 1) else {
+        return axum::http::StatusCode::NOT_FOUND.into_response();
+    };
+    let Some(game) = lib.games.get(idx) else {
+        return axum::http::StatusCode::NOT_FOUND.into_response();
+    };
+    match tower::ServiceExt::oneshot(ServeFile::new(&game.path), req).await {
+        Ok(r) => r.into_response(),
+        Err(_) => axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
 async fn rom_by_id(
     State(lib): State<Arc<Library>>,
     AxPath(id): AxPath<i64>,
@@ -288,6 +318,7 @@ async fn main() -> Result<()> {
         .route("/api/roms", get(roms))
         .route("/api/roms/identifiers", get(rom_identifiers))
         .route("/api/roms/{id}", get(rom_by_id))
+        .route("/api/roms/{id}/content/{*name}", get(rom_content))
         .route("/api/collections", get(collections))
         // Artwork straight off the tree. ES-DE and Skraper already scraped it;
         // re-serving it through a database would gain nothing.
