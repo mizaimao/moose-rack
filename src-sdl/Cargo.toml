@@ -1,0 +1,89 @@
+[package]
+name = "moose-sdl"
+version.workspace = true
+edition = "2024"
+
+# The third front end, and the one meant to outlive the other two. See
+# docs/handheld-frontend.md task 3 and docs/handheld-device.md.
+#
+# It draws; it decides nothing. Sort orders, filters, bindings, cursor
+# movement and the layout units all come from `moose_rack`, which is why
+# tasks 1 and 2 came first.
+# The drawing is a library as well as a binary, so it can be tested against a
+# real context — see tests/rendering.rs. Three of the last four bugs were
+# invisible to `cargo test` and obvious in a screenshot.
+[lib]
+name = "moose_sdl"
+path = "src/lib.rs"
+
+[[bin]]
+name = "moose-sdl"
+path = "src/main.rs"
+
+# The device schemes, passed straight through to the core. Building the front
+# end for the handheld is `cargo build -p moose-sdl --features knulli`, not a
+# different command with a different meaning.
+[features]
+default = []
+knulli = ["moose-rack/knulli"]
+android = ["moose-rack/android"]
+linux = ["moose-rack/linux"]
+
+[dependencies]
+moose-rack = { path = ".." }
+anyhow = "1.0.104"
+
+# One use: the genres inside a cached row's metadata blob, for the info pane.
+# The blob is RomM's own JSON and the core already depends on this to write it.
+serde_json = "1.0"
+
+# Fetching console pictures. The blocking client, on a thread of its own —
+# there is no async runtime here and adding one to download a few hundred small
+# files would be the tail wagging the dog. Same TLS stack the core uses, so the
+# handheld build carries one copy of it.
+reqwest = { version = "0.13.4", default-features = false, features = [
+    "blocking", "gzip", "http2", "rustls-no-provider",
+] }
+
+# Text: shaping, font fallback, line breaking and rasterisation.
+#
+# SDL_ttf was the obvious pairing and is the wrong one. It wraps FreeType and
+# draws a string in *one* face — so a Japanese title in a Latin font comes out
+# as a row of empty boxes, and the fix is to open several faces and guess which
+# one has the glyph, which is precisely how this ends up feeling cheap. Whether
+# it can shape at all depends on whether the distribution built it against
+# HarfBuzz, which is not a thing we get to decide on the handheld.
+#
+# cosmic-text does shaping (rustybuzz), per-script fallback (fontdb, reading
+# the same fontconfig directories the OS does), Unicode line breaking and
+# rasterisation (swash). It is also pure Rust, so it cross-compiles to the
+# handheld with nothing to install.
+cosmic-text = "0.19"
+
+# Raw GL, for the shader backdrop. SDL's renderer draws the interface; the
+# backdrop is one full-screen quad drawn underneath it, and that needs the
+# context directly. See src/backdrop.rs.
+gl = "0.14"
+
+# The C library, not a reimplementation. `libsdl2-dev` is already in the
+# handheld's package list, so the device can build this itself and
+# cross-compiling is a convenience rather than a blocker.
+[dependencies.sdl2]
+version = "0.38"
+default-features = false
+# Ask pkg-config where SDL is rather than hoping the linker's default search
+# path covers it. On Apple silicon Homebrew puts it in /opt/homebrew/lib, which
+# is not one of those paths, and the failure is `ld: library 'SDL2' not found`
+# with nothing to say that the library is installed and one directory away.
+# Debian answers the same question the same way, so this is not a Mac
+# workaround — it is the portable form.
+features = ["use-pkgconfig", "image"]
+
+# No libtest harness: on macOS SDL's video subsystem must be initialised on the
+# real main thread, and libtest runs every test on a spawned one — so
+# `sdl.video()` fails with "No available video device" and the checks skip.
+# Silently, which is how this file reported nine passes over a screen full of
+# grey blocks. `harness = false` gives us `fn main` on the thread SDL wants.
+[[test]]
+name = "rendering"
+harness = false

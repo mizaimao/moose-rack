@@ -1,0 +1,97 @@
+[package]
+name = "moose-rack"
+version.workspace = true
+edition = "2024"
+
+# The core is a library so the Tauri GUI (src-tauri/) and the CLI/TUI share one
+# backend rather than reimplementing it.
+[lib]
+name = "moose_rack"
+path = "src/lib.rs"
+
+[[bin]]
+name = "moose-rack"
+path = "src/main.rs"
+
+[workspace]
+members = ["src-tauri", "src-sdl", "src-addon", "src-fastlaunch"]
+
+# The single source of the version number.
+#
+# Both crates inherit it with `version.workspace = true`, and
+# src-tauri/tauri.conf.json has no `version` key at all — Tauri falls back to
+# the version in its own Cargo.toml, which is this one. So the number lives in
+# exactly one place and the bundle, the binary, the user-agent and the
+# `client_version` sent at device registration cannot disagree.
+#
+# To cut a release: change this line, commit, tag `v<version>`, push the tag.
+# Do not reintroduce a literal version in either member manifest or in
+# tauri.conf.json — that is the drift this replaced.
+[workspace.package]
+version = "0.3.333"
+
+# `md-5` is imported as `md5`, which the unused-dependency check reads as a
+# name that appears nowhere. It is used, in download.rs and savehash.rs.
+[package.metadata.cargo-machete]
+ignored = ["md-5"]
+
+# The five device schemes — one per target, selected at build time.
+#
+# `target_os` cannot express these. KNULLI *is* `target_os = "linux"` and is not
+# desktop Linux; Android falls through the same `not(any(macos, windows))`
+# branch that desktop Linux uses. Both would compile today and behave wrong —
+# RetroArch looked for at the wrong paths, config written where desktop Linux
+# writes it — and build-and-be-wrong is worse than build-and-fail.
+#
+# No scheme is a default feature: with none set, `platform::current()` falls
+# back to the host's `target_os`, so an ordinary `cargo build` on this Mac is
+# byte-for-byte what it was before the module existed. The two schemes that
+# `target_os` cannot reach are opt-in:
+#
+#     cargo check --features knulli
+#     cargo check --features android
+[features]
+default = []
+macos = []
+windows = []
+linux = []
+knulli = []
+android = []
+
+[dependencies]
+anyhow = "1.0.104"
+base64 = "0.23.0"
+clap = { version = "4.6.5", features = ["derive"] }
+crossterm = "0.29.0"
+futures-util = "0.3.33"
+hex = "0.4.3"
+md-5 = "0.11.0"
+ratatui = "0.30.2"
+# rustls with *ring* rather than the default aws-lc backend. aws-lc-sys is a
+# large C library whose build script needs a full cross toolchain for the
+# target, which makes Windows and Linux builds fail on a machine that only has
+# a host compiler. ring builds cleanly across all three.
+reqwest = { version = "0.13.4", default-features = false, features = [
+    "json", "stream", "gzip", "multipart", "http2", "rustls-no-provider",
+] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12", "logging"] }
+rusqlite = { version = "0.37", features = ["bundled"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+sevenz-rust2 = "0.21.4"
+sha1 = "0.11.0"
+tokio = { version = "1.53.1", features = ["rt-multi-thread", "macros"] }
+toml = "1.1.4"
+zip = "8.6.0"
+libc = "0.2.189"
+
+# Root certificates, Android only.
+#
+# Every other platform verifies certificates through `rustls-platform-verifier`,
+# which reqwest pulls in and which asks the OS. On Android that verifier reaches
+# the trust store through Java, so it must be handed a JNI environment before
+# the first request or it panics — and Tauri does not expose the Android context
+# during setup (tauri-apps/tauri#13267). So Android carries Mozilla's root list
+# instead. See `util::tls_roots`.
+[target.'cfg(target_os = "android")'.dependencies]
+webpki-roots = "1.0"

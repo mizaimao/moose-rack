@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+  <external-path name="my_images" path="." />
+  <cache-path name="my_cache_images" path="." />
+  <!-- The library is not in this app's storage. It is an ES-DE folder wherever
+       the user put it — on this device a memory card at /storage/A2FC-A9FB —
+       and handing a video or a manual to another app means granting a URI that
+       can reach it. `root-path` is the only one that spans a card.
+
+       Nothing is exposed by declaring it: a FileProvider grants one URI at a
+       time, for one file, to the app the Intent resolves to. -->
+  <root-path name="anywhere" path="/" />
+</paths>

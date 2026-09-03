@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Tells the engine this page already has a dark theme, so it must not
+         apply one of its own.
+
+         Read before any CSS is parsed, which is what the `color-scheme: dark`
+         in the stylesheet cannot be — so form controls, scrollbars and the
+         first painted frame get the right answer rather than the light default
+         and then a correction.
+
+         Added while chasing the Android tint, on the theory that the wash was
+         Chromium's auto-dark pass. It was not, and this changed nothing; see
+         docs/tint.md. It stays because it is the correct declaration for a
+         page that themes itself. -->
+    <meta name="color-scheme" content="dark" />
+    <title>Moose Rack</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header data-tauri-drag-region>
+      <!-- Under the traffic lights. The version used to be in the window
+           title, which `hiddenTitle` removed — and "which build is this"
+           still has to be answerable from a screenshot. -->
+      <span id="build" data-tauri-drag-region></span>
+      <button id="back" hidden title="Go back" aria-label="Go back"><span class="icon icon-back"></span><span>Back</span></button>
+      <h1 id="title" data-tauri-drag-region>Platforms</h1>
+      <!-- One pane or three columns, side by side. It was a dropdown in
+           Settings, two windows away from the thing it changes — and it is a
+           thing you flip back and forth to decide, not set once. -->
+      <div id="view-switch" role="group" aria-label="Window layout">
+        <button data-mode="single" title="Sofa — one screen at a time, big artwork, everything reachable from a controller"><span class="icon icon-pad"></span><span>Sofa</span></button>
+        <button data-mode="columns" title="Desk — everything side by side: what you are picking from, the games, and the preview"><span class="icon icon-columns"></span><span>Desk</span></button>
+      </div>
+      <input id="search" type="search" placeholder="Search all games…" />
+      <button id="sidebar-btn" hidden title="Show or hide the detail pane"><span class="icon icon-info-on"></span><span>Hide info</span></button>
+      <label id="zoom-wrap" hidden title="Icon size">
+        <input id="zoom" type="range" min="90" max="300" step="2" />
+      </label>
+      <button id="layout-btn" hidden title="Grid or list"><span class="icon icon-grid"></span><span>Grid</span></button>
+      <button id="filter-btn" hidden title="Narrow this list down"><span class="icon icon-filter"></span><span>Filter</span></button>
+      <button id="random-btn" hidden title="Pick something at random from this list (R, or the right stick click)"><span class="icon icon-dice"></span><span>Random</span></button>
+      <!-- Take offline and the preview toggle both act on the list the tab row
+           chooses, so `installTabs` moves them down there. They are declared
+           here because the tab row is rebuilt from scratch whenever the
+           sections change, and anything declared inside it would be wiped. -->
+      <button id="grab-btn" hidden title="Download this platform or collection for offline use"><span class="icon icon-download"></span><span>Take offline</span></button>
+      <button id="sort-btn" hidden title="How this list is ordered (right stick click)"><span class="icon icon-sort"></span><span>Name</span></button>
+      <!-- Sync, then Settings, and both glyph-only.
+           They are the two controls here that are about the app rather than
+           about the list in front of you, so they sit together at the end. No
+           labels: every other button in this row earns its word by being
+           ambiguous without it, and these two do not — a gear is a gear.
+           On Android `installTabs` moves both down into the tab row, because
+           this header is not drawn there at all. -->
+      <button id="sync-btn" title="Sync saves with the server" aria-label="Sync saves"><span class="icon icon-sync"></span></button>
+      <button id="settings-btn" title="Settings" aria-label="Settings"><span class="icon icon-settings"></span></button>
+      <span id="status"></span>
+    </header>
+
+    <!-- Top-level sections. A separate row from the header so the controls up
+         there (search, layout, zoom) stay put while the view changes, and so
+         the shoulder buttons have somewhere obvious to be moving between. -->
+    <nav id="tabbar" role="tablist" aria-label="Sections"></nav>
+
+    <!-- Search inside the page, and the button that orders it. Declared here
+         rather than inside the tab row because that row is rebuilt from
+         scratch whenever the sections change; `installTabs` moves this into
+         it. -->
+    <span id="page-filter">
+      <input id="pfilter" class="filter" type="search" placeholder="Filter this page…" />
+      <span id="page-filter-extra"></span>
+    </span>
+
+    <!-- Which section the list has scrolled into. Its own row above the list
+         rather than a heading floating inside it: a sticky heading is over the
+         content by construction, whatever color it is painted. -->
+    <div id="section-strip" hidden></div>
+
+    <main>
+      <!-- The left column, in the three-column arrangement only. In the
+           one-pane arrangement the console list is drawn into #list like
+           everything else and this stays empty and hidden. -->
+      <nav id="consoles" hidden aria-label="Consoles"></nav>
+      <section id="list"></section>
+      <aside id="detail" hidden></aside>
+    </main>
+
+    <div id="lightbox" hidden>
+      <button class="lb-close" title="Close (Esc)" aria-label="Close"><span class="icon icon-close"></span></button>
+      <button class="lb-nav lb-prev" title="Previous (←)" aria-label="Previous"><span class="icon icon-prev"></span></button>
+      <figure>
+        <div class="lb-stage"></div>
+        <figcaption></figcaption>
+      </figure>
+      <button class="lb-nav lb-next" title="Next (→)" aria-label="Next"><span class="icon icon-next"></span></button>
+    </div>
+
+    <footer id="toast" hidden></footer>
+
+    <script type="module" src="js/main.js"></script>
+  </body>
+</html>

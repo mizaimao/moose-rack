@@ -1,0 +1,303 @@
+{
+  "actions": [
+    {
+      "id": "left",
+      "label": "Move left"
+    },
+    {
+      "id": "right",
+      "label": "Move right"
+    },
+    {
+      "id": "up",
+      "label": "Move up"
+    },
+    {
+      "id": "down",
+      "label": "Move down"
+    },
+    {
+      "id": "first",
+      "label": "Jump to first"
+    },
+    {
+      "id": "last",
+      "label": "Jump to last"
+    },
+    {
+      "id": "pageUp",
+      "label": "Page up"
+    },
+    {
+      "id": "pageDown",
+      "label": "Page down"
+    },
+    {
+      "id": "activate",
+      "label": "Open platform / play"
+    },
+    {
+      "id": "back",
+      "label": "Go back"
+    },
+    {
+      "id": "back2",
+      "label": "Go back (alternate)"
+    },
+    {
+      "id": "search",
+      "label": "Focus search"
+    },
+    {
+      "id": "help",
+      "label": "Shortcut list"
+    },
+    {
+      "id": "download",
+      "label": "Download without playing"
+    },
+    {
+      "id": "favorite",
+      "label": "Star this game"
+    },
+    {
+      "id": "layout",
+      "label": "Toggle grid / list"
+    },
+    {
+      "id": "sidebar",
+      "label": "Toggle info pane"
+    },
+    {
+      "id": "settings",
+      "label": "Open settings"
+    },
+    {
+      "id": "prevSection",
+      "label": "Previous section"
+    },
+    {
+      "id": "nextSection",
+      "label": "Next section"
+    },
+    {
+      "id": "scrollUp",
+      "label": "Scroll the list up"
+    },
+    {
+      "id": "scrollDown",
+      "label": "Scroll the list down"
+    },
+    {
+      "id": "zoomIn",
+      "label": "Bigger covers"
+    },
+    {
+      "id": "zoomOut",
+      "label": "Smaller covers"
+    },
+    {
+      "id": "video",
+      "label": "Play gameplay video"
+    },
+    {
+      "id": "pictures",
+      "label": "Change the pictures"
+    },
+    {
+      "id": "sortCycle",
+      "label": "Next sort order"
+    },
+    {
+      "id": "sortMenu",
+      "label": "Sort by…"
+    },
+    {
+      "id": "filterMenu",
+      "label": "Filter this list…"
+    },
+    {
+      "id": "random",
+      "label": "Surprise me"
+    }
+  ],
+  "key_labels": {
+    "activate": "⏎",
+    "back": "Esc",
+    "back2": "⌫",
+    "down": "↓",
+    "download": "—",
+    "favorite": "*",
+    "filterMenu": "F",
+    "first": "HOME",
+    "help": "?",
+    "last": "END",
+    "layout": "—",
+    "left": "←",
+    "nextSection": "E",
+    "pageDown": "PgDn",
+    "pageUp": "PgUp",
+    "pictures": "—",
+    "prevSection": "Q",
+    "random": "R",
+    "right": "→",
+    "scrollDown": "—",
+    "scrollUp": "—",
+    "search": "/",
+    "settings": "—",
+    "sidebar": "—",
+    "sortCycle": "—",
+    "sortMenu": "S",
+    "up": "↑",
+    "video": "V",
+    "zoomIn": "+",
+    "zoomOut": "-"
+  },
+  "keys": {
+    "activate": "Enter",
+    "back": "Escape",
+    "back2": "Backspace",
+    "down": "ArrowDown",
+    "download": null,
+    "favorite": "*",
+    "filterMenu": "f",
+    "first": "Home",
+    "help": "?",
+    "last": "End",
+    "layout": null,
+    "left": "ArrowLeft",
+    "nextSection": "e",
+    "pageDown": "PageDown",
+    "pageUp": "PageUp",
+    "pictures": null,
+    "prevSection": "q",
+    "random": "r",
+    "right": "ArrowRight",
+    "scrollDown": null,
+    "scrollUp": null,
+    "search": "/",
+    "settings": null,
+    "sidebar": null,
+    "sortCycle": null,
+    "sortMenu": "s",
+    "up": "ArrowUp",
+    "video": "v",
+    "zoomIn": "+",
+    "zoomOut": "-"
+  },
+  "pad_buttons": [
+    {
+      "index": 0,
+      "name": "A / Cross (bottom face)"
+    },
+    {
+      "index": 1,
+      "name": "B / Circle (right face)"
+    },
+    {
+      "index": 2,
+      "name": "X / Square (left face)"
+    },
+    {
+      "index": 3,
+      "name": "Y / Triangle (top face)"
+    },
+    {
+      "index": 4,
+      "name": "L1 / LB"
+    },
+    {
+      "index": 5,
+      "name": "R1 / RB"
+    },
+    {
+      "index": 6,
+      "name": "L2 / LT"
+    },
+    {
+      "index": 7,
+      "name": "R2 / RT"
+    },
+    {
+      "index": 8,
+      "name": "Select / Share"
+    },
+    {
+      "index": 9,
+      "name": "Start / Options"
+    },
+    {
+      "index": 10,
+      "name": "L3 (left stick)"
+    },
+    {
+      "index": 11,
+      "name": "R3 (right stick)"
+    },
+    {
+      "index": 12,
+      "name": "D-pad up"
+    },
+    {
+      "index": 13,
+      "name": "D-pad down"
+    },
+    {
+      "index": 14,
+      "name": "D-pad left"
+    },
+    {
+      "index": 15,
+      "name": "D-pad right"
+    }
+  ],
+  "pad_labels": {
+    "activate": "A / Cross (bottom face)",
+    "back": "B / Circle (right face)",
+    "back2": "unset",
+    "down": "D-pad down",
+    "download": "unset",
+    "favorite": "unset",
+    "filterMenu": "unset",
+    "first": "unset",
+    "help": "Start / Options",
+    "last": "unset",
+    "layout": "unset",
+    "left": "D-pad left",
+    "nextSection": "R1 / RB",
+    "pageDown": "unset",
+    "pageUp": "unset",
+    "pictures": "Select / Share",
+    "prevSection": "L1 / LB",
+    "random": "R3 (right stick)",
+    "right": "D-pad right",
+    "scrollDown": "R2 / RT",
+    "scrollUp": "L2 / LT",
+    "search": "unset",
+    "settings": "unset",
+    "sidebar": "unset",
+    "sortCycle": "L3 (left stick)",
+    "sortMenu": "unset",
+    "up": "D-pad up",
+    "video": "Y / Triangle (top face)",
+    "zoomIn": "unset",
+    "zoomOut": "unset"
+  },
+  "pad_map": {
+    "0": "activate",
+    "1": "back",
+    "10": "sortCycle",
+    "11": "random",
+    "12": "up",
+    "13": "down",
+    "14": "left",
+    "15": "right",
+    "3": "video",
+    "4": "prevSection",
+    "5": "nextSection",
+    "6": "scrollUp",
+    "7": "scrollDown",
+    "8": "pictures",
+    "9": "help"
+  }
+}

@@ -1,0 +1,3 @@
+shaders = 1
+shader0 = /usr/share/knulli/shaders/sharp-shimmerless/shaders_glsl/shaders/sharp-shimmerless.glsl
+filter_linear0 = true

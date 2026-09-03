@@ -1,0 +1,3479 @@
+:root {
+  --bg: #14161a;
+  --panel: #1b1e24;
+  --panel-2: #21252c;
+  --line: #2c313a;
+  --text: #e6e8ec;
+  --dim: #8b93a1;
+  --accent: #5b9dd9;
+  --ok: #5fb37a;
+  /* Attention, not danger: a save that changed in two places is a thing to
+     look at, not a thing that has gone wrong. */
+  --warn: #d99b3a;
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --panel-2: #eef1f5;
+    --line: #d9dee6;
+    --text: #1a1d22;
+    --dim: #6a7280;
+    color-scheme: light;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  overflow: hidden;
+}
+
+header {
+  /* In normal flow, not floating over the list. Content stops at the bar
+     rather than sliding under it, so nothing is ever hidden behind the top
+     bar and nothing has to be padded to compensate.
+
+     No background either: the page — or the shader, when it is on — shows
+     straight through. The glass moved to the cards, where it has the artwork
+     behind it and something to actually refract. */
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid color-mix(in srgb, var(--glass) 20%, transparent);
+  /* Translucent rather than solid. `color-mix` keeps this tied to the theme
+     color instead of a second hardcoded value that drifts from it. */
+  /* Aero glass.
+     Vista's look was never just blur. Four things did the work, and leaving any
+     one out gives you a gray bar:
+
+       a tint the user picks, sitting over the blur rather than replacing it
+       a vertical gradient, lighter at the top, as if lit from above
+       a bright hairline inside the top edge and a dimmer one inside the bottom
+       a wide soft shadow beneath, so the sheet floats above the page
+
+     The tint is a custom property so Appearance can drive it, the same way
+     Vista's own "Window Color" panel did. */
+  /* Tint over blur, with a gentle vertical gradient so the sheet looks lit
+     from above. No inset hairlines: those were the dated part of Aero, and
+     modern glass gets its edge from the blur boundary and the shadow instead.
+
+     Strength is a variable so Appearance can drive it — `--tint` is a
+     percentage the whole top bar shares. */
+  background: transparent;
+  /* The macOS traffic lights end at about 70px and the window is dragged by
+     this bar, so nothing can go left of them. This is as far left as the first
+     control goes without sitting under the close button.
+     
+     This padding was here long before the lights were: the stylesheet was
+     written for an inset title bar and `tauri.conf.json` never asked for one,
+     so macOS drew its own solid 28px strip *above* the header and this gap sat
+     under an empty bar for nothing. `titleBarStyle: Overlay` is the missing
+     half — it hands that strip back and floats the lights over our content,
+     which is what the 72px was always for. */
+  /* Wider than the lights themselves. 72px put the title flush against the
+     zoom button with nothing between them, which reads as a collision even
+     though it does not overlap. */
+  padding-left: 104px;
+  gap: 8px;
+  -webkit-app-region: drag;
+  /* Tall enough for the lights and the build number beneath them. */
+  min-height: 52px;
+}
+
+/* The build number, under the traffic lights.
+   Absolutely placed rather than in the flex row: it belongs to the gutter the
+   lights occupy, not to the run of controls, and in the flow it would push
+   everything right by its own width. Quiet on purpose — it is there to be read
+   off a screenshot, not while playing. */
+#build {
+  position: absolute;
+  left: 22px;
+  top: 30px;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: color-mix(in srgb, var(--text) 38%, transparent);
+  pointer-events: none;
+  white-space: nowrap;
+}
+header { position: relative; }
+
+/* Only the things you can press opt out. The title and the build number are
+   text, and the title is 380px wide by design — a fixed share of the bar so
+   the controls after it do not move between screens — so most of that width is
+   empty space. Excluding every child made that empty space undraggable, which
+   is the widest part of the bar and the obvious place to grab it. */
+header > * { -webkit-app-region: no-drag; }
+header h1,
+header #build { -webkit-app-region: drag; }
+
+header h1 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  /* A share of the bar rather than however wide the words happen to be.
+     "Platforms" and "Arcade Fighting — 322 games" differ by 200px, and with
+     the title sized to its text everything after it moved by that much between
+     one screen and the next. Overflowing names ellipsis; the full one is in
+     the tooltip. */
+  flex: 0 1 clamp(180px, 24vw, 380px);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#back {
+  background: transparent;
+  color: color-mix(in srgb, var(--text) 78%, transparent);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  /* Icon and word together, so it takes its own width rather than a square. */
+  gap: 5px;
+  /* No left padding of its own: the header's clearance already puts it as far
+     left as it can go, and another 6px on top was visible as a gap. */
+  padding: 5px 8px 5px 2px;
+  font-weight: 600;
+  height: 26px;
+  font-size: 16px;
+  cursor: pointer;
+}
+#back:hover {
+  background: transparent;
+  color: color-mix(in srgb, var(--glass) 45%, white 55%);
+  text-shadow: 0 0 14px color-mix(in srgb, var(--glass) 70%, transparent);
+}
+
+/* Search: the one control in the bar that is a field rather than a button, so
+   it keeps a faint recess — a text box with no boundary at all reads as a
+   label and nobody clicks it. Just enough to say "type here". */
+#search {
+  /* The switch's auto margins take the slack now, which is what centers it
+     between the title and this box. Taking it here as well would split the gap
+     three ways and put the switch a third of the way along. */
+  margin-left: 0;
+  width: 260px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+  color: var(--text);
+  font-size: 13px;
+}
+#search:focus {
+  outline: none;
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+  border-color: color-mix(in srgb, var(--glass) 55%, transparent);
+}
+
+/* No surface on the top row either. These are ID rules and the flat block
+   further down is not, so without matching them here they would win on
+   specificity and the pills would come back. */
+/* Take offline belongs in this list: left out of it, it kept the generic
+   button styling — a filled panel with a border — and sat in the tab row
+   next to the preview toggle looking like a different application's. */
+#settings-btn, #sync-btn, #sidebar-btn, #layout-btn, #grab-btn {
+  background: transparent;
+  color: color-mix(in srgb, var(--text) 80%, transparent);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 13.5px;
+  /* Heavier than the body text. With no panel behind them these labels are the
+     whole control, so they have to carry the weight a surface used to. */
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+}
+/* Hover lights the label rather than drawing a panel behind it — the same
+   signal the tab strip uses, so the two rows behave alike. A fill here was the
+   last surface left in the top bar. */
+#settings-btn:hover, #sync-btn:hover, #sidebar-btn:hover, #layout-btn:hover, #grab-btn:hover {
+  background: transparent;
+  color: color-mix(in srgb, var(--glass) 30%, white 70%);
+  /* Two shadows: a tight bright core and a wide soft halo. One alone reads as
+     blur rather than light. */
+  text-shadow:
+    0 0 6px color-mix(in srgb, var(--glass) 90%, transparent),
+    0 0 22px color-mix(in srgb, var(--glass) 65%, transparent);
+}
+#settings-btn, #sync-btn { padding: 6px 10px; }
+
+#zoom-wrap { display: flex; align-items: center; }
+#zoom {
+  width: 96px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+/* One tag, and what is behind it.
+   Four facts across the corner — server, roms, cores, disk — were three that
+   never change and one that matters. The rest is a hover away. */
+#status {
+  color: var(--dim);
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: default;
+  padding: 3px 9px 3px 20px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--glass) 26%, transparent);
+  position: relative;
+}
+#status:hover { border-color: color-mix(in srgb, var(--glass) 55%, transparent); }
+/* A dot for the state, because "offline" and a server name are the same shape
+   of word and the difference between them is the whole point of the tag. */
+#status::before {
+  content: "";
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  margin-top: -3px;
+  border-radius: 50%;
+  background: var(--dim);
+}
+#status[data-state="on"]::before { background: #43c76a; }
+#status[data-state="off"]::before { background: #d8823c; }
+#status[data-state="unset"]::before { background: #d84c4c; }
+
+#status-card {
+  position: fixed;
+  z-index: 60;
+  width: 320px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--panel);
+  border: 1px solid color-mix(in srgb, var(--glass) 30%, transparent);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  font-size: 12px;
+  pointer-events: none;
+}
+#status-card[hidden] { display: none; }
+#status-card .sc-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 2px 0;
+}
+#status-card .sc-row span { color: var(--dim); }
+#status-card hr {
+  border: 0;
+  border-top: 1px solid color-mix(in srgb, var(--glass) 22%, transparent);
+  margin: 8px 0;
+}
+#status-card .sc-path { display: grid; grid-template-columns: 58px 1fr; gap: 8px; padding: 1px 0; }
+#status-card .sc-path span { color: var(--dim); }
+#status-card .sc-path code {
+  font-size: 11px;
+  overflow-wrap: anywhere;
+  opacity: 0.85;
+}
+#status-card p { margin: 8px 0 0; color: var(--dim); }
+
+/* Header plus tab bar. One value, used by every element that has to clear
+   them, so moving a bar does not mean hunting for the three places that
+   assumed its height. */
+:root {
+  /* How much of the glass tint shows through, as a percentage. */
+  --tint: 18%;
+  /* The glass tint. Vista let you choose this and it is half of what made the
+     look yours rather than the operating system's; Appearance sets it. */
+  --glass: #4d8fd6;
+  /* The same colour as components, kept in step by `setGlassTint`. Only the
+     no-color-mix fallback below reads it. */
+  --glass-rgb: 77 143 214;
+  --text-rgb: 230 232 236;
+}
+@media (prefers-color-scheme: light) {
+  :root { --text-rgb: 26 29 34; }
+}
+
+/* `hidden` has to actually hide.
+   The browser's own rule for it is `[hidden] { display: none }` in the *user
+   agent* stylesheet, which loses to any author rule that sets `display` at all
+   — and this file sets one on every button holding an icon beside a word. So
+   Back, Grid and Hide info stayed on screen after being hidden, and the Grid
+   button in particular then redrew the last console you had open, which looks
+   exactly like a button that opens consoles by itself.
+
+   `!important` because the point is to beat every author rule, present and
+   future. This is the one place in the file where that is the correct tool. */
+[hidden] { display: none !important; }
+
+body {
+  /* The bars and the content stack. Heights come out of the layout rather than
+     being computed from the bars, so changing one moves nothing else. */
+  display: flex;
+  flex-direction: column;
+}
+
+main {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ---- Section tabs -------------------------------------------------------
+   Below the header rather than in it: the header's controls belong to whatever
+   view is showing, and mixing "where am I" with "what can I do here" made both
+   harder to find. */
+#tabbar {
+  /* Positioned so it keeps its place in the paint order. The page-turn
+     animation puts a transform on #list, and a transformed element makes its
+     own stacking context that paints above unpositioned siblings — so for the
+     180ms of every tab change the cards slid up over the tab bar and left
+     rectangles across it. */
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  /* 42px rather than 38: a tenth taller, which is the difference between a
+     row of labels and a row you aim at. */
+  height: 42px;
+  padding: 0 10px;
+  /* When the labels do not fit, slide rather than stack. Every item in this
+     row keeps its own line and the row keeps its height; what does not fit is
+     reached by scrolling, which a pad already does by moving between tabs.
+     `overflow-y: hidden` because a horizontal scroller with `auto` on both
+     axes reserves room for a vertical bar it will never use. */
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  /* Slightly less tint than the header, so the two read as separate sheets of
+     glass rather than one thick bar. */
+  /* The second sheet: less tint and a weaker highlight, so it reads as glass
+     behind glass rather than one thick slab. */
+  background: transparent;
+  /* The line under the tabs takes the theme color rather than a neutral gray,
+     so changing the tint in Appearance moves the whole bar together instead of
+     leaving a gray rule across the top of a colored window. */
+  border-bottom: 1px solid color-mix(in srgb, var(--glass) 28%, transparent);
+}
+#tabbar .stab {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  opacity: 0.62;
+  font: inherit;
+  padding: 0 14px;
+  cursor: pointer;
+  /* Never break a label across two lines.
+     The row is a fixed 42px, so a wrapped label does not make it taller — it
+     spills out of it, and every other item in the row loses its baseline. On a
+     handheld at 832 CSS pixels that is not an edge case: "My collections",
+     "RomM browse", "Take offline" and "Platform info" all wrapped at once and
+     the row stopped reading as a row. Narrow is handled by scrolling below. */
+  white-space: nowrap;
+  /* A flex item's floor is its content, which would push the row wider than
+     the screen no matter what overflow says. */
+  min-width: 0;
+}
+#tabbar .stab:hover { opacity: 0.85; }
+#tabbar .stab.active {
+  opacity: 1;
+  font-weight: 600;
+  border-bottom-color: var(--accent, #7c8cff);
+}
+#tabbar .stab:focus-visible { outline: 2px solid var(--accent, #7c8cff); outline-offset: -3px; }
+/* The shoulder-button hints, so the mapping is discoverable without opening
+   Settings. Hidden when no pad is connected — they would be a lie. */
+#tabbar .bumper {
+  display: none;
+  align-self: center;
+  opacity: 0.45;
+  font-size: 11px;
+  padding: 0 6px;
+}
+body.has-pad #tabbar .bumper { display: inline; }
+
+#list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+}
+
+/* Platform grid */
+.grid {
+  display: grid;
+  /* Fixed width, for the same reason as the game grid above. */
+  grid-template-columns: repeat(auto-fill, calc(var(--card, 150px) * 1.25));
+  justify-content: start;
+  gap: 10px;
+}
+
+/* Glass, here rather than on the bars. A card has artwork and a shader behind
+   it — something to refract — which is what the effect needs and what a bar
+   spanning an empty strip never had.
+
+   Much more transparent than the bars were: these tile the whole screen, so at
+   the bar's opacity the page would read as frosted rather than as objects made
+   of glass. */
+.card {
+  /* The pane and the outline are the card. Taking them away was tried and
+     reverted: without an edge there is nothing to say where one console ends
+     and the next begins, and a grid of logos floating on the backdrop reads as
+     a scatter rather than a list of things you can press. */
+  background: color-mix(in srgb, var(--glass) calc(var(--tint) * 0.5), transparent);
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  border: 1px solid color-mix(in srgb, var(--glass) 22%, transparent);
+  border-radius: 12px;
+  padding: 14px;
+  cursor: pointer;
+  transition: background .14s, border-color .14s, box-shadow .18s, transform .14s;
+}
+.card:hover {
+  background: color-mix(in srgb, var(--glass) calc(var(--tint) * 1.1), transparent);
+  border-color: color-mix(in srgb, var(--glass) 45%, transparent);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--glass) 40%, transparent);
+  transform: translateY(-1px);
+}
+/* The cursor. A lit pane rather than a ring: the glow is what reads at a
+   distance, which is the whole point of a cursor you drive from the sofa. */
+.card.sel {
+  background: color-mix(in srgb, var(--glass) calc(var(--tint) * 1.9), transparent);
+  border-color: color-mix(in srgb, var(--glass) 80%, white 12%);
+  box-shadow: 0 0 22px color-mix(in srgb, var(--glass) 65%, transparent);
+}
+.card { display: flex; flex-direction: column; }
+.card .logo {
+  height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+.card .logo img {
+  max-height: 100%;
+  max-width: 100%;
+  object-fit: contain;
+}
+/* Wordmark art is white-on-transparent and vanishes on a light page, so it is
+   inverted there. Hardware and console art is full color — inverting that
+   turns a gray SNES pad into a photographic negative. */
+@media (prefers-color-scheme: light) {
+  .card .logo img.wordmark { filter: invert(1) brightness(.55); }
+}
+/* Hardware art is busier than a wordmark, so give it more room. */
+.card .logo img.art,
+.card .logo canvas.art { max-height: 100%; }
+.card .logo:has(img.art),
+.card .logo:has(canvas.art) { height: 76px; }
+.card .logo .ph { color: var(--dim); font-size: 12px; letter-spacing: .05em; }
+.card .name { font-weight: 600; margin-bottom: 4px; }
+.card .meta { color: var(--dim); font-size: 12px; display: flex; gap: 6px; align-items: center; }
+
+/* Collection cards show real cover art, not a white-on-transparent logo, so
+   they must escape the light-mode invert applied to ES-DE logos above. */
+.card .logo.mosaic { height: 92px; }
+.card .logo.mosaic img {
+  height: 100%;
+  border-radius: 4px;
+  object-fit: cover;
+  filter: none;
+}
+@media (prefers-color-scheme: light) {
+  .card .logo.mosaic img { filter: none; }
+}
+
+/* Local filter for a long collection list — distinct from the header search,
+   which searches games. */
+.filter {
+  width: 100%;
+  max-width: 340px;
+  margin-bottom: 12px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--text);
+  font-size: 13px;
+}
+.filter:focus { outline: none; border-color: var(--accent); }
+
+/* Core picker in the detail pane — sits inside a <dd>, so it must not blow
+   out the two-column metadata grid. */
+#core-pick {
+  max-width: 100%;
+  padding: 2px 4px;
+  border-radius: 5px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--text);
+  font-size: 12px;
+}
+#core-pick:focus { outline: none; border-color: var(--accent); }
+
+/* Grouped search results: one section per console. The header sticks so the
+   console stays identifiable while scrolling a long group. */
+.pgroup + .pgroup { margin-top: 22px; }
+/* A marker where a section begins, in the flow.
+   Two earlier attempts got this wrong the same way. Sticky and frosted, the
+   heading floated over a game's cover; sticky and opaque, it still covered the
+   row above it — a sticky heading is over the content by construction and
+   paint does not change that. It sits in the list now, and the strip above the
+   list says which section you are in once this has scrolled by, which is the
+   part that was actually missing. */
+.ghead {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 10px;
+  padding: 8px 0 7px;
+  border-bottom: 1px solid color-mix(in srgb, var(--glass) 35%, transparent);
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--text) 92%, transparent);
+}
+/* The strip: its own row, above the part that scrolls, so there is nothing
+   underneath it to cover. Its height is reserved for as long as the list has
+   sections, which keeps the list from jumping as the name appears. */
+#section-strip {
+  flex: 0 0 auto;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--text) 60%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--glass) 18%, transparent);
+  /* Empty until the first heading goes past, and quiet when it fills. */
+  opacity: 0;
+  transition: opacity .12s;
+}
+#section-strip.showing { opacity: 1; }
+#section-strip[hidden] { display: none; }
+
+.ghead .gcount {
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--dim);
+  opacity: .9;
+}
+
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--dim); display: inline-block; }
+.dot.on { background: var(--ok); }
+
+/* Game grid — box art */
+.gcards {
+  display: grid;
+  /* Cards are exactly the width the zoom asks for, rather than a minimum they
+     then stretch past.
+     `minmax(X, 1fr)` sets how many columns fit and lets them fill the row, so
+     the width that actually gets drawn is row-width divided by column count —
+     and that only changes when the column count does. Half the zoom slider
+     drew identical cards, which is not a slider that is broken so much as a
+     slider whose middle two thirds do nothing.
+     A fixed width means every pixel of zoom is a pixel on screen. The cost is
+     a ragged right edge where the last column would have been. */
+  grid-template-columns: repeat(auto-fill, var(--gcard));
+  justify-content: start;
+  --gcard: clamp(90px, calc(var(--card, 150px) * var(--ar, 0.75) / 0.75), 420px);
+  gap: 14px;
+  /* Default until the platform's real ratio is measured. */
+  --ar: 0.75;
+}
+/* The stand-in for the rows a window is not drawing. One above the band and
+   one below, each exactly the height of the rows it replaces, so the scrollbar
+   and every remembered scroll position are what they would have been with the
+   whole list in the document. See ui/js/visible.js.
+
+   Spanning every column, or the grid would flow cards around it and the band
+   would no longer start on a row of its own. */
+.gcards > .vspace { grid-column: 1 / -1; }
+.rows > .vspace { flex: 0 0 auto; }
+
+.gcard { cursor: pointer; user-select: none; }
+.gcard .art {
+  /* Square, deliberately, and no longer per-platform.
+     
+     This was `var(--ar, 0.75)` — the platform's real box shape, 0.58 for a PSP
+     UMD case and 1.37 for a SNES box. It is more faithful and it makes a grid
+     of mixed systems a ragged thing: every row a different height, and the row
+     below it starting somewhere new. A square is one shape for everything, so
+     the grid is a grid.
+     
+     Nothing is cropped by it: the picture inside is `object-fit: contain`, so a
+     tall box and a wide one both sit whole inside the same square. */
+  aspect-ratio: 1;
+  background: color-mix(in srgb, var(--glass) calc(var(--tint) * 0.4), rgba(0, 0, 0, 0.28));
+  backdrop-filter: blur(10px) saturate(150%);
+  -webkit-backdrop-filter: blur(10px) saturate(150%);
+  border: 1px solid color-mix(in srgb, var(--glass) 18%, transparent);
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color .12s, transform .12s;
+}
+.gcard:hover .art { border-color: var(--accent); transform: translateY(-2px); }
+.gcard:hover .art {
+  border-color: color-mix(in srgb, var(--glass) 40%, transparent);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--glass) 35%, transparent);
+}
+.gcard.sel .art {
+  border-color: color-mix(in srgb, var(--glass) 85%, white 12%);
+  box-shadow: 0 0 24px color-mix(in srgb, var(--glass) 70%, transparent);
+}
+.gcard .art img {
+  width: 100%;
+  height: 100%;
+  /* contain, never cover: cropping box art was the original complaint. */
+  object-fit: contain;
+  display: block;
+}
+/* A cover drawn into a canvas rather than loaded into an `<img>`, which is
+   what keeps a 1,280x960 file from sitting in memory at 1,280x960 to fill a
+   200-pixel tile. The canvas is already sized to fit, so `contain` is built
+   in; these two rules are a guard for the moment before layout settles. */
+.gcard .art canvas {
+  max-width: 100%;
+  max-height: 100%;
+  display: block;
+}
+.gcard .art .ph {
+  color: var(--dim);
+  font-size: 26px;
+  font-weight: 700;
+  text-transform: uppercase;
+  opacity: .35;
+}
+.gcard .gname {
+  font-size: 12px;
+  margin-top: 6px;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.gcard .gmeta { font-size: 11px; color: var(--dim); margin-top: 2px; }
+
+/* Game rows */
+.rows { display: flex; flex-direction: column; }
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.row { user-select: none; }
+.row:hover { background: var(--panel); }
+.row.sel {
+  background: color-mix(in srgb, var(--glass) calc(var(--tint) * 1.6), transparent);
+  backdrop-filter: blur(12px) saturate(150%);
+  -webkit-backdrop-filter: blur(12px) saturate(150%);
+  border-color: color-mix(in srgb, var(--glass) 70%, transparent);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--glass) 45%, transparent);
+}
+.row .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .sz { color: var(--dim); font-size: 12px; font-variant-numeric: tabular-nums; }
+.row .pf { color: var(--dim); font-size: 11px; min-width: 92px; }
+.row .have { font-size: 12px; width: 14px; color: var(--ok); }
+
+/* Detail pane */
+/* `hidden` sets display:none via a UA attribute rule, which an id selector
+   with `display: flex` silently outranks — that is why the pane stayed visible
+   on the platform screen. Restore it explicitly. */
+#detail[hidden] { display: none; }
+
+#detail {
+  /* ES-DE's proportions, taken from slate-es-de's gamelist view.
+     
+     That theme frames the screen as: 2% margin, list 0.40, 2% gap, preview
+     0.54, 2% margin — and it uses the same numbers at 16:9 and at 4:3. Diffing
+     its `aspect-ratio-16-9.xml` against `aspect-ratio-4-3.xml` turns up three
+     text elements and nothing else, because every position is normalised
+     against the screen rather than written in pixels. That is the whole trick,
+     and it is why one theme covers 640x480 and 4K without a breakpoint.
+     
+     Of the space our `main` actually has — no outer margins — that would be 57%
+     to the preview. It is 43% here, which is ES-DE's proportion the other way
+     round, because Frank tried theirs and read it as reversed. Their split is
+     not a mistake and it is recorded above so nobody "corrects" this back: the
+     theme is drawn for a television across a room, where the artwork is the
+     point and the list is a means of getting to it. A handheld held at arm's
+     length is the opposite — the list is what you are looking at.
+     
+     Clamped at the top, which ES-DE has no need to do: it is always the whole
+     screen, while this is a window that can be 2900 points wide, and 57% of
+     that is a preview pane wider than most displays. Overridden outright by
+     `--detail-w` once the divider has been dragged. */
+  /* `min`, not `clamp`. A clamp's lower bound is a floor in pixels and it wins
+     over the proportion — `clamp(300px, 43%, 760px)` is 300px on any screen
+     under ~700 wide, which is how the Retroid ended up at 48% when it was asked
+     for 43%. The upper bound is the only one that has to be absolute, because a
+     desktop window can be 2,900 points across and 43% of that is a preview pane
+     wider than most monitors. */
+  width: var(--detail-w, min(43%, 760px));
+  /* The floor is a proportion too, below a certain width.
+     
+     A flat 300px floor is fine on a desktop and wrong on a handheld: the Retroid
+     Pocket Mini is 620 points across, 43% of it is 266, and the floor won — so
+     the pane took 48% of the screen and the list was left with 320. A pixel
+     minimum is the same kind of thing as a pixel breakpoint, and it fails the
+     same way on the small screen nobody measured on. */
+  min-width: min(300px, 43%);
+  max-width: 70vw;
+  flex-shrink: 0;
+  border-left: 1px solid var(--line);
+  /* The same glass as a card, deliberately the same declaration.
+     It had a tint and an opacity of its own, and a second slider in Appearance
+     to drive them, which made the one surface you look at while reading also
+     the one surface that never matched anything around it. There is nothing
+     special about this pane: it is a large card. Anything that changes how
+     glass looks belongs in `.card` and arrives here for free — and if these
+     two ever drift apart again, the slider that was deleted comes back. */
+  background: color-mix(in srgb, var(--glass) calc(var(--tint) * 0.5), transparent);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  padding: 16px;
+  /* Media scrolls; the buttons stay pinned so they are never below the fold,
+     which was the complaint about the old fixed-height layout. */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+#detail .scroll {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  margin: 0 -16px;
+  padding: 0 16px;
+}
+#detail .pinned {
+  padding-top: 12px;
+  margin-top: 8px;
+  border-top: 1px solid var(--line);
+  flex-shrink: 0;
+}
+
+#detail h2 { margin: 0 0 4px; font-size: 16px; }
+#detail .sub { color: var(--dim); font-size: 12px; margin-bottom: 14px; word-break: break-all; }
+
+#detail video, #detail img.cover, #detail canvas.cover {
+  width: 100%;
+  border-radius: 8px;
+  background: var(--panel-2);
+  margin-bottom: 12px;
+  display: block;
+}
+
+/* The artwork's own box, so the pane is the same height for every game.
+   Its height comes from the pane's width and nothing else, which is what stops
+   the text below moving when the picture changes — see the note in detail.js. */
+#detail .coverbox {
+  width: 100%;
+  aspect-ratio: var(--cover-aspect, 4 / 3);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+/* The picture itself, however it ends up drawn.
+   `data-fit` swaps the <img> for a <canvas> of the same class once the bitmap
+   has been decoded, so both have to be styled or the swap changes the look. */
+#detail .coverbox img.cover,
+#detail .coverbox canvas.cover {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  margin: 0;
+  /* Transparent, because the artwork is. Miximages, wordmarks and marquees are
+     PNGs with an alpha channel, and a panel colour painted behind them squares
+     them off into tiles — which is not what they look like, and not what the
+     grid does with the same files. */
+  background: transparent;
+  border-radius: 0;
+}
+/* A game with no artwork keeps the gap rather than closing it. */
+#detail .cover-none {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  opacity: 0.35;
+}
+
+/* Screenshot slideshow. Images are stacked and cross-faded rather than laid
+   out in a row, so the pane height stays put while cycling. */
+.shots {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--panel-2);
+  margin-bottom: 12px;
+}
+.shots img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 0;
+  transition: opacity .35s ease;
+}
+.shots img.on { opacity: 1; }
+
+.shots .dots {
+  position: absolute;
+  left: 0; right: 0; bottom: 6px;
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+}
+.shots .dots span {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.35);
+  cursor: pointer;
+}
+.shots .dots span.on { background: #fff; }
+
+.shots .nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 26px; height: 40px;
+  border: none;
+  background: rgba(0,0,0,.35);
+  color: #fff;
+  font-size: 18px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity .15s;
+}
+.shots:hover .nav { opacity: 1; }
+.shots .nav.prev { left: 0; border-radius: 0 6px 6px 0; }
+.shots .nav.next { right: 0; border-radius: 6px 0 0 6px; }
+
+#detail .summary {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text);
+  opacity: .85;
+  margin: 0 0 14px;
+}
+#detail .rating { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; }
+#detail .rating .stars {
+  position: relative;
+  display: inline-block;
+  font-size: 15px;
+  letter-spacing: 1px;
+  /* The two rows must line up exactly, so neither may wrap or be spaced by the
+     surrounding text layout. */
+  white-space: nowrap;
+}
+#detail .rating .stars-off { color: color-mix(in srgb, var(--text) 22%, transparent); }
+#detail .rating .stars-on {
+  position: absolute;
+  inset: 0 auto 0 0;
+  overflow: hidden;
+  color: #e0b13a;
+}
+#detail .rating .num { color: var(--dim); font-size: 11px; }
+
+/* The save-state shelf.
+   A horizontal strip rather than a grid: these are a handful of items in a
+   meaningful order — where you left off, then the slots — and a grid would
+   reflow that order at every pane width. */
+#detail .shelf { margin: 4px 0 16px; }
+#detail .shelf-head {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--dim);
+  margin-bottom: 6px;
+}
+#detail .shelf-strip {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+#detail .state {
+  flex: 0 0 116px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 0 6px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  overflow: hidden;
+}
+#detail .state:hover:not(.noresume) {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+/* The autosave: RetroArch loads it itself, so there is nothing to click. Kept
+   on the shelf anyway — it is usually the most recent thing there, and a shelf
+   that hid it would look wrong to anyone who knew it existed. */
+#detail .state.noresume { cursor: default; opacity: 0.72; }
+#detail .state.noresume:hover { border-color: var(--line); box-shadow: none; }
+#detail .state img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  display: block;
+  background: #000;
+  margin: 0 0 4px;
+}
+#detail .state-blank {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 4 / 3;
+  background: var(--panel);
+  color: var(--dim);
+  font-size: 18px;
+  margin-bottom: 4px;
+}
+#detail .state-label {
+  font-size: 11.5px;
+  padding: 0 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#detail .state-when { font-size: 10.5px; color: var(--dim); padding: 0 6px; }
+
+/* ES-DE artwork strip */
+#detail .artstrip {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 8px;
+  margin-bottom: 14px;
+}
+#detail .artstrip figure {
+  margin: 0;
+  cursor: zoom-in;
+}
+#detail .artstrip img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  display: block;
+  margin: 0;
+}
+#detail .artstrip figure:hover img { border-color: var(--accent); }
+#detail .artstrip figcaption {
+  font-size: 10px;
+  color: var(--dim);
+  text-align: center;
+  margin-top: 3px;
+}
+
+#detail .link {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 5px 11px;
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+}
+#detail .link:hover { border-color: var(--accent); }
+
+#detail dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0 0 16px; font-size: 12px; }
+#detail dt { color: var(--dim); }
+#detail dd { margin: 0; word-break: break-all; }
+
+.actions { display: flex; gap: 8px; }
+
+button.primary, button.ghost {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--line);
+}
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+button.ghost { background: var(--panel-2); color: var(--text); }
+button:disabled { opacity: .5; cursor: default; }
+
+progress { width: 100%; height: 6px; margin-top: 10px; }
+
+.empty { color: var(--dim); padding: 40px; text-align: center; }
+
+footer#toast {
+  /* Bigger, because this is the only thing the app says out loud. It carries
+     launch failures, BIOS warnings, sync results and login answers, and at
+     13px in a 70%-wide strip it read as a status line rather than as a message
+     — the sort of thing the eye skips on a 1500px window. Roughly a third
+     larger in every dimension, and glass rather than a flat panel so it
+     belongs to the same window as everything else. */
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  background: color-mix(in srgb, var(--glass) 16%, var(--panel-2));
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  border: 1px solid color-mix(in srgb, var(--glass) 30%, transparent);
+  border-radius: 12px;
+  padding: 14px 22px;
+  font-size: 15px;
+  line-height: 1.45;
+  font-weight: 500;
+  max-width: min(760px, 80%);
+  box-shadow: 0 10px 34px rgb(0 0 0 / 0.45);
+}
+
+/* ------------------------------------------------------------------ */
+/* Lightbox — full-size artwork over a dimmed backdrop, in-window.     */
+/* ------------------------------------------------------------------ */
+
+#lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  /* Room down the sides for the arrows, which are now over the picture rather
+     than beside it. */
+  padding: 40px 72px;
+  /* Dim + blur so the library behind reads as context, not clutter. */
+  background: rgba(10, 12, 15, .82);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  animation: lb-in .16s ease;
+}
+#lightbox[hidden] { display: none; }
+
+@keyframes lb-in { from { opacity: 0; } to { opacity: 1; } }
+
+#lightbox figure {
+  margin: 0;
+  max-width: 100%;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  min-height: 0;
+}
+#lightbox .lb-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  max-height: calc(100vh - 130px);
+  /* Zoom, driven by the triggers on a pad and +/- on the keyboard. A transform
+     rather than a width so it applies the same way to a video, a still and a
+     manual, and so a playing video is not re-laid-out on every frame. */
+  transform: scale(var(--lb-zoom, 1));
+  transition: transform .12s ease-out;
+}
+#lightbox img,
+#lightbox video,
+#lightbox iframe {
+  max-width: 100%;
+  /* Bounded so tall box art cannot push the caption off-screen. */
+  max-height: calc(100vh - 130px);
+  object-fit: contain;
+  border-radius: 6px;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, .6);
+  background: #000;
+}
+#lightbox figcaption {
+  color: #cfd4dc;
+  font-size: 12px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+/* Gameplay videos are 320x240 far more often than not, and `max-width` never
+   scales anything up — so the player opened at the file's own size, which on a
+   5K display is a postage stamp in the middle of a black screen. A width makes
+   it fill the space; the height cap keeps the aspect ratio honest. */
+#lightbox video {
+  width: min(1500px, 88vw);
+  height: auto;
+}
+
+#lightbox iframe {
+  width: min(900px, 92vw);
+  height: calc(100vh - 130px);
+  border: none;
+  background: #fff;
+}
+
+#lightbox .lb-close,
+#lightbox .lb-nav {
+  background: rgba(255, 255, 255, .09);
+  border: 1px solid rgba(255, 255, 255, .16);
+  color: #fff;
+  border-radius: 8px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+#lightbox .lb-close {
+  position: absolute;
+  top: 16px;
+  right: 18px;
+  width: 34px;
+  height: 34px;
+  font-size: 20px;
+  line-height: 1;
+}
+/* Pinned to the window, not to the picture.
+   As flex siblings of the figure the arrows sat against whatever was on the
+   stage, so they slid inwards for a cartridge and outwards for a wide
+   screenshot — and stepping through a reel of mixed artwork meant chasing a
+   button that moved every time you pressed it. */
+#lightbox .lb-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 72px;
+  font-size: 26px;
+}
+#lightbox .lb-prev { left: 14px; }
+#lightbox .lb-next { right: 14px; }
+#lightbox .lb-close:hover,
+#lightbox .lb-nav:hover { background: rgba(255, 255, 255, .2); }
+#lightbox .lb-nav[disabled] { opacity: 0; pointer-events: none; }
+
+/* Signal that sidebar artwork is clickable. */
+#detail .shots,
+#detail img.cover,
+#detail video { cursor: zoom-in; }
+
+/* Keyboard shortcut sheet (press ?) */
+#shortcuts {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 12, 15, .7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+#shortcuts .sc-panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 22px 26px;
+  min-width: 340px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .5);
+}
+#shortcuts h3 { margin: 0 0 14px; font-size: 15px; }
+#shortcuts dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 7px 18px;
+  margin: 0 0 14px;
+  font-size: 12.5px;
+}
+#shortcuts dt {
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+#shortcuts dd { margin: 0; color: var(--dim); }
+#shortcuts p { margin: 0; color: var(--dim); font-size: 11px; }
+
+/* Settings pane */
+/* Systems table */
+.systbl {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.systbl th {
+  text-align: left;
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--dim);
+  padding: 0 10px 8px;
+  border-bottom: 1px solid var(--line);
+}
+.systbl td { padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.systbl tr:hover td { background: var(--panel); }
+.systbl .sysname { font-weight: 600; }
+.systbl .dim { color: var(--dim); font-weight: 400; font-size: 11px; }
+.systbl .num { color: var(--dim); font-variant-numeric: tabular-nums; }
+.systbl select {
+  width: 100%;
+  max-width: 260px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--text);
+  font-size: 12px;
+}
+.systbl select:hover { border-color: var(--accent); }
+
+.badge {
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  color: var(--dim);
+}
+.badge.crt { color: #d8a657; border-color: #6b5626; }
+.badge.hh { color: #7fbf7f; border-color: #3c5c3c; }
+
+/* The sync status can be several lines of per-file notes, so let it wrap
+   rather than stretching the panel. */
+.set-savesync-status { white-space: pre-wrap; }
+
+/* Console-picture picker. One button per style, grayed out when nothing has
+   been fetched for it — the count is the point, since a style with two icons
+   is worse than the one with thirty. */
+.icon-styles { display: flex; gap: 6px; flex-wrap: wrap; }
+.icon-style {
+  padding: 5px 11px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+}
+.icon-style.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.icon-style:disabled { opacity: .4; cursor: default; }
+.icon-style em { font-style: normal; opacity: .6; margin-left: 4px; }
+.set-icons-note { color: var(--dim); font-size: 12px; margin-left: 10px; }
+
+/* App-icon picker. Shows the picture rather than its name, because the whole
+   question is what it looks like — and at the size it will actually be seen,
+   not scaled up to something flattering. The list grows on its own: one button
+   per icon the backend reports. */
+.app-icons { display: flex; gap: 10px; flex-wrap: wrap; }
+.app-icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+}
+.app-icon img,
+.app-icon-missing {
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+  display: block;
+}
+.app-icon-missing { background: var(--panel); border: 1px dashed var(--line); }
+.app-icon.on { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 40%, transparent); }
+.app-icon-label { opacity: .8; }
+.app-icon.on .app-icon-label { opacity: 1; }
+
+/* Settings: RetroArch path row. The panel was keyboard-only before, so these
+   are the first non-binding controls it has needed. */
+.set-panel h4 {
+  margin: 1.2em 0 0.3em;
+  font-size: 0.95em;
+  opacity: 0.85;
+}
+.set-panel .set-path {
+  display: flex;
+  gap: 0.5em;
+}
+.set-panel .set-ra {
+  flex: 1;
+  min-width: 0;
+  padding: 0.4em 0.6em;
+  font: inherit;
+  font-size: 0.9em;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 4px;
+}
+.set-panel .set-ra-status {
+  min-height: 1.2em;
+  word-break: break-all;
+}
+
+/* Controller binding buttons. Wider than the key ones: a button name is
+   "A / Cross (bottom face)", not a single glyph. */
+.set-panel .set-pad {
+  min-width: 13em;
+  text-align: right;
+}
+
+/* ---- Lucide icons ----
+   Drawn as CSS masks rather than <img>: Lucide strokes use currentColor, which
+   an <img> cannot inherit, so a mask tinted with `background: currentColor` is
+   the only way to get an icon that follows the theme without inlining SVG or
+   shipping a light and dark copy of every file. */
+.icon {
+  display: inline-block;
+  width: 1.05em;
+  height: 1.05em;
+  vertical-align: -0.15em;
+  background: currentColor;
+  -webkit-mask: var(--icon) center / contain no-repeat;
+  mask: var(--icon) center / contain no-repeat;
+  flex: none;
+}
+/* Icon sitting beside a word, rather than alone in a button. */
+button > .icon + span {
+  margin-left: 0.4em;
+}
+button:has(> .icon + span) {
+  display: inline-flex;
+  align-items: center;
+}
+
+.icon-back      { --icon: url("icons/chevron-left.svg"); }
+.icon-prev      { --icon: url("icons/chevron-left.svg"); }
+.icon-next      { --icon: url("icons/chevron-right.svg"); }
+.icon-close     { --icon: url("icons/x.svg"); }
+.icon-settings  { --icon: url("icons/settings.svg"); }
+.icon-collections { --icon: url("icons/library-big.svg"); }
+.icon-systems   { --icon: url("icons/sliders-horizontal.svg"); }
+.icon-themes    { --icon: url("icons/palette.svg"); }
+.icon-grid      { --icon: url("icons/layout-grid.svg"); }
+.icon-list      { --icon: url("icons/list.svg"); }
+.icon-info-on   { --icon: url("icons/panel-right-close.svg"); }
+.icon-info-off  { --icon: url("icons/panel-right-open.svg"); }
+.icon-play      { --icon: url("icons/play.svg"); }
+.icon-download  { --icon: url("icons/download.svg"); }
+.icon-search    { --icon: url("icons/search.svg"); }
+.icon-gamepad   { --icon: url("icons/gamepad-2.svg"); }
+/* Lucide "arrow-down-narrow-wide" — the ordering glyph, vendored like the rest. */
+.icon-sort      { --icon: url("icons/arrow-down-narrow-wide.svg"); }
+.icon-filter    { --icon: url("icons/funnel.svg"); }
+.icon-dice      { --icon: url("icons/dice-5.svg"); }
+.icon-disk      { --icon: url("icons/hard-drive-download.svg"); }
+.icon-cloud     { --icon: url("icons/cloud.svg"); }
+.icon-folder    { --icon: url("icons/folder.svg"); }
+.icon-pane      { --icon: url("icons/square.svg"); }
+.icon-book      { --icon: url("icons/book-open.svg"); }
+.icon-columns   { --icon: url("icons/columns-2.svg"); }
+.icon-pad       { --icon: url("icons/gamepad-2.svg"); }
+.icon-external  { --icon: url("icons/external-link.svg"); }
+/* Lucide "refresh-cw" — two arrows chasing each other, which is what a sync
+   is: it goes both ways and the server decides which per save. */
+.icon-sync      { --icon: url("icons/refresh-cw.svg"); }
+
+/* Glyph-only buttons were sized for a text character; a mask needs a box. */
+#back, #settings-btn, #sync-btn, .lb-close, .lb-nav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ---- Attract mode ------------------------------------------------------
+   Over everything, including the settings button and the tab row: the machine
+   has been left alone and there is nothing on screen worth reaching. */
+#attract {
+  position: fixed;
+  /* A twentieth of the screen clear on every side. */
+  inset: 5vh 5vw;
+  z-index: 90;
+  background: #000;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  opacity: 0;
+  transition: opacity .5s ease;
+  outline: none;
+}
+/* The margin would otherwise show the library through it, so the black goes
+   behind the whole screen and the content sits inside the margin. */
+#attract::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: #000;
+  z-index: -1;
+}
+#attract.on { opacity: 1; }
+.attract-art { position: relative; overflow: hidden; }
+/* Stacked rather than swapped. Changing one element's src shows a blank frame
+   between two pictures, and on a slideshow that is the only frame anybody sees
+   move. The new one fades up over the old and the old is removed after. */
+.attract-art img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 0;
+  transition: opacity .5s ease;
+}
+.attract-art img.in { opacity: 1; }
+.attract-info {
+  padding: 22px 32px 8px;
+  text-align: center;
+}
+.attract-info b { display: block; font-size: 22px; font-weight: 600; }
+.attract-info span { color: var(--dim, #8b93a1); font-size: 13px; }
+.attract-hint {
+  margin: 0;
+  padding: 0 32px 26px;
+  text-align: center;
+  color: #545b66;
+  font-size: 12px;
+}
+
+/* ---- Save conflict dialog ----------------------------------------------
+   Modal because the launch is genuinely blocked behind the answer; anything
+   dismissable would leave the game not starting with nothing on screen
+   explaining why. */
+#conflict-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.72);
+  display: grid;
+  place-items: center;
+  z-index: 60;
+}
+.conflict-box {
+  background: var(--panel, #1b1b20);
+  border: 1px solid var(--line, #33333c);
+  border-radius: 12px;
+  padding: 1.4rem 1.6rem;
+  width: min(46rem, 92vw);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+}
+.conflict-box header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.4rem;
+}
+.conflict-box h2 { margin: 0; font-size: 1.15rem; }
+.conflict-box .lead { margin: 0 0 1rem; opacity: 0.8; }
+.conflict h3 { margin: 0 0 0.2rem; font-size: 1rem; font-weight: 600; }
+.conflict .why { margin: 0 0 0.9rem; opacity: 0.7; font-size: 0.9rem; }
+
+/* Side by side: "which is newer" is the entire decision, and two dates next
+   to each other answer it faster than any sentence. */
+.conflict .sides { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
+.conflict .side {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.9rem 1rem;
+  text-align: left;
+  background: var(--card, #24242b);
+  border: 2px solid transparent;
+  border-radius: 9px;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+.conflict .side:hover { background: var(--card-hover, #2b2b34); }
+.conflict .side:focus-visible,
+.conflict .side:focus {
+  outline: none;
+  border-color: var(--accent, #7c8cff);
+}
+.conflict .side[disabled] { opacity: 0.5; cursor: default; }
+.conflict .who { font-weight: 600; }
+.conflict .when { font-variant-numeric: tabular-nums; opacity: 0.85; font-size: 0.9rem; }
+.conflict .size { opacity: 0.6; font-size: 0.85rem; }
+.conflict .note { margin: 0.9rem 0 0; font-size: 0.85rem; opacity: 0.65; }
+.conflict .note code { opacity: 0.9; }
+.conflict-cancel {
+  margin-top: 1.1rem;
+  background: none;
+  border: 1px solid var(--line, #33333c);
+  border-radius: 8px;
+  padding: 0.5rem 0.9rem;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.conflict-cancel:hover { background: var(--card, #24242b); }
+
+/* ---- The sync plan ------------------------------------------------------
+   The same box as the conflict picker, because it is the same kind of moment:
+   a question with two answers, asked before anything is written. Only the
+   contents differ — a list you read rather than a pair you choose between. */
+.sync-box .sy-list {
+  display: grid;
+  gap: 2px;
+  /* A plan can be four rows or four hundred. Scrolling inside the box keeps
+     the headline and the two buttons where they are, so a long list never
+     pushes the answer off the bottom of the screen. */
+  max-height: min(46vh, 26rem);
+  overflow-y: auto;
+  margin-bottom: 0.4rem;
+}
+.sy-row {
+  display: grid;
+  grid-template-columns: 12.5rem 1fr;
+  gap: 0.1rem 0.8rem;
+  align-items: baseline;
+  padding: 0.45rem 0.7rem;
+  border-radius: 7px;
+  /* `--panel-2` rather than the conflict dialog's `--card`: that one is not a
+     token this stylesheet defines, so it is a dark hex on a light page. */
+  background: var(--panel-2);
+}
+/* Which way it goes, in the left column and in a colour, so the shape of the
+   plan is readable before a single filename is. */
+.sy-what { font-size: 0.82rem; font-weight: 600; opacity: 0.9; }
+.sy-conflict .sy-what { color: var(--warn, #e8b04b); }
+.sy-down .sy-what { color: var(--accent, #7c8cff); }
+.sy-up .sy-what { opacity: 0.6; }
+.sy-title { overflow-wrap: anywhere; }
+/* The server's own words for why. Full width under the pair, because it is a
+   sentence and a sentence in a 12rem column is a column of syllables. */
+.sy-why {
+  grid-column: 1 / -1;
+  font-size: 0.82rem;
+  opacity: 0.62;
+  margin-top: 0.15rem;
+}
+.sy-buttons { display: flex; gap: 0.6rem; }
+/* The one that moves files is the lit one. It is also not the one focus opens
+   on — see savesync.js. */
+.sy-go {
+  border-color: var(--accent, #7c8cff);
+  font-weight: 600;
+}
+.sy-go:hover { background: var(--accent, #7c8cff); color: #12121a; }
+
+/* Android: the box is most of the screen, so the row loses its second column
+   rather than squeezing a filename into 4rem. */
+body.mobile .sy-row { grid-template-columns: 1fr; }
+body.mobile .sync-box .sy-list { max-height: 42vh; }
+
+/* ---- Shader backdrop ----------------------------------------------------
+   A WebGL2 canvas behind the whole app. Fixed and non-interactive: it must
+   never take a click or a focus ring from the grid on top of it. Absent
+   entirely when the machine cannot run it, so nothing here assumes it exists.
+
+   `html, body` paint an opaque `--bg`, which sat directly on top of a canvas at
+   z-index -1 — the shader was running perfectly and completely invisible. The
+   page has to be see-through for a backdrop to be a backdrop, so the class goes
+   on <html> while it is on and comes off again when it stops. */
+html.backdrop-on,
+html.backdrop-on body { background: transparent; }
+
+/* The sticky group headings inside the grid paint --bg too, for the same
+   reason: they have to hide the rows scrolling under them. Frosted instead, so
+   the shader shows through without the text losing its background. */
+#backdrop {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  pointer-events: none;
+  /* Rendered at half resolution and stretched: it is out-of-focus noise, so
+     the softness costs nothing and the pixels are worth saving. */
+  image-rendering: auto;
+}
+
+/* ---- Detail pane divider -------------------------------------------------
+   A drag handle on the pane's left edge. Sits in the border rather than taking
+   layout space, so widening the pane does not shift the grid by an extra few
+   pixels the first time you touch it. */
+#detail-grip {
+  width: 7px;
+  margin-right: -7px;
+  flex: 0 0 7px;
+  cursor: col-resize;
+  z-index: 5;
+  background: transparent;
+  transition: background 120ms;
+}
+#detail-grip:hover,
+#detail-grip.dragging { background: var(--accent, #7c8cff); opacity: 0.55; }
+
+/* While dragging, stop the pointer selecting text across the whole window —
+   otherwise a drag highlights every game name it passes over. */
+body.resizing-detail { user-select: none; cursor: col-resize; }
+
+/* Live controller readout inside the shortcut list. Monospaced numbers so the
+   indices do not jump about while buttons are held. */
+#shortcuts .pad-readout {
+  font-variant-numeric: tabular-nums;
+  line-height: 1.6;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+}
+#shortcuts .pad-readout .hint { opacity: 0.6; font-size: 12px; }
+
+/* ---- Section transitions -------------------------------------------------
+   A slide in the direction you moved, so LB and RB feel like turning pages
+   rather than the list being replaced under you. Which way it goes is the whole
+   point: an animation that plays the same both ways tells you nothing about
+   where you went.
+
+   Short — 180ms. Long enough to read as motion, short enough that holding a
+   bumper to move two tabs does not feel like waiting for it. */
+#list.turn-left { animation: turn-from-right 180ms ease-out; }
+#list.turn-right { animation: turn-from-left 180ms ease-out; }
+
+@keyframes turn-from-right {
+  from { opacity: 0; transform: translateX(26px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes turn-from-left {
+  from { opacity: 0; transform: translateX(-26px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* The tab label leads slightly, so the eye is already where the content is
+   about to arrive. */
+#tabbar .stab.active { transition: opacity 140ms, border-color 140ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  #list.turn-left,
+  #list.turn-right { animation: none; }
+}
+
+/* ---- View transitions ----------------------------------------------------
+   The cover art moves from the card into the detail pane instead of the pane
+   being replaced. Only the pair is animated; everything else cross-fades, which
+   is the browser default and right for text.
+
+   Ignored entirely where the API is missing — the app behaves the same, it just
+   does not animate. Nothing may depend on this having run. */
+::view-transition-old(cover),
+::view-transition-new(cover) {
+  /* No fade on the pair: fading a moving element makes it look like two
+     pictures rather than one travelling. */
+  animation: none;
+  mix-blend-mode: normal;
+  object-fit: cover;
+}
+
+::view-transition-group(cover) { animation-duration: 260ms; }
+
+/* The console's name moving between the card and the title bar. Slower than
+   the cover, because it travels much further across the window and at 260ms
+   that reads as a jump rather than a move. */
+::view-transition-old(heading),
+::view-transition-new(heading) {
+  animation-duration: 300ms;
+  animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+::view-transition-group(heading) {
+  animation-duration: 300ms;
+  animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+::view-transition-old(root),
+::view-transition-new(root) { animation-duration: 160ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) { animation: none !important; }
+}
+
+/* ---- Controls ------------------------------------------------------------
+   Modern flat: no fill at rest, no gloss, no bevel. Weight and color carry the
+   state instead of a raised surface, which is the thing that dates an interface
+   fastest — a button that looks pressable in three dimensions belongs to a
+   decade that had window frames to match. */
+header button {
+  border-radius: 9px;
+  background: transparent;
+  border: 1px solid transparent;
+  box-shadow: none;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--text) 80%, transparent);
+  /* "Hide info" is two words and was breaking across two lines, which made the
+     whole bar taller than the rest of its contents needed. */
+  white-space: nowrap;
+  transition: color .14s, text-shadow .2s, opacity .14s;
+}
+header button:hover {
+  background: transparent;
+  color: color-mix(in srgb, var(--glass) 30%, white 70%);
+  text-shadow:
+    0 0 6px color-mix(in srgb, var(--glass) 90%, transparent),
+    0 0 22px color-mix(in srgb, var(--glass) 65%, transparent);
+}
+header button:active { opacity: 0.7; }
+header button:focus-visible {
+  outline: none;
+  border-color: color-mix(in srgb, var(--glass) 70%, transparent);
+}
+
+/* The tab strip: no surface at all. The active tab is the one that is lit —
+   full-strength text, the tint color, and a glow under it. Everything else is
+   dimmed, which is a stronger signal than a box around one of them. */
+#tabbar .stab {
+  border: 0;
+  border-bottom: 0;
+  background: transparent;
+  box-shadow: none;
+  margin: 4px 0;
+  padding: 0 16px;
+  font-weight: 500;
+  font-size: 14px;
+  letter-spacing: 0.01em;
+  opacity: 0.45;
+  color: var(--text);
+  transition: opacity .16s, color .16s, text-shadow .2s;
+}
+#tabbar .stab:hover { opacity: 0.8; }
+
+#tabbar .stab.active {
+  opacity: 1;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--glass) 55%, white 45%);
+  /* The glow is on the text itself rather than behind a panel, so there is no
+     surface to date. */
+  text-shadow:
+    0 0 7px color-mix(in srgb, var(--glass) 95%, transparent),
+    0 0 26px color-mix(in srgb, var(--glass) 75%, transparent);
+}
+#tabbar .stab:focus-visible {
+  outline: none;
+  opacity: 1;
+  text-decoration: underline;
+  text-underline-offset: 6px;
+}
+
+/* Search: a recessed field, with no border drawn round it. */
+#search {
+  background: color-mix(in srgb, var(--text) 7%, transparent);
+  border: 1px solid transparent;
+  border-radius: 9px;
+  box-shadow: none;
+}
+#search:focus {
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+  border-color: color-mix(in srgb, var(--glass) 55%, transparent);
+}
+
+/* ---- Detail pane divider -------------------------------------------------
+   A drag handle on the pane's left edge. Sits in the border rather than taking
+   layout space, so widening the pane does not shift the grid by an extra few
+   pixels the first time you touch it. */
+#detail-grip {
+  width: 7px;
+  margin-right: -7px;
+  flex: 0 0 7px;
+  cursor: col-resize;
+  z-index: 5;
+  background: transparent;
+  transition: background 120ms;
+}
+#detail-grip:hover,
+#detail-grip.dragging { background: var(--accent, #7c8cff); opacity: 0.55; }
+
+/* While dragging, stop the pointer selecting text across the whole window —
+   otherwise a drag highlights every game name it passes over. */
+body.resizing-detail { user-select: none; cursor: col-resize; }
+
+/* Live controller readout inside the shortcut list. Monospaced numbers so the
+   indices do not jump about while buttons are held. */
+#shortcuts .pad-readout {
+  font-variant-numeric: tabular-nums;
+  line-height: 1.6;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+}
+#shortcuts .pad-readout .hint { opacity: 0.6; font-size: 12px; }
+
+/* ---- Section transitions -------------------------------------------------
+   A slide in the direction you moved, so LB and RB feel like turning pages
+   rather than the list being replaced under you. Which way it goes is the whole
+   point: an animation that plays the same both ways tells you nothing about
+   where you went.
+
+   Short — 180ms. Long enough to read as motion, short enough that holding a
+   bumper to move two tabs does not feel like waiting for it. */
+#list.turn-left { animation: turn-from-right 180ms ease-out; }
+#list.turn-right { animation: turn-from-left 180ms ease-out; }
+
+@keyframes turn-from-right {
+  from { opacity: 0; transform: translateX(26px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes turn-from-left {
+  from { opacity: 0; transform: translateX(-26px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* The tab label leads slightly, so the eye is already where the content is
+   about to arrive. */
+#tabbar .stab.active { transition: opacity 140ms, border-color 140ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  #list.turn-left,
+  #list.turn-right { animation: none; }
+}
+
+/* ---- View transitions ----------------------------------------------------
+   The cover art moves from the card into the detail pane instead of the pane
+   being replaced. Only the pair is animated; everything else cross-fades, which
+   is the browser default and right for text.
+
+   Ignored entirely where the API is missing — the app behaves the same, it just
+   does not animate. Nothing may depend on this having run. */
+::view-transition-old(cover),
+::view-transition-new(cover) {
+  /* No fade on the pair: fading a moving element makes it look like two
+     pictures rather than one travelling. */
+  animation: none;
+  mix-blend-mode: normal;
+  object-fit: cover;
+}
+
+::view-transition-group(cover) { animation-duration: 260ms; }
+
+/* The console's name moving between the card and the title bar. Slower than
+   the cover, because it travels much further across the window and at 260ms
+   that reads as a jump rather than a move. */
+::view-transition-old(heading),
+::view-transition-new(heading) {
+  animation-duration: 300ms;
+  animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+::view-transition-group(heading) {
+  animation-duration: 300ms;
+  animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+::view-transition-old(root),
+::view-transition-new(root) { animation-duration: 160ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) { animation: none !important; }
+}
+
+/* Download readout. Tabular numerals so the digits do not jitter as the size
+   and rate change — a percentage that shifts left and right while you watch it
+   is harder to read than one that stays put. */
+#prog-text {
+  margin-top: 4px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.72;
+}
+
+/* ---- Platform wordmarks --------------------------------------------------
+   Set as type rather than fetched as art.
+
+   ES-DE's "logo" images are the system's name drawn as a picture — a wordmark,
+   not a photograph of hardware — so downloading a theme to get them buys a
+   worse version of text the app already has: it cannot be selected, does not
+   scale cleanly, needs a network round trip, and arrives in whatever color the
+   theme author chose. The hardware renders would have been worth having; the
+   wordmarks are not.
+
+   So this is the slug, set properly. Condensed, spaced out, and clipped to the
+   card so a long name shrinks rather than wrapping into the title below it. */
+.card .logo { overflow: hidden; }
+
+.wordtype {
+  font-size: clamp(13px, 2.1cqw, 26px);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-align: center;
+  line-height: 1.1;
+  white-space: nowrap;
+  max-width: 100%;
+  /* Falls back to shrinking rather than overflowing when the slug is long. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: color-mix(in srgb, var(--text) 62%, transparent);
+  transition: color .16s, text-shadow .2s;
+}
+
+.grid .card { container-type: inline-size; }
+
+.card:hover .wordtype { color: color-mix(in srgb, var(--text) 85%, transparent); }
+
+.card.sel .wordtype {
+  color: color-mix(in srgb, var(--glass) 40%, white 60%);
+  text-shadow: 0 0 20px color-mix(in srgb, var(--glass) 70%, transparent);
+}
+
+/* ---- Favorites ----------------------------------------------------------
+   RomM has no per-game favorite: a favorite there is a collection, either
+   one the server flags or one named with a star — which is what the
+   "★ Best of …" collections on this library are. A game in one of those sorts
+   to the top of its console page and is marked here.
+
+   Gold, and only on the star: coloring the whole title would make a favorite
+   harder to read than an ordinary game, which is backwards. */
+.star {
+  color: #f5c451;
+  text-shadow: 0 0 10px rgba(245, 196, 81, 0.45);
+}
+
+.row .star { margin-right: 6px; font-size: 11px; }
+
+/* On a cover the star floats in the corner rather than sitting in the text,
+   which would fight the artwork. */
+.gcard .art { position: relative; }
+.gcard .art .star {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  font-size: 14px;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8), 0 0 10px rgba(245, 196, 81, 0.5);
+}
+
+/* ---- Light gun switch, in Systems ---------------------------------------- */
+.systbl .gun {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.systbl .gun input { accent-color: var(--accent); cursor: pointer; }
+
+/* ---- Consoles as a list -------------------------------------------------
+   The same row as a game list so the two read alike, with the slug in the
+   middle column the platform tag uses in search results. The dot sits where a
+   game's download marker would: both answer "can I play this right now". */
+.prow .have { display: flex; align-items: center; justify-content: center; }
+.prow .pf { opacity: 0.55; }
+.prow .sz { min-width: 12ch; text-align: right; }
+
+/* ---- The selected game's own color --------------------------------------
+   `--pick` is the dominant color of that game's box art, set on the selected
+   card and on the detail pane once it has been measured. Everything falls back
+   to the theme color, so a game with no cover, a cover with no usable color,
+   or a browser that will not let the pixels be read all look exactly as they
+   did before this existed.
+
+   Only the glow and the edge take it. Tinting the surface as well would make
+   the list flicker through a different color on every row as you scroll. */
+/* Matched on the inline property rather than on `--pick` having a value,
+   because `rgb(var(--pick) / .5)` with no `--pick` set is invalid at
+   computed-value time — which does not fall back to the theme rule above, it
+   drops the border entirely. This way the tinted rule simply does not apply
+   until there is a color, and until then the rules above stand. */
+.gcard.sel[style*="--pick"] .art {
+  border-color: rgb(var(--pick) / 0.75);
+  box-shadow: 0 0 26px rgb(var(--pick) / 0.5);
+}
+.gcard.sel .art { transition: border-color .25s, box-shadow .25s; }
+
+.row.sel[style*="--pick"] {
+  border-color: rgb(var(--pick) / 0.6);
+  box-shadow: 0 0 18px rgb(var(--pick) / 0.35);
+}
+.row.sel { transition: border-color .25s, box-shadow .25s; }
+
+#detail { transition: box-shadow .3s; }
+#detail[style*="--pick"] {
+  /* A single lit edge where the pane meets the list, rather than a wash behind
+     the text — the artwork is right there and does not need help. */
+  box-shadow: inset 1px 0 0 rgb(var(--pick) / 0.55), inset 6px 0 22px -8px rgb(var(--pick) / 0.35);
+}
+
+/* ---- Take offline -------------------------------------------------------
+   The estimate is the reason this dialog exists, so it is the largest thing in
+   it and it moves the moment a box is ticked. A person cannot otherwise tell
+   that videos multiply the download by ten. */
+#bulk-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.72);
+  display: grid;
+  place-items: center;
+  z-index: 60;
+}
+.bulk-panel {
+  /* Wide enough for the system list to sit two columns across, and capped
+     against the viewport so the list scrolls rather than the dialog growing
+     off the bottom of a laptop screen. */
+  width: min(760px, 94vw);
+  max-height: 88vh;
+  overflow-y: auto;
+  padding: 22px 24px;
+  border-radius: 14px;
+  background: var(--panel);
+  border: 1px solid color-mix(in srgb, var(--glass) 30%, transparent);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+}
+.bulk-panel h3 { margin: 0 0 6px; font-size: 16px; }
+.bulk-est {
+  margin: 0 0 16px;
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in srgb, var(--glass) 40%, white 60%);
+}
+.bulk-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 10px 0 2px;
+  font-size: 13px;
+}
+.bulk-row > span:first-child { min-width: 84px; }
+.bulk-row select { flex: 1; }
+.bulk-check { cursor: pointer; }
+.bulk-check input { accent-color: var(--accent); }
+.bulk-check em { color: var(--dim); font-style: normal; }
+.bulk-panel .hint { margin: 2px 0 10px 96px; font-size: 11.5px; color: var(--dim); }
+.bulk-space { margin: 14px 0 0; font-size: 12px; color: var(--dim); }
+/* A refusal has to look like one: this is the only thing standing between an
+   hour of transfer and a full disk. */
+.bulk-space.bad { color: #e0736a; font-weight: 600; }
+.bulk-buttons { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+
+/* The system list. Fixed height rather than fitting its contents: with thirty
+   consoles it would otherwise push the size estimate and the buttons off the
+   screen, which is where the decision actually gets made. */
+.bulk-systems { margin: 0 0 14px; }
+.bulk-systems-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: var(--dim);
+}
+.bulk-pick { display: flex; gap: 12px; }
+.bulk-pick .link {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--accent);
+  font-size: 12px;
+  cursor: pointer;
+}
+.bulk-pick .link:hover { text-decoration: underline; }
+.bulk-list {
+  max-height: 30vh;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 2px 14px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--glass) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--glass) 22%, transparent);
+}
+.bulk-sys {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 4px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.bulk-sys:hover { background: color-mix(in srgb, var(--glass) 20%, transparent); }
+.bulk-sys input { accent-color: var(--accent); }
+.bulk-sys span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bulk-sys em { color: var(--dim); font-style: normal; font-size: 11.5px; }
+
+/* How much of a collection is already here — the question a card could not
+   answer before, and the one that matters before travelling. */
+.ccard .here { color: var(--ok, #6fcf7f); }
+
+/* The recent row sits above the consoles and is not one of them. */
+.recent { margin-bottom: 18px; }
+
+/* ---- Play history ---- */
+.hist { padding: 8px 4px 40px; max-width: 900px; }
+.hist-top {
+  display: flex;
+  gap: 36px;
+  margin-bottom: 6px;
+}
+.hist-top div { display: flex; flex-direction: column; }
+.hist-top strong { font-size: 30px; font-weight: 650; line-height: 1.1; }
+.hist-top span { font-size: 12px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.07em; }
+.hist-note { font-size: 12px; color: var(--dim); margin: 0 0 22px; max-width: 62ch; line-height: 1.5; }
+.hist h3 {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--dim);
+  margin: 26px 0 10px;
+}
+.hist-list { display: flex; flex-direction: column; gap: 3px; }
+.hist-row {
+  display: grid;
+  /* Fixed first and last columns so the bars share one baseline: sizing the
+     name column to its contents would stagger every bar by a different amount
+     and the comparison the page exists for stops working. */
+  grid-template-columns: 190px 1fr 110px;
+  align-items: center;
+  gap: 12px;
+  padding: 5px 8px;
+  border-radius: 7px;
+  font-size: 13px;
+}
+.hist-row:hover { background: color-mix(in srgb, var(--glass) 16%, transparent); }
+.hist-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hist-name em { color: var(--dim); font-style: normal; font-size: 11px; margin-left: 8px; }
+.hist-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--glass) 22%, transparent);
+  overflow: hidden;
+}
+.hist-bar span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  border-radius: 4px;
+}
+.hist-time { text-align: right; color: var(--dim); font-variant-numeric: tabular-nums; }
+.hist-game { grid-template-columns: 1fr 150px; }
+.hist-empty { padding: 60px 20px; max-width: 54ch; }
+.hist-empty h2 { font-size: 18px; margin: 0 0 10px; }
+.hist-empty p { color: var(--dim); font-size: 13px; line-height: 1.6; }
+
+/* The right-click menu, wherever it is opened.
+   The first version of this shipped with no rules at all, which is why it
+   looked like a menu that did nothing: a div with `left` and `top` set and no
+   `position` is laid out in the normal flow, so it appeared past the end of
+   the page with nothing on screen to show for it. */
+.ctx-menu {
+  position: fixed;
+  z-index: 70;
+  min-width: 190px;
+  padding: 4px;
+  border-radius: 8px;
+  background: var(--panel);
+  border: 1px solid color-mix(in srgb, var(--glass) 34%, transparent);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, .55);
+}
+.ctx-menu button {
+  display: block;
+  width: 100%;
+  padding: 7px 12px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--text);
+  font-size: 13px;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.ctx-menu button:hover { background: color-mix(in srgb, var(--glass) 24%, transparent); }
+.ctx-menu button.dim { color: var(--dim); cursor: default; }
+.ctx-menu button.dim:hover { background: none; }
+.ctx-menu button.danger { color: #e0736a; }
+.ctx-menu button.danger:hover { background: color-mix(in srgb, #e0736a 22%, transparent); }
+.ctx-menu hr {
+  border: 0;
+  border-top: 1px solid color-mix(in srgb, var(--glass) 26%, transparent);
+  margin: 4px 6px;
+}
+
+/* Which controller is which player. In connection order, because that is the
+   order RetroArch assigns ports in — so this is the only way to find out which
+   pad is player three without starting a four-player game and pressing
+   buttons. */
+.pad-list { margin: 0 0 14px; display: flex; flex-direction: column; gap: 4px; }
+.pad-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--glass) 14%, transparent);
+  font-size: 13px;
+}
+.pad-num {
+  flex: 0 0 auto;
+  min-width: 26px;
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 650;
+  text-align: center;
+}
+.pad-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pad-row em { color: var(--dim); font-style: normal; font-size: 11.5px; }
+
+/* The control list behind START. Two columns, because "what does this button
+   do" is the question it exists to answer and half of it was missing. */
+.sc-table { border-collapse: collapse; width: 100%; font-size: 13px; }
+.sc-table th {
+  text-align: left;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--dim);
+  font-weight: 600;
+  padding: 0 14px 6px 0;
+}
+.sc-table td { padding: 3px 14px 3px 0; white-space: nowrap; }
+.sc-table td:first-child { width: 100%; white-space: normal; }
+.sc-table .dim { color: var(--dim); }
+
+/* The sort menu. Same furniture as the save-state menu, and positioned from the
+   button rather than the pointer, because the right stick opens it too and a
+   stick has no cursor to open it under. */
+#sort-menu {
+  position: fixed;
+  z-index: 70;
+  min-width: 170px;
+  padding: 4px;
+  border-radius: 8px;
+  background: var(--panel);
+  border: 1px solid color-mix(in srgb, var(--glass) 34%, transparent);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, .55);
+}
+#sort-menu button {
+  display: block;
+  width: 100%;
+  padding: 7px 12px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--text);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+#sort-menu button:hover { background: color-mix(in srgb, var(--glass) 24%, transparent); }
+#sort-menu button.on { color: var(--accent); font-weight: 600; }
+
+/* "Continue playing": one row that scrolls sideways.
+   It used to wrap, so eight games became two rows on a narrow window and the
+   library itself started halfway down the screen. A shortcut that pushes the
+   thing it is a shortcut to off the page is not a shortcut. */
+.recent .gcards {
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  padding-bottom: 6px;
+}
+.recent .gcard {
+  flex: 0 0 var(--gcard, 150px);
+}
+.recent .ghead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.recent .recent-more {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--accent);
+  font-size: 12px;
+  cursor: pointer;
+}
+.recent .recent-more:hover { text-decoration: underline; }
+
+/* Where the controller is, inside a dialog.
+   `:focus-visible` does not fire for focus moved by script, so a pad moving
+   the highlight showed nothing at all — which is the same as the dialog being
+   unusable, since there is no way to tell what pressing A would do. */
+.pad-focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Rapid fire, in the pinned strip above Play so it never scrolls away.
+   A row of three rather than a dropdown: the whole point is changing it
+   between two runs of the same game, and a menu that has to be opened, read
+   and chosen from is three steps where this is one. */
+.autofire-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.af-label {
+  flex: 1;
+  font-size: 11.5px;
+  color: var(--dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.autofire-row .af {
+  min-width: 34px;
+  padding: 3px 9px;
+  border-radius: calc(6px * 1);
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--dim);
+  font-size: 12px;
+  cursor: pointer;
+}
+.autofire-row .af:hover { color: var(--text); border-color: var(--accent); }
+.af-rate {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 6px;
+}
+.af-hz {
+  min-width: 44px;
+  text-align: center;
+  font-size: 11.5px;
+  color: var(--dim);
+  font-variant-numeric: tabular-nums;
+}
+.af-step {
+  width: 20px;
+  padding: 2px 0;
+  border-radius: calc(5px * 1);
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--dim);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+.af-step:hover { color: var(--text); border-color: var(--accent); }
+
+.autofire-row .af.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+/* A game whose fire button behaves differently from every other game should
+   say so before it is started, not after. */
+.autofire-cue {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 10px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--text);
+  font-size: 11.5px;
+}
+.autofire-cue .icon { width: 13px; height: 13px; }
+
+/* ---- Three columns -------------------------------------------------------
+   Consoles on the left, games in the middle, the preview on the right. The
+   same three elements the one-pane arrangement uses — the console list simply
+   has a column of its own instead of taking over the middle — so this is a
+   handful of rules rather than a second stylesheet. */
+#consoles {
+  flex: 0 0 240px;
+  overflow-y: auto;
+  padding: 10px 8px;
+  border-right: 1px solid color-mix(in srgb, var(--glass) 22%, transparent);
+}
+#consoles[hidden] { display: none; }
+
+/* The handle between the column and the games. Mirrors the one on the other
+   side of the preview, and is only there when the column is. */
+#consoles-grip {
+  flex: 0 0 5px;
+  cursor: col-resize;
+  background: transparent;
+}
+#consoles-grip:hover,
+#consoles-grip.dragging { background: color-mix(in srgb, var(--accent) 45%, transparent); }
+body:not(.columns) #consoles-grip { display: none; }
+
+/* A column that narrow holds one console per line, whatever the grid/list
+   button says — that button is about the games in the middle. */
+body.columns #consoles .rows { gap: 1px; }
+body.columns #consoles .prow {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 5px 8px;
+  font-size: 13px;
+}
+/* The console's name, at full strength. In a column it is the only thing worth
+   reading at a glance, and it was inheriting the same muted color as the
+   count beside it. */
+body.columns #consoles .prow .nm {
+  flex: 1;
+  color: var(--text);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* The slug repeats what the name already said, in a column with no room for
+   it. */
+body.columns #consoles .prow .pf { display: none; }
+body.columns #consoles .prow .sz {
+  color: color-mix(in srgb, var(--text) 62%, transparent);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+/* The dot is a riddle without the words beside it: the row says "no core" in
+   the count, and the title says it in full. */
+body.columns #consoles .prow .have { display: none; }
+body.columns #consoles .card .meta {
+  color: color-mix(in srgb, var(--text) 62%, transparent);
+}
+body.columns #consoles .prow .logo { height: 22px; }
+
+/* The preview is a column rather than a panel that slides over the list, so it
+   keeps its width instead of being resizable to nothing. */
+body.columns #detail {
+  flex: 0 0 clamp(280px, 26vw, 420px);
+  border-left: 1px solid color-mix(in srgb, var(--glass) 22%, transparent);
+}
+
+/* The console whose games are in the middle. The column stays on screen while
+   the middle changes, so without this there is nothing to say which of
+   thirty-five consoles you are looking at. */
+body.columns #consoles .prow.open,
+body.columns #consoles .card.open {
+  background: color-mix(in srgb, var(--glass) 26%, transparent);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+/* Collections and groups in the left column.
+   They are drawn as cards, which is right for a page of them and wrong for a
+   240px column — a grid two across leaves a picture the size of a stamp above
+   a name that does not fit. In the column they become rows, matching the
+   consoles above them, without changing the markup or the click handlers. */
+body.columns #consoles .grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+body.columns #consoles .card {
+  /* Not a card. A row of text.
+     `.card` carries a background, a border, a 12px radius, 14px of padding and
+     a hover that lifts it off the page — right for a page of them, wrong for a
+     column, and the reason this list kept coming back as a stack of boxes no
+     matter how the inside was laid out. Every one of those is turned off here,
+     and what is left is the same line the consoles above it draw: name on the
+     left, count on the right, nothing around it.
+
+     `flex-direction` is the one that made it two lines: `.card` sets `column`,
+     and setting `display: flex` here without saying which way inherits it —
+     which is how the name and the count went on stacking after the box around
+     them was gone. */
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 6px;
+  padding: 5px 8px;
+  font-size: 13px;
+  background: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  transform: none;
+  min-height: 0;
+  text-align: left;
+}
+body.columns #consoles .card:hover {
+  background: color-mix(in srgb, var(--glass) 14%, transparent);
+  border: 0;
+  box-shadow: none;
+  transform: none;
+}
+/* A stamp-sized mosaic of cover art is mush, and the two-letter placeholder
+   under it — "Ar" for every one of the eleven Arcade collections — says less
+   than the name it is standing next to. */
+body.columns #consoles .card .logo,
+body.columns #consoles .card .logo.mosaic { display: none; }
+body.columns #consoles .card .name {
+  flex: 1;
+  min-width: 0;
+  color: var(--text);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+body.columns #consoles .card .meta {
+  flex: none;
+  font-size: 11.5px;
+  color: color-mix(in srgb, var(--text) 62%, transparent);
+  white-space: nowrap;
+}
+/* "322 games · 322 here" for a collection that is entirely downloaded is the
+   same number twice, and it was taking the width the name needed. */
+body.columns #consoles .card .meta .here { display: none; }
+body.columns #consoles .card .meta { font-size: 11.5px; }
+/* The cursor is a lit pane on a page of cards; in a column it is the same
+   marked row the consoles use. */
+body.columns #consoles .card.sel {
+  background: color-mix(in srgb, var(--glass) 26%, transparent);
+  border: 0;
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+/* Outside a column there is no filter and nothing to stick to — just the
+   button, sitting above the grid. */
+.pickbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+.pick-sort {
+  flex: none;
+  background: color-mix(in srgb, var(--glass) 22%, transparent);
+  border: 1px solid color-mix(in srgb, var(--glass) 26%, transparent);
+  border-radius: 8px;
+  color: color-mix(in srgb, var(--text) 78%, transparent);
+  font-size: 11.5px;
+  padding: 4px 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.pick-sort:hover {
+  background: color-mix(in srgb, var(--glass) 40%, transparent);
+  color: var(--text);
+}
+/* The handle goes with the column it belongs to — History has neither. */
+#consoles[hidden] + #consoles-grip { display: none; }
+
+/* This is an application, not a page.
+   Dragging across a game's name and watching it turn blue is the single
+   clearest tell that a thing is a web view — nothing else in the window
+   behaves like a document. Text that exists to be copied keeps its selection:
+   a path you have to paste somewhere, a field you type into. */
+body {
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: default;
+}
+input,
+textarea,
+[contenteditable],
+.summary,
+.cf-text,
+.set-path,
+code {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* One pane or three columns, in the header.
+   A pair rather than a toggle: a toggle shows the state you are not in half
+   the time, and there is no label short enough to say which half. Two buttons
+   with the lit one being the current arrangement has no such riddle. */
+#view-switch {
+  /* Halfway between the title and the search box, and staying there. Equal
+     auto margins on both sides split the free space evenly, so the pair sits
+     in the middle of the gap and moves with the window rather than with
+     whatever the title happens to say. */
+  margin: 0 auto;
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--glass) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--glass) 22%, transparent);
+}
+#view-switch button {
+  /* Named, not just drawn. Two unlabelled glyphs in a bar full of unlabelled
+     glyphs say nothing about what they do to the window, and this one changes
+     the whole shape of the app. */
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: 0;
+  border-radius: 7px;
+  padding: 4px 9px;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+  color: color-mix(in srgb, var(--text) 55%, transparent);
+}
+#view-switch button:hover { color: var(--text); }
+#view-switch button.on {
+  background: color-mix(in srgb, var(--glass) 45%, transparent);
+  color: var(--text);
+}
+#view-switch .icon { width: 16px; height: 16px; }
+
+/* What a game has, in one row of tags.
+   A button for the video up here and two links at the very foot of the pane
+   were the same kind of thing in two places, and the one at the foot was below
+   the artwork strip, the save states and every metadata row — so nobody found
+   it. */
+#detail .badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 4px;
+}
+#detail .badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  cursor: pointer;
+  color: color-mix(in srgb, var(--text) 82%, transparent);
+  background: color-mix(in srgb, var(--glass) 20%, transparent);
+  border: 1px solid color-mix(in srgb, var(--glass) 30%, transparent);
+}
+#detail .badge:hover {
+  color: var(--text);
+  background: color-mix(in srgb, var(--glass) 42%, transparent);
+}
+#detail .badge .icon { width: 12px; height: 12px; }
+
+/* The video's place in the artwork strip.
+   No thumbnail: the file is fetched when it is asked for, and a tile that has
+   to download 30MB to draw itself is not a thumbnail. */
+#detail .artstrip .vidtile .vidthumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--glass) 22%, transparent);
+  border: 1px solid color-mix(in srgb, var(--glass) 30%, transparent);
+}
+#detail .artstrip .vidtile .icon { width: 22px; height: 22px; opacity: 0.8; }
+#detail .artstrip .vidtile:hover .vidthumb {
+  background: color-mix(in srgb, var(--glass) 40%, transparent);
+}
+
+/* The two buttons that act on the whole list live at the end of the tab row,
+   with what they act on rather than among the header's unrelated controls.
+   Take offline first, then the preview toggle.
+
+   The holder is what keeps them at the end: a margin on the first button
+   disappears along with the button whenever there is nothing to take offline,
+   which left the preview toggle stranded in the middle of the row. */
+#tabbar .tabbar-end {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+#tabbar #grab-btn,
+#tabbar #sidebar-btn,
+#tabbar #sync-btn,
+#tabbar #settings-btn { font-size: 12px; }
+
+/* A filtered list looks exactly like a short one, so the button that did it
+   stays lit while anything is on. */
+#filter-btn.on {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+/* A console in the preview pane.
+   The Library screen used to leave this pane empty and hidden, so the button
+   that opens it did nothing you could see. */
+#detail .pcover {
+  display: block;
+  max-width: 70%;
+  max-height: 120px;
+  margin: 6px auto 14px;
+  object-fit: contain;
+}
+@media (prefers-color-scheme: light) {
+  /* Wordmark art is white-on-transparent, the same rule the console grid uses. */
+  #detail .pcover.wordmark { filter: invert(1); }
+}
+#detail .warn {
+  margin: 10px 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  color: color-mix(in srgb, var(--text) 85%, transparent);
+  background: color-mix(in srgb, #d8823c 18%, transparent);
+  border: 1px solid color-mix(in srgb, #d8823c 40%, transparent);
+}
+
+/* A control that is present but cannot do anything here. */
+#tabbar #sidebar-btn:disabled,
+#tabbar #grab-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* Search inside the page, in the tab row.
+   As far right as it goes, and always in front of the two buttons at the end.
+   The slack in the row is this element's left margin, so the filter and the
+   two buttons travel together against the right-hand edge — a margin on the
+   buttons as well would split the slack between them and leave the box
+   stranded in the middle. */
+#tabbar #page-filter {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+#tabbar #page-filter .filter {
+  width: clamp(140px, 18vw, 260px);
+  height: 26px;
+  padding: 3px 9px;
+  font-size: 12px;
+  margin: 0;
+}
+#page-filter-extra:empty { display: none; }
+/* If the box is ever taken away, the buttons still need pushing. */
+#tabbar #page-filter[hidden] + .tabbar-end { margin-left: auto; }
+/* The order button beside it, sized for this row rather than for a list. */
+#tabbar #page-filter .pickbar {
+  margin: 0;
+  padding: 0;
+  position: static;
+  background: none;
+  border: 0;
+}
+#tabbar #page-filter .pick-sort { font-size: 11.5px; padding: 3px 8px; }
+
+/* What the filter hid. */
+.filtered-out { display: none !important; }
+
+/* Is this game on the machine, or still on the server.
+   It was a bare "▣" on the ones that were here and nothing at all on the ones
+   that were not, which is a symbol that explains itself nowhere and an absence
+   that reads as no information. Both states are drawn now, and both carry a
+   sentence in their tooltip. */
+.mark {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: -2px;
+  margin-right: 5px;
+  cursor: help;
+}
+.mark .icon { width: 12px; height: 12px; }
+.mark.here { color: color-mix(in srgb, #43c76a 80%, var(--text)); }
+/* Quieter than the one beside it: not being downloaded yet is the ordinary
+   state of a library that lives on a server, not a warning. */
+.mark.away { color: color-mix(in srgb, var(--text) 32%, transparent); }
+.star { cursor: help; }
+
+/* The same field as the search box above it, exactly.
+   Two boxes that take typed text, one above the other, reading as two
+   different kinds of control was the wrong answer — the base `.filter` style
+   is a solid panel meant for a box drawn into a list, and this one is not in a
+   list any more. Faint recess, no border until focus. */
+#tabbar #page-filter .filter {
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+  border: 1px solid transparent;
+}
+#tabbar #page-filter .filter:focus {
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+  border-color: color-mix(in srgb, var(--glass) 55%, transparent);
+}
+
+/* The legend on the help page. Narrow first column: it holds one mark. */
+.sc-marks td:first-child {
+  width: 34px;
+  text-align: center;
+  white-space: nowrap;
+}
+.sc-marks .dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+/* Systems or collections, in the take-offline pane. */
+.bulk-tabs { display: flex; gap: 2px; }
+.bulk-tab {
+  background: none;
+  border: 0;
+  border-radius: 7px;
+  padding: 3px 9px;
+  font: inherit;
+  font-size: 12px;
+  color: color-mix(in srgb, var(--text) 55%, transparent);
+  cursor: pointer;
+}
+.bulk-tab:hover { color: var(--text); }
+.bulk-tab.on {
+  color: var(--text);
+  background: color-mix(in srgb, var(--glass) 34%, transparent);
+}
+
+/* ---- Continue playing, flattened ----------------------------------------
+   The one row where the frame earns nothing. These are five wide screenshots
+   in a horizontal strip, not a grid — there is no column to line up with and
+   no neighbour to be told apart from, so the pane and the outline are drawing
+   a box around a picture that already has edges. The grid below keeps both,
+   because there the border is what separates one console from the next.
+
+   The art keeps its dark well so a game with no cover yet is still a tile. */
+.recent .gcard .art {
+  /* Nothing behind the picture at all. A dark well was tried first and it is
+     still a box: against this backdrop a 22% black rectangle reads as an
+     outline even without a border on it. The screenshots in this row are
+     opaque and already rectangular, so they are their own frame. */
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-color: transparent;
+  box-shadow: none;
+}
+/* The miximages are PNGs with a real alpha channel — the box stands in front
+   of a screenshot with nothing behind either — so the shadow can follow the
+   artwork's own outline instead of the rectangle containing it. `drop-shadow`
+   reads the alpha; `box-shadow` would draw round the element and give back the
+   box this row just lost. */
+.recent .gcard .art img {
+  filter: drop-shadow(0 6px 10px rgb(0 0 0 / 0.55));
+  transition: transform .22s cubic-bezier(.2, .8, .3, 1), filter .22s ease;
+  transform-origin: 50% 90%;
+  will-change: transform;
+}
+
+/* Lift and grow, no rotation.
+   A fixed tilt was tried and was too subtle to read at under a degree, and
+   anything larger looked broken. The angle now comes from where the pointer
+   is instead — see `.tilt` below — which is legible because it *moves*.
+
+   The lift is 6px rather than 8: with the card turning under the cursor as
+   well, the two together were doing too much. */
+.recent .gcard:hover .art img {
+  transform: translateY(-6px) scale(1.06);
+  filter: drop-shadow(0 16px 22px rgb(0 0 0 / 0.6));
+}
+.recent .gcard:active .art img {
+  transform: translateY(-2px) scale(1.02);
+  transition-duration: .08s;
+}
+
+/* ---- Pointer-driven angle ------------------------------------------------
+   The card turns to face the cursor, the way a page held in one hand does.
+   `--rx` and `--ry` are written by `tilt.js` from the pointer's position over
+   the card; everything here is otherwise static, so a frame that misses simply
+   leaves the last angle rather than jumping.
+
+   The perspective lives on the *container*, not the image: on the image it
+   would be computed per element and every card would face its own vanishing
+   point. `translateZ` is what makes the rotation read as depth rather than as
+   a skew. */
+.recent .gcards { perspective: 900px; }
+.recent .gcard .art img {
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+}
+.recent .gcard.tilt .art img {
+  transform: translateY(-6px) scale(1.06)
+             rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  /* No transition while tracking: the pointer *is* the animation, and easing
+     it as well leaves the card lagging behind the cursor. */
+  transition: filter .22s ease;
+}
+.recent .gcard .art {
+  overflow: visible;   /* the lift and the shadow must not be clipped */
+}
+.recent .gcard:hover .art {
+  border-color: transparent;
+  box-shadow: none;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .recent .gcard .art img,
+  .recent .gcard:hover .art img { transition: none; transform: none; }
+}
+.recent .gcard.sel .art {
+  border-color: color-mix(in srgb, var(--glass) 85%, white 12%);
+  box-shadow: 0 0 24px color-mix(in srgb, var(--glass) 70%, transparent);
+}
+
+/* The platform pane's Take offline, styled as the one in the top bar rather
+   than as a form button. It was a bare `<button>` — a gray slab spanning the
+   pane — while the identical action in the header is a label with an icon and
+   no surface at all. Same control, same look, and left-aligned: a button that
+   fills its container reads as "confirm", which this is not. */
+#detail .pinned .pf-grab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: auto;
+  background: transparent;
+  color: color-mix(in srgb, var(--text) 80%, transparent);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+}
+#detail .pinned .pf-grab:hover {
+  color: color-mix(in srgb, var(--glass) 30%, white 70%);
+  text-shadow:
+    0 0 6px color-mix(in srgb, var(--glass) 90%, transparent),
+    0 0 22px color-mix(in srgb, var(--glass) 65%, transparent);
+}
+
+/* ---- Collection card artwork --------------------------------------------
+   Four arrangements of the same member covers. `.logo.mosaic` is the box; the
+   style class on it decides what the images inside do. Each keeps the same
+   height so switching between them never reflows the grid. */
+.card .logo.mosaic.single img { width: 100%; height: 100%; object-fit: contain; }
+
+/* Three covers overlapping, the first in front. `--i` is written per image so
+   the offsets and the stacking come from one number. */
+.card .logo.mosaic.fan { position: relative; }
+.card .logo.mosaic.fan img {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  height: 88%;
+  width: auto;
+  object-fit: contain;
+  transform: translateX(calc(var(--i) * 14px)) rotate(calc(var(--i) * 5deg));
+  transform-origin: 50% 100%;
+  z-index: calc(3 - var(--i));
+  filter: drop-shadow(0 2px 6px rgb(0 0 0 / 0.5));
+}
+
+/* A real 2x2, which is what "mosaic" always claimed to be. */
+.card .logo.mosaic.tiles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 2px;
+}
+.card .logo.mosaic.tiles img { width: 100%; height: 100%; object-fit: cover; border-radius: 3px; }
+.card .logo.mosaic.tiles .ph { grid-column: 1 / -1; grid-row: 1 / -1; }
+
+/* Nothing at all: the box collapses so the name moves up rather than sitting
+   under an empty rectangle. */
+.card .logo.mosaic.none { display: none; }
+
+
+/* The "do not show again" line in the light gun notice. Left-aligned with the
+   text above it rather than centered with the button, so it reads as a choice
+   about the message and not a second action. */
+#conflict-overlay .gun-again {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 4px 0 14px;
+  font-size: 12px;
+  opacity: 0.7;
+  cursor: pointer;
+}
+
+/* The config check's list of findings. Scrolls inside the dialog: a file that
+   has been through several versions can turn up half a dozen, and a dialog
+   that grows past the window has no buttons. */
+#conflict-overlay .cfg-list {
+  margin: 4px 0 12px;
+  padding: 0 0 0 18px;
+  max-height: 34vh;
+  overflow-y: auto;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+#conflict-overlay .cfg-list li { margin-bottom: 8px; opacity: 0.8; }
+#conflict-overlay .cfg-list i { margin-left: 6px; font-style: normal; opacity: 0.6; }
+/* Severity, as a marker rather than a color wash: the point is which line to
+   read first, not to make the dialog alarming. */
+#conflict-overlay .cfg-wrong b { color: color-mix(in srgb, var(--accent) 70%, white 30%); }
+
+
+/* Everything without glass.
+ *
+ * `backdrop-filter` is on `.gcard .art`, so every card on screen is its own
+ * compositing layer holding its own blurred copy of what is behind it. One is
+ * cheap. Eighty-five of them, replaced wholesale every time a windowed list
+ * scrolls, is not: measured 2026-08-23, scrolling the arcade console with *no
+ * artwork at all* still peaked at 573.7 MB, 451 of it in the page process.
+ *
+ * That was measured and cleared — the cards cost nothing anyone could see. But
+ * the switch that cleared them **did not turn off `#detail`**, and it should
+ * have: the preview column is 460px of full-height glass at `blur(18px)`, the
+ * strongest blur in the app on much the largest surface carrying one, and it
+ * is on screen the whole time in three columns. So "backdrop-filter costs
+ * nothing" is established for the small ones and was never asked of the big
+ * one. It is in the list now, and the question is open again.
+ *
+ * This turns the glass off and leaves a flat panel of the same color. Set by
+ * the measuring switch today; a "reduce transparency" setting tomorrow, which
+ * is a thing worth having on a handheld anyway.
+ */
+body.plain-cards .gcard .art,
+body.plain-cards .card,
+body.plain-cards #detail,
+body.plain-cards .row.sel {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+
+/* Letting WebKit forget the cards it is not showing.
+ *
+ * The floor is 192 MB and browsing takes it to 600. None of that is the
+ * document — deleting the whole thing changes the page process by nothing —
+ * so it is WebKit's own working memory: layer backing stores, decoded
+ * pictures, and the tiled backing for a scroller that is eighty thousand
+ * pixels tall.
+ *
+ * `contain` promises that a card's layout and paint cannot affect anything
+ * outside it, and `content-visibility: auto` lets the engine skip rendering
+ * one that is off screen and drop what it had rendered. `contain-intrinsic-size`
+ * is what stops the scrollbar jumping about while it does: without it a
+ * skipped card measures zero and the page collapses.
+ *
+ * Measured 2026-08-24, two passes each: the peak over a full scroll of the
+ * arcade console falls from 853 MB to 704, against a spread of about twenty.
+ * At rest it makes no difference — this is a peak fix, and the peak is what
+ * gets a process killed on a phone.
+ */
+.gcard,
+.card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto var(--card, 150px) auto 260px;
+}
+/* Off again, for measuring what it is worth. */
+body.uncontained .gcard,
+body.uncontained .card {
+  content-visibility: visible;
+}
+
+/* The items `installTabs` moves into the tab row.
+   They are declared in the header and relocated, so they never picked up the
+   rule above. Same reasoning: the row has a fixed height and a wrapped label
+   spills out of it rather than growing it. */
+#tabbar #page-filter,
+#tabbar #grab-btn,
+#tabbar #sort-btn,
+#tabbar .stab span {
+  white-space: nowrap;
+}
+#tabbar::-webkit-scrollbar { height: 0; }
+
+/* ---------------------------------------------------------------------------
+   For engines with no color-mix(): everything tinted, drawn a longer way.
+
+   `color-mix()` arrived in Chromium 111. The AYN Thor ships Chromium 109 in
+   its system image and cannot update it — `com.google.android.webview` is not
+   installed and Android will not let the Chrome that *is* installed serve as
+   the engine. So on that device all 152 `color-mix()` declarations in this file
+   were being discarded, and the parts of the interface that are nothing but
+   tint simply did not draw. The clearest symptom was the cursor: `.card.sel` is
+   three of those declarations and nothing else, so the selection was set
+   correctly and painted nothing at all.
+
+   Only the rules that carry meaning are repeated here — the cursor, the
+   surfaces you have to be able to tell apart, the states. Decoration that
+   merely looks nice is left to fall away, which is what a fallback is for.
+
+   `rgb(var(--glass-rgb) / N%)` rather than a fixed colour, so the tint chosen
+   in Appearance still applies. Anything mixed with white instead of transparent
+   is approximated with a flat colour, because that cannot be expressed as
+   alpha.
+   --------------------------------------------------------------------------- */
+@supports not (color: color-mix(in srgb, red 50%, blue)) {
+  /* The cursor. Without this there is no cursor. */
+  .card.sel {
+    background: rgb(var(--glass-rgb) / 34%);
+    border-color: rgb(var(--glass-rgb) / 80%);
+    box-shadow: 0 0 22px rgb(var(--glass-rgb) / 65%);
+  }
+  .gcard.sel .art {
+    border-color: rgb(var(--glass-rgb) / 85%);
+    box-shadow: 0 0 24px rgb(var(--glass-rgb) / 70%);
+  }
+  .row.sel {
+    background: rgb(var(--glass-rgb) / 29%);
+    border-color: rgb(var(--glass-rgb) / 70%);
+    box-shadow: 0 0 16px rgb(var(--glass-rgb) / 45%);
+  }
+  .tcard.sel {
+    border-color: rgb(var(--glass-rgb) / 80%);
+    box-shadow: 0 0 18px rgb(var(--glass-rgb) / 55%);
+  }
+
+  /* No blanket tint on the bars.
+     A 10% glass wash was applied to `header` and `#tabbar` here, and on a dark
+     theme that reads as a pale band across the top of the screen — the bars are
+     meant to be transparent with `backdrop-filter` doing the work, and
+     `backdrop-filter` has been supported since Chromium 76, so it was already
+     working. All the wash added was a pale band. */
+  .card { border-color: rgb(var(--glass-rgb) / 22%); }
+
+  /* The open tab's colour and glow.
+     Both are color-mix, so on these engines the tab lost the lit look it has
+     everywhere else and became plain bold text. `--glass-rgb` carries the same
+     tint the mix would have used. The 45% of white in the original is
+     approximated by mixing toward the text colour, which is near-white. */
+  #tabbar .stab.active {
+    color: rgb(var(--text-rgb) / 92%);
+    text-shadow:
+      0 0 7px rgb(var(--glass-rgb) / 95%),
+      0 0 26px rgb(var(--glass-rgb) / 75%);
+  }
+
+  /* The line under the tab row.
+     A color-mix border, so there was none — the row and the list it sits above
+     ran together with nothing between them. */
+  #tabbar { border-bottom: 1px solid rgb(var(--glass-rgb) / 28%); }
+  header { border-bottom: 1px solid rgb(var(--glass-rgb) / 20%); }
+
+  /* The message strip.
+     Its background is a color-mix, so on these engines it had none — and it
+     keeps `backdrop-filter: blur(18px) saturate(160%)`, which over a dark page
+     with nothing behind it renders as a pale, washed-out rectangle. That is
+     the white tint that appeared with "Controller connected": not a tint at
+     all, a toast with its colour missing. */
+  footer#toast {
+    background: var(--panel-2, #1b1f26);
+    border-color: rgb(var(--glass-rgb) / 30%);
+  }
+
+  /* Text that is deliberately quieter than the body. */
+  .meta,
+  .hint,
+  .sz,
+  .dim {
+    color: rgb(var(--text-rgb) / 62%);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Android: no top bar.
+
+   The header is a desktop object. It carries a drag region for a window that
+   cannot be dragged, a version string for a build you can read in Settings, and
+   a row of controls duplicated by the pad. On a 469-point screen it was costing
+   roughly a fifth of the height the console grid had to work with.
+
+   Everything in it is still reachable: Settings is on Start (see
+   `androidDefaults`), search is on its own binding, and layout, sort and zoom
+   are all bound actions. Removing the bar removes the buttons, not the
+   functions.
+   --------------------------------------------------------------------------- */
+body.mobile > header { display: none !important; }
+/* The bars sat under the status bar rather than below it. With the header gone
+   the tab row is the top of the app, so it takes the inset the header used to
+   absorb — otherwise the first tab sits behind the clock. */
+/* No inset: `goFullScreen` hides the system bars entirely, so there is nothing
+   for the tab row to clear. It reserved 24px for a status bar that is no longer
+   drawn, which is 24 points of a 469-point screen spent on nothing. */
+body.mobile #tabbar { height: auto; min-height: 42px; }
+
+/* ---------------------------------------------------------------------------
+   Android, and any screen this narrow.
+   --------------------------------------------------------------------------- */
+
+/* No underline on the open tab.
+   Two rules draw one, and the obvious one was not the culprit: the active tab
+   has a bottom border, and `:focus-visible` adds `text-decoration: underline`.
+   On a desktop that second one is a focus ring you see while tabbing. Driven by
+   a pad the focused tab *is* the open tab, permanently, so it read as a line
+   under the first word on the screen with nothing above it. The tab is already
+   the bright bold one in a row of dim ones; that is the answer, and it does not
+   need a second. */
+body.mobile #tabbar .stab.active { border-bottom-color: transparent; }
+body.mobile #tabbar .stab:focus-visible { text-decoration: none; }
+
+/* No LB/RB hints in the tab row.
+   They are there so the shoulder mapping is discoverable without opening
+   Settings — which matters on a desktop with a pad plugged in, and not at all
+   on a handheld whose shoulder buttons are part of the case. On a 833-point
+   row they were spending width on advice nobody there needs. */
+body.mobile #tabbar .bumper { display: none !important; }
+
+/* A narrower info pane, and smaller artwork with it.
+   The pane's width is now a proportion rather than a pixel count — see
+   `--detail-w` — so these breakpoints only carry the artwork sizes. */
+@media (max-width: 1100px) {
+  #detail .artstrip img,
+  #detail .artstrip .vidtile { max-height: 132px; }
+  #detail h2 { font-size: 15px; }
+}
+@media (max-width: 900px) {
+  #detail .artstrip img,
+  #detail .artstrip .vidtile { max-height: 108px; }
+}
+
+/* ES-DE's type scale, on the one screen where its model actually holds.
+   
+   Slate sizes every string as a fraction of the screen: the game list is
+   0.025 of the height, the description and the metadata 0.0195. Nothing is in
+   points, which is why the same theme is legible on a 640x480 panel and on a
+   4K television without a single breakpoint.
+   
+   Android only, and that is not a hedge — it is the condition ES-DE works
+   under. It owns the whole screen, so "a fraction of the height" is a fixed
+   physical size. A desktop window is not the screen: the same rule there makes
+   a maximised window's text twice the size of a small one's, which is not what
+   anybody means by consistent.
+   
+   The numbers come out the same physically. 0.025 of this device's 469 points
+   is 11.7, which at its 2.31x scale is 27 device pixels — what Slate draws at
+   1080p. The rows this app drew at a flat 14 points were 32, and eleven of
+   them fitted where ES-DE fits sixteen. */
+/* The artwork takes a fixed share of the *height*, not of the pane's width.
+   
+   An aspect-ratio box grows with the pane, so widening the pane to ES-DE's
+   proportions took the picture from 200 points tall to 332 — 78% of the pane,
+   with the description squeezed underneath. ES-DE places its media by
+   normalised screen coordinates, which is a fixed fraction of the height
+   whatever the pane is doing, so that is what this does too.
+   
+   The picture still centres inside and keeps its own shape; only the box is
+   fixed, which is what stops the text below moving between games. */
+/* The filename goes to the bottom of the pane on Android.
+   
+   It is the least-read line in the pane and it was sitting between the title
+   and the artwork, taking a line of a 426-point column and pushing the picture
+   down. It is still worth having — it is what the emulator is handed and what a
+   save is named after — so it moves rather than goes.
+   
+   `order` rather than moving it in the markup, because the desktop pane wants
+   it where it is and one arrangement should not have to fork the other. */
+body.mobile #detail .scroll { display: flex; flex-direction: column; }
+/* `flex: 0 0 auto` on every child, and it is not decoration.
+   A flex column shrinks its children to fit, and the two with a fixed height —
+   the title, which is clamped to two lines, and the artwork box — were the ones
+   it could shrink. Both measured 0 tall: the title and the picture had simply
+   vanished from the pane, which is exactly what it looked like. */
+body.mobile #detail .scroll > * { order: 1; flex: 0 0 auto; }
+body.mobile #detail .sub {
+  order: 99;
+  /* Readable rather than a hairline: this is the smallest text in the pane and
+     ES-DE's 0.0195 is meant for a paragraph, not for one line at the bottom. */
+  font-size: 2.2vh;
+  margin: 10px 0 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+  opacity: 0.7;
+}
+
+/* Title and the three actions on one line, icons only.
+   The buttons keep their `title` text; only the label is dropped. */
+/* The selection moves rather than jumps.
+   
+   Driven by a stick or a d-pad the cursor steps one item at a time and the only
+   thing that changes is which card is lit — with nothing in between, a fast
+   press reads as the screen flickering rather than as moving through a list.
+   
+   Short and on the highlight only: the transform and the glow ease, the layout
+   never does. Anything that animated position would fight the scroll, which is
+   the browser's and has its own smoothing below. */
+.gcard .art,
+.card,
+.row {
+  transition:
+    transform .13s cubic-bezier(.2, .7, .3, 1),
+    box-shadow .18s ease,
+    border-color .14s ease,
+    background .14s ease;
+}
+.gcard.sel .art,
+.card.sel { transform: scale(1.035); }
+.row.sel { transform: translateX(3px); }
+
+/* And the scroll that carries it. `scroll-behavior: smooth` on the container
+   the cursor scrolls, so stepping off the bottom glides instead of snapping.
+   Honoured by `scrollIntoView` and by assignments to `scrollTop` alike. */
+#list,
+#consoles { scroll-behavior: smooth; }
+
+/* Except when the whole list is replaced. Opening a console and landing on its
+   first game must not animate a scroll from wherever the last list was. */
+#list.jump { scroll-behavior: auto; }
+
+@media (prefers-reduced-motion: reduce) {
+  .gcard .art, .card, .row { transition: none; }
+  .gcard.sel .art, .card.sel, .row.sel { transform: none; }
+  #list, #consoles { scroll-behavior: auto; }
+}
+
+/* No filter box in the tab row on Android.
+   It is a text field, and reaching it means summoning the on-screen keyboard
+   over a 469-point screen to narrow a list the d-pad already walks. It also
+   took the width three tab names needed. Search is still on its own binding. */
+body.mobile #tabbar #page-filter { display: none !important; }
+
+/* Take offline, and the info toggle: the icon alone.
+   Both live in the tab row on this screen, where a word each is most of a tab.
+   The words stay in `title`, which is what a long press shows. */
+body.mobile #grab-btn span:not(.icon),
+body.mobile #sidebar-btn span:not(.icon) { display: none; }
+body.mobile #grab-btn,
+body.mobile #sidebar-btn { padding: 4px 7px; }
+/* Both at the right-hand end, past the tabs.
+   `installTabs` moves them into the tab row, where they landed in the middle of
+   the names. An auto margin on the first pushes the pair to the edge, which
+   also puts them where a thumb already is. */
+body.mobile #tabbar #grab-btn { margin-left: auto; }
+body.mobile #tabbar #sidebar-btn { margin-left: 4px; }
+body.mobile #tabbar #grab-btn,
+body.mobile #tabbar #sidebar-btn { order: 99; flex: 0 0 auto; }
+
+/* Sync and Settings, moved down here by `installTabs` because Android draws no
+   header. Same treatment as the two above: glyph only, and never allowed to
+   push the tabs off the row — on a 620-point screen four words and four icons
+   do not both fit, and the words are the part you can do without when the icon
+   is a gear. `margin-left: auto` is on Take offline alone; these follow it. */
+body.mobile #tabbar #sync-btn,
+body.mobile #tabbar #settings-btn {
+  order: 99;
+  flex: 0 0 auto;
+  padding: 4px 7px;
+}
+
+/* A fifth larger across the pane and the list.
+   ES-DE's own fractions are its "medium"; this is nearer its "large", which it
+   offers for exactly this reason — the same layout, read from further away or
+   by someone who wants it bigger. */
+body.mobile .row { font-size: 3vh; }
+body.mobile #detail .meta,
+body.mobile #detail .desc { font-size: 2.35vh; }
+body.mobile #detail .sub { font-size: 2.65vh; }
+body.mobile #detail h2 { font-size: 3.1vh; }
+
+body.mobile #detail .titlerow {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+body.mobile #detail .titlerow h2 { flex: 1 1 auto; min-width: 0; }
+body.mobile #detail .titlerow .badges {
+  flex: 0 0 auto;
+  gap: 4px;
+  margin: 0;
+}
+body.mobile #detail .titlerow .badge { padding: 4px 6px; }
+body.mobile #detail .titlerow .badge span:not(.icon) { display: none; }
+
+body.mobile #detail .coverbox {
+  aspect-ratio: auto;
+  height: 40vh;
+}
+
+body.mobile .row {
+  font-size: 2.5vh;
+  padding: 0.7vh 10px;
+  gap: 1.2vh;
+}
+body.mobile #detail .meta,
+body.mobile #detail .desc,
+body.mobile #detail .sub {
+  font-size: 1.95vh;
+}
+body.mobile #detail h2 { font-size: 2.6vh; }
+
+/* Nothing above the artwork may change height.
+   The pane is redrawn for every game the cursor touches, so a title that wraps
+   to two lines where the last one took one moves the picture and everything
+   under it — measured on the Thor, the box top moved between 116 and 134 as the
+   filename wrapped, which is the flicker.
+
+   Both lines are given a fixed number of lines rather than left to the text, so
+   the pane has one shape for every game in the library. */
+body.mobile #detail h2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  /* Two lines exactly, whether the title needs them or not. */
+  height: calc(2 * 1.45em);
+}
+body.mobile #detail .sub {
+  /* The filename is the secondary line and a long one is no more readable
+     wrapped than clipped. `break-all` is what made it wrap mid-word. */
+  white-space: nowrap;
+  word-break: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* No page background on Android with a backdrop running.
+
+   `html.mobile.backdrop-on { background: var(--bg) }` was here, added while
+   chasing the tint on the theory that a transparent page over a light window
+   was the cause. It is gone and it should stay gone — but not for the reason it
+   was removed for.
+
+   It was never the tint. That was Android drawing a focus highlight over the
+   whole webview, outside anything a stylesheet can reach; docs/tint.md has it.
+   Removing this rule looked like a partial fix because it changed what the
+   twelve per cent of white was sitting on, not because it took away any of the
+   white.
+
+   What the rule actually did was hide the backdrop. It is later in the file and
+   more specific than `html.backdrop-on { background: transparent }`, so it won,
+   and the shader ran perfectly behind an opaque page. With a backdrop the page
+   is meant to be see-through and the canvas provides the colour. */
+
+
+/* Folders, the way ES-DE shows them: a shelf you walk into, drawn above the
+   games at that level. The block is separate from the game grid because the
+   games are sorted, filtered and windowed and a folder is none of those. */
+.folders { margin-bottom: 1rem; }
+.folders .gcard .art,
+.folders .row .have {
+  display: grid;
+  place-items: center;
+}
+.folders .gcard .art .icon {
+  width: 2.4em;
+  height: 2.4em;
+  opacity: 0.75;
+}
+.folders .gcard .art { background: color-mix(in srgb, currentColor 8%, transparent); }

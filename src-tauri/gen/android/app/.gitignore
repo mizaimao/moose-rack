@@ -1,0 +1,11 @@
+/src/main/**/generated
+/src/main/jniLibs/**/*.so
+/src/main/assets/tauri.conf.json
+/tauri.build.gradle.kts
+/proguard-tauri.pro
+/tauri.properties
+# Tauri's copy of `bundle.resources` from tauri.conf.json, rewritten on every
+# build. `_up_` is how it spells the `../` in those paths. Every file under it
+# is a duplicate of one already tracked in data/ or assets/, so committing it
+# would mean two copies that can disagree.
+/src/main/assets/_up_

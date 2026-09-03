@@ -1,0 +1,30 @@
+{
+  "name": "moose-rack",
+  "version": "0.1.12",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test ui/test/*.test.js",
+    "tauri": "tauri"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mizaimao/moose-rack.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/mizaimao/moose-rack/issues"
+  },
+  "homepage": "https://github.com/mizaimao/moose-rack#readme",
+  "devDependencies": {
+    "@tauri-apps/api": "^2.11.1",
+    "@tauri-apps/cli": "^2.11.4",
+    "jsdom": "^30.0.1"
+  },
+  "dependencies": {
+    "@tauri-apps/plugin-dialog": "^2.7.2"
+  }
+}

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Tells the engine this page already has a dark theme, so it must not
+         apply one of its own.
+
+         Chromium's auto-dark pass rewrites the colours of pages it decides are
+         light, and on the AYN Thor it was doing that to this one: the page
+         painted rgb(20, 22, 26) and the WebView rasterised #313236 — the same
+         colour lifted by twelve per cent of white. Not a compositing problem:
+         SurfaceFlinger reported the layer as alpha=1, blend=NONE, identity
+         colour transform, so the wash was in the raster itself. Canvas pixels
+         were untouched, which is why the backdrop stayed dark while everything
+         around it did not.
+
+         `color-scheme: dark` in the stylesheet did not stop it. The meta form
+         is read before any CSS is parsed, which is the difference. -->
+    <meta name="color-scheme" content="dark" />
+    <title>Settings</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="settings.css" />
+  </head>
+  <body class="settings-window">
+    <!-- A rail of tabs on the left, one pane on the right. The rail is fixed
+         width and the pane scrolls, so the window resizes without the
+         navigation moving. -->
+    <nav id="tabs" aria-label="Settings sections"></nav>
+    <div id="versions" hidden></div>
+    <main id="pane" tabindex="-1"></main>
+    <footer id="settings-toast" hidden></footer>
+    <script type="module" src="js/settings-window.js"></script>
+  </body>
+</html>

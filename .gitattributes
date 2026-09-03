@@ -1,0 +1,3 @@
+# The fixture is compared byte for byte against what the tables produce, and
+# what produces it writes LF. Checked out with CRLF it fails on Windows only.
+ui/test/bindings.fixture.json text eol=lf

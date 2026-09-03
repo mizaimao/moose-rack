@@ -1,0 +1,1613 @@
+# Names as the emulator reads them out of the romset, with the region it states.
+# 'check' rows are where your label shares no word with the emulator's.
+romset	your label	game	region	suggested name	class
+10yard.zip	10-Yard Fight	10-Yard Fight (set 1)	World	10-Yard Fight (set 1) (World)	alias
+1941.zip	1941: Counter Attack	1941: Counter Attack (World 900227)	—	1941: Counter Attack (World 900227)	alias
+1943.zip	1943: The Battle Of Midway	1943: The Battle of Midway (Euro)	—	1943: The Battle of Midway (Euro)	alias
+1943kai.zip	1943 Kai: Midway Kaisen	1943 Kai: Midway Kaisen	Japan	1943 Kai: Midway Kaisen (Japan)	alias
+1943mii.zip	1943: The Battle Of Midway Mark II	1943: The Battle of Midway Mark II	USA	1943: The Battle of Midway Mark II (USA)	alias
+1944.zip	1944: The Loop Master	1944: The Loop Master (Europe 000620)	—	1944: The Loop Master (Europe 000620)	alias
+1945kiii.zip	1945k III	1945k III (newer, OPCX2 PCB)	—	1945k III (newer, OPCX2 PCB)	alias
+19xx.zip	19XX: The War Against Destiny	19XX: The War Against Destiny (Europe 960104)	—	19XX: The War Against Destiny (Europe 960104)	alias
+19yy.zip	19YY	19YY (Neo CD conversion, ADK World)	—	19YY (Neo CD conversion, ADK World)	alias
+2020bb.zip	2020 Super Baseball	2020 Super Baseball (set 1)	—	2020 Super Baseball (set 1)	alias
+20pacgal.zip	Ms. Pac-man/Galaga - 20th Anniversary Class of 1981 Reunion	Ms. Pac-Man/Galaga - 20th Anniversary Class of 1981 Reunion (V1.08)	—	Ms. Pac-Man/Galaga - 20th Anniversary Class of 1981 Reunion (V1.08)	alias
+3countb.zip	3 Count Bout	3 Count Bout / Fire Suplex (NGM-043 ~ NGH-043)	—	3 Count Bout / Fire Suplex (NGM-043 ~ NGH-043)	alias
+3in1semi.zip	New HyperMan	New HyperMan (3-in-1 with Cookie & Bibi & HyperMan) (set 1)	—	New HyperMan (3-in-1 with Cookie & Bibi & HyperMan) (set 1)	alias
+3kokushi.zip	Sankokushi	Sankokushi	Japan	Sankokushi (Japan)	alias
+3on3dunk.zip	3 On 3 Dunk Madness	3 On 3 Dunk Madness (prototype? 1997/02/04)	USA	3 On 3 Dunk Madness (prototype? 1997/02/04) (USA)	alias
+3stooges.zip	The Three Stooges In Brides Is Brides	The Three Stooges In Brides Is Brides (set 1)	—	The Three Stooges In Brides Is Brides (set 1)	alias
+3wonders.zip	Three Wonders	Three Wonders (World 910520)	—	Three Wonders (World 910520)	alias
+3x3puzzl.zip	3x3 Puzzle	3X3 Puzzle (Enterprise)	—	3X3 Puzzle (Enterprise)	alias
+4dwarrio.zip	4-D Warriors	4-D Warriors (315-5162)	—	4-D Warriors (315-5162)	alias
+4enraya.zip	4 En Raya	4 En Raya (set 1)	—	4 En Raya (set 1)	alias
+4in1.zip	4 Fun In 1	4 Fun in 1	—	4 Fun in 1	alias
+4in1boot.zip	Puzzle King (Dance & Puzzle)	Puzzle King (PacMan 2, Tetris, HyperMan 2, Snow Bros.)	—	Puzzle King (PacMan 2, Tetris, HyperMan 2, Snow Bros.)	alias
+4play.zip	ZZZ(notgame):Neo-geo Bios	4 player input test	—	4 player input test	check
+64street.zip	64th. Street - A Detective Story	64th. Street: A Detective Story	World	64th. Street: A Detective Story (World)	alias
+7ordi.zip	7 Ordi	7 Ordi	Korea	7 Ordi (Korea)	alias
+abcop.zip	A.B. Cop	A.B. Cop (FD1094 317-0169b)	World	A.B. Cop (FD1094 317-0169b) (World)	alias
+aceattac.zip	Ace Attacker	Ace Attacker (FD1094 317-0059)	—	Ace Attacker (FD1094 317-0059)	alias
+actfancr.zip	Act-Fancer: Cybernetick Hyper Weapon	Act-Fancer Cybernetick Hyper Weapon (World revision 3)	—	Act-Fancer Cybernetick Hyper Weapon (World revision 3)	alias
+aerofgt.zip	Aero Fighters	Aero Fighters (World / USA + Canada / Korea / Hong Kong / Taiwan) (newer hardware)	—	Aero Fighters (World / USA + Canada / Korea / Hong Kong / Taiwan) (newer hardware)	alias
+afighter.zip	Action Fighter	Action Fighter (FD1089A 317-0018)	—	Action Fighter (FD1089A 317-0018)	alias
+agallet.zip	Air Gallet	Air Gallet	Europe	Air Gallet (Europe)	alias
+agress.zip	Agress - Missile Daisenryaku	Agress - Missile Daisenryaku	Japan	Agress - Missile Daisenryaku (Japan)	alias
+airass.zip	Air Assault	Air Assault	World	Air Assault (World)	alias
+airattck.zip	Air Attack	Air Attack (set 1)	—	Air Attack (set 1)	alias
+airbustr.zip	Air Buster: Trouble Specialty Raid Unit	Air Buster: Trouble Specialty Raid Unit	World	Air Buster: Trouble Specialty Raid Unit (World)	alias
+airduel.zip	Air Duel	Air Duel (M82 hardware)	World	Air Duel (M82 hardware) (World)	alias
+akatana.zip	Akai Katana	Akai Katana (2010/ 8/13 MASTER VER.)	—	Akai Katana (2010/ 8/13 MASTER VER.)	alias
+akazukin.zip	Akazukin 	Akazukin	Japan	Akazukin (Japan)	alias
+akiss.zip	Mahjong Angel Kiss	Mahjong Angel Kiss (ver 1.0)	—	Mahjong Angel Kiss (ver 1.0)	alias
+akkaarrh.zip	Akka Arrh	Akka Arrh (prototype)	—	Akka Arrh (prototype)	alias
+alcon.zip	Alcon (US)	Alcon	USA	Alcon (USA)	alias
+alexkidd.zip	Alex Kidd: The Lost Stars	Alex Kidd: The Lost Stars (set 2, unprotected)	—	Alex Kidd: The Lost Stars (set 2, unprotected)	alias
+alibaba.zip	Ali Baba And 40 Thieves	Ali Baba and 40 Thieves	—	Ali Baba and 40 Thieves	alias
+alien3.zip	Alien 3: The Gun	Alien3: The Gun	World	Alien3: The Gun (World)	alias
+aliencha.zip	Alien Challenge	Alien Challenge	World	Alien Challenge (World)	alias
+alienres.zip	Alien Rescue	Alien Rescue (Homebrew, Test Build July 2019)	—	Alien Rescue (Homebrew, Test Build July 2019)	alias
+aliensyn.zip	Alien Syndrome	Alien Syndrome (set 4, System 16B, unprotected)	—	Alien Syndrome (set 4, System 16B, unprotected)	alias
+aligator.zip	Alligator Hunt	Alligator Hunt (protected, checksum 2B34128B)	World	Alligator Hunt (protected, checksum 2B34128B) (World)	alias
+aligatorun.zip	Alligator Hunt	Alligator Hunt (unprotected, checksum F9C6891D)	—	Alligator Hunt (unprotected, checksum F9C6891D)	alias
+alpha1v.zip	Alpha One	Alpha One (Vision Electronics)	—	Alpha One (Vision Electronics)	alias
+alpham2.zip	Alpha Mission II	Alpha Mission II / ASO II - Last Guardian (NGM-007 ~ NGH-007)	—	Alpha Mission II / ASO II - Last Guardian (NGM-007 ~ NGH-007)	alias
+alpine.zip	Alpine Ski	Alpine Ski (set 1)	—	Alpine Ski (set 1)	alias
+altbeast.zip	Altered Beast	Altered Beast (set 8) (8751 317-0078)	—	Altered Beast (set 8) (8751 317-0078)	alias
+amspdwy.zip	American Speedway	American Speedway (set 1)	—	American Speedway (set 1)	alias
+androdun.zip	Andro Dunos	Andro Dunos (NGM-049 ~ NGH-049)	—	Andro Dunos (NGM-049 ~ NGH-049)	alias
+androidp.zip	Android	Android (prototype, later build)	—	Android (prototype, later build)	alias
+angelkds.zip	Angel Kids	Angel Kids	Japan	Angel Kids (Japan)	alias
+aodk.zip	Aggressors of Dark Kombat	Aggressors of Dark Kombat / Tsuukai GANGAN Koushinkyoku (ADM-008 ~ ADH-008)	—	Aggressors of Dark Kombat / Tsuukai GANGAN Koushinkyoku (ADM-008 ~ ADH-008)	alias
+aof.zip	Art of Fighting	Art of Fighting / Ryuuko no Ken (NGM-044 ~ NGH-044)	—	Art of Fighting / Ryuuko no Ken (NGM-044 ~ NGH-044)	alias
+aof2.zip	Art of Fighting 2	Art of Fighting 2 / Ryuuko no Ken 2 (NGM-056)	—	Art of Fighting 2 / Ryuuko no Ken 2 (NGM-056)	alias
+aof3.zip	Art of Fighting 3: The Path of the Warrior	Art of Fighting 3 - The Path of the Warrior / Art of Fighting - Ryuuko no Ken Gaiden	—	Art of Fighting 3 - The Path of the Warrior / Art of Fighting - Ryuuko no Ken Gaiden	alias
+aoh.zip	Age of Heroes - Silkroad 2	Age Of Heroes - Silkroad 2 (v0.63 - 2001/02/07)	—	Age Of Heroes - Silkroad 2 (v0.63 - 2001/02/07)	alias
+apb.zip	Apb - All Points Bulletin	APB - All Points Bulletin (rev 7)	—	APB - All Points Bulletin (rev 7)	alias
+aquajack.zip	Aqua Jack	Aqua Jack	World	Aqua Jack (World)	alias
+aquarium.zip	Aquarium (US)	Aquarium	USA	Aquarium (USA)	alias
+arabfgt.zip	Arabian Fight	Arabian Fight	World	Arabian Fight (World)	alias
+arabianm.zip	Arabian Magic	Arabian Magic (Ver 1.0O 1992/07/06)	—	Arabian Magic (Ver 1.0O 1992/07/06)	alias
+arcadecl.zip	Arcade Classics	Arcade Classics (prototype)	—	Arcade Classics (prototype)	alias
+arcadian.zip	Arcadia	Arcadia (NMK)	—	Arcadia (NMK)	alias
+archrivl.zip	Arch Rivals	Arch Rivals (rev 4.0 6/29/89)	—	Arch Rivals (rev 4.0 6/29/89)	alias
+arescue.zip	Air Rescue	Air Rescue	World	Air Rescue (World)	alias
+arkanoid.zip	Arkanoid (World, older)	Arkanoid (older)	World	Arkanoid (older) (World)	alias
+arkatour.zip	Tournament Arkanoid	Tournament Arkanoid (older)	USA	Tournament Arkanoid (older) (USA)	alias
+arknoid2.zip	Arkanoid - Revenge Of Doh	Arkanoid - Revenge of DOH	World	Arkanoid - Revenge of DOH (World)	alias
+arkretrn.zip	Arkanoid Returns	Arkanoid Returns (Ver 2.02O 1997/02/10)	—	Arkanoid Returns (Ver 2.02O 1997/02/10)	alias
+armedf.zip	Armed Formation	Armed F	Japan	Armed F (Japan)	alias
+armorcar.zip	Armored Car	Armored Car (set 1)	—	Armored Car (set 1)	alias
+armwar.zip	Armored Warriors	Armored Warriors (Europe 941024)	—	Armored Warriors (Europe 941024)	alias
+ashura.zip	Ashura Blaster	Ashura Blaster	World	Ashura Blaster (World)	alias
+aso.zip	Alpha Mission	ASO - Armored Scrum Object	—	ASO - Armored Scrum Object	check
+astdelux.zip	Asteroids Deluxe	Asteroids Deluxe (rev 3)	—	Asteroids Deluxe (rev 3)	alias
+asteroid.zip	Asteroids	Asteroids (rev 4)	—	Asteroids (rev 4)	alias
+astorm.zip	Alien Storm	Alien Storm (2 Players) (FD1094 317-0154)	World	Alien Storm (2 Players) (FD1094 317-0154) (World)	alias
+astyanax.zip	The Astyanax	The Astyanax (EPROM version)	—	The Astyanax (EPROM version)	alias
+asuka.zip	Asuka & Asuka	Asuka & Asuka	World	Asuka & Asuka (World)	alias
+asurabld.zip	Asura Blade - Sword Of Dynasty	Asura Blade - Sword of Dynasty	Japan	Asura Blade - Sword of Dynasty (Japan)	alias
+asurabus.zip	Asura Buster - Eternal Warriors	Asura Buster - Eternal Warriors	USA	Asura Buster - Eternal Warriors (USA)	alias
+atetris.zip	Tetris	Tetris (set 1)	—	Tetris (set 1)	alias
+atlantis.zip	Battle of Atlantis	Battle of Atlantis (set 1)	—	Battle of Atlantis (set 1)	alias
+atomicp.zip	Atomic Point	Atomic Point	Korea	Atomic Point (Korea)	alias
+aurail.zip	Aurail (set 3, US) (unprotected)	Aurail (set 3) (unprotected)	USA	Aurail (set 3) (unprotected) (USA)	alias
+avengrgs.zip	Avengers In Galactic Storm	Avengers In Galactic Storm (US/Europe 1.0)	—	Avengers In Galactic Storm (US/Europe 1.0)	alias
+avsp.zip	Alien vs. Predator	Alien vs. Predator (Europe 940520)	—	Alien vs. Predator (Europe 940520)	alias
+b2b.zip	Bang Bang Busters	Bang Bang Busters (2010 NCI release)	—	Bang Bang Busters (2010 NCI release)	alias
+bace.zip	bace	Balloon Ace	—	Balloon Ace	check
+backfire.zip	Backfire!	Backfire! (set 1)	Japan	Backfire! (set 1) (Japan)	alias
+badapple.zip	ZZZ(notgame):Demos	Bad Apple (HB, Tech-Demo)	—	Bad Apple (HB, Tech-Demo)	check
+baddudes.zip	Bad Dudes vs. Dragonninja	Bad Dudes vs. Dragonninja (revision 1)	USA	Bad Dudes vs. Dragonninja (revision 1) (USA)	alias
+bakatono.zip	Bakatonosama Mahjong Manyuuki	Bakatonosama Mahjong Manyuuki (MOM-002 ~ MOH-002)	—	Bakatonosama Mahjong Manyuuki (MOM-002 ~ MOH-002)	alias
+bakubrkr.zip	Bakuretsu Breaker	Bakuretsu Breaker	Japan	Bakuretsu Breaker (Japan)	alias
+baluba.zip	Baluba-louk No Densetsu	Baluba-louk no Densetsu	Japan	Baluba-louk no Densetsu (Japan)	alias
+bangball.zip	Bang Bang Ball	Bang Bang Ball (v1.05)	—	Bang Bang Ball (v1.05)	alias
+baryon.zip	Baryon: Future Assault	Baryon - Future Assault (set 1)	—	Baryon - Future Assault (set 1)	alias
+batcir.zip	Battle Circuit	Battle Circuit (Europe 970319)	—	Battle Circuit (Europe 970319)	alias
+batrider.zip	Armed Police Batrider	Armed Police Batrider (Fri Feb 13 1998)	Europe	Armed Police Batrider (Fri Feb 13 1998) (Europe)	alias
+battlane.zip	Battle Lane! Vol. 5	Battle Lane! Vol. 5 (set 1)	—	Battle Lane! Vol. 5 (set 1)	alias
+battlnts.zip	Battlantis	Battlantis (version G)	—	Battlantis (version G)	alias
+bayroute.zip	Bay Route	Bay Route (set 3) (FD1094 317-0116)	World	Bay Route (set 3) (FD1094 317-0116) (World)	alias
+bbakraid.zip	Battle Bakraid: Unlimited Version	Battle Bakraid - Unlimited Version (Tue Jun 8 1999)	USA	Battle Bakraid - Unlimited Version (Tue Jun 8 1999) (USA)	alias
+bbbxing.zip	Best Bout Boxing	Best Bout Boxing (ver 1.3)	—	Best Bout Boxing (ver 1.3)	alias
+bbmanw.zip	New Atomic Punk - Global Quest	Bomber Man World / New Dyna Blaster - Global Quest	—	Bomber Man World / New Dyna Blaster - Global Quest	alias
+bbros.zip	Buster Bros.	Buster Bros.	USA	Buster Bros. (USA)	alias
+bbusters.zip	Beast Busters	Beast Busters	World	Beast Busters (World)	alias
+bchopper.zip	Battle Chopper	Battle Chopper	World	Battle Chopper (World)	alias
+bcstry.zip	B.C. Story	B.C. Story (set 1)	—	B.C. Story (set 1)	alias
+beast.zip	ZZZ(notgame):Demos	Shadow of the Beast (Neo Geo demo)	—	Shadow of the Beast (Neo Geo demo)	check
+benberob.zip	Ben Bero Beh	Ben Bero Beh	Japan	Ben Bero Beh (Japan)	alias
+berabohm.zip	Beraboh Man	Chou Zetsurinjin Berabowman (Rev C)	Japan	Chou Zetsurinjin Berabowman (Rev C) (Japan)	check
+bermudat.zip	Bermuda Triangle	Bermuda Triangle (World?)	—	Bermuda Triangle (World?)	alias
+bestbest.zip	Best of Best	Best Of Best	—	Best Of Best	alias
+bestri.zip	Bestri (Korea, set 1)	Bestri (set 1)	Korea	Bestri (set 1) (Korea)	alias
+bgaregga.zip	Battle Garegga	Battle Garegga (Europe / USA / Japan / Asia) (Sat Feb 3 1996)	—	Battle Garegga (Europe / USA / Japan / Asia) (Sat Feb 3 1996)	alias
+bigkarnk.zip	Big Karnak	Big Karnak (ver. 1.0, checksum 1e38c94)	—	Big Karnak (ver. 1.0, checksum 1e38c94)	alias
+bigprowr.zip	Tag Team Wrestling	The Big Pro Wrestling! (set 1)	—	The Big Pro Wrestling! (set 1)	alias
+bigrun.zip	Big Run	Big Run (11th Rallye version, Europe?)	—	Big Run (11th Rallye version, Europe?)	alias
+bikkuric.zip	Bikkuri Card	Bikkuri Card	Japan	Bikkuri Card (Japan)	alias
+biomtoy.zip	Biomechanical Toy	Biomechanical Toy (ver. 1.0.1885, checksum 69f5e032)	—	Biomechanical Toy (ver. 1.0.1885, checksum 69f5e032)	alias
+bionicc.zip	Bionic Commando	Bionic Commando (Euro)	—	Bionic Commando (Euro)	alias
+birdtry.zip	Birdie Try	Birdie Try (revision 2, revision 1 MCU)	Japan	Birdie Try (revision 2, revision 1 MCU) (Japan)	alias
+bishi.zip	Bishi Bashi Championship Mini Game Senshuken	Bishi Bashi Champ Mini Game Senshuken (ver JAA, 3 Players)	—	Bishi Bashi Champ Mini Game Senshuken (ver JAA, 3 Players)	alias
+bjourney.zip	Blue's Journey	Blue's Journey / Raguy (ALM-001 ~ ALH-001)	—	Blue's Journey / Raguy (ALM-001 ~ ALH-001)	alias
+bjtwin.zip	Bomb Jack Twin	Bombjack Twin (set 1)	—	Bombjack Twin (set 1)	alias
+bladestl.zip	Blades Of Steel	Blades of Steel (version T, Joystick)	—	Blades of Steel (version T, Joystick)	alias
+blastoff.zip	Blast Off	Blast Off	Japan	Blast Off (Japan)	alias
+blazeon.zip	Blaze On	Blaze On	World	Blaze On (World)	alias
+blmbycar.zip	Blomby Car	Blomby Car (Version 1P0)	—	Blomby Car (Version 1P0)	alias
+block.zip	Block Block	Block Block (World 911219 Joystick)	—	Block Block (World 911219 Joystick)	alias
+blockcar.zip	Block Carnival	Block Carnival / Thunder & Lightning 2	—	Block Carnival / Thunder & Lightning 2	alias
+blockgal.zip	Block Gal	Block Gal (MC-8123B, 317-0029)	—	Block Gal (MC-8123B, 317-0029)	alias
+blockout.zip	Block Out	Block Out (set 1)	—	Block Out (set 1)	alias
+bloodbro.zip	Blood Bros.	Blood Bros. (World?)	—	Blood Bros. (World?)	alias
+bloxeed.zip	Bloxeed (Japan) (FD1094 317-0139)	Bloxeed (FD1094 317-0139)	Japan	Bloxeed (FD1094 317-0139) (Japan)	alias
+blstroid.zip	Blasteroids	Blasteroids (rev 4)	—	Blasteroids (rev 4)	alias
+blswhstl.zip	Bells & Whistles	Bells & Whistles (version L)	World	Bells & Whistles (version L) (World)	alias
+blueprnt.zip	Blue Print	Blue Print (Midway)	—	Blue Print (Midway)	alias
+bmaster.zip	Blade Master	Blade Master	World	Blade Master (World)	alias
+bnzabros.zip	Bonanza Bros.	Bonanza Bros (Floppy DS3-5000-07d? Based)	USA	Bonanza Bros (Floppy DS3-5000-07d? Based) (USA)	alias
+bodyslam.zip	Body Slam	Body Slam (8751 317-0015)	—	Body Slam (8751 317-0015)	alias
+bombkick.zip	Bomb Kick	Bomb Kick (set 1)	—	Bomb Kick (set 1)	alias
+bonkadv.zip	Bonk's Adventure - Arcade Version	B.C. Kid / Bonk's Adventure: Arcade Version / Kyukyoku!! PC Genjin: Special Arcade Version	Europe	B.C. Kid / Bonk's Adventure: Arcade Version / Kyukyoku!! PC Genjin: Special Arcade Version (Europe)	alias
+bonzeadv.zip	Bonze Adventure	Bonze Adventure (rev 1)	World	Bonze Adventure (rev 1) (World)	alias
+boogwing.zip	Boogie Wings	Boogie Wings (Europe v1.5, 92.12.07)	—	Boogie Wings (Europe v1.5, 92.12.07)	alias
+boomrang.zip	Boomer Rang'r	Boomer Rang'r / Genesis (set 1)	—	Boomer Rang'r / Genesis (set 1)	alias
+boonggab.zip	Boong-ga Boong-ga	Boong-Ga Boong-Ga (Spank'em!)	—	Boong-Ga Boong-Ga (Spank'em!)	alias
+bottom9.zip	Bottom Of The Ninth	Bottom of the Ninth (version T)	—	Bottom of the Ninth (version T)	alias
+bouldash.zip	Boulder Dash / Boulder Dash Part 2	Boulder Dash / Boulder Dash Part 2	World	Boulder Dash / Boulder Dash Part 2 (World)	alias
+bounty.zip	The Bounty	The Bounty (set 1)	—	The Bounty (set 1)	alias
+bowlrama.zip	Bowl-O-Rama	Bowl-O-Rama (Rev 1.0)	—	Bowl-O-Rama (Rev 1.0)	alias
+boxyboy.zip	Boxy Boy	Boxy Boy (SB2)	World	Boxy Boy (SB2) (World)	alias
+brapboys.zip	B.Rap Boys	B.Rap Boys	World	B.Rap Boys (World)	alias
+brival.zip	Burning Rival	Burning Rival	World	Burning Rival (World)	alias
+brkthruu.zip	Break Thru	Break Thru	USA	Break Thru (USA)	alias
+brubber.zip	Bump 'n' Jump	Burnin' Rubber	—	Burnin' Rubber	check
+bshark.zip	Battle Shark	Battle Shark	World	Battle Shark (World)	alias
+bssoccer.zip	Back Street Soccer	Back Street Soccer (KRB-0031 PCB)	—	Back Street Soccer (KRB-0031 PCB)	alias
+bstars.zip	Baseball Stars Professional	Baseball Stars Professional (NGM-002)	—	Baseball Stars Professional (NGM-002)	alias
+btime.zip	BurgerTime	Burger Time (Data East set 1)	—	Burger Time (Data East set 1)	alias
+bubblem.zip	Bubble Memories: The Story of Bubble Bobble III	Bubble Memories: The Story Of Bubble Bobble III (Ver 2.4O 1996/02/15)	—	Bubble Memories: The Story Of Bubble Bobble III (Ver 2.4O 1996/02/15)	alias
+bublbob2.zip	Bubble Symphony	Bubble Bobble II (Ver 2.6O 1994/12/16)	—	Bubble Bobble II (Ver 2.6O 1994/12/16)	alias
+bublbobl.zip	Bubble Bobble	Bubble Bobble (Ver 0.1)	Japan	Bubble Bobble (Ver 0.1) (Japan)	alias
+bublbust.zip	Puzzle Bobble	Bubble Buster (B-System)	USA	Bubble Buster (B-System) (USA)	check
+buccanrs.zip	Buccaneers	Buccaneers (set 1)	—	Buccaneers (set 1)	alias
+bucky.zip	Bucky O'Hare	Bucky O'Hare (ver EAB)	—	Bucky O'Hare (ver EAB)	alias
+bullfgt.zip	Bullfight	Bullfight (315-5065)	—	Bullfight (315-5065)	alias
+burnforc.zip	Burning Force	Burning Force (new version (Rev C))	Japan	Burning Force (new version (Rev C)) (Japan)	alias
+burningf.zip	Burning Fight	Burning Fight (NGM-018 ~ NGH-018)	—	Burning Fight (NGM-018 ~ NGH-018)	alias
+butasan.zip	Butasan - Pig's & Bomber's	Butasan - Pig's & Bomber's (English)	Japan	Butasan - Pig's & Bomber's (English) (Japan)	alias
+bwings.zip	Battle Wings	B-Wings (Japan new Ver.)	—	B-Wings (Japan new Ver.)	alias
+bzone.zip	Battlezone	Battle Zone (rev 2)	—	Battle Zone (rev 2)	alias
+cabal.zip	Cabal (World, Joystick)	Cabal (Joystick)	World	Cabal (Joystick) (World)	alias
+cabalng.zip	Cabal	Cabal - Neo Geo Conversion (HB)	—	Cabal - Neo Geo Conversion (HB)	alias
+cachat.zip	Tube-it	Cachat	Japan	Cachat (Japan)	check
+cadanglr.zip	Angler Dangler	Angler Dangler (DECO Cassette)	USA	Angler Dangler (DECO Cassette) (USA)	alias
+cairblad.zip	Change Air Blade	Change Air Blade	Japan	Change Air Blade (Japan)	alias
+calibr50.zip	Caliber 50	Caliber 50 (Ver. 1.01)	—	Caliber 50 (Ver. 1.01)	alias
+calorie.zip	Calorie Kun Vs Moguranian	Calorie Kun vs Moguranian	—	Calorie Kun vs Moguranian	alias
+cameltryu.zip	Cameltry (US, YM2610)	Cameltry (YM2610)	USA	Cameltry (YM2610) (USA)	alias
+cannball.zip	Cannon Ball	Cannon Ball (Yun Sung, horizontal)	—	Cannon Ball (Yun Sung, horizontal)	alias
+cannonbp.zip	Cannon Ball	Cannon Ball (Pac-Man Hardware)	—	Cannon Ball (Pac-Man Hardware)	alias
+capbowl.zip	Capcom Bowling	Capcom Bowling (set 1)	—	Capcom Bowling (set 1)	alias
+captaven.zip	Captain America And The Avengers	Captain America and The Avengers (Asia Rev 1.4)	—	Captain America and The Avengers (Asia Rev 1.4)	alias
+captcomm.zip	Captain Commando	Captain Commando (World 911202)	—	Captain Commando (World 911202)	alias
+cashquiz.zip	Cash Quiz	Cash Quiz (Type B, Version 5)	—	Cash Quiz (Type B, Version 5)	alias
+castfant.zip	Astro Fantasia	Astro Fantasia (DECO Cassette)	USA	Astro Fantasia (DECO Cassette) (USA)	alias
+cawing.zip	Carrier Air Wing	Carrier Air Wing (World 901012)	—	Carrier Air Wing (World 901012)	alias
+cbasebal.zip	Capcom baseball	Capcom Baseball	Japan	Capcom Baseball (Japan)	alias
+cbdash.zip	Boulder Dash	Boulder Dash (DECO Cassette)	USA	Boulder Dash (DECO Cassette) (USA)	alias
+cbombers.zip	Chase Bombers	Chase Bombers	World	Chase Bombers (World)	alias
+cbtime.zip	Burger Time	Burger Time (DECO Cassette)	USA	Burger Time (DECO Cassette) (USA)	alias
+cburnrub.zip	Burnin' Rubber (DECO Cassette)	Burnin' Rubber (DECO Cassette) (set 1)	USA	Burnin' Rubber (DECO Cassette) (set 1) (USA)	alias
+cbuster.zip	Two Crude	Crude Buster (World FX version)	—	Crude Buster (World FX version)	alias
+ccastles.zip	Crystal Castles	Crystal Castles (version 4)	—	Crystal Castles (version 4)	alias
+cclimbr2.zip	Crazy Climber 2	Crazy Climber 2	Japan	Crazy Climber 2 (Japan)	alias
+cdiscon1.zip	Disco No.1 (DECO Cassette)	Disco No.1 (DECO Cassette)	USA	Disco No.1 (DECO Cassette) (USA)	alias
+cdsteljn.zip	Ds Telejan	DS Telejan (DECO Cassette)	Japan	DS Telejan (DECO Cassette) (Japan)	alias
+centiped.zip	Centipede	Centipede (revision 4)	—	Centipede (revision 4)	alias
+cexplore.zip	Explorer	Explorer (DECO Cassette)	USA	Explorer (DECO Cassette) (USA)	alias
+cfboy0a1.zip	Flash Boy	Flash Boy (vertical) (DECO Cassette MD) (No.12/Ver.0/Set.1)	Japan	Flash Boy (vertical) (DECO Cassette MD) (No.12/Ver.0/Set.1) (Japan)	alias
+cfghtice.zip	Fighting Ice Hockey	Fighting Ice Hockey (DECO Cassette)	USA	Fighting Ice Hockey (DECO Cassette) (USA)	alias
+cflyball.zip	Flying Ball	Flying Ball (DECO Cassette)	USA	Flying Ball (DECO Cassette) (USA)	alias
+cgangpzl.zip	Cosmo Gang The Puzzle	Cosmo Gang the Puzzle	USA	Cosmo Gang the Puzzle (USA)	alias
+cgraplop.zip	Graplop	Cluster Buster (DECO Cassette)	USA	Cluster Buster (DECO Cassette) (USA)	check
+chainrec.zip	Chain Reaction	Chain Reaction (Version 2.2, 1995.09.25)	World	Chain Reaction (Version 2.2, 1995.09.25) (World)	alias
+champbas.zip	Champion Base Ball	Champion Base Ball	World	Champion Base Ball (World)	alias
+champbb2.zip	Champion Base Ball Part-2	Champion Base Ball Part-2 (set 1)	World	Champion Base Ball Part-2 (set 1) (World)	alias
+champwr.zip	Champion Wrestler	Champion Wrestler	World	Champion Wrestler (World)	alias
+chasehq.zip	Chase H.Q.	Chase H.Q.	World	Chase H.Q. (World)	alias
+chelnov.zip	Chelnov - Atomic Runner	Atomic Runner Chelnov	World	Atomic Runner Chelnov (World)	alias
+chimerab.zip	Chimera Beast	Chimera Beast (prototype, set 1)	Japan	Chimera Beast (prototype, set 1) (Japan)	alias
+chinagat.zip	China Gate	China Gate	USA	China Gate (USA)	alias
+chinatwn.zip	China Town	China Town	Japan	China Town (Japan)	alias
+chkun.zip	Chance Kun	Chance Kun	Japan	Chance Kun (Japan)	alias
+choko.zip	Janpai Puzzle Choukou	Janpai Puzzle Choukou (Japan 010820)	—	Janpai Puzzle Choukou (Japan 010820)	alias
+choplift.zip	Choplifter	Choplifter (8751 315-5151)	—	Choplifter (8751 315-5151)	alias
+chopper.zip	Chopper I	Chopper I (US Ver 2)	—	Chopper I (US Ver 2)	alias
+chukatai.zip	Chuka Taisen	Chuka Taisen (P0-028-A PCB)	World	Chuka Taisen (P0-028-A PCB) (World)	alias
+chwy.zip	Highway Chase	Highway Chase (DECO Cassette)	USA	Highway Chase (DECO Cassette) (USA)	alias
+circusc.zip	Circus Charlie	Circus Charlie (level select, set 1)	—	Circus Charlie (level select, set 1)	alias
+citybomb.zip	City Bomber	City Bomber	World	City Bomber (World)	alias
+citycon.zip	City Connection	City Connection (set 1)	—	City Connection (set 1)	alias
+ckongpt2.zip	Crazy Kong Part II	Crazy Kong Part II (set 1)	—	Crazy Kong Part II (set 1)	alias
+clapapa.zip	Rootin' Tootin' / La-pa-pa	Rootin' Tootin' / La-Pa-Pa (DECO Cassette)	USA	Rootin' Tootin' / La-Pa-Pa (DECO Cassette) (USA)	alias
+claypign.zip	Clay Pigeon	Clay Pigeon (version 2.0)	—	Clay Pigeon (version 2.0)	alias
+cleopatr.zip	Cleopatra Fortune	Cleopatra Fortune (Ver 2.1J 1996/09/05)	—	Cleopatra Fortune (Ver 2.1J 1996/09/05)	alias
+cloak.zip	Cloak & Dagger	Cloak & Dagger (rev 5)	—	Cloak & Dagger (rev 5)	alias
+clocknch.zip	Lock'n'Chase (DECO Cassette)	Lock'n'Chase (DECO Cassette)	USA	Lock'n'Chase (DECO Cassette) (USA)	alias
+cloud9.zip	Cloud 9	Cloud 9 (prototype)	—	Cloud 9 (prototype)	alias
+clshroad.zip	Clash-road	Clash-Road	—	Clash-Road	alias
+cltchitr.zip	Clutch Hitter	Clutch Hitter (FD1094 317-0176)	USA	Clutch Hitter (FD1094 317-0176) (USA)	alias
+clubpacm.zip	Pacman Club / Club Lambada	Pacman Club / Club Lambada (Argentina)	—	Pacman Club / Club Lambada (Argentina)	alias
+cluckypo.zip	Lucky Poker	Lucky Poker (DECO Cassette)	USA	Lucky Poker (DECO Cassette) (USA)	alias
+cmanhat.zip	Manhattan	Manhattan (DECO Cassette)	Japan	Manhattan (DECO Cassette) (Japan)	alias
+cmissnx.zip	Mission-X	Mission-X (DECO Cassette)	USA	Mission-X (DECO Cassette) (USA)	alias
+cnbe.zip	Codename - Blut Engel	Codename - Blut Engel (HB, ver. 20060119)	—	Codename - Blut Engel (HB, ver. 20060119)	alias
+cndi.zip	ZZZ(notgame):Demos	Chip n Dale (FMV Demo)	—	Chip n Dale (FMV Demo)	check
+cnebula.zip	Nebula	Nebula (DECO Cassette)	UK	Nebula (DECO Cassette) (UK)	alias
+cnightst.zip	Night Star	Night Star (DECO Cassette) (set 1)	USA	Night Star (DECO Cassette) (set 1) (USA)	alias
+cninja.zip	Caveman Ninja	Caveman Ninja (World ver 4)	—	Caveman Ninja (World ver 4)	alias
+cobracom.zip	Cobra-command	Cobra-Command (World/US revision 5)	—	Cobra-Command (World/US revision 5)	alias
+cocean1a.zip	Ocean To Ocean	Ocean to Ocean (Medal) (DECO Cassette MD) (No.10/Ver.1)	Japan	Ocean to Ocean (Medal) (DECO Cassette MD) (No.10/Ver.1) (Japan)	alias
+colony7.zip	Colony 7	Colony 7 (set 1)	—	Colony 7 (set 1)	alias
+columns2.zip	Columns II: The Voyage Through Time	Columns II: The Voyage Through Time	World	Columns II: The Voyage Through Time (World)	alias
+columnsn.zip	Columns (Neo-Geo)	Columns - Neo Geo (HB)	—	Columns - Neo Geo (HB)	alias
+combatsc.zip	Boot Camp	Combat School (joystick)	—	Combat School (joystick)	check
+commandw.zip	Command War - Super Special Battle & War Game	Command War - Super Special Battle & War Game (Ver 0.0J, prototype)	—	Command War - Super Special Battle & War Game (Ver 0.0J, prototype)	alias
+commsega.zip	Commando	Commando (Sega)	—	Commando (Sega)	alias
+comotion.zip	Comotion	CoMotion	—	CoMotion	alias
+compgolf.zip	Competition Golf Final Round	Competition Golf Final Round (World?, revision 3)	—	Competition Golf Final Round (World?, revision 3)	alias
+congo.zip	Congo Bongo	Congo Bongo (Rev C, 2 board stack)	—	Congo Bongo (Rev C, 2 board stack)	alias
+contcirc.zip	Continental Circus	Continental Circus	World	Continental Circus (World)	alias
+contraj.zip	Contra	Contra (set 1)	Japan	Contra (set 1) (Japan)	alias
+cookbib.zip	Cookie & Bibi	Cookie & Bibi (set 1)	—	Cookie & Bibi (set 1)	alias
+cookbib2.zip	Cookie & Bibi 2	Cookie & Bibi 2 (English, set 1)	—	Cookie & Bibi 2 (English, set 1)	alias
+coozumou.zip	Oozumou - The Grand Sumo	Oozumou - The Grand Sumo (DECO Cassette)	Japan	Oozumou - The Grand Sumo (DECO Cassette) (Japan)	alias
+cop01.zip	Cop 01	Cop 01 (set 1)	—	Cop 01 (set 1)	alias
+cosmccop.zip	Cosmic Cop	Cosmic Cop	World	Cosmic Cop (World)	alias
+cosmogng.zip	Cosmo Gang The Video	Cosmo Gang the Video	USA	Cosmo Gang the Video (USA)	alias
+cotton.zip	Cotton: Fantastic Night Dreams	Cotton (set 4) (FD1094 317-0181a)	World	Cotton (set 4) (FD1094 317-0181a) (World)	alias
+countrunb.zip	Counter Run	Counter Run (bootleg set 1)	—	Counter Run (bootleg set 1)	alias
+cphd.zip	Crouching Pony Hidden Dragon	Crouching Poney Hidden Dragon (HB, Demo)	—	Crouching Poney Hidden Dragon (HB, Demo)	alias
+cppicf.zip	Peter Pepper's Ice Cream Factory	Peter Pepper's Ice Cream Factory (DECO Cassette) (set 1)	USA	Peter Pepper's Ice Cream Factory (DECO Cassette) (set 1) (USA)	alias
+cprobowl.zip	Pro Bowling	Pro Bowling (DECO Cassette)	USA	Pro Bowling (DECO Cassette) (USA)	alias
+cprogolf.zip	Tournament Pro Golf	Tournament Pro Golf (DECO Cassette)	USA	Tournament Pro Golf (DECO Cassette) (USA)	alias
+cps1demo.zip	ZZZ(notgame):Chaos Demo	Chaos Demo (CPS-1)	—	Chaos Demo (CPS-1)	alias
+cps1frog.zip	Frog Feast	Frog Feast (CPS-1)	—	Frog Feast (CPS-1)	alias
+cpsoccer.zip	Pro Soccer	Pro Soccer (DECO Cassette)	USA	Pro Soccer (DECO Cassette) (USA)	alias
+cptennis.zip	Pro Tennis	Pro Tennis (DECO Cassette)	USA	Pro Tennis (DECO Cassette) (USA)	alias
+cracksht.zip	Crackshot	Crackshot (version 2.0)	—	Crackshot (version 2.0)	alias
+crashh.zip	Crash	Crash (Pac-Man)	—	Crash (Pac-Man)	alias
+crbaloon.zip	Crazy Balloon	Crazy Balloon (set 1)	—	Crazy Balloon (set 1)	alias
+crimec.zip	Crime City	Crime City	World	Crime City (World)	alias
+crimfght.zip	Crime Fighters	Crime Fighters (World 2 players)	—	Crime Fighters (World 2 players)	alias
+crkdown.zip	Crack Down	Crack Down (Floppy Based, FD1094 317-0058-04c)	World	Crack Down (Floppy Based, FD1094 317-0058-04c) (World)	alias
+croquis.zip	Logic Pro	Croquis	Korea	Croquis (Korea)	check
+crshrace.zip	Lethal Crash Race	Lethal Crash Race / Bakuretsu Crash Race (set 1)	—	Lethal Crash Race / Bakuretsu Crash Race (set 1)	alias
+crswd2bl.zip	Crossed Swords II	Crossed Swords 2 (bootleg of CD version)	—	Crossed Swords 2 (bootleg of CD version)	alias
+crsword.zip	Crossed Swords	Crossed Swords (ALM-002 ~ ALH-002)	—	Crossed Swords (ALM-002 ~ ALH-002)	alias
+crush.zip	Make Trax	Crush Roller (set 1)	—	Crush Roller (set 1)	check
+crusherm.zip	Crusher Makochan	Crusher Makochan	Japan	Crusher Makochan (Japan)	alias
+crzrally.zip	Crazy Rally	Crazy Rally (set 1)	—	Crazy Rally (set 1)	alias
+csclub.zip	Capcom Sports Club	Capcom Sports Club (Europe 971017)	—	Capcom Sports Club (Europe 971017)	alias
+cscrtry.zip	Scrum Try	Scrum Try (DECO Cassette) (set 1)	USA	Scrum Try (DECO Cassette) (set 1) (USA)	alias
+csdtenis.zip	Super Doubles Tennis	Super Doubles Tennis (DECO Cassette)	Japan	Super Doubles Tennis (DECO Cassette) (Japan)	alias
+csilver.zip	Captain Silver	Captain Silver	World	Captain Silver (World)	alias
+cskater.zip	Skater	Skater (DECO Cassette)	Japan	Skater (DECO Cassette) (Japan)	alias
+csuperas.zip	Super Astro Fighter	Super Astro Fighter (DECO Cassette)	USA	Super Astro Fighter (DECO Cassette) (USA)	alias
+cterrani.zip	Terranean	Terranean (DECO Cassette)	USA	Terranean (DECO Cassette) (USA)	alias
+ctisland.zip	Treasure Island	Treasure Island (DECO Cassette) (set 1)	USA	Treasure Island (DECO Cassette) (set 1) (USA)	alias
+ctornado.zip	Tornado	Tornado (DECO Cassette)	USA	Tornado (DECO Cassette) (USA)	alias
+ctower.zip	The Tower (DECO Cassette)	The Tower (DECO Cassette)	Europe	The Tower (DECO Cassette) (Europe)	alias
+ctribe.zip	The Combatribes	The Combatribes (rev 2, set 1)	USA	The Combatribes (rev 2, set 1) (USA)	alias
+ctsttape.zip	ZZZ(notgame):Test Tape	Test Tape (DECO Cassette)	USA	Test Tape (DECO Cassette) (USA)	alias
+cubybop.zip	Cuby Bop	Cuby Bop (location test)	—	Cuby Bop (location test)	alias
+cuebrick.zip	Cue Brick	Cue Brick (version D)	World	Cue Brick (version D) (World)	alias
+cultures.zip	Jibun Wo Migaku Culture School Mahjong Hen	Jibun wo Migaku Culture School Mahjong Hen	—	Jibun wo Migaku Culture School Mahjong Hen	alias
+cupfinal.zip	Taito Cup Finals	Taito Cup Finals (Ver 1.0O 1993/02/28)	—	Taito Cup Finals (Ver 1.0O 1993/02/28)	alias
+cyberlip.zip	Cyber-Lip	Cyber-Lip (NGM-010)	—	Cyber-Lip (NGM-010)	alias
+cybertnk.zip	Cyber Tank	Cyber Tank (v1.4)	—	Cyber Tank (v1.4)	alias
+cybots.zip	Cyberbots: Fullmetal Madness	Cyberbots: Fullmetal Madness (Europe 950424)	—	Cyberbots: Fullmetal Madness (Europe 950424)	alias
+cyclemb.zip	Cycle Maabou	Cycle Maabou	Japan	Cycle Maabou (Japan)	alias
+cyvern.zip	Cyvern: The Dragon Weapons	Cyvern - The Dragon Weapons	USA	Cyvern - The Dragon Weapons (USA)	alias
+czeroize.zip	Zeroize	Zeroize (DECO Cassette)	USA	Zeroize (DECO Cassette) (USA)	alias
+daikaiju.zip	Daikaiju No Gyakushu	Daikaiju no Gyakushu (rev 1)	—	Daikaiju no Gyakushu (rev 1)	alias
+dambustr.zip	Dambusters	Dambusters (set 1)	USA	Dambusters (set 1) (USA)	alias
+dangar.zip	UFO Robo Dangar	Ufo Robo Dangar (4/09/1987)	—	Ufo Robo Dangar (4/09/1987)	alias
+dangseed.zip	Dangerous Seed	Dangerous Seed	Japan	Dangerous Seed (Japan)	alias
+dankuga.zip	Dan-ku-ga	Dan-Ku-Ga (Ver 0.0J 1994/12/13, prototype)	—	Dan-Ku-Ga (Ver 0.0J 1994/12/13, prototype)	alias
+daraku.zip	The Fallen Angels	The Fallen Angels / Daraku Tenshi: The Fallen Angels	World	The Fallen Angels / Daraku Tenshi: The Fallen Angels (World)	alias
+darius.zip	Darius (World, rev 2)	Darius (rev 2)	World	Darius (rev 2) (World)	alias
+darius2.zip	Darius II	Darius II (triple screen) (rev 1)	Japan	Darius II (triple screen) (rev 1) (Japan)	alias
+dariusg.zip	Darius Gaiden - Silver Hawk	Darius Gaiden - Silver Hawk (Ver 2.5O 1994/09/19)	—	Darius Gaiden - Silver Hawk (Ver 2.5O 1994/09/19)	alias
+dariusgx.zip	Darius Gaiden - Silver Hawk Extra Version	Darius Gaiden - Silver Hawk Extra Version (Ver 2.7J 1995/03/06) (Official Hack)	—	Darius Gaiden - Silver Hawk Extra Version (Ver 2.7J 1995/03/06) (Official Hack)	alias
+darkedge.zip	Dark Edge	Dark Edge	World	Dark Edge (World)	alias
+darkseal.zip	Dark Seal	Dark Seal (World revision 3)	—	Dark Seal (World revision 3)	alias
+darwin.zip	Darwin 4078	Darwin 4078	Japan	Darwin 4078 (Japan)	alias
+dassault.zip	Desert Assault	Desert Assault	USA	Desert Assault (USA)	alias
+dblaxle.zip	Double Axle	Double Axle (Rev 1, set 1)	USA	Double Axle (Rev 1, set 1) (USA)	alias
+dbldynj.zip	The Double Dynamites	The Double Dynamites (13NOV89)	Japan	The Double Dynamites (13NOV89) (Japan)	alias
+dblewing.zip	Double Wings	Double Wings (set 1)	—	Double Wings (set 1)	alias
+dbreed.zip	Dragon Breed	Dragon Breed (M81 hardware)	World	Dragon Breed (M81 hardware) (World)	alias
+dbz.zip	DragonBall Z	Dragon Ball Z (rev B)	—	Dragon Ball Z (rev B)	alias
+dbz2.zip	Dragonball Z 2 - Super Battle	Dragon Ball Z 2 - Super Battle	—	Dragon Ball Z 2 - Super Battle	alias
+dbzvrvs.zip	Dragon Ball Z V.r.v.s.	Dragon Ball Z: V.R. V.S. (Rev A)	Japan	Dragon Ball Z: V.R. V.S. (Rev A) (Japan)	alias
+dcclub.zip	Dynamic Country Club	Dynamic Country Club (ROM Based)	World	Dynamic Country Club (ROM Based) (World)	alias
+dcon.zip	D-con	D-Con	—	D-Con	alias
+dday.zip	D-day	D-Day	—	D-Day	alias
+ddayjlc.zip	D-day	D-Day (Jaleco set 1)	—	D-Day (Jaleco set 1)	alias
+ddcrew.zip	D. D. Crew	D. D. Crew (3 Players) (FD1094 317-0190)	World	D. D. Crew (3 Players) (FD1094 317-0190) (World)	alias
+ddcrew2.zip	D. D. Crew	D. D. Crew (2 Players) (FD1094 317-0184)	World	D. D. Crew (2 Players) (FD1094 317-0184) (World)	alias
+dderby.zip	dderby	Death Derby	—	Death Derby	check
+ddonpach.zip	DoDonPachi	DoDonPachi (1997 2/ 5 Master Ver.)	World	DoDonPachi (1997 2/ 5 Master Ver.) (World)	alias
+ddp2.zip	DoDonPachi II - Bee Storm	DoDonPachi II - Bee Storm (ver. 102)	World	DoDonPachi II - Bee Storm (ver. 102) (World)	alias
+ddp3.zip	DoDonPachi DaiOuJou	DoDonPachi III (2002.05.15 Master Ver)	World	DoDonPachi III (2002.05.15 Master Ver) (World)	alias
+ddpdfk.zip	DoDonPachi Resurrection	DoDonPachi Dai-Fukkatsu Ver 1.5 (2008/06/23 MASTER VER 1.5)	—	DoDonPachi Dai-Fukkatsu Ver 1.5 (2008/06/23 MASTER VER 1.5)	alias
+ddpdoj.zip	DoDonPachi DaiOuJou	DoDonPachi Dai-Ou-Jou (2002.04.05.Master Ver, 68k Label V101)	Japan	DoDonPachi Dai-Ou-Jou (2002.04.05.Master Ver, 68k Label V101) (Japan)	alias
+ddragon2.zip	Double Dragon II - The Revenge	Double Dragon II: The Revenge	World	Double Dragon II: The Revenge (World)	alias
+ddragon3.zip	Double Dragon 3 - The Rosetta Stone	Double Dragon 3: The Rosetta Stone	USA	Double Dragon 3: The Rosetta Stone (USA)	alias
+ddragonj.zip	Double Dragon	Double Dragon (Japan set 1)	—	Double Dragon (Japan set 1)	alias
+ddsom.zip	Dungeons & Dragons: Shadow over Mystara	Dungeons & Dragons: Shadow over Mystara (Europe 960619)	—	Dungeons & Dragons: Shadow over Mystara (Europe 960619)	alias
+ddtod.zip	Dungeons & Dragons: Tower of Doom	Dungeons & Dragons: Tower of Doom (Europe 940412)	—	Dungeons & Dragons: Tower of Doom (Europe 940412)	alias
+ddungeon.zip	Dangerous Dungeons	Dangerous Dungeons (set 1)	—	Dangerous Dungeons (set 1)	alias
+ddux.zip	Dynamite Dux	Dynamite Dux (set 3) (FD1094 317-0096)	World	Dynamite Dux (set 3) (FD1094 317-0096) (World)	alias
+deadconx.zip	Dead Connection	Dead Connection	World	Dead Connection (World)	alias
+deathsml.zip	Deathsmiles	Deathsmiles (2007/10/09 MASTER VER)	—	Deathsmiles (2007/10/09 MASTER VER)	alias
+decomult.zip	ZZZ(notgame):Deco Cassette System Multigame	DECO Cassette System ROM Multigame (David Widel)	—	DECO Cassette System ROM Multigame (David Widel)	alias
+deerhunt.zip	Deer Hunting Usa V4.3	Deer Hunting USA V4.3	—	Deer Hunting USA V4.3	alias
+deluxe5.zip	Deluxe 5	Deluxe 5 (ver. 0107, 07/01/2000, set 1)	—	Deluxe 5 (ver. 0107, 07/01/2000, set 1)	alias
+demonwld.zip	Demon's World	Demon's World / Horror Story (set 1)	World	Demon's World / Horror Story (set 1) (World)	alias
+denjinmk.zip	Denjin Makai	Denjin Makai (set 1)	—	Denjin Makai (set 1)	alias
+deroon.zip	Deroon Derodero	Deroon DeroDero (earlier, set 1)	—	Deroon DeroDero (earlier, set 1)	alias
+desertbr.zip	Desert Breaker	Desert Breaker (FD1094 317-0196)	World	Desert Breaker (FD1094 317-0196) (World)	alias
+desertwr.zip	Desert War	Desert War / Wangan Sensou (ver 1.0)	—	Desert War / Wangan Sensou (ver 1.0)	alias
+devilfsh.zip	Devil Fish	Devil Fish (Mars hardware)	—	Devil Fish (Mars hardware)	alias
+devstors.zip	Devastators	Devastators (ver. Z)	—	Devastators (ver. Z)	alias
+dfkbl.zip	DoDonPachi Dai-Fukkatsu Black Label	DoDonPachi Dai-Fukkatsu Black Label (2010/1/18 BLACK LABEL)	—	DoDonPachi Dai-Fukkatsu Black Label (2010/1/18 BLACK LABEL)	alias
+dietgoe.zip	Diet Go Go	Diet Go Go (Europe v1.1 1992.09.26, set 2)	—	Diet Go Go (Europe v1.1 1992.09.26, set 2)	alias
+digdug.zip	Dig Dug	Dig Dug (rev 2)	—	Dig Dug (rev 2)	alias
+digdug2.zip	Dig Dug II	Dig Dug II (New Ver.)	—	Dig Dug II (New Ver.)	alias
+diggerma.zip	Digger Man	Digger Man (prototype)	—	Digger Man (prototype)	alias
+dino.zip	Cadillacs and Dinosaurs	Cadillacs and Dinosaurs (World 930201)	—	Cadillacs and Dinosaurs (World 930201)	alias
+dinorex.zip	Dino Rex	Dino Rex	World	Dino Rex (World)	alias
+dirtfoxj.zip	Dirt Fox	Dirt Fox	Japan	Dirt Fox (Japan)	alias
+divebomb.zip	Kyuukoukabakugekitai - Dive Bomber Squad	Kyuukoukabakugekitai - Dive Bomber Squad (prototype)	Japan	Kyuukoukabakugekitai - Dive Bomber Squad (prototype) (Japan)	alias
+djboy.zip	Dj Boy	DJ Boy	World	DJ Boy (World)	alias
+dkong.zip	Donkey Kong	Donkey Kong (US set 1)	—	Donkey Kong (US set 1)	alias
+dkong3.zip	Donkey Kong 3	Donkey Kong 3	USA	Donkey Kong 3 (USA)	alias
+dkongjr.zip	Donkey Kong Junior	Donkey Kong Junior (US set F-2)	—	Donkey Kong Junior (US set F-2)	alias
+dleague.zip	Dynamite League	Dynamite League	USA	Dynamite League (USA)	alias
+dmnfrnt.zip	Demon Front	Demon Front / Moyu Zhanxian (68k label V105, ROM M105XX 08/05/02) (ARM label V105, ROM 08/05/02 S105XX)	—	Demon Front / Moyu Zhanxian (68k label V105, ROM M105XX 08/05/02) (ARM label V105, ROM 08/05/02 S105XX)	alias
+docastle.zip	Mr. Do's Castle	Mr. Do's Castle (set 1)	—	Mr. Do's Castle (set 1)	alias
+dockman.zip	Dock Man	Dock Man (set 1)	—	Dock Man (set 1)	alias
+dogfight.zip	Dog Fight	Dog Fight (Thunderbolt)	—	Dog Fight (Thunderbolt)	alias
+dokaben2.zip	Dokaben 2	Dokaben 2	Japan	Dokaben 2 (Japan)	alias
+domino.zip	Domino Man	Domino Man (set 1)	—	Domino Man (set 1)	alias
+dondokod.zip	Don Doko Don	Don Doko Don (rev 1)	World	Don Doko Don (rev 1) (World)	alias
+donight.zip	Mr. Do!	Mr.Do's Nightmare (hack by Krazy Ivan)	—	Mr.Do's Nightmare (hack by Krazy Ivan)	alias
+donpachi.zip	DonPachi (USA, ver. 1.12, 95/05/2x)	DonPachi (ver. 1.12, 95/05/2x)	USA	DonPachi (ver. 1.12, 95/05/2x) (USA)	alias
+dorunrun.zip	Do! Run Run	Do! Run Run (set 1)	—	Do! Run Run (set 1)	alias
+dotrikun.zip	Dottori Kun	Dottori Kun (new version)	—	Dottori Kun (new version)	alias
+dotron.zip	Discs Of Tron	Discs of Tron (Upright, 10/4/83)	—	Discs of Tron (Upright, 10/4/83)	alias
+doubledr.zip	Double Dragon	Double Dragon (Neo-Geo)	—	Double Dragon (Neo-Geo)	alias
+downtown.zip	Downtown / Mokugeki	DownTown / Mokugeki (set 1)	—	DownTown / Mokugeki (set 1)	alias
+dquizgo.zip	Date Quiz Go Go	Date Quiz Go Go	Korea	Date Quiz Go Go (Korea)	alias
+dragngun.zip	Dragon Gun	Dragon Gun	USA	Dragon Gun (USA)	alias
+dragonsh.zip	Dragon's Heaven	Dragon's Heaven (development board)	—	Dragon's Heaven (development board)	alias
+dreambal.zip	Dream Ball	Dream Ball (Japan V2.4)	—	Dream Ball (Japan V2.4)	alias
+drgnbowl.zip	Dragon Bowl	Dragon Bowl (set 1, encrypted program)	—	Dragon Bowl (set 1, encrypted program)	alias
+drgnmst.zip	Dragon Master	Dragon Master (set 1)	—	Dragon Master (set 1)	alias
+drgnunit.zip	Castle of Dragon	Dragon Unit / Castle of Dragon	—	Dragon Unit / Castle of Dragon	alias
+drgw2.zip	Dragon World II	Dragon World II (ver. 110X, Export)	—	Dragon World II (ver. 110X, Export)	alias
+drgw3.zip	Dragon World 3	Dragon World 3 / Zhongguo Long 3 / Dungfong Zi Zyu 3 / Chuugokuryuu 3 Special (ver. 106)	—	Dragon World 3 / Zhongguo Long 3 / Dungfong Zi Zyu 3 / Chuugokuryuu 3 Special (ver. 106)	alias
+dribling.zip	Dribbling	Dribbling (set 1)	—	Dribbling (set 1)	alias
+drifto94.zip	Drift Out '94 - The Hard Order	Drift Out '94 - The Hard Order	Japan	Drift Out '94 - The Hard Order (Japan)	alias
+driftout.zip	Drift Out	Drift Out	Europe	Drift Out (Europe)	alias
+drivfrcp.zip	Driving Force	Driving Force (Pac-Man conversion)	—	Driving Force (Pac-Man conversion)	alias
+drtoppel.zip	Dr. Toppel's Adventure	Dr. Toppel's Adventure	World	Dr. Toppel's Adventure (World)	alias
+dsaber.zip	Dragon Saber	Dragon Saber (DO2)	World	Dragon Saber (DO2) (World)	alias
+dsmbl.zip	Deathsmiles MegaBlack Label	Deathsmiles MegaBlack Label (2008/10/06 MEGABLACK LABEL VER)	—	Deathsmiles MegaBlack Label (2008/10/06 MEGABLACK LABEL VER)	alias
+dsoccr94.zip	Dream Soccer '94	Dream Soccer '94 (M107 hardware)	World	Dream Soccer '94 (M107 hardware) (World)	alias
+dspirit.zip	Dragon Spirit	Dragon Spirit (new version (DS3))	—	Dragon Spirit (new version (DS3))	alias
+dstlk.zip	Darkstalkers: The Night Warriors	Darkstalkers: The Night Warriors (Europe 940705)	—	Darkstalkers: The Night Warriors (Europe 940705)	alias
+ducki.zip	ZZZ(notgame):Demos	Duck Tales (FMV Demo)	—	Duck Tales (FMV Demo)	check
+dunkshot.zip	Dunk Shot	Dunk Shot (Rev C, FD1089A 317-0022)	—	Dunk Shot (Rev C, FD1089A 317-0022)	alias
+dw2001.zip	Chuugokuryuu 2001 [dragon World 2001]	Chuugokuryuu 2001 [Dragon World 2001] (V100 02/21/01 16:05:16)	Japan	Chuugokuryuu 2001 [Dragon World 2001] (V100 02/21/01 16:05:16) (Japan)	alias
+dwex.zip	Dragon World 3 Ex	Dragon World 3 EX / Zhongguo Long 3 EX / Dungfong Zi Zyu 3 EX / Chuugokuryuu 3 EX (ver. 100)	—	Dragon World 3 EX / Zhongguo Long 3 EX / Dungfong Zi Zyu 3 EX / Chuugokuryuu 3 EX (ver. 100)	alias
+dwi.zip	ZZZ(notgame):Demos	DarkWing Duck (FMV Demo)	—	DarkWing Duck (FMV Demo)	check
+dwpc.zip	Chuugokuryuu Pretty Chance [dragon World Pretty Chance]	Zhongguo Long Pretty Chance [Dragon World Pretty Chance] (V110 03/19/02 11:13:16)	China	Zhongguo Long Pretty Chance [Dragon World Pretty Chance] (V110 03/19/02 11:13:16) (China)	alias
+dynablst.zip	Atomic Punk	Dynablaster / Bomber Man	—	Dynablaster / Bomber Man	check
+dynabomb.zip	Dynamite Bomber	Dynamite Bomber (Rev 1.5)	Korea	Dynamite Bomber (Rev 1.5) (Korea)	alias
+dynduke.zip	Dynamite Duke	Dynamite Duke (03SEP89)	Europe	Dynamite Duke (03SEP89) (Europe)	alias
+dynwar.zip	Dynasty Wars	Dynasty Wars (B-Board 89624B-?)	USA	Dynasty Wars (B-Board 89624B-?) (USA)	alias
+eaglshot.zip	Eagle Shot Golf	Eagle Shot Golf	USA	Eagle Shot Golf (USA)	alias
+earthjkr.zip	U.N. Defense Force: Earth Joker	U.N. Defense Force: Earth Joker (US / Japan, set 1)	—	U.N. Defense Force: Earth Joker (US / Japan, set 1)	alias
+ecofghtr.zip	Eco Fighters	Eco Fighters (World 931203)	—	Eco Fighters (World 931203)	alias
+edf.zip	E.D.F. : Earth Defense Force	E.D.F.: Earth Defense Force (set 1)	—	E.D.F.: Earth Defense Force (set 1)	alias
+edrandy.zip	The Cliffhanger: Edward Randy	The Cliffhanger - Edward Randy (World ver 3)	—	The Cliffhanger - Edward Randy (World ver 3)	alias
+eightman.zip	Eight Man	Eight Man (NGM-025 ~ NGH-025)	—	Eight Man (NGM-025 ~ NGH-025)	alias
+ejanhs.zip	E Jong High School	E Jong High School	Japan	E Jong High School (Japan)	alias
+ejsakura.zip	E-jan Sakurasou	E-Jan Sakurasou (SYS386F V2.0)	Japan	E-Jan Sakurasou (SYS386F V2.0) (Japan)	alias
+elecyoyo.zip	The Electric Yo-Yo	The Electric Yo-Yo (rev 1)	—	The Electric Yo-Yo (rev 1)	alias
+elevator.zip	Elevator Action	Elevator Action (BA3, 4 PCB version, 1.1)	—	Elevator Action (BA3, 4 PCB version, 1.1)	alias
+elim2.zip	Eliminator	Eliminator (2 Players, set 1)	—	Eliminator (2 Players, set 1)	alias
+elvactr.zip	Elevator Action Returns	Elevator Action Returns (Ver 2.2O 1995/02/20)	—	Elevator Action Returns (Ver 2.2O 1995/02/20)	alias
+emeralda.zip	Emeraldia	Emeraldia	World	Emeraldia (World)	alias
+empcity.zip	Empire City: 1931	Empire City: 1931 (bootleg?)	—	Empire City: 1931 (bootleg?)	alias
+enduror.zip	Enduro Racer	Enduro Racer (Rev A, YM2151, FD1089B 317-0013A)	—	Enduro Racer (Rev A, YM2151, FD1089B 317-0013A)	alias
+eprom.zip	Escape From The Planet Of The Robot Monsters	Escape from the Planet of the Robot Monsters (set 1)	—	Escape from the Planet of the Robot Monsters (set 1)	alias
+esckids.zip	Escape Kids	Escape Kids (4 Players)	Asia	Escape Kids (4 Players) (Asia)	alias
+espgal.zip	Espgaluda	Espgaluda (2003/10/15 Master Ver)	—	Espgaluda (2003/10/15 Master Ver)	alias
+espgal2.zip	Espgaluda II	Espgaluda II (2005/11/14.MASTER VER.)	—	Espgaluda II (2005/11/14.MASTER VER.)	alias
+esprade.zip	ESP Ra.De.	ESP Ra.De. - A.D.2018 Tokyo (1998 4/22 International Ver.)	World	ESP Ra.De. - A.D.2018 Tokyo (1998 4/22 International Ver.) (World)	alias
+eswat.zip	E-swat - Cyber Police	Cyber Police ESWAT (set 4) (FD1094 317-0130)	World	Cyber Police ESWAT (set 4) (FD1094 317-0130) (World)	alias
+eto.zip	Kokontouzai Eto Monogatari	Kokontouzai Eto Monogatari	Japan	Kokontouzai Eto Monogatari (Japan)	alias
+euroch92.zip	Euro Champ '92	Euro Champ '92	World	Euro Champ '92 (World)	alias
+excelsr.zip	Excelsior	Excelsior (set 1)	—	Excelsior (set 1)	alias
+exctleag.zip	Excite League	Excite League (FD1094 317-0079)	—	Excite League (FD1094 317-0079)	alias
+explbrkr.zip	Explosive Breaker	Explosive Breaker	World	Explosive Breaker (World)	alias
+exprraid.zip	Express Raider	Express Raider (Rev 4)	World	Express Raider (Rev 4) (World)	alias
+extdwnhl.zip	Extreme Downhill	Extreme Downhill (v1.5)	—	Extreme Downhill (v1.5)	alias
+extrmatn.zip	Extermination	Extermination	World	Extermination (World)	alias
+exzisus.zip	Exzisus (Japan, dedicated)	Exzisus (dedicated)	Japan	Exzisus (dedicated) (Japan)	alias
+eyes.zip	Eyes (US, set 1)	Eyes (set 1)	USA	Eyes (set 1) (USA)	alias
+f1en.zip	F1 Exhaust Note	F1 Exhaust Note (Rev A)	World	F1 Exhaust Note (Rev A) (World)	alias
+f1gp.zip	F-1 Grand Prix	F-1 Grand Prix (set 1)	—	F-1 Grand Prix (set 1)	alias
+f1gpstar.zip	Grand Prix Star	Grand Prix Star (ver 4.0)	—	Grand Prix Star (ver 4.0)	alias
+f1lap.zip	F1 Super Lap	F1 Super Lap	World	F1 Super Lap (World)	alias
+faceoff.zip	Face Off	Face Off (Japan 2 Players)	—	Face Off (Japan 2 Players)	alias
+fantastc.zip	Fantastic	Fantastic (Galaga conversion on Galaxian hardware)	—	Fantastic (Galaga conversion on Galaxian hardware)	alias
+fantasyu.zip	Fantasy	Fantasy	USA	Fantasy (USA)	alias
+fantland.zip	Fantasy Land	Fantasy Land (set 1)	—	Fantasy Land (set 1)	alias
+fantsia2.zip	Fantasia II	Fantasia II (Explicit)	—	Fantasia II (Explicit)	alias
+fantzn2.zip	Fantasy Zone II: The Tears of Opa-Opa	Fantasy Zone II - The Tears of Opa-Opa (MC-8123, 317-0057)	—	Fantasy Zone II - The Tears of Opa-Opa (MC-8123, 317-0057)	alias
+fantzn2x.zip	Fantasy Zone II - The Tears of Opa-Opa (2008)	Fantasy Zone II - The Tears of Opa-Opa (System 16C version)	—	Fantasy Zone II - The Tears of Opa-Opa (System 16C version)	alias
+fantzone.zip	Fantasy Zone	Fantasy Zone (Rev A, unprotected)	—	Fantasy Zone (Rev A, unprotected)	alias
+fatfursp.zip	Fatal Fury Special	Fatal Fury Special / Garou Densetsu Special (NGM-058 ~ NGH-058, set 1)	—	Fatal Fury Special / Garou Densetsu Special (NGM-058 ~ NGH-058, set 1)	alias
+fatfury1.zip	Fatal Fury : King of Fighters	Fatal Fury - King of Fighters / Garou Densetsu - Shukumei no Tatakai (NGM-033 ~ NGH-033)	—	Fatal Fury - King of Fighters / Garou Densetsu - Shukumei no Tatakai (NGM-033 ~ NGH-033)	alias
+fatfury2.zip	Fatal Fury 2	Fatal Fury 2 / Garou Densetsu 2 - Arata-naru Tatakai (NGM-047 ~ NGH-047)	—	Fatal Fury 2 / Garou Densetsu 2 - Arata-naru Tatakai (NGM-047 ~ NGH-047)	alias
+fatfury3.zip	Fatal Fury 3: Road to the Final Victory	Fatal Fury 3 - Road to the Final Victory / Garou Densetsu 3 - Haruka-naru Tatakai (NGM-069 ~ NGH-069)	—	Fatal Fury 3 - Road to the Final Victory / Garou Densetsu 3 - Haruka-naru Tatakai (NGM-069 ~ NGH-069)	alias
+fball.zip	Fire Ball	Fire Ball (FM Work)	—	Fire Ball (FM Work)	alias
+fbfrenzy.zip	Football Frenzy	Football Frenzy (NGM-034 ~ NGH-034)	—	Football Frenzy (NGM-034 ~ NGH-034)	alias
+feversos.zip	Fever SOS	Fever SOS (98/09/25 VER)	World	Fever SOS (98/09/25 VER) (World)	alias
+ffight.zip	Final Fight	Final Fight (set 1)	World	Final Fight (set 1) (World)	alias
+ffightaec2.zip	ffightaec2	Final Fight: Anniversary Edition (CPS2 hardware)	—	Final Fight: Anniversary Edition (CPS2 hardware)	check
+fghtatck.zip	Fighter & Attacker	Fighter & Attacker	USA	Fighter & Attacker (USA)	alias
+fghthist.zip	Fighter's History	Fighter's History (World ver 43-09, DE-0395-1 PCB)	—	Fighter's History (World ver 43-09, DE-0395-1 PCB)	alias
+fhawk.zip	Fighting Hawk	Fighting Hawk	World	Fighting Hawk (World)	alias
+fightfev.zip	Fight Fever	Fight Fever / Wang Jung Wang (set 1)	—	Fight Fever / Wang Jung Wang (set 1)	alias
+finalap3.zip	Final Lap 3	Final Lap 3 (Rev C)	World	Final Lap 3 (Rev C) (World)	alias
+finalb.zip	Final Blow	Final Blow	World	Final Blow (World)	alias
+finalgdr.zip	Final Godori	Final Godori (version 2.20.5915)	Korea	Final Godori (version 2.20.5915) (Korea)	alias
+finalizr.zip	Finalizer - Super Transformation	Finalizer - Super Transformation (set 1)	—	Finalizer - Super Transformation (set 1)	alias
+finallap.zip	Final Lap	Final Lap (Rev E)	—	Final Lap (Rev E)	alias
+finehour.zip	Finest Hour	Finest Hour	Japan	Finest Hour (Japan)	alias
+firebarr.zip	Air Assault	Fire Barrel	Japan	Fire Barrel (Japan)	check
+firebeas.zip	Firebeast	Firebeast (prototype)	—	Firebeast (prototype)	alias
+firetrap.zip	Fire Trap	Fire Trap (rev A)	USA	Fire Trap (rev A) (USA)	alias
+fitegolf.zip	Lee Trevino's Fighting Golf	Lee Trevino's Fighting Golf (World?)	—	Lee Trevino's Fighting Golf (World?)	alias
+flower.zip	Flower (US)	Flower	USA	Flower (USA)	alias
+flyboy.zip	Fly-boy	Fly-Boy	—	Fly-Boy	alias
+flytiger.zip	Flying Tiger	Flying Tiger (set 1)	—	Flying Tiger (set 1)	alias
+fncywld.zip	Fancy World: Earth of Crisis	Fancy World - Earth of Crisis	—	Fancy World - Earth of Crisis	alias
+foodf.zip	Food Fight	Food Fight (rev 3)	—	Food Fight (rev 3)	alias
+footchmp.zip	Football Champ	Football Champ / Euro Football Champ	World	Football Champ / Euro Football Champ (World)	alias
+forgottn.zip	Forgotten Worlds	Forgotten Worlds (newer)	World	Forgotten Worlds (newer) (World)	alias
+formatz.zip	Aeroboto	Formation Z	—	Formation Z	check
+fort2b.zip	Fortress 2 Blue Arcade	Fortress 2 Blue Arcade (ver 1.01 / pcb ver 3.05)	World	Fortress 2 Blue Arcade (ver 1.01 / pcb ver 3.05) (World)	alias
+fourtrax.zip	Four Trax	Four Trax	World	Four Trax (World)	alias
+fpoint.zip	Flash Point	Flash Point (set 2) (FD1094 317-0127A)	Japan	Flash Point (set 2) (FD1094 317-0127A) (Japan)	alias
+freekick.zip	Free Kick	Free Kick (NS6201-A 1987.10)	—	Free Kick (NS6201-A 1987.10)	alias
+friskyt.zip	Frisky Tom	Frisky Tom (set 1)	—	Frisky Tom (set 1)	alias
+froman2b.zip	Idol Mahjong Final Romance 2	Idol Mahjong Final Romance 2 (Neo-Geo, bootleg of CD version)	—	Idol Mahjong Final Romance 2 (Neo-Geo, bootleg of CD version)	alias
+frontlin.zip	Front Line	Front Line (AA1, 4 PCB version)	—	Front Line (AA1, 4 PCB version)	alias
+fround.zip	The Final Round	The Final Round (version M)	—	The Final Round (version M)	alias
+fshark.zip	Sky Shark	Flying Shark	World	Flying Shark (World)	alias
+fspiderb.zip	Frog & Spiders	Frog & Spiders (bootleg?)	—	Frog & Spiders (bootleg?)	alias
+fstarfrc.zip	Final Star Force	Final Star Force	USA	Final Star Force (USA)	alias
+funkyjet.zip	Funky Jet	Funky Jet (rev 1)	World	Funky Jet (rev 1) (World)	alias
+futari15.zip	Mushihime-Sama Futari	Mushihime-Sama Futari Ver 1.5 (2006/12/8.MASTER VER. 1.54.)	—	Mushihime-Sama Futari Ver 1.5 (2006/12/8.MASTER VER. 1.54.)	alias
+futaribl.zip	Mushihime-Sama Futari Black Label	Mushihime-Sama Futari Black Label - Another Ver (2009/11/27 INTERNATIONAL BL)	—	Mushihime-Sama Futari Black Label - Another Ver (2009/11/27 INTERNATIONAL BL)	alias
+futspy.zip	Future Spy	Future Spy (315-5061)	—	Future Spy (315-5061)	alias
+ga2.zip	Golden Axe: The Revenge of Death Adder	Golden Axe: The Revenge of Death Adder (Rev B)	World	Golden Axe: The Revenge of Death Adder (Rev B) (World)	alias
+gaialast.zip	Gaia: The Last Choice of Earth	Gaia - The Last Choice of Earth	—	Gaia - The Last Choice of Earth	alias
+gaiapols.zip	Gaiapolis	Gaiapolis (ver EAF)	—	Gaiapolis (ver EAF)	alias
+gaiden.zip	Ninja Gaiden	Ninja Gaiden	USA	Ninja Gaiden (USA)	alias
+galastrm.zip	Galactic Storm	Galactic Storm	Japan	Galactic Storm (Japan)	alias
+galaxyfg.zip	Galaxy Fight: Universal Warriors	Galaxy Fight - Universal Warriors	—	Galaxy Fight - Universal Warriors	alias
+galivan.zip	Cosmo Police Galivan	Cosmo Police Galivan (12/26/1985)	—	Cosmo Police Galivan (12/26/1985)	alias
+galpani3.zip	Gals Panic 3	Gals Panic 3 (Euro)	—	Gals Panic 3 (Euro)	alias
+galpani4.zip	Gals Panic 4	Gals Panic 4	Europe	Gals Panic 4 (Europe)	alias
+galpanic.zip	Gals Panic	Gals Panic (unprotected, ver. 2.0)	—	Gals Panic (unprotected, ver. 2.0)	alias
+galpanis.zip	Gals Panic S - Extra Edition	Gals Panic S - Extra Edition (revision 1)	Europe	Gals Panic S - Extra Edition (revision 1) (Europe)	alias
+galpans2.zip	Gals Panic S2	Gals Panic S2 (version 3)	Europe	Gals Panic S2 (version 3) (Europe)	alias
+galpans3.zip	Gals Panic S3	Gals Panic S3	Japan	Gals Panic S3 (Japan)	alias
+gametngk.zip	The Game Paradise - Master of Shooting!	The Game Paradise - Master of Shooting! / Game Tengoku - The Game Paradise (ver 1.0)	—	The Game Paradise - Master of Shooting! / Game Tengoku - The Game Paradise (ver 1.0)	alias
+ganbare.zip	Ganbare! Marine Kun	Ganbare! Marine Kun (Japan 2K0411)	—	Ganbare! Marine Kun (Japan 2K0411)	alias
+garogun.zip	Garogun Seroyang	Garogun Seroyang	Korea	Garogun Seroyang (Korea)	alias
+garou.zip	Garou: Mark of the Wolves	Garou - Mark of the Wolves (NGM-2530)	—	Garou - Mark of the Wolves (NGM-2530)	alias
+garyoret.zip	Garyo Retsuden	Garyo Retsuden	Japan	Garyo Retsuden (Japan)	alias
+gaunt2.zip	Gauntlet 2	Gauntlet II	—	Gauntlet II	alias
+gaunt22p.zip	Gauntlet II	Gauntlet II (2 Players, rev 2)	—	Gauntlet II (2 Players, rev 2)	alias
+gauntlet2p.zip	Gauntlet	Gauntlet (2 Players, rev 6)	—	Gauntlet (2 Players, rev 6)	alias
+gberet.zip	Rush'n Attack	Green Beret	—	Green Beret	check
+gblchmp.zip	Global Champion	Global Champion (Ver 2.1A 1994/07/29)	—	Global Champion (Ver 2.1A 1994/07/29)	alias
+gbusters.zip	Gang Busters	Gang Busters (set 1)	—	Gang Busters (set 1)	alias
+gdfs.zip	Mobile Suit Gundam Final Shooting	Mobile Suit Gundam Final Shooting	Japan	Mobile Suit Gundam Final Shooting (Japan)	alias
+geebee.zip	Gee Bee	Gee Bee	Japan	Gee Bee (Japan)	alias
+geebeeg.zip	Gee Bee	Gee Bee	USA	Gee Bee (USA)	alias
+gekiridn.zip	Gekirindan	Gekirindan (Ver 2.3O 1995/09/21)	—	Gekirindan (Ver 2.3O 1995/09/21)	alias
+gemini.zip	Gemini Wing	Gemini Wing	World	Gemini Wing (World)	alias
+genpeitd.zip	Genpei Toumaden	Genpei ToumaDen	—	Genpei ToumaDen	alias
+gground.zip	Gain Ground	Gain Ground (3 Players, Floppy Based, FD1094 317-0058-03d Rev A)	World	Gain Ground (3 Players, Floppy Based, FD1094 317-0058-03d Rev A) (World)	alias
+ghostb.zip	The Real Ghostbusters	The Real Ghostbusters (US 2 Players, revision 2)	—	The Real Ghostbusters (US 2 Players, revision 2)	alias
+ghostbi.zip	ZZZ(notgame):Demos	Ghost Busters (FMV Demo)	—	Ghost Busters (FMV Demo)	check
+ghouls.zip	Ghouls'n Ghosts	Ghouls'n Ghosts	World	Ghouls'n Ghosts (World)	alias
+gigasm2.zip	Gigas Mark II	Gigas Mark II (MC-8123, 317-5002)	—	Gigas Mark II (MC-8123, 317-5002)	alias
+gigawing.zip	Giga Wing	Giga Wing (USA 990222)	—	Giga Wing (USA 990222)	alias
+gijoe.zip	G.I. Joe	G.I. Joe (EAB)	World	G.I. Joe (EAB) (World)	alias
+ginganin.zip	Ginga Ninkyouden	Ginga Ninkyouden (set 1)	—	Ginga Ninkyouden (set 1)	alias
+gladiatr.zip	Gladiator	Gladiator	USA	Gladiator (USA)	alias
+gloc.zip	G-loc Air Battle	G-LOC Air Battle	World	G-LOC Air Battle (World)	alias
+gmgalax.zip	Ghostmuncher Galaxian	Ghostmuncher Galaxian (bootleg)	—	Ghostmuncher Galaxian (bootleg)	alias
+gogomile.zip	Go Go! Mile Smile	Susume! Mile Smile / Go Go! Mile Smile (newer)	—	Susume! Mile Smile / Go Go! Mile Smile (newer)	alias
+goindol.zip	Goindol (SunA, World)	Goindol (SunA)	World	Goindol (SunA) (World)	alias
+goldmedl.zip	Gold Medalist	Gold Medalist (set 1, Alpha68k II PCB)	—	Gold Medalist (set 1, Alpha68k II PCB)	alias
+goldnaxe.zip	Golden Axe	Golden Axe (set 6) (8751 317-123A)	USA	Golden Axe (set 6) (8751 317-123A) (USA)	alias
+gondo.zip	Gondomania	Gondomania	World	Gondomania (World)	alias
+gowcaizr.zip	Voltage Fighter Gowcaizer	Voltage Fighter - Gowcaizer / Choujin Gakuen Gowcaizer	—	Voltage Fighter - Gowcaizer / Choujin Gakuen Gowcaizer	alias
+gpilots.zip	Ghost Pilots	Ghost Pilots (NGM-020 ~ NGH-020)	—	Ghost Pilots (NGM-020 ~ NGH-020)	alias
+gprider.zip	Gp Rider	GP Rider (FD1094 317-0163) (Twin setup)	World	GP Rider (FD1094 317-0163) (Twin setup) (World)	alias
+gradius3.zip	Gradius III	Gradius III (version R)	World	Gradius III (version R) (World)	alias
+grainbow.zip	SD Gundam Sangokushi Rainbow Tairiku Senki	SD Gundam Sangokushi Rainbow Tairiku Senki	Japan	SD Gundam Sangokushi Rainbow Tairiku Senki (Japan)	alias
+gratia.zip	Gratia - Second Earth	Gratia - Second Earth (ver 1.0, 92047-01 version)	—	Gratia - Second Earth (ver 1.0, 92047-01 version)	alias
+grdian.zip	Guardian	Guardian	USA	Guardian (USA)	alias
+grdians.zip	Guardians: Denjin Makai II	Guardians / Denjin Makai II (P-FG01-1 PCB)	—	Guardians / Denjin Makai II (P-FG01-1 PCB)	alias
+grdnstrm.zip	Guardian Storm	Guardian Storm (horizontal, not encrypted)	—	Guardian Storm (horizontal, not encrypted)	alias
+grndtour.zip	Grand Tour	Grand Tour (V100U)	—	Grand Tour (V100U)	alias
+groundfx.zip	Ground Effects / Super Ground Effects	Ground Effects / Super Ground Effects	Japan	Ground Effects / Super Ground Effects (Japan)	alias
+growl.zip	Growl (World, Rev 1)	Growl (Rev 1)	World	Growl (Rev 1) (World)	alias
+gseeker.zip	Grid Seeker: Project Storm Hammer	Grid Seeker: Project Storm Hammer (Ver 1.3O)	—	Grid Seeker: Project Storm Hammer (Ver 1.3O)	alias
+gslugrsj.zip	Great Sluggers	Great Sluggers	Japan	Great Sluggers (Japan)	alias
+gstrik2.zip	Grand Striker 2	Grand Striker 2 (Europe and Oceania)	—	Grand Striker 2 (Europe and Oceania)	alias
+gt2k.zip	Golden Tee 2k	Golden Tee 2K (v1.00)	—	Golden Tee 2K (v1.00)	alias
+gt3d.zip	Golden Tee 3d Golf	Golden Tee 3D Golf (v1.93N)	—	Golden Tee 3D Golf (v1.93N)	alias
+gt97.zip	Golden Tee '97	Golden Tee '97 (v1.30)	—	Golden Tee '97 (v1.30)	alias
+gt98.zip	Golden Tee '98	Golden Tee '98 (v1.10)	—	Golden Tee '98 (v1.10)	alias
+gt99.zip	Golden Tee '99	Golden Tee '99 (v1.00)	—	Golden Tee '99 (v1.00)	alias
+gtclassc.zip	Golden Tee Classic	Golden Tee Classic (v1.00)	—	Golden Tee Classic (v1.00)	alias
+gtmr.zip	1000 Miglia: Great 1000 Miles Rally	1000 Miglia: Great 1000 Miles Rally (Taiwan 94/07/18)	—	1000 Miglia: Great 1000 Miles Rally (Taiwan 94/07/18)	alias
+gtmr2.zip	Mille Miglia 2: Great 1000 Miles Rally	Mille Miglia 2: Great 1000 Miles Rally (95/05/24)	—	Mille Miglia 2: Great 1000 Miles Rally (95/05/24)	alias
+gulfstrm.zip	Gulf Storm	Gulf Storm (set 1)	—	Gulf Storm (set 1)	alias
+gulfwar2.zip	Gulf War II	Gulf War II (set 1)	—	Gulf War II (set 1)	alias
+gulunpa.zip	Gulun.Pa	Gulun.Pa! (Japan 931220 L) (prototype)	—	Gulun.Pa! (Japan 931220 L) (prototype)	alias
+gunbird2.zip	Gunbird 2	Gunbird 2 (set 1)	—	Gunbird 2 (set 1)	alias
+gunbustr.zip	Gunbuster	Gunbuster	World	Gunbuster (World)	alias
+gundamex.zip	Mobile Suit Gundam: EX Revue	Mobile Suit Gundam EX Revue	—	Mobile Suit Gundam EX Revue	alias
+gunforc2.zip	GunForce II	Gun Force II	USA	Gun Force II (USA)	alias
+gunforce.zip	Gunforce - Battle Fire Engulfed Terror Island	Gunforce - Battle Fire Engulfed Terror Island	World	Gunforce - Battle Fire Engulfed Terror Island (World)	alias
+gunfront.zip	Gun & Frontier	Gun & Frontier	World	Gun & Frontier (World)	alias
+gunsmoke.zip	Gun.Smoke	Gun.Smoke (1985-11-15)	World	Gun.Smoke (1985-11-15) (World)	alias
+gutsn.zip	Guts'n	Guts'n	Japan	Guts'n (Japan)	alias
+guwange.zip	Guwange (Japan, 1999 6/24 Master Ver 16:55)	Guwange (1999 6/24 Master Ver 16:55)	Japan	Guwange (1999 6/24 Master Ver 16:55) (Japan)	alias
+gwar.zip	Guerrilla War	Guerrilla War	USA	Guerrilla War (USA)	alias
+hachoo.zip	Hachoo!	Hachoo! (set 1)	World	Hachoo! (set 1) (World)	alias
+hal21.zip	Hal21	HAL21	—	HAL21	alias
+halleysc.zip	Halley's Comet	Halley's Comet	USA	Halley's Comet (USA)	alias
+hamaway.zip	Hammer Away	Hammer Away (prototype)	Japan	Hammer Away (prototype) (Japan)	alias
+hangon.zip	Hang-on	Hang-On (Rev A)	—	Hang-On (Rev A)	alias
+hangonjr.zip	Hang-on Jr.	Hang-On Jr. (Rev. B)	—	Hang-On Jr. (Rev. B)	alias
+hangzo.zip	Hangzo (Japan, prototype)	Hangzo (prototype)	Japan	Hangzo (prototype) (Japan)	alias
+happy6.zip	Happy 6-in-1	Huanle Liu He Yi (Happy 6-in-1) (M68K ver. V101, ARM ver. V102CN)	—	Huanle Liu He Yi (Happy 6-in-1) (M68K ver. V101, ARM ver. V102CN)	check
+harddunk.zip	Hard Dunk	Hard Dunk	World	Hard Dunk (World)	alias
+hardhea2.zip	Hard Head 2	Hard Head 2 (v2.0, Music Program v2.4)	—	Hard Head 2 (v2.0, Music Program v2.4)	alias
+hardyard.zip	Hard Yardage	Hard Yardage (v1.20)	—	Hard Yardage (v1.20)	alias
+hatris.zip	Hatris (US)	Hatris	USA	Hatris (USA)	alias
+hbarrel.zip	Heavy Barrel	Heavy Barrel	World	Heavy Barrel (World)	alias
+hcastle.zip	Haunted Castle	Haunted Castle (version M)	—	Haunted Castle (version M)	alias
+hcrash.zip	Hyper Crash	Hyper Crash (version D)	—	Hyper Crash (version D)	alias
+headon.zip	Head On	Head On (2 players)	—	Head On (2 players)	alias
+headonch.zip	Monita to Rimoko no Head On Channel	Monita to Rimoko no Head On Channel (prototype, hack)	—	Monita to Rimoko no Head On Channel (prototype, hack)	alias
+heatbrl.zip	Heated Barrel	Heated Barrel (World version 3)	—	Heated Barrel (World version 3)	alias
+heberpop.zip	Hebereke No Popoon	Hebereke no Popoon	Japan	Hebereke no Popoon (Japan)	alias
+hedpanic.zip	Head Panic	Head Panic (ver. 0117, 17/01/2000)	—	Head Panic (ver. 0117, 17/01/2000)	alias
+heuksun.zip	Heuk Sun Baek Sa	Heuk Sun Baek Sa	Korea	Heuk Sun Baek Sa (Korea)	alias
+hgkairak.zip	Taisen Hot Gimmick Kairakuten	Taisen Hot Gimmick Kairakuten	Japan	Taisen Hot Gimmick Kairakuten (Japan)	alias
+hharry.zip	Hammerin' Harry	Hammerin' Harry (M81 hardware)	World	Hammerin' Harry (M81 hardware) (World)	alias
+hidctch2.zip	Hidden Catch 2	Hidden Catch 2 (pcb ver 3.03) (Kor/Eng) (AT89c52 protected)	—	Hidden Catch 2 (pcb ver 3.03) (Kor/Eng) (AT89c52 protected)	alias
+hidctch3.zip	Hidden Catch 3	Hidden Catch 3 (ver 1.00 / pcb ver 3.05)	—	Hidden Catch 3 (ver 1.00 / pcb ver 3.05)	alias
+hidnc2k.zip	Hidden Catch 2000	Hidden Catch 2000 (AT89c52 protected)	—	Hidden Catch 2000 (AT89c52 protected)	alias
+hidnctch.zip	Hidden Catch	Hidden Catch / Tul Lin Gu Lim Chat Ki '98 (pcb ver 3.03)	World	Hidden Catch / Tul Lin Gu Lim Chat Ki '98 (pcb ver 3.03) (World)	alias
+hiimpact.zip	High Impact Football	High Impact Football (rev LA5 02/15/91)	—	High Impact Football (rev LA5 02/15/91)	alias
+himesiki.zip	Himeshikibu	Himeshikibu	Japan	Himeshikibu (Japan)	alias
+hippodrm.zip	Hippodrome	Hippodrome	USA	Hippodrome (USA)	alias
+hitice.zip	Hit The Ice	Hit the Ice	USA	Hit the Ice (USA)	alias
+hitnmiss.zip	Hit 'n Miss	Hit 'n Miss (version 3.0)	—	Hit 'n Miss (version 3.0)	alias
+holeland.zip	Hole Land	Hole Land	Japan	Hole Land (Japan)	alias
+holo.zip	Holosseum	Holosseum (Rev A)	USA	Holosseum (Rev A) (USA)	alias
+honeydol.zip	Honey Dolls	Honey Doll	—	Honey Doll	alias
+hookj.zip	Hook	Hook	Japan	Hook (Japan)	alias
+hoops96.zip	Hoops	Hoops '96 (Europe/Asia 2.0)	—	Hoops '96 (Europe/Asia 2.0)	alias
+horekid.zip	Kid No Hore Hore Daisakusen	Kid no Hore Hore Daisakusen	—	Kid no Hore Hore Daisakusen	alias
+horshoes.zip	American Horseshoes	American Horseshoes	USA	American Horseshoes (USA)	alias
+hotchase.zip	Hot Chase	Hot Chase (set 1)	—	Hot Chase (set 1)	alias
+hotdogst.zip	Hotdog Storm	Hotdog Storm - The First Supersonics	Korea	Hotdog Storm - The First Supersonics (Korea)	alias
+hotgm4ev.zip	Taisen Hot Gimmick 4 Ever	Taisen Hot Gimmick 4 Ever	Japan	Taisen Hot Gimmick 4 Ever (Japan)	alias
+hotgmck.zip	Taisen Hot Gimmick	Taisen Hot Gimmick	Japan	Taisen Hot Gimmick (Japan)	alias
+hotgmck3.zip	Taisen Hot Gimmick 3 Digital Surfing	Taisen Hot Gimmick 3 Digital Surfing	Japan	Taisen Hot Gimmick 3 Digital Surfing (Japan)	alias
+hotgmcki.zip	Mahjong Hot Gimmick Integral	Mahjong Hot Gimmick Integral	Japan	Mahjong Hot Gimmick Integral (Japan)	alias
+hotmind.zip	Hot Mind	Hot Mind (Hard Times hardware, set 1)	—	Hot Mind (Hard Times hardware, set 1)	alias
+hotrod.zip	Hot Rod	Hot Rod (3 Players, Turbo set 1, Floppy Based)	World	Hot Rod (3 Players, Turbo set 1, Floppy Based) (World)	alias
+hrdtimes.zip	Hard Times	Hard Times (set 1)	—	Hard Times (set 1)	alias
+hsf2.zip	Hyper Street Fighter II: The Anniversary Edition	Hyper Street Fighter II: The Anniversary Edition (USA 040202)	—	Hyper Street Fighter II: The Anniversary Edition (USA 040202)	alias
+hvymetal.zip	Heavy Metal	Heavy Metal (315-5135)	—	Heavy Metal (315-5135)	alias
+hvysmsh.zip	Heavy Smash	Heavy Smash (Europe version -2)	—	Heavy Smash (Europe version -2)	alias
+hvyunit.zip	Heavy Unit	Heavy Unit	World	Heavy Unit (World)	alias
+hwchamp.zip	Heavyweight Champ	Heavyweight Champ (set 1)	—	Heavyweight Champ (set 1)	alias
+hypernoid.zip	hypernoid	Hypernoid (HB, ver. 20220224)	—	Hypernoid (HB, ver. 20220224)	alias
+hyprduel.zip	Hyper Duel	Hyper Duel (Japan set 1)	—	Hyper Duel (Japan set 1)	alias
+hypreac2.zip	Mahjong Hyper Reaction 2	Mahjong Hyper Reaction 2	Japan	Mahjong Hyper Reaction 2 (Japan)	alias
+hypreact.zip	Mahjong Hyper Reaction	Mahjong Hyper Reaction	Japan	Mahjong Hyper Reaction (Japan)	alias
+ibarablk.zip	Ibara Kuro Black Label	Ibara Kuro Black Label (2006/02/06. MASTER VER.)	—	Ibara Kuro Black Label (2006/02/06. MASTER VER.)	alias
+ichir.zip	Puzzle & Action: Ichidant-R	Puzzle & Action: Ichidant-R	World	Puzzle & Action: Ichidant-R (World)	alias
+ikari.zip	Ikari Warriors	Ikari Warriors (US JAMMA)	—	Ikari Warriors (US JAMMA)	alias
+ikari3.zip	Ikari III - The Rescue	Ikari III - The Rescue (World version 1, 8-Way Joystick)	—	Ikari III - The Rescue (World version 1, 8-Way Joystick)	alias
+imgfight.zip	Image Fight	Image Fight	World	Image Fight (World)	alias
+imsorry.zip	I'm Sorry	I'm Sorry (315-5110)	USA	I'm Sorry (315-5110) (USA)	alias
+insectx.zip	Insector X	Insector X	World	Insector X (World)	alias
+intcup94.zip	International Cup '94	International Cup '94 (Ver 2.2O 1994/05/26)	—	International Cup '94 (Ver 2.2O 1994/05/26)	alias
+inthunt.zip	In the Hunt	In The Hunt	World	In The Hunt (World)	alias
+inyourfa.zip	In Your Face	In Your Face (North America, prototype)	—	In Your Face (North America, prototype)	alias
+iqblock.zip	Iq-block	IQ-Block (V100U)	—	IQ-Block (V100U)	alias
+ironclad.zip	Choutetsu Brikin'ger - Iron Clad	Choutetsu Brikin'ger / Iron Clad (prototype)	—	Choutetsu Brikin'ger / Iron Clad (prototype)	alias
+ironhors.zip	Iron Horse	Iron Horse (version K)	—	Iron Horse (version K)	alias
+irrmaze.zip	The Irritating Maze	The Irritating Maze / Ultra Denryu Iraira Bou	—	The Irritating Maze / Ultra Denryu Iraira Bou	alias
+itaten.zip	Itazura Tenshi	Itazura Tenshi	Japan	Itazura Tenshi (Japan)	alias
+jack.zip	Jack the Giantkiller	Jack the Giantkiller (set 1)	—	Jack the Giantkiller (set 1)	alias
+jackal.zip	Jackal (World, 8-way Joystick)	Jackal (8-way Joystick)	World	Jackal (8-way Joystick) (World)	alias
+jackrabt.zip	Jack Rabbit	Jack Rabbit (set 1)	—	Jack Rabbit (set 1)	alias
+janjans1.zip	Lovely Pop Mahjong Jangjang Shimasho	Lovely Pop Mahjong JangJang Shimasho	Japan	Lovely Pop Mahjong JangJang Shimasho (Japan)	alias
+janjans2.zip	Lovely Pop Mahjong Jangjang Shimasho 2	Lovely Pop Mahjong JangJang Shimasho 2	Japan	Lovely Pop Mahjong JangJang Shimasho 2 (Japan)	alias
+jchan.zip	Jackie Chan - The Kung-fu Master	Jackie Chan - The Kung-Fu Master (rev 4?)	—	Jackie Chan - The Kung-Fu Master (rev 4?)	alias
+jchan2.zip	Jackie Chan In Fists Of Fire	Jackie Chan in Fists of Fire	—	Jackie Chan in Fists of Fire	alias
+jcross.zip	Jumping Cross	Jumping Cross (set 1)	—	Jumping Cross (set 1)	alias
+jdreddp.zip	Judge Dredd	Judge Dredd (rev TA1 7/12/92, location test)	—	Judge Dredd (rev TA1 7/12/92, location test)	alias
+jitsupro.zip	Jitsuryoku!! Pro Yakyuu	Jitsuryoku!! Pro Yakyuu	Japan	Jitsuryoku!! Pro Yakyuu (Japan)	alias
+jmpbreak.zip	Jumping Break	Jumping Break (set 1)	—	Jumping Break (set 1)	alias
+jockeygp.zip	Jockey Grand Prix	Jockey Grand Prix (set 1)	—	Jockey Grand Prix (set 1)	alias
+joemacr.zip	Joe & Mac Returns	Joe & Mac Returns (Version 1.1, 1994.05.27)	World	Joe & Mac Returns (Version 1.1, 1994.05.27) (World)	alias
+jojo.zip	JoJo's Venture	JoJo's Venture (Europe 990128)	—	JoJo's Venture (Europe 990128)	alias
+jojobar1.zip	JoJo's Bizarre Adventure: Last Survivor	JoJo's Bizarre Adventure (Europe 990927)	—	JoJo's Bizarre Adventure (Europe 990927)	alias
+joyfulr.zip	Joyful Road	Joyful Road	Japan	Joyful Road (Japan)	alias
+joyjoy.zip	Puzzled	Puzzled / Joy Joy Kid (NGM-021 ~ NGH-021)	—	Puzzled / Joy Joy Kid (NGM-021 ~ NGH-021)	alias
+jpark.zip	Jurassic Park	Jurassic Park (Rev A)	World	Jurassic Park (Rev A) (World)	alias
+jpopnics.zip	Jumping Pop	Jumping Pop (Nics, Korean hack of Plump Pop)	—	Jumping Pop (Nics, Korean hack of Plump Pop)	alias
+jrpacman.zip	Jr. Pac-Man	Jr. Pac-Man (11/9/83)	—	Jr. Pac-Man (11/9/83)	alias
+jumpcoas.zip	Jump Coaster	Jump Coaster	World	Jump Coaster (World)	alias
+jumpkun.zip	Jump Kun	Jump Kun (prototype)	—	Jump Kun (prototype)	alias
+jumppop.zip	Jumping Pop	Jumping Pop (set 1)	—	Jumping Pop (set 1)	alias
+junglek.zip	Jungle King	Jungle King	Japan	Jungle King (Japan)	alias
+jyangoku.zip	Jyangokushi: Haoh no Saihai	Jyangokushi: Haoh no Saihai (Japan 990527)	—	Jyangokushi: Haoh no Saihai (Japan 990527)	alias
+kabukikl.zip	Far East of Eden: Kabuki Klash	Far East of Eden - Kabuki Klash / Tengai Makyou - Shin Den	—	Far East of Eden - Kabuki Klash / Tengai Makyou - Shin Den	alias
+kabukiz.zip	Kabuki-Z	Kabuki-Z	World	Kabuki-Z (World)	alias
+kaiserkn.zip	Kaiser Knuckle	Kaiser Knuckle (Ver 2.1O 1994/07/29)	—	Kaiser Knuckle (Ver 2.1O 1994/07/29)	alias
+kamenrid.zip	Masked Riders Club Battle Race	Masked Riders Club Battle Race / Kamen Rider Club Battle Racer	—	Masked Riders Club Battle Race / Kamen Rider Club Battle Racer	alias
+karatblz.zip	Karate Blazers	Karate Blazers (set 1)	World	Karate Blazers (set 1) (World)	alias
+karianx.zip	Karian Cross	Karian Cross (Rev. 1.0)	—	Karian Cross (Rev. 1.0)	alias
+karnov.zip	Karnov (US, rev 6)	Karnov (rev 6)	USA	Karnov (rev 6) (USA)	alias
+karnovr.zip	Fighter's History Dynamite	Karnov's Revenge / Fighter's History Dynamite	—	Karnov's Revenge / Fighter's History Dynamite	alias
+kazan.zip	Ninja Kazan	Ninja Kazan	World	Ninja Kazan (World)	alias
+kbash2.zip	Knuckle Bash 2	Knuckle Bash 2 (bootleg)	—	Knuckle Bash 2 (bootleg)	alias
+kchamp.zip	Karate Champ	Karate Champ	USA	Karate Champ (USA)	alias
+kengo.zip	Lightning Swords	Ken-Go	World	Ken-Go (World)	check
+keroppi.zip	Kero Kero Keroppi's Let's Play Together	Kero Kero Keroppi's Let's Play Together (Version 2.0)	USA	Kero Kero Keroppi's Let's Play Together (Version 2.0) (USA)	alias
+ket.zip	Ketsui: Kizuna Jigoku Tachi	Ketsui: Kizuna Jigoku Tachi (2003/01/01. Master Ver.)	—	Ketsui: Kizuna Jigoku Tachi (2003/01/01. Master Ver.)	alias
+kf2k3pcb.zip	The King of Fighters 2003	The King of Fighters 2003 (JAMMA PCB)	Japan	The King of Fighters 2003 (JAMMA PCB) (Japan)	alias
+kickgoal.zip	Kick Goal	Kick Goal (set 1)	—	Kick Goal (set 1)	alias
+kicknrun.zip	Kick And Run	Kick and Run	World	Kick and Run (World)	alias
+kickoff.zip	Kick Off	Kick Off: Jaleco Cup	Japan	Kick Off: Jaleco Cup (Japan)	alias
+kidniki.zip	Kid Niki - Radical Ninja	Kid Niki - Radical Ninja	World	Kid Niki - Radical Ninja (World)	alias
+kikcubic.zip	Kickle Cubicle / Meikyu Jima	Meikyu Jima	Japan	Meikyu Jima (Japan)	alias
+kikstart.zip	Kick Start - Wheelie King	Kick Start: Wheelie King	—	Kick Start: Wheelie King	alias
+killbld.zip	The Killing Blade	The Killing Blade / Ao Jian Kuang Dao (ver. 109, Chinese Board)	—	The Killing Blade / Ao Jian Kuang Dao (ver. 109, Chinese Board)	alias
+killbldp.zip	The Killing Blade Plus	The Killing Blade Plus / Ao Jian Kuang Dao Jiaqiang Ban (ver. 300)	China	The Killing Blade Plus / Ao Jian Kuang Dao Jiaqiang Ban (ver. 300) (China)	alias
+kingball.zip	King & Balloon	King & Balloon	USA	King & Balloon (USA)	alias
+kingofb.zip	Ring King	King of Boxer	World	King of Boxer (World)	alias
+kizuna.zip	Kizuna Encounter - Super Tag Battle	Kizuna Encounter - Super Tag Battle / Fu'un Super Tag Battle	—	Kizuna Encounter - Super Tag Battle / Fu'un Super Tag Battle	alias
+klondkp.zip	Klondike+	KlonDike+	—	KlonDike+	alias
+knckhead.zip	Knuckle Heads	Knuckle Heads	World	Knuckle Heads (World)	alias
+kncljoe.zip	Knuckle Joe	Knuckle Joe (set 1)	—	Knuckle Joe (set 1)	alias
+kngtmare.zip	Knightmare	Knightmare (prototype)	—	Knightmare (prototype)	alias
+knights.zip	Knights of the Round	Knights of the Round (World 911127)	—	Knights of the Round (World 911127)	alias
+kod.zip	The King of Dragons	The King of Dragons (World 910805)	—	The King of Dragons (World 910805)	alias
+kof2000.zip	The King of Fighters 2000	The King of Fighters 2000 (NGM-2570 ~ NGH-2570)	—	The King of Fighters 2000 (NGM-2570 ~ NGH-2570)	alias
+kof2001.zip	The King of Fighters 2001	The King of Fighters 2001 (NGM-262?)	—	The King of Fighters 2001 (NGM-262?)	alias
+kof2002.zip	The King of Fighters 2002	The King of Fighters 2002 (NGM-2650 ~ NGH-2650)	—	The King of Fighters 2002 (NGM-2650 ~ NGH-2650)	alias
+kof2003.zip	The King of Fighters 2003	The King of Fighters 2003 (NGM-2710, Export)	—	The King of Fighters 2003 (NGM-2710, Export)	alias
+kof94.zip	The King of Fighters '94	The King of Fighters '94 (NGM-055 ~ NGH-055)	—	The King of Fighters '94 (NGM-055 ~ NGH-055)	alias
+kof95.zip	The King of Fighters '95	The King of Fighters '95 (NGM-084)	—	The King of Fighters '95 (NGM-084)	alias
+kof96.zip	The King of Fighters '96	The King of Fighters '96 (NGM-214)	—	The King of Fighters '96 (NGM-214)	alias
+kof97.zip	The King of Fighters '97	The King of Fighters '97 (NGM-2320)	—	The King of Fighters '97 (NGM-2320)	alias
+kof98.zip	The King of Fighters '98 - The Slugfest	The King of Fighters '98 - The Slugfest / King of Fighters '98 - Dream Match Never Ends (NGM-2420)	—	The King of Fighters '98 - The Slugfest / King of Fighters '98 - Dream Match Never Ends (NGM-2420)	alias
+kof99.zip	The King of Fighters '99 : Millennium Battle	The King of Fighters '99 - Millennium Battle (NGM-2510)	—	The King of Fighters '99 - Millennium Battle (NGM-2510)	alias
+koikois2.zip	Koi Koi Shimasho 2 - Super Real Hanafuda	Koi Koi Shimasho 2 - Super Real Hanafuda	Japan	Koi Koi Shimasho 2 - Super Real Hanafuda (Japan)	alias
+kokoroj.zip	Soreike Kokology	Soreike Kokology (Rev A)	—	Soreike Kokology (Rev A)	alias
+konamigt.zip	Konami Gt	Konami GT	—	Konami GT	alias
+konek.zip	Konek-gorbunok	Konek-Gorbunok	—	Konek-Gorbunok	alias
+kontest.zip	ZZZ(notgame):Konami Test Board	Konami Test Board (GX800)	Japan	Konami Test Board (GX800) (Japan)	alias
+korokoro.zip	Koro Koro Quest	Koro Koro Quest	Japan	Koro Koro Quest (Japan)	alias
+koshien.zip	Ah Eikou No Koshien	Ah Eikou no Koshien	Japan	Ah Eikou no Koshien (Japan)	alias
+kot.zip	Kot-rybolov	Kot-Rybolov (Terminal)	—	Kot-Rybolov (Terminal)	alias
+kotm.zip	King of the Monsters	King of the Monsters (set 1)	—	King of the Monsters (set 1)	alias
+kotm2.zip	King of the Monsters 2 - The Next Thing	King of the Monsters 2 - The Next Thing (NGM-039 ~ NGH-039)	—	King of the Monsters 2 - The Next Thing (NGM-039 ~ NGH-039)	alias
+kov.zip	Knights of Valour	Knights of Valour / San Guo Zhan Ji / Sangoku Senki (ver. 117)	Hong Kong	Knights of Valour / San Guo Zhan Ji / Sangoku Senki (ver. 117) (Hong Kong)	alias
+kov2.zip	Knights of Valour 2	Knights of Valour 2 / Sanguo Zhan Ji 2 / Sangoku Senki 2 (ver. 107, 102, 100HK)	—	Knights of Valour 2 / Sanguo Zhan Ji 2 / Sangoku Senki 2 (ver. 107, 102, 100HK)	alias
+kov2p.zip	Knights of Valour 2 Plus - Nine Dragons	Knights of Valour 2 Plus - Nine Dragons / Sanguo Zhan Ji 2 Qunxiong Zhengba / Sanguo Zhan Ji 2 Feilong Zai Tian / Sangoku Senki Busyou Souha (ver. M205XX, 200, 100CN)	—	Knights of Valour 2 Plus - Nine Dragons / Sanguo Zhan Ji 2 Qunxiong Zhengba / Sanguo Zhan Ji 2 Feilong Zai Tian / Sangoku Senki Busyou Souha (ver. M205XX, 200, 100CN)	alias
+kovplus.zip	Knights of Valour Plus	Knights of Valour Plus / San Guo Zhan Ji - Zheng Zong Plus / Sangoku Senki Masamune Plus (ver. 119, set 1)	—	Knights of Valour Plus / San Guo Zhan Ji - Zheng Zong Plus / Sangoku Senki Masamune Plus (ver. 119, set 1)	alias
+kovsh.zip	Knights of Valour Super Heroes	Knights of Valour Super Heroes / San Guo Zhan Ji - Feng Yun Zai Qi / Sangoku Senki Super Heroes (ver. 104, CN)	—	Knights of Valour Super Heroes / San Guo Zhan Ji - Feng Yun Zai Qi / Sangoku Senki Super Heroes (ver. 104, CN)	alias
+kovshp.zip	Knights of Valour Super Heroes Plus	Knights of Valour Super Heroes Plus / San Guo Zhan Ji - Luan Shi Xiao Xiong (ver. 101)	—	Knights of Valour Super Heroes Plus / San Guo Zhan Ji - Luan Shi Xiao Xiong (ver. 101)	alias
+kovytzy.zip	Knights of Valour: Yi Tong Zhong Yuan	Knights of Valour Super Heroes / San Guo Zhan Ji - Yi Tong Zhong Yuan / Sangoku Senki Super Heroes (SANGO EX+) (ver. 201 'Yitong Zhongyuan')	China	Knights of Valour Super Heroes / San Guo Zhan Ji - Yi Tong Zhong Yuan / Sangoku Senki Super Heroes (SANGO EX+) (ver. 201 'Yitong Zhongyuan') (China)	alias
+kozure.zip	Kozure Ookami	Kozure Ookami	Japan	Kozure Ookami (Japan)	alias
+ktiger2.zip	Twin Cobra II	Kyukyoku Tiger II (Ver 2.1J 1995/11/30)	—	Kyukyoku Tiger II (Ver 2.1J 1995/11/30)	check
+kungfum.zip	Kung-fu Master	Kung-Fu Master	World	Kung-Fu Master (World)	alias
+kungfut.zip	Kung-fu Taikun	Kung-Fu Taikun (set 1)	—	Kung-Fu Taikun (set 1)	alias
+kurikint.zip	Kuri Kinton	Kuri Kinton	World	Kuri Kinton (World)	alias
+kyukaidk.zip	Kyuukai Douchuuki	Kyuukai Douchuuki (new version (Rev B))	Japan	Kyuukai Douchuuki (new version (Rev B)) (Japan)	alias
+kyustrkr.zip	Last Striker 	Last Striker / Kyuukyoku no Striker	—	Last Striker / Kyuukyoku no Striker	alias
+ladymstr.zip	Lady Master of Kung Fu	Lady Master of Kung Fu (rev 1)	—	Lady Master of Kung Fu (rev 1)	alias
+landbrk.zip	Land Breaker	Land Breaker / Miss Tang Ja Ru Gi (pcb ver 3.02)	World	Land Breaker / Miss Tang Ja Ru Gi (pcb ver 3.02) (World)	alias
+landmakr.zip	Land Maker	Land Maker (Ver 2.02O 1998/06/02)	—	Land Maker (Ver 2.02O 1998/06/02)	alias
+lastblad.zip	The Last Blade	The Last Blade / Bakumatsu Roman - Gekka no Kenshi (NGM-2340)	—	The Last Blade / Bakumatsu Roman - Gekka no Kenshi (NGM-2340)	alias
+lastbld2.zip	The Last Blade 2	The Last Blade 2 / Bakumatsu Roman - Dai Ni Maku Gekka no Kenshi (NGM-2430 ~ NGH-2430)	—	The Last Blade 2 / Bakumatsu Roman - Dai Ni Maku Gekka no Kenshi (NGM-2430 ~ NGH-2430)	alias
+lastday.zip	The Last Day	The Last Day (set 1)	—	The Last Day (set 1)	alias
+lastduel.zip	Last Duel	Last Duel (US New Ver.)	—	Last Duel (US New Ver.)	alias
+lastfort.zip	Last Fortress - Toride	Last Fortress - Toride (VG420 PCB)	Japan	Last Fortress - Toride (VG420 PCB) (Japan)	alias
+lasthope.zip	Last Hope	Last Hope (bootleg AES to MVS conversion, no coin support)	—	Last Hope (bootleg AES to MVS conversion, no coin support)	alias
+lastkm.zip	Last Km	Last KM (ver 1.0.0275, checksum 13bff751, prototype)	—	Last KM (ver 1.0.0275, checksum 13bff751, prototype)	alias
+lastmisn.zip	Last Mission	Last Mission (World revision 8)	—	Last Mission (World revision 8)	alias
+lastsurv.zip	Last Survivor	Last Survivor (FD1094 317-0083)	Japan	Last Survivor (FD1094 317-0083) (Japan)	alias
+lazybug.zip	lazybug	Lazy Bug	—	Lazy Bug	alias
+lbowling.zip	League Bowling	League Bowling (NGM-019 ~ NGH-019)	—	League Bowling (NGM-019 ~ NGH-019)	alias
+ldrun.zip	Lode Runner	Lode Runner (set 1)	—	Lode Runner (set 1)	alias
+ldrun4.zip	Lode Runner IV - Teikoku Karano Dasshutsu	Lode Runner IV - Teikoku Karano Dasshutsu	Japan	Lode Runner IV - Teikoku Karano Dasshutsu (Japan)	alias
+leds2011.zip	Led Storm Rally 2011	Led Storm Rally 2011	World	Led Storm Rally 2011 (World)	alias
+legendoh.zip	Legend Of Heroes	Legend of Heroes	—	Legend of Heroes	alias
+legendos.zip	Legend of Success Joe	Legend of Success Joe / Ashita no Joe Densetsu	—	Legend of Success Joe / Ashita no Joe Densetsu	alias
+legion.zip	Legion: Spinner-87	Legion - Spinner-87 (World ver 2.03)	—	Legion - Spinner-87 (World ver 2.03)	alias
+legionna.zip	Legionnaire	Legionnaire	World	Legionnaire (World)	alias
+lethalen.zip	Lethal Enforcers	Lethal Enforcers (ver UAE, 11/19/92 15:04)	—	Lethal Enforcers (ver UAE, 11/19/92 15:04)	alias
+lethalth.zip	Lethal Thunder	Lethal Thunder	World	Lethal Thunder (World)	alias
+lghost.zip	Laser Ghost	Laser Ghost (FD1094 317-0166)	World	Laser Ghost (FD1094 317-0166) (World)	alias
+lgtnfght.zip	Lightning Fighters	Lightning Fighters	World	Lightning Fighters (World)	alias
+lhcdb.zip	Last Hope	Last Hope CD Beta (Neo CD conversion)	—	Last Hope CD Beta (Neo CD conversion)	alias
+lightbr.zip	Light Bringer	Light Bringer (Ver 2.2O 1994/04/08)	—	Light Bringer (Ver 2.2O 1994/04/08)	alias
+liquidk.zip	Liquid Kids	Liquid Kids	World	Liquid Kids (World)	alias
+lkage.zip	The Legend of Kage	The Legend of Kage (rev 2)	—	The Legend of Kage (rev 2)	alias
+llander.zip	Lunar Lander	Lunar Lander (rev 2)	—	Lunar Lander (rev 2)	alias
+lnc.zip	Lock 'n' Chase	Lock'n'Chase	—	Lock'n'Chase	alias
+lockon.zip	Lock-on	Lock-On (rev. E)	—	Lock-On (rev. E)	alias
+lockonph.zip	Lock On	Lock On (Philko)	—	Lock On (Philko)	alias
+locomotn.zip	Loco-motion	Loco-Motion	—	Loco-Motion	alias
+loderndf.zip	Lode Runner: The Dig Fight	Lode Runner - The Dig Fight (ver. B)	—	Lode Runner - The Dig Fight (ver. B)	alias
+loffire.zip	Line Of Fire / Bakudan Yarou	Line of Fire / Bakudan Yarou (FD1094 317-0136)	World	Line of Fire / Bakudan Yarou (FD1094 317-0136) (World)	alias
+logicpr2.zip	Logic Pro 2	Logic Pro 2	Japan	Logic Pro 2 (Japan)	alias
+loht.zip	Legend of Hero Tonma	Legend of Hero Tonma	World	Legend of Hero Tonma (World)	alias
+lomakai.zip	Legend of Makai	Legend of Makai	World	Legend of Makai (World)	alias
+looptris.zip	Looptris	Looptris (HB, v. 20211226)	—	Looptris (HB, v. 20211226)	alias
+losttomb.zip	Lost Tomb	Lost Tomb (easy)	—	Lost Tomb (easy)	alias
+lsasquad.zip	Land Sea Air Squad	Land Sea Air Squad / Riku Kai Kuu Saizensen	—	Land Sea Air Squad / Riku Kai Kuu Saizensen	alias
+ltorb.zip	Jonas Indiana and the Lost Temple of RA	Jonas Indiana and the Lost Temple of RA (HB, ver. 20050717)	—	Jonas Indiana and the Lost Temple of RA (HB, ver. 20050717)	alias
+ltswords.zip	Lightning Swords	Lightning Swords	World	Lightning Swords (World)	alias
+lvgirl94.zip	Las Vegas Girl	Las Vegas Girl (Girl '94)	—	Las Vegas Girl (Girl '94)	alias
+lwings.zip	Legendary Wings	Legendary Wings (rev. C)	USA	Legendary Wings (rev. C) (USA)	alias
+m660.zip	Mission 660	Mission 660	USA	Mission 660 (USA)	alias
+machbrkr.zip	Mach Breakers	Mach Breakers (MB2)	World	Mach Breakers (MB2) (World)	alias
+macross2.zip	Super Spacefortress Macross II	Super Spacefortress Macross II / Chou-Jikuu Yousai Macross II	—	Super Spacefortress Macross II / Chou-Jikuu Yousai Macross II	alias
+maddonna.zip	Mad Donna	Mad Donna (Tuning, set 1)	—	Mad Donna (Tuning, set 1)	alias
+madgear.zip	Led Storm	Mad Gear	USA	Mad Gear (USA)	check
+madmotor.zip	Mad Motor	Mad Motor (prototype, set 1)	—	Mad Motor (prototype, set 1)	alias
+magerror.zip	Magical Error Wo Sagase	Magical Error wo Sagase	—	Magical Error wo Sagase	alias
+magicbal.zip	Magicball Fighting	Magicball Fighting	Korea	Magicball Fighting (Korea)	alias
+maglord.zip	Magician Lord	Magician Lord (NGM-005)	—	Magician Lord (NGM-005)	alias
+magmax.zip	Mag Max	Mag Max (set 1)	—	Mag Max (set 1)	alias
+mahoudai.zip	Sorcer Striker	Mahou Daisakusen	Japan	Mahou Daisakusen (Japan)	check
+mahretsu.zip	Mahjong Kyo Retsuden	Mahjong Kyo Retsuden (NGM-004 ~ NGH-004)	—	Mahjong Kyo Retsuden (NGM-004 ~ NGH-004)	alias
+mainevt.zip	The Main Event	The Main Event (4 Players ver. Y)	—	The Main Event (4 Players ver. Y)	alias
+mainevt2p.zip	The Main Event	The Main Event (2 Players ver. X)	—	The Main Event (2 Players ver. X)	alias
+mainsnk.zip	Main Event	Main Event (1984)	—	Main Event (1984)	alias
+majtitl2.zip	Major Title 2	Major Title 2 (set 1)	World	Major Title 2 (set 1) (World)	alias
+majtitle.zip	Major Title	Major Title	World	Major Title (World)	alias
+maniach.zip	Mania Challenge	Mania Challenge (set 1)	—	Mania Challenge (set 1)	alias
+mappy.zip	Mappy (US)	Mappy	USA	Mappy (USA)	alias
+marblmd2.zip	Marble Man: Marble Madness II	Marble Madness II (prototype)	—	Marble Madness II (prototype)	alias
+mariner.zip	800 Fathoms	Mariner	—	Mariner	check
+mariog.zip	Mario Bros. (US, Revision G)	Mario Bros. (Revision G)	USA	Mario Bros. (Revision G) (USA)	alias
+martmast.zip	Martial Masters	Martial Masters / Xing Yi Quan (ver. 104, 102, 102US)	—	Martial Masters / Xing Yi Quan (ver. 104, 102, 102US)	alias
+marukin.zip	Super Marukin-ban	Super Marukin-Ban (Japan 911128)	—	Super Marukin-Ban (Japan 911128)	alias
+marvland.zip	Marvel Land	Marvel Land	Japan	Marvel Land (Japan)	alias
+mastboyo.zip	Master Boy	Master Boy (1987, Z80 hardware, Covielsa, set 1)	—	Master Boy (1987, Z80 hardware, Covielsa, set 1)	alias
+masterw.zip	Master of Weapon	Master of Weapon	World	Master of Weapon (World)	alias
+matrim.zip	Matrimelee	Matrimelee / Shin Gouketsuji Ichizoku Toukon (NGM-2660 ~ NGH-2660)	—	Matrimelee / Shin Gouketsuji Ichizoku Toukon (NGM-2660 ~ NGH-2660)	alias
+maxrpm.zip	Max Rpm	Max RPM (ver 2)	—	Max RPM (ver 2)	alias
+mazeinv.zip	Maze Invaders	Maze Invaders (prototype)	—	Maze Invaders (prototype)	alias
+mazinger.zip	Mazinger Z	Mazinger Z	World	Mazinger Z (World)	alias
+mbombrd.zip	Muscle Bomber Duo : Ultimate Team Battle	Muscle Bomber Duo: Ultimate Team Battle (World 931206)	—	Muscle Bomber Duo: Ultimate Team Battle (World 931206)	alias
+mchampdx.zip	Multi Champ Deluxe	Multi Champ Deluxe (ver. 0106, 06/01/2000)	—	Multi Champ Deluxe (ver. 0106, 06/01/2000)	alias
+mechatt.zip	Mechanized Attack	Mechanized Attack	World	Mechanized Attack (World)	alias
+megablst.zip	Mega Blast	Mega Blast	World	Mega Blast (World)	alias
+megaman.zip	Mega Man: The Power Battle	Mega Man: The Power Battle (CPS1, USA 951006)	—	Mega Man: The Power Battle (CPS1, USA 951006)	alias
+megaman2.zip	Mega Man 2: The Power Fighters	Mega Man 2: The Power Fighters (USA 960708)	—	Mega Man 2: The Power Fighters (USA 960708)	alias
+megazone.zip	Mega Zone	Mega Zone (version L)	—	Mega Zone (version L)	alias
+meijinsn.zip	Meijinsen	Meijinsen (set 1)	—	Meijinsen (set 1)	alias
+meosism.zip	Meosis Magic	Meosis Magic	Japan	Meosis Magic (Japan)	alias
+merlinmm.zip	Merlin's Money Maze	Merlins Money Maze	—	Merlins Money Maze	alias
+metalb.zip	Metal Black	Metal Black	World	Metal Black (World)	alias
+metamrph.zip	Metamorphic Force	Metamorphic Force (ver EAA)	—	Metamorphic Force (ver EAA)	alias
+metlclsh.zip	Metal Clash	Metal Clash	Japan	Metal Clash (Japan)	alias
+metlfrzr.zip	Metal Freezer	Metal Freezer	Japan	Metal Freezer (Japan)	alias
+metlhawk.zip	Metal Hawk	Metal Hawk (Rev C)	—	Metal Hawk (Rev C)	alias
+metmqstr.zip	Metamoqester	Metamoqester	World	Metamoqester (World)	alias
+metrocrs.zip	Metro-cross	Metro-Cross (set 1)	—	Metro-Cross (set 1)	alias
+mgakuen2.zip	Mahjong Gakuen 2 Gakuen-chou No Fukushuu	Mahjong Gakuen 2 Gakuen-chou no Fukushuu	—	Mahjong Gakuen 2 Gakuen-chou no Fukushuu	alias
+mgcrystl.zip	Magical Crystals	Magical Crystals (92/01/10)	World	Magical Crystals (92/01/10) (World)	alias
+mhavoc.zip	Major Havoc	Major Havoc (rev 3)	—	Major Havoc (rev 3)	alias
+mia.zip	M.I.A.: Missing in Action	M.I.A. - Missing in Action (version T)	—	M.I.A. - Missing in Action (version T)	alias
+midres.zip	Midnight Resistance	Midnight Resistance (set 1)	World	Midnight Resistance (set 1) (World)	alias
+miexchng.zip	Money Puzzle Exchanger	Money Puzzle Exchanger / Money Idol Exchanger	—	Money Puzzle Exchanger / Money Idol Exchanger	alias
+minasan.zip	Minasan no Okagesamadesu! Dai Sugoroku Taikai	Minasan no Okagesamadesu! Dai Sugoroku Taikai (MOM-001 ~ MOH-001)	—	Minasan no Okagesamadesu! Dai Sugoroku Taikai (MOM-001 ~ MOH-001)	alias
+mirage.zip	Mirage Youjuu Mahjongden	Mirage Youjuu Mahjongden	Japan	Mirage Youjuu Mahjongden (Japan)	alias
+mirninja.zip	Mirai Ninja	Mirai Ninja (set 1)	Japan	Mirai Ninja (set 1) (Japan)	alias
+misncrft.zip	Mission Craft	Mission Craft (version 2.7)	—	Mission Craft (version 2.7)	alias
+missile.zip	Missile Command	Missile Command (rev 3, A035467-02/04 PCBs)	—	Missile Command (rev 3, A035467-02/04 PCBs)	alias
+missw02d.zip	Miss World 2002	Miss World 2002 (Daigom license)	—	Miss World 2002 (Daigom license)	alias
+missw96.zip	Miss World '96	Miss World '96 (Nude) (C-3000A PCB, set 1)	—	Miss World '96 (Nude) (C-3000A PCB, set 1)	alias
+mj4simai.zip	Wakakusamonogatari Mahjong Yonshimai	Wakakusamonogatari Mahjong Yonshimai	Japan	Wakakusamonogatari Mahjong Yonshimai (Japan)	alias
+mjgtaste.zip	Mahjong G-taste	Mahjong G-Taste	—	Mahjong G-Taste	alias
+mjkjidai.zip	Mahjong Kyou Jidai	Mahjong Kyou Jidai	Japan	Mahjong Kyou Jidai (Japan)	alias
+mjnquest.zip	Mahjong Quest	Mahjong Quest	Japan	Mahjong Quest (Japan)	alias
+mk.zip	Mortal Kombat	Mortal Kombat (rev 5.0 T-Unit 03/19/93)	—	Mortal Kombat (rev 5.0 T-Unit 03/19/93)	alias
+mk2.zip	Mortal Kombat 2	Mortal Kombat II (rev L3.1)	—	Mortal Kombat II (rev L3.1)	alias
+mk3.zip	Mortal Kombat 3	Mortal Kombat 3 (rev 2.1)	—	Mortal Kombat 3 (rev 2.1)	alias
+mmatrix.zip	Mars Matrix: Hyper Solid Shooting	Mars Matrix: Hyper Solid Shooting (USA 000412)	—	Mars Matrix: Hyper Solid Shooting (USA 000412)	alias
+mmaulers.zip	Monster Maulers	Monster Maulers (ver EAA)	—	Monster Maulers (ver EAA)	alias
+mmaze.zip	Marchen Maze	Marchen Maze	Japan	Marchen Maze (Japan)	alias
+mmpork.zip	Muchi Muchi Pork!	Muchi Muchi Pork! (2007/ 4/17 MASTER VER.)	—	Muchi Muchi Pork! (2007/ 4/17 MASTER VER.)	alias
+mofflott.zip	Maze Of Flott	Maze of Flott	Japan	Maze of Flott (Japan)	alias
+moguchan.zip	Mogu Chan	Mogu Chan (bootleg?)	—	Mogu Chan (bootleg?)	alias
+mogura.zip	Mogura Desse	Mogura Desse	Japan	Mogura Desse (Japan)	alias
+momoko.zip	Momoko 120%	Momoko 120% (Japanese text)	—	Momoko 120% (Japanese text)	alias
+monymony.zip	Money Money	Money Money (set 1)	—	Money Money (set 1)	alias
+moomesa.zip	Wild West C.o.w.-boys Of Moo Mesa	Wild West C.O.W.-Boys of Moo Mesa (ver EAB)	—	Wild West C.O.W.-Boys of Moo Mesa (ver EAB)	alias
+mooncrst.zip	Moon Cresta	Moon Cresta (Nichibutsu)	—	Moon Cresta (Nichibutsu)	alias
+moonwarp.zip	Moon War	Moon War (prototype on Frenzy hardware)	—	Moon War (prototype on Frenzy hardware)	alias
+moshougi.zip	Syougi No Tatsujin - Master of Syougi	Shougi no Tatsujin - Master of Shougi	—	Shougi no Tatsujin - Master of Shougi	alias
+mpang.zip	Mighty! Pang	Mighty! Pang (Europe 001010)	—	Mighty! Pang (Europe 001010)	alias
+mrgoemon.zip	Mr. Goemon	Mr. Goemon	Japan	Mr. Goemon (Japan)	alias
+mrjong.zip	Mr. Jong	Mr. Jong	Japan	Mr. Jong (Japan)	alias
+mrkicker.zip	Mr. Kicker	Mr. Kicker (F-E1-16-010 PCB)	—	Mr. Kicker (F-E1-16-010 PCB)	alias
+mrviking.zip	Mister Viking	Mister Viking (315-5041)	—	Mister Viking (315-5041)	alias
+ms5pcb.zip	Metal Slug 5	Metal Slug 5 (JAMMA PCB)	—	Metal Slug 5 (JAMMA PCB)	alias
+msgogo.zip	Mouse Shooter Gogo	Mouse Shooter GoGo	—	Mouse Shooter GoGo	alias
+msh.zip	Marvel Super Heroes	Marvel Super Heroes (Europe 951024)	—	Marvel Super Heroes (Europe 951024)	alias
+mshuttle.zip	Moon Shuttle	Moon Shuttle (US? set 1)	—	Moon Shuttle (US? set 1)	alias
+mshvsf.zip	Marvel Super Heroes vs. Street Fighter	Marvel Super Heroes Vs. Street Fighter (Europe 970625)	—	Marvel Super Heroes Vs. Street Fighter (Europe 970625)	alias
+mslider.zip	Monster Slider	Monster Slider	Japan	Monster Slider (Japan)	alias
+mslug2.zip	Metal Slug 2 - Super Vehicle-001/II	Metal Slug 2 - Super Vehicle-001/II (NGM-2410 ~ NGH-2410)	—	Metal Slug 2 - Super Vehicle-001/II (NGM-2410 ~ NGH-2410)	alias
+mslug3.zip	Metal Slug 3	Metal Slug 3 (NGM-2560)	—	Metal Slug 3 (NGM-2560)	alias
+mslug3b6.zip	Metal Slug 6	Metal Slug 6 (bootleg of Metal Slug 3)	—	Metal Slug 6 (bootleg of Metal Slug 3)	alias
+mslug3x.zip	Metal Slug 3	Metal Slug 3X (Release)	—	Metal Slug 3X (Release)	alias
+mslug4.zip	Metal Slug 4	Metal Slug 4 (NGM-2630)	—	Metal Slug 4 (NGM-2630)	alias
+mslug5.zip	Metal Slug 5	Metal Slug 5 (NGM-2680)	—	Metal Slug 5 (NGM-2680)	alias
+mslugx.zip	Metal Slug X - Super Vehicle-001	Metal Slug X - Super Vehicle-001 (NGM-2500 ~ NGH-2500)	—	Metal Slug X - Super Vehicle-001 (NGM-2500 ~ NGH-2500)	alias
+mspactwin.zip	Ms Pac Man Twin	Ms Pac Man Twin (Argentina, set 1)	—	Ms Pac Man Twin (Argentina, set 1)	alias
+mstworld.zip	Monsters World	Monsters World (bootleg of Super Pang)	—	Monsters World (bootleg of Super Pang)	alias
+msword.zip	Magic Sword: Heroic Fantasy	Magic Sword: Heroic Fantasy (World 900725)	—	Magic Sword: Heroic Fantasy (World 900725)	alias
+mtlchamp.zip	Martial Champion	Martial Champion (ver EAB)	—	Martial Champion (ver EAB)	alias
+mtwins.zip	Mega Twins	Mega Twins (World 900619)	—	Mega Twins (World 900619)	alias
+multchmp25.zip	Multi Champ (World, ver. 2.5)	Multi Champ (ver. 2.5)	World	Multi Champ (ver. 2.5) (World)	alias
+mushisam.zip	Mushihime-Sama	Mushihime-Sama (2004/10/12.MASTER VER.)	—	Mushihime-Sama (2004/10/12.MASTER VER.)	alias
+mushitam.zip	Puzzle! Mushihime-Tama	Puzzle! Mushihime-Tama (2005/09/09.MASTER VER)	—	Puzzle! Mushihime-Tama (2005/09/09.MASTER VER)	alias
+mustache.zip	Mustache Boy	Mustache Boy	Japan	Mustache Boy (Japan)	alias
+mutantf.zip	Mutant Fighter	Mutant Fighter (World ver EM-5)	—	Mutant Fighter (World ver EM-5)	alias
+mutnat.zip	Mutation Nation	Mutation Nation (NGM-014 ~ NGH-014)	—	Mutation Nation (NGM-014 ~ NGH-014)	alias
+mvp.zip	MVP (set 2, US) (FD1094 317-0143)	MVP (set 2) (FD1094 317-0143)	USA	MVP (set 2) (FD1094 317-0143) (USA)	alias
+mvsc.zip	Marvel vs. Capcom : Clash of Super Heroes	Marvel Vs. Capcom: Clash of Super Heroes (Europe 980123)	—	Marvel Vs. Capcom: Clash of Super Heroes (Europe 980123)	alias
+mwalk.zip	Michael Jackson's Moonwalker	Michael Jackson's Moonwalker (FD1094/8751 317-0159)	World	Michael Jackson's Moonwalker (FD1094/8751 317-0159) (World)	alias
+mwarr.zip	Mighty Warriors	Mighty Warriors (24/1)	—	Mighty Warriors (24/1)	alias
+myhero.zip	My Hero	My Hero (not encrypted)	USA	My Hero (not encrypted) (USA)	alias
+mysticri.zip	Mystic Riders	Mystic Riders	World	Mystic Riders (World)	alias
+mystwarr.zip	Mystic Warriors	Mystic Warriors (ver EAA)	—	Mystic Warriors (ver EAA)	alias
+nam1975.zip	NAM-1975	NAM-1975 (NGM-001 ~ NGH-001)	—	NAM-1975 (NGM-001 ~ NGH-001)	alias
+namenayo.zip	Namennayo	Namennayo	Japan	Namennayo (Japan)	alias
+naname.zip	Naname De Magic!	Naname de Magic!	Japan	Naname de Magic! (Japan)	alias
+nbahangt.zip	Nba Hangtime	NBA Hangtime (ver L1.3 10/10/96)	—	NBA Hangtime (ver L1.3 10/10/96)	alias
+nbajam.zip	Nba Jam	NBA Jam (rev 3.01 4/07/93)	—	NBA Jam (rev 3.01 4/07/93)	alias
+nbajamte.zip	NBA Jam Tournament Edition	NBA Jam Tournament Edition (rev 4.0 3/23/94)	—	NBA Jam Tournament Edition (rev 4.0 3/23/94)	alias
+nbamht.zip	Nba Maximum Hangtime	NBA Maximum Hangtime (ver L1.03 06/09/97)	—	NBA Maximum Hangtime (ver L1.03 06/09/97)	alias
+nbbatman.zip	Ninja Baseball Bat Man	Ninja Baseball Bat Man	World	Ninja Baseball Bat Man (World)	alias
+nblktiger.zip	ZZZ(notgame):Neo Black Tiger	Neo Black Tiger (HB, Demo)	—	Neo Black Tiger (HB, Demo)	alias
+ncombat.zip	Ninja Combat	Ninja Combat (NGM-009)	—	Ninja Combat (NGM-009)	alias
+nebulray.zip	Nebulas Ray	Nebulas Ray (NR2)	World	Nebulas Ray (NR2) (World)	alias
+neo2500.zip	ZZZ(notgame):Demos	Neo 2500 Demo	—	Neo 2500 Demo	check
+neo3ddmo.zip	ZZZ(notgame):Demos	NeoGeo 3D! (HB, Demo)	—	NeoGeo 3D! (HB, Demo)	check
+neobattl.zip	SD Gundam Neo Battling	SD Gundam Neo Battling	Japan	SD Gundam Neo Battling (Japan)	alias
+neocstlv.zip	ZZZ(notgame):Demos	Neo CastleVania (HB, Demo)	—	Neo CastleVania (HB, Demo)	check
+neodemo.zip	ZZZ(notgame):Demos	Chaos Demo (Neo Geo)	—	Chaos Demo (Neo Geo)	check
+neogalag.zip	ZZZ(notgame):Demos	Galaga Demo (HB, set 1)	—	Galaga Demo (HB, set 1)	check
+neonopon.zip	Neo No Panepon	Neo No Panepon (HB, beta)	—	Neo No Panepon (HB, beta)	alias
+neopang.zip	Neo Pong	Neo Pang (HB)	—	Neo Pang (HB)	alias
+neopong.zip	Neo Pong	Neo Pong (HB, v1.1)	—	Neo Pong (HB, v1.1)	alias
+neoprimo.zip	ZZZ(notgame):neoprimo	Primo (HB, Demo)	—	Primo (HB, Demo)	check
+neotet.zip	NeoGeo 2-Player Tetris	NeoGeo 2-Player Tetris (HB)	—	NeoGeo 2-Player Tetris (HB)	alias
+neothndr.zip	Neo Thunder	Neo Thunder (HB)	—	Neo Thunder (HB)	alias
+neotris.zip	NeoTRIS	NeoTRIS (HB, Free Beta 2, ver. 202009)	—	NeoTRIS (HB, Free Beta 2, ver. 202009)	alias
+neoww2.zip	ZZZ(notgame):Neo-geo Bios	WW2 - Arcade Development Project (HB, Demo)	—	WW2 - Arcade Development Project (HB, Demo)	check
+newfant.zip	New Fantasia	New Fantasia (1995 copyright)	—	New Fantasia (1995 copyright)	alias
+newsin7.zip	New Sinbad 7	New Sinbad 7 (set 1)	—	New Sinbad 7 (set 1)	alias
+newxpang.zip	New Cross Pang	New Cross Pang (set 1)	—	New Cross Pang (set 1)	alias
+ngem2k.zip	NGEM2K	NGEM2K (HB, beta 2006-01-18)	—	NGEM2K (HB, beta 2006-01-18)	alias
+ngfrog.zip	Frog Feast	Neo Frog Feast (HB)	—	Neo Frog Feast (HB)	alias
+ngftdemo.zip	ZZZ(notgame):Demos	NGF Transparency (HB, Demo)	—	NGF Transparency (HB, Demo)	check
+ngmontst.zip	ZZZ(notgame):Monitor Test Patterns Tool	Monitor Test Patterns Tool (v1.3)	—	Monitor Test Patterns Tool (v1.3)	alias
+nhidctch.zip	New Hidden Catch	New Hidden Catch / New Tul Lin Gu Lim Chat Ki '98 (pcb ver 3.02)	World	New Hidden Catch / New Tul Lin Gu Lim Chat Ki '98 (pcb ver 3.02) (World)	alias
+nightstr.zip	Night Striker	Night Striker	World	Night Striker (World)	alias
+ninjak.zip	The Ninja Kids	The Ninja Kids	World	The Ninja Kids (World)	alias
+ninjakd2.zip	Ninja-Kid II	Ninja-Kid II / NinjaKun Ashura no Shou (set 1)	—	Ninja-Kid II / NinjaKun Ashura no Shou (set 1)	alias
+ninjakun.zip	Ninja-kun: Adventure of Devil Castle	Ninjakun Majou no Bouken	—	Ninjakun Majou no Bouken	check
+ninjamas.zip	Ninja Master's: Haō Ninpō Chō	Ninja Master's - Haoh-ninpo-cho	—	Ninja Master's - Haoh-ninpo-cho	alias
+ninjaw.zip	The Ninja Warriors	The Ninja Warriors (later version)	World	The Ninja Warriors (later version) (World)	alias
+ninjemak.zip	Ninja Emaki	Ninja Emaki	USA	Ninja Emaki (USA)	alias
+nitrobal.zip	Nitro Ball	Nitro Ball (set 1)	World	Nitro Ball (set 1) (World)	alias
+nmg5.zip	Multi 5 / New Multi Game 5	Multi 5 / New Multi Game 5 (set 1)	—	Multi 5 / New Multi Game 5 (set 1)	alias
+nmouse.zip	Naughty Mouse	Naughty Mouse (set 1)	—	Naughty Mouse (set 1)	alias
+nob.zip	Zippy Bug	Noboranka	Japan	Noboranka (Japan)	check
+nostromo.zip	nostromo	Nostromo	—	Nostromo	alias
+nova2001.zip	Nova 2001	Nova 2001	Japan	Nova 2001 (Japan)	alias
+nslasher.zip	Night Slashers	Night Slashers (Korea Rev 1.3, DE-0397-0 PCB)	—	Night Slashers (Korea Rev 1.3, DE-0397-0 PCB)	alias
+nslasherj.zip	Night Slashers	Night Slashers (Japan Rev 1.2, DE-0397-0 PCB)	—	Night Slashers (Japan Rev 1.2, DE-0397-0 PCB)	alias
+nslashers.zip	Night Slashers	Night Slashers (Over Sea Rev 1.2, DE-0397-0 PCB)	—	Night Slashers (Over Sea Rev 1.2, DE-0397-0 PCB)	alias
+nsmb.zip	Neo Super Mario Bros	Neo Super Mario Bros (HB, Demo v0.01)	—	Neo Super Mario Bros (HB, Demo v0.01)	alias
+nsub.zip	N-sub	N-Sub (upright)	—	N-Sub (upright)	alias
+numanath.zip	Numan Athletics	Numan Athletics	World	Numan Athletics (World)	alias
+nwarr.zip	Night Warriors: Darkstalkers' Revenge	Night Warriors: Darkstalkers' Revenge (Europe 950316)	—	Night Warriors: Darkstalkers' Revenge (Europe 950316)	alias
+nycaptor.zip	N.y. Captor	N.Y. Captor (rev 2)	—	N.Y. Captor (rev 2)	alias
+ohmygod.zip	Oh My God!	Oh My God!	Japan	Oh My God! (Japan)	alias
+oisipuzl.zip	Triple Fun	Oishii Puzzle Ha Irimasenka	—	Oishii Puzzle Ha Irimasenka	check
+olds.zip	Oriental Legend Special / Xi You Shi E Zhuan Super	Oriental Legend Super / Xiyou Shi E Zhuan Super (ver. 101, Korean Board)	—	Oriental Legend Super / Xiyou Shi E Zhuan Super (ver. 101, Korean Board)	alias
+oldsplus.zip	Oriental Legend Special Plus / Xi You Shi E Zhuan	Oriental Legend 2 / Xiyou Shi E Zhuan Qunmo Luanwu (ver. 205) [Oriental Ex]	Korea	Oriental Legend 2 / Xiyou Shi E Zhuan Qunmo Luanwu (ver. 205) [Oriental Ex] (Korea)	alias
+omegaf.zip	Omega Fighter	Omega Fighter (set 1)	—	Omega Fighter (set 1)	alias
+omegrace.zip	Omega Race	Omega Race (set 1)	—	Omega Race (set 1)	alias
+onna34ro.zip	Onna Sanshirou - Typhoon Gal	Onna Sanshirou - Typhoon Gal (rev 1)	—	Onna Sanshirou - Typhoon Gal (rev 1)	alias
+opaopa.zip	Opa Opa	Opa Opa (MC-8123, 317-0042)	—	Opa Opa (MC-8123, 317-0042)	alias
+openice.zip	2 On 2 Open Ice Challenge	NHL Open Ice: 2 on 2 Challenge (rev 1.21)	—	NHL Open Ice: 2 on 2 Challenge (rev 1.21)	alias
+opwolf.zip	Operation Wolf	Operation Wolf (rev 2, set 1)	World	Operation Wolf (rev 2, set 1) (World)	alias
+opwolf3.zip	Operation Wolf 3	Operation Wolf 3	World	Operation Wolf 3 (World)	alias
+orlegend.zip	Oriental Legend / Xi You Shi E Zhuan	Oriental Legend / Xiyou Shi E Zhuan (ver. 126)	—	Oriental Legend / Xiyou Shi E Zhuan (ver. 126)	alias
+orunners.zip	OutRunners	OutRunners	World	OutRunners (World)	alias
+oscar.zip	Psycho-Nics Oscar	Psycho-Nics Oscar (World revision 0)	—	Psycho-Nics Oscar (World revision 0)	alias
+othunder.zip	Operation Thunderbolt	Operation Thunderbolt (rev 1)	World	Operation Thunderbolt (rev 1) (World)	alias
+outfxies.zip	The Outfoxies	The Outfoxies (OU2)	World	The Outfoxies (OU2) (World)	alias
+outrun.zip	Out Run	Out Run (sitdown/upright, Rev B)	—	Out Run (sitdown/upright, Rev B)	alias
+ozmawars.zip	Ozma Wars	Ozma Wars (set 1)	—	Ozma Wars (set 1)	alias
+p47.zip	P47 Thunderbolt	P-47: The Phantom Fighter	World	P-47: The Phantom Fighter (World)	check
+p47aces.zip	P-47 Aces	P-47 Aces (ver 1.1)	—	P-47 Aces (ver 1.1)	alias
+packbangp.zip	Pack'n Bang Bang	Pack'n Bang Bang (prototype)	—	Pack'n Bang Bang (prototype)	alias
+pacland.zip	Pac-Land	Pac-Land	World	Pac-Land (World)	alias
+pacman.zip	Pac-Man	Pac-Man (Midway)	—	Pac-Man (Midway)	alias
+pacplus.zip	Pac-man Plus	Pac-Man Plus	—	Pac-Man Plus	alias
+pairs.zip	Pairs - Featuring The Giffy Girls	Pairs (V1.2, 09/30/94)	—	Pairs (V1.2, 09/30/94)	alias
+pairsred.zip	Pairs Redemption	Pairs Redemption (V1.0, 10/25/94)	—	Pairs Redemption (V1.0, 10/25/94)	alias
+palamed.zip	Palamedes	Palamedes	USA	Palamedes (USA)	alias
+pang.zip	Buster Bros.	Pang	World	Pang (World)	check
+pang3.zip	Pang! 3	Pang! 3 (Europe 950601)	—	Pang! 3 (Europe 950601)	alias
+panicstr.zip	Panic Street	Panic Street	Japan	Panic Street (Japan)	alias
+parodius.zip	Parodius Da!	Parodius Da!: Shinwa kara Owarai e (set 1)	World	Parodius Da!: Shinwa kara Owarai e (set 1) (World)	alias
+passsht.zip	Passing Shot	Passing Shot (2 Players) (FD1094 317-0080)	World	Passing Shot (2 Players) (FD1094 317-0080) (World)	alias
+pastelis.zip	Pastel Island	Pastel Island (prototype)	Japan	Pastel Island (prototype) (Japan)	alias
+pbaction.zip	Pinball Action	Pinball Action (set 1)	—	Pinball Action (set 1)	alias
+pbanchoa.zip	Gyakuten!! Puzzle Bancho	Gyakuten!! Puzzle Bancho (set 2)	Japan	Gyakuten!! Puzzle Bancho (set 2) (Japan)	alias
+pbobbl2n.zip	Bust-A-Move Again	Puzzle Bobble 2 / Bust-A-Move Again (Neo-Geo)	—	Puzzle Bobble 2 / Bust-A-Move Again (Neo-Geo)	alias
+pbobble2.zip	Bust-A-Move Again	Puzzle Bobble 2 (Ver 2.3O 1995/07/31)	—	Puzzle Bobble 2 (Ver 2.3O 1995/07/31)	check
+pbobble3.zip	Puzzle Bobble 3	Puzzle Bobble 3 (Ver 2.1O 1996/09/27)	—	Puzzle Bobble 3 (Ver 2.1O 1996/09/27)	alias
+pbobble4.zip	Puzzle Bobble 4	Puzzle Bobble 4 (Ver 2.04O 1997/12/19)	—	Puzzle Bobble 4 (Ver 2.04O 1997/12/19)	alias
+pbobblen.zip	Bust-a-Move	Puzzle Bobble / Bust-A-Move (Neo-Geo, NGM-083)	—	Puzzle Bobble / Bust-A-Move (Neo-Geo, NGM-083)	alias
+pcktgal.zip	Pocket Gal	Pocket Gal	Japan	Pocket Gal (Japan)	alias
+pclubys.zip	Puzzle Club	Puzzle Club (Yun Sung, set 1)	—	Puzzle Club (Yun Sung, set 1)	alias
+pdrift.zip	Power Drift	Power Drift (Rev A)	World	Power Drift (Rev A) (World)	alias
+peekaboo.zip	Peek-a-boo!	Peek-a-Boo! (ver. 1.1)	Japan	Peek-a-Boo! (ver. 1.1) (Japan)	alias
+penbros.zip	Penguin Brothers	Penguin Brothers	Japan	Penguin Brothers (Japan)	alias
+penfan.zip	Penfan Girls - Step1. Mild Mind	Penfan Girls - Step1. Mild Mind (set 1)	—	Penfan Girls - Step1. Mild Mind (set 1)	alias
+pengadvb.zip	Penguin Adventure	Penguin Adventure (bootleg of MSX version, encrypted)	—	Penguin Adventure (bootleg of MSX version, encrypted)	alias
+pengo.zip	Pengo (World, not encrypted, rev A)	Pengo (not encrypted, rev A)	World	Pengo (not encrypted, rev A) (World)	alias
+perfrman.zip	Performan	Performan	Japan	Performan (Japan)	alias
+pgalvip.zip	Pocket Gals V.i.p	Pocket Gals V.I.P (set 1)	—	Pocket Gals V.I.P (set 1)	alias
+pgemeni.zip	P-gemeni	P-GeMeni (060123)	—	P-GeMeni (060123)	alias
+pgm3in1.zip	Shan Liang San He Yi (Flash 3-in-1)	Shanliang San He Yi (Flash 3-in-1) (V102 08/23/04 13:03:26)	—	Shanliang San He Yi (Flash 3-in-1) (V102 08/23/04 13:03:26)	alias
+pgmdemo.zip	ZZZ(notgame):Chaos Demo	Chaos (PGM Demo)	—	Chaos (PGM Demo)	alias
+pgmfrog.zip	Frog Feast	Frog Feast (PGM)	—	Frog Feast (PGM)	alias
+pgoal.zip	Pleasure Goal	Pleasure Goal / Futsal - 5 on 5 Mini Soccer (NGM-219)	—	Pleasure Goal / Futsal - 5 on 5 Mini Soccer (NGM-219)	alias
+photoy2k.zip	Photo Y2k	Photo Y2K / Chaoji Bi Yi Bi / Dajia Lai Zhao Cha / Real and Fake (ver. 105)	—	Photo Y2K / Chaoji Bi Yi Bi / Dajia Lai Zhao Cha / Real and Fake (ver. 105)	alias
+pigskin.zip	Pigskin 621ad	Pigskin 621AD (rev 1.1K 8/01/90)	—	Pigskin 621AD (rev 1.1K 8/01/90)	alias
+pingpong.zip	Konami's Ping-pong	Konami's Ping-Pong	—	Konami's Ping-Pong	alias
+pinkswts.zip	Pink Sweets: Ibara Sorekara	Pink Sweets: Ibara Sorekara (2006/04/06 MASTER VER....)	—	Pink Sweets: Ibara Sorekara (2006/04/06 MASTER VER....)	alias
+pipedrm.zip	Pipe Dream	Pipe Dream	World	Pipe Dream (World)	alias
+pipibibs.zip	Pipi & Bibi's	Pipi & Bibis / Whoopee!! (Z80 sound cpu, set 1)	—	Pipi & Bibis / Whoopee!! (Z80 sound cpu, set 1)	alias
+pistoldm.zip	Pistol Daimyo no Bōken	Pistol Daimyo no Bouken	Japan	Pistol Daimyo no Bouken (Japan)	alias
+pitapat.zip	Pitapat Puzzle	Pitapat Puzzle (set 1)	—	Pitapat Puzzle (set 1)	alias
+pitfall2.zip	Pitfall II	Pitfall II (315-5093)	—	Pitfall II (315-5093)	alias
+pitfight.zip	Pit Fighter	Pit Fighter (rev 9)	—	Pit Fighter (rev 9)	alias
+pkscram.zip	Pk Scramble	PK Scramble	—	PK Scramble	alias
+pktgaldx.zip	Pocket Gal Deluxe	Pocket Gal Deluxe (Europe v3.00)	—	Pocket Gal Deluxe (Europe v3.00)	alias
+pkunwar.zip	Penguin-kun Wars	Penguin-Kun Wars	USA	Penguin-Kun Wars (USA)	alias
+playball.zip	Playball!	PlayBall! (prototype)	—	PlayBall! (prototype)	alias
+plegends.zip	Power Instinct Legends	Gogetsuji Legends (Ver. 95.06.20)	USA	Gogetsuji Legends (Ver. 95.06.20) (USA)	alias
+plumppop.zip	Plump Pop	Plump Pop	Japan	Plump Pop (Japan)	alias
+pnickj.zip	Pnickies	Pnickies (Japan 940608)	—	Pnickies (Japan 940608)	alias
+pnyaa.zip	Pochi and Nyaa	Pochi and Nyaa (Ver 2.02)	—	Pochi and Nyaa (Ver 2.02)	alias
+poitto.zip	Poitto!	Poitto! (revision D)	—	Poitto! (revision D)	alias
+poknight.zip	Poker Night	Poker Night (HB)	—	Poker Night (HB)	alias
+pokonyan.zip	Pokonyan! Balloon	Pokonyan! Balloon (Japan 940322)	—	Pokonyan! Balloon (Japan 940322)	alias
+popbounc.zip	Pop 'n Bounce	Pop 'n Bounce / Gapporin	—	Pop 'n Bounce / Gapporin	alias
+popflame.zip	Pop Flamer	Pop Flamer (protected)	—	Pop Flamer (protected)	alias
+popnpop.zip	Pop'n Pop	Pop'n Pop (Ver 2.07O 1998/02/09)	—	Pop'n Pop (Ver 2.07O 1998/02/09)	alias
+potopoto.zip	Poto Poto	Poto Poto (Rev A)	Japan	Poto Poto (Rev A) (Japan)	alias
+poundfor.zip	Pound For Pound	Pound for Pound	World	Pound for Pound (World)	alias
+pow.zip	P.O.W.: Prisoners of War	P.O.W. - Prisoners of War (US version 1)	—	P.O.W. - Prisoners of War (US version 1)	alias
+powerins.zip	Power Instinct	Power Instinct	USA	Power Instinct (USA)	alias
+pprobe.zip	Planet Probe	Planet Probe (prototype?)	—	Planet Probe (prototype?)	alias
+prehisle.zip	Prehistoric Isle in 1930	Prehistoric Isle in 1930 (set 1)	World	Prehistoric Isle in 1930 (set 1) (World)	alias
+progolf.zip	18 Holes Pro Golf	18 Holes Pro Golf (set 1)	—	18 Holes Pro Golf (set 1)	alias
+promutrv.zip	Progressive Music Trivia	Progressive Music Trivia (Question set 1)	—	Progressive Music Trivia (Question set 1)	alias
+proneon.zip	Project Neon	Project Neon - Caravan Edition (HB, pre-alpha v0.4.19)	—	Project Neon - Caravan Edition (HB, pre-alpha v0.4.19)	alias
+prtytime.zip	Party Time: Gonta the Diver II	Party Time: Gonta the Diver II / Ganbare! Gonta!! 2 (World Release)	—	Party Time: Gonta the Diver II / Ganbare! Gonta!! 2 (World Release)	alias
+pspikes.zip	Power Spikes	Power Spikes	World	Power Spikes (World)	alias
+pspikes2.zip	Power Spikes II	Power Spikes II (NGM-068)	—	Power Spikes II (NGM-068)	alias
+psychic5.zip	Psychic 5	Psychic 5	World	Psychic 5 (World)	alias
+psychos.zip	Psycho Soldier	Psycho Soldier	USA	Psycho Soldier (USA)	alias
+ptblank.zip	Point Blank	Point Blank (GN2 Rev B, set 1)	World	Point Blank (GN2 Rev B, set 1) (World)	alias
+pubball.zip	Power Up Baseball	Power Up Baseball (prototype)	—	Power Up Baseball (prototype)	alias
+puchicar.zip	Puchi Carat	Puchi Carat (Ver 2.02O 1997/10/29)	—	Puchi Carat (Ver 2.02O 1997/10/29)	alias
+puckman.zip	Puck Man	Puck Man (set 1)	Japan	Puck Man (set 1) (Japan)	alias
+pulirula.zip	Pu·Li·Ru·La	PuLiRuLa (dual PCB)	World	PuLiRuLa (dual PCB) (World)	alias
+punchout.zip	Punch-out!!	Punch-Out!! (Rev B)	—	Punch-Out!! (Rev B)	alias
+punisher.zip	The Punisher	The Punisher (World 930422)	—	The Punisher (World 930422)	alias
+punkshot.zip	Punk Shot	Punk Shot (US 4 Players)	—	Punk Shot (US 4 Players)	alias
+punkshot2.zip	Punk Shot	Punk Shot (US 2 Players)	—	Punk Shot (US 2 Players)	alias
+pururuna.zip	Pururun	Pururun (set 2)	—	Pururun (set 2)	alias
+pushman.zip	Pushman (Korea, set 1)	Pushman (set 1)	Korea	Pushman (set 1) (Korea)	alias
+puyo.zip	Puyo Puyo	Puyo Puyo	World	Puyo Puyo (World)	alias
+puyopuy2.zip	Puyo Puyo 2	Puyo Puyo 2	Japan	Puyo Puyo 2 (Japan)	alias
+puzlstar.zip	Puzzle Star	Puzzle Star / Mohuan Xingzuo (ver. 100MG, 09/30/99 build)	—	Puzzle Star / Mohuan Xingzuo (ver. 100MG, 09/30/99 build)	alias
+puzzli2.zip	Puzzli 2	Puzzli 2 / Pao Pao Yu (ver. 100)	—	Puzzli 2 / Pao Pao Yu (ver. 100)	alias
+puzzloop.zip	Puzz Loop	Puzz Loop (v0.94)	Europe	Puzz Loop (v0.94) (Europe)	alias
+puzzlove.zip	Puzzlove	PuzzLove	—	PuzzLove	alias
+pwrgoal.zip	Taito Power Goal	Taito Power Goal (Ver 2.5O 1994/11/03)	—	Taito Power Goal (Ver 2.5O 1994/11/03)	alias
+pwrinst2.zip	Power Instinct 2	Power Instinct 2 (Ver. 94.04.08, set 1)	USA	Power Instinct 2 (Ver. 94.04.08, set 1) (USA)	alias
+py2k2.zip	Photo Y2k 2	Photo Y2K 2 / Chaoji Bi Yi Bi 2 / Dajia Lai Zhao Cha 2 / Real and Fake 2 Photo Y2K (M101XX 05/25/01 11:02:54)	—	Photo Y2K 2 / Chaoji Bi Yi Bi 2 / Dajia Lai Zhao Cha 2 / Real and Fake 2 Photo Y2K (M101XX 05/25/01 11:02:54)	alias
+pzlbowl.zip	Puzzle De Bowling	Puzzle De Bowling	Japan	Puzzle De Bowling (Japan)	alias
+pzlbreak.zip	Puzzle Break	Puzzle Break (set 1)	—	Puzzle Break (set 1)	alias
+pzloop2.zip	Puzz Loop 2	Puzz Loop 2 (Europe 010302)	—	Puzz Loop 2 (Europe 010302)	alias
+qad.zip	Quiz & Dragons: Capcom Quiz Game	Quiz & Dragons: Capcom Quiz Game (USA 920701)	—	Quiz & Dragons: Capcom Quiz Game (USA 920701)	alias
+qbert.zip	Q*bert	Q*bert (US set 1)	—	Q*bert (US set 1)	alias
+qbertqub.zip	Q-bert's Qubes	Q*bert's Qubes	—	Q*bert's Qubes	alias
+qcrayon2.zip	Crayon Shinchan Orato Asobo	Crayon Shinchan Orato Asobo	Japan	Crayon Shinchan Orato Asobo (Japan)	alias
+quartet2.zip	Quartet	Quartet 2 (8751 317-0010)	—	Quartet 2 (8751 317-0010)	alias
+quizo.zip	Quiz Olympic	Quiz Olympic (set 1)	—	Quiz Olympic (set 1)	alias
+r2dx_v33.zip	Raiden II New / Raiden DX	Raiden II New / Raiden DX (newer V33 PCB) (Raiden DX EEPROM)	—	Raiden II New / Raiden DX (newer V33 PCB) (Raiden DX EEPROM)	alias
+rabiolep.zip	Rabio Lepus	Rabio Lepus	Japan	Rabio Lepus (Japan)	alias
+rachero.zip	Racing Hero	Racing Hero (FD1094 317-0144)	—	Racing Hero (FD1094 317-0144)	alias
+racingb.zip	Racing Beat	Racing Beat	World	Racing Beat (World)	alias
+rackemup.zip	Rack 'em Up	Rack 'em Up (version L)	—	Rack 'em Up (version L)	alias
+radarscp.zip	Radar Scope	Radar Scope (TRS02, rev. D)	—	Radar Scope (TRS02, rev. D)	alias
+radm.zip	Rad Mobile	Rad Mobile	World	Rad Mobile (World)	alias
+radr.zip	Rad Rally	Rad Rally	World	Rad Rally (World)	alias
+radrad.zip	Radical Radial	Radical Radial	USA	Radical Radial (USA)	alias
+raflesia.zip	Rafflesia	Rafflesia (315-5162)	—	Rafflesia (315-5162)	alias
+ragnagrd.zip	Ragnagard	Ragnagard / Shin-Oh-Ken	—	Ragnagard / Shin-Oh-Ken	alias
+raiden2.zip	Raiden II	Raiden II (set 1)	USA	Raiden II (set 1) (USA)	alias
+raidendx.zip	Raiden DX	Raiden DX	UK	Raiden DX (UK)	alias
+raidenj.zip	Raiden	Raiden	Japan	Raiden (Japan)	alias
+raimais.zip	Raimais (World, rev 1)	Raimais (rev 1)	World	Raimais (rev 1) (World)	alias
+rallybik.zip	Rally Bike / Dash Yarou	Rally Bike / Dash Yarou	Europe	Rally Bike / Dash Yarou (Europe)	alias
+rallyx.zip	Rally X	Rally X (32k Ver.?)	—	Rally X (32k Ver.?)	alias
+rambo3.zip	Rambo III	Rambo III	Europe	Rambo III (Europe)	alias
+rampart2p.zip	Rampart	Rampart (Joystick, bigger ROMs)	—	Rampart (Joystick, bigger ROMs)	alias
+rbff1.zip	Real Bout Fatal Fury	Real Bout Fatal Fury / Real Bout Garou Densetsu (NGM-095 ~ NGH-095)	—	Real Bout Fatal Fury / Real Bout Garou Densetsu (NGM-095 ~ NGH-095)	alias
+rbff2.zip	Real Bout Fatal Fury 2 - The Newcomers	Real Bout Fatal Fury 2 - The Newcomers / Real Bout Garou Densetsu 2 - The Newcomers (NGM-2400)	—	Real Bout Fatal Fury 2 - The Newcomers / Real Bout Garou Densetsu 2 - The Newcomers (NGM-2400)	alias
+rbffspec.zip	Real Bout Fatal Fury Special	Real Bout Fatal Fury Special / Real Bout Garou Densetsu Special	—	Real Bout Fatal Fury Special / Real Bout Garou Densetsu Special	alias
+rbisland.zip	Rainbow Islands	Rainbow Islands (rev 1)	—	Rainbow Islands (rev 1)	alias
+rchase.zip	Rail Chase	Rail Chase	World	Rail Chase (World)	alias
+rdft.zip	Raiden Fighters	Raiden Fighters	Germany	Raiden Fighters (Germany)	alias
+rdft2.zip	Raiden Fighters 2 - Operation Hell Dive	Raiden Fighters 2 - Operation Hell Dive	Germany	Raiden Fighters 2 - Operation Hell Dive (Germany)	alias
+recordbr.zip	Recordbreaker	Recordbreaker	World	Recordbreaker (World)	alias
+redbaron.zip	Red Baron	Red Baron (revised hardware)	—	Red Baron (revised hardware)	alias
+redearth.zip	Red Earth	Red Earth (Europe 961121)	—	Red Earth (Europe 961121)	alias
+relief.zip	Relief Pitcher	Relief Pitcher (Rev D, 07 Jun 1992 / 28 May 1992)	—	Relief Pitcher (Rev D, 07 Jun 1992 / 28 May 1992)	alias
+renegade.zip	Renegade (US)	Renegade	USA	Renegade (USA)	alias
+revngr84.zip	Revenger '84	Revenger '84 (newer)	—	Revenger '84 (newer)	alias
+rezono.zip	Rezon	Rezon (earlier)	—	Rezon (earlier)	alias
+rfjet.zip	Raiden Fighters Jet	Raiden Fighters Jet	Germany	Raiden Fighters Jet (Germany)	alias
+ridhero.zip	Riding Hero	Riding Hero (NGM-006 ~ NGH-006)	—	Riding Hero (NGM-006 ~ NGH-006)	alias
+ridingf.zip	Riding Fight	Riding Fight (Ver 1.0O)	—	Riding Fight (Ver 1.0O)	alias
+ridleofp.zip	Riddle Of Pythagoras	Riddle of Pythagoras	Japan	Riddle of Pythagoras (Japan)	alias
+ringdest.zip	Ring of Destruction: Slam Masters II	Ring of Destruction: Slammasters II (Europe 940902)	—	Ring of Destruction: Slammasters II (Europe 940902)	alias
+ringking.zip	Ring King	Ring King (US set 1)	—	Ring King (US set 1)	alias
+ringrage.zip	Ring Rage	Ring Rage (Ver 2.3O 1992/08/09)	—	Ring Rage (Ver 2.3O 1992/08/09)	alias
+riot.zip	Kamniari Kishi Riot	Riot (NMK)	—	Riot (NMK)	alias
+riotcity.zip	Riot City	Riot City	Japan	Riot City (Japan)	alias
+rmpgwt.zip	Rampage: World Tour	Rampage: World Tour (rev 1.3)	—	Rampage: World Tour (rev 1.3)	alias
+roadf.zip	Road Fighter	Road Fighter (set 1)	—	Road Fighter (set 1)	alias
+robocop.zip	Robocop (World, revision 4)	Robocop (revision 4)	World	Robocop (revision 4) (World)	alias
+robocop2.zip	Robocop 2	Robocop 2 (Euro/Asia v0.10)	—	Robocop 2 (Euro/Asia v0.10)	alias
+robocopi.zip	ZZZ(notgame):Demos	Robocop (FMV Demo)	—	Robocop (FMV Demo)	check
+robokid.zip	Atomic Robo-Kid	Atomic Robo-kid (Type-2)	World	Atomic Robo-kid (Type-2) (World)	alias
+robotron.zip	Robotron: 2084	Robotron: 2084 (Solid Blue label)	—	Robotron: 2084 (Solid Blue label)	alias
+rockduck.zip	Rock Duck	Rock Duck (prototype?)	—	Rock Duck (prototype?)	alias
+rockn.zip	Rock'n Tread	Rock'n Tread	Japan	Rock'n Tread (Japan)	alias
+rockn2.zip	Rock'n Tread 2	Rock'n Tread 2	Japan	Rock'n Tread 2 (Japan)	alias
+rockn3.zip	Rock'n 3	Rock'n 3	Japan	Rock'n 3 (Japan)	alias
+rockn4.zip	Rock'n 4	Rock'n 4 (prototype)	Japan	Rock'n 4 (prototype) (Japan)	alias
+rockrage.zip	Rock'n Rage	Rock'n Rage	World	Rock'n Rage (World)	alias
+rocktrv2.zip	Mtv Rock-n-roll Trivia	MTV Rock-N-Roll Trivia (Part 2)	—	MTV Rock-N-Roll Trivia (Part 2)	alias
+rodland.zip	Rod Land	Rod-Land (set 1)	World	Rod-Land (set 1) (World)	alias
+rohga.zip	Rohga Armor Force	Rohga: Armor Force (Asia/Europe v5.0)	—	Rohga: Armor Force (Asia/Europe v5.0)	alias
+rolcrush.zip	Rolling Crush	Rolling Crush (version 1.07.E - 1999/02/11, Trust license)	—	Rolling Crush (version 1.07.E - 1999/02/11, Trust license)	alias
+rollerg.zip	Rollergames	Rollergames	USA	Rollergames (USA)	alias
+rompers.zip	Rompers (Japan, new version (Rev B))	Rompers (new version (Rev B))	Japan	Rompers (new version (Rev B)) (Japan)	alias
+rotd.zip	Rage of the Dragons	Rage of the Dragons (NGM-2640?)	—	Rage of the Dragons (NGM-2640?)	alias
+roughrac.zip	Rough Racer	Rough Racer (Floppy Based, FD1094 317-0058-06b)	Japan	Rough Racer (Floppy Based, FD1094 317-0058-06b) (Japan)	alias
+roundup.zip	Round-up	Round-Up	—	Round-Up	alias
+route16.zip	Route 16	Route 16 (Sun Electronics, set 1)	—	Route 16 (Sun Electronics, set 1)	alias
+rpatrol.zip	River Patrol	River Patrol	Japan	River Patrol (Japan)	alias
+rshark.zip	R-Shark	R-Shark (set 1)	—	R-Shark (set 1)	alias
+rthunder.zip	Rolling Thunder	Rolling Thunder (rev 3)	—	Rolling Thunder (rev 3)	alias
+rtype.zip	R-Type	R-Type	World	R-Type (World)	alias
+rtype2.zip	R-Type II	R-Type II	World	R-Type II (World)	alias
+rtypeleo.zip	R-Type Leo	R-Type Leo	World	R-Type Leo (World)	alias
+rumba.zip	Rumba Lumber	Rumba Lumber (rev 1)	—	Rumba Lumber (rev 1)	alias
+rushatck.zip	Rush'n Attack	Rush'n Attack	USA	Rush'n Attack (USA)	alias
+ryouran.zip	Vs Mahjong Otome Ryouran	VS Mahjong Otome Ryouran (revision 2)	—	VS Mahjong Otome Ryouran (revision 2)	alias
+ryujin.zip	Ryu Jin	Ryu Jin (ET910000B PCB)	Japan	Ryu Jin (ET910000B PCB) (Japan)	alias
+ryukyu.zip	RyuKyu (Rev A, Japan) (FD1094 317-5023A)	RyuKyu (Rev A) (FD1094 317-5023A)	Japan	RyuKyu (Rev A) (FD1094 317-5023A) (Japan)	alias
+s1945.zip	Strikers 1945	Strikers 1945	World	Strikers 1945 (World)	alias
+s1945iii.zip	Strikers 1945 III	Strikers 1945 III / Strikers 1999	World	Strikers 1945 III / Strikers 1999 (World)	alias
+sabotenb.zip	Saboten Bombers	Saboten Bombers (set 1)	—	Saboten Bombers (set 1)	alias
+sadari.zip	Sadari (Japan, NTC license)	Sadari (NTC license)	Japan	Sadari (NTC license) (Japan)	alias
+safarir.zip	Safari Rally	Safari Rally	World	Safari Rally (World)	alias
+sailormn.zip	Pretty Soldier Sailor Moon	Pretty Soldier Sailor Moon (Version 95/03/22B)	Europe	Pretty Soldier Sailor Moon (Version 95/03/22B) (Europe)	alias
+saiyugou.zip	China Gate	Sai Yu Gou Ma Roku	Japan	Sai Yu Gou Ma Roku (Japan)	check
+salamand.zip	Salamander	Salamander (version D)	—	Salamander (version D)	alias
+samsh5fe.zip	Samurai Shodown V Special	Samurai Shodown V Special / Samurai Spirits Zero Special (NGM-272) (NGH-272) (Final Edition, location test version)	—	Samurai Shodown V Special / Samurai Spirits Zero Special (NGM-272) (NGH-272) (Final Edition, location test version)	alias
+samsh5sp.zip	Samurai Shodown V Special	Samurai Shodown V Special / Samurai Spirits Zero Special (NGM-2720)	—	Samurai Shodown V Special / Samurai Spirits Zero Special (NGM-2720)	alias
+samsho.zip	Samurai Shodown	Samurai Shodown / Samurai Spirits (NGM-045)	—	Samurai Shodown / Samurai Spirits (NGM-045)	alias
+samsho2.zip	Samurai Shodown II	Samurai Shodown II / Shin Samurai Spirits - Haohmaru Jigokuhen (NGM-063 ~ NGH-063)	—	Samurai Shodown II / Shin Samurai Spirits - Haohmaru Jigokuhen (NGM-063 ~ NGH-063)	alias
+samsho3.zip	Samurai Shodown III	Samurai Shodown III / Samurai Spirits - Zankurou Musouken (NGM-087)	—	Samurai Shodown III / Samurai Spirits - Zankurou Musouken (NGM-087)	alias
+samsho4.zip	Samurai Shodown IV - Amakusa's Revenge	Samurai Shodown IV - Amakusa's Revenge / Samurai Spirits - Amakusa Kourin (NGM-222 ~ NGH-222)	—	Samurai Shodown IV - Amakusa's Revenge / Samurai Spirits - Amakusa Kourin (NGM-222 ~ NGH-222)	alias
+samsho5.zip	Samurai Shodown V	Samurai Shodown V / Samurai Spirits Zero (NGM-2700, set 1)	—	Samurai Shodown V / Samurai Spirits Zero (NGM-2700, set 1)	alias
+samuraia.zip	Samurai Aces	Samurai Aces	World	Samurai Aces (World)	alias
+santaball.zip	SantaBall - Christmas Tennis Game	SantaBall - Christmas Tennis Game (HB)	—	SantaBall - Christmas Tennis Game (HB)	alias
+sasuke.zip	Sasuke Vs. Commander	Sasuke vs. Commander (set 1)	—	Sasuke vs. Commander (set 1)	alias
+satansat.zip	Satan Of Saturn	Satan of Saturn (set 1)	—	Satan of Saturn (set 1)	alias
+savagere.zip	Savage Reign	Savage Reign / Fu'un Mokushiroku - Kakutou Sousei	—	Savage Reign / Fu'un Mokushiroku - Kakutou Sousei	alias
+sb2003.zip	Super Bubble 2003	Super Bubble 2003 (Ver 1.0)	World	Super Bubble 2003 (Ver 1.0) (World)	alias
+sbagman.zip	Super Bagman	Super Bagman (version 5)	—	Super Bagman (version 5)	alias
+sbasebal.zip	Super Champion Baseball	Super Champion Baseball	USA	Super Champion Baseball (USA)	alias
+sbasketb.zip	Super Basketball	Super Basketball (version I, encrypted)	—	Super Basketball (version I, encrypted)	alias
+sbishi.zip	Super Bishi Bashi Championship	Super Bishi Bashi Champ (ver JAA, 2 Players)	—	Super Bishi Bashi Champ (ver JAA, 2 Players)	alias
+sbomber.zip	Space Bomber	Space Bomber (ver. B)	—	Space Bomber (ver. B)	alias
+sbubsm.zip	Super Bubble Bobble	Super Bubble Bobble (Sun Mixing, Mega Drive clone hardware)	—	Super Bubble Bobble (Sun Mixing, Mega Drive clone hardware)	alias
+scessjoe.zip	Success Joe	Success Joe	World	Success Joe (World)	alias
+scfinals.zip	Super Cup Finals	Super Cup Finals (Ver 2.2O 1994/01/13, single PCB)	—	Super Cup Finals (Ver 2.2O 1994/01/13, single PCB)	alias
+schmeisr.zip	Schmeiser Robo	Schmeiser Robo	Japan	Schmeiser Robo (Japan)	alias
+sci.zip	Special Criminal Investigation	Special Criminal Investigation (World set 1)	—	Special Criminal Investigation (World set 1)	alias
+scontra.zip	Super Contra	Super Contra (set 1)	—	Super Contra (set 1)	alias
+screwloo.zip	Screw Loose	Screw Loose (prototype)	—	Screw Loose (prototype)	alias
+scross.zip	Stadium Cross	Stadium Cross	World	Stadium Cross (World)	alias
+scudhamm.zip	Scud Hammer	Scud Hammer (ver 1.4)	—	Scud Hammer (ver 1.4)	alias
+sderby.zip	Super Derby	Super Derby (Playmark, v.07.03)	—	Super Derby (Playmark, v.07.03)	alias
+sdfight.zip	Sd Fighters	SD Fighters	Korea	SD Fighters (Korea)	alias
+sdi.zip	SDI - Strategic Defense Initiative	SDI - Strategic Defense Initiative (newer, System 16A, FD1089B 317-0027)	Japan	SDI - Strategic Defense Initiative (newer, System 16A, FD1089B 317-0027) (Japan)	alias
+sdodgeb.zip	Super Dodge Ball	Super Dodge Ball / Kunio no Nekketsu Toukyuu Densetsu	—	Super Dodge Ball / Kunio no Nekketsu Toukyuu Densetsu	alias
+searchar.zip	SAR: Search And Rescue	SAR - Search And Rescue	World	SAR - Search And Rescue (World)	alias
+searchey.zip	Search Eye	Search Eye (English / Korean / Japanese / Italian)	—	Search Eye (English / Korean / Japanese / Italian)	alias
+seawolft.zip	Sea Wolf	Sea Wolf (Tecfri)	—	Sea Wolf (Tecfri)	alias
+secretag.zip	Sly Spy	Secret Agent (revision 3)	World	Secret Agent (revision 3) (World)	check
+sectionz.zip	Section Z	Section Z	USA	Section Z (USA)	alias
+seganinj.zip	Sega Ninja	Sega Ninja (315-5102)	—	Sega Ninja (315-5102)	alias
+semibase.zip	Muhanseungbu	MuHanSeungBu (SemiCom Baseball)	Korea	MuHanSeungBu (SemiCom Baseball) (Korea)	alias
+sengekis.zip	Sengeki Striker	Sengeki Striker	Asia	Sengeki Striker (Asia)	alias
+sengoku.zip	Sengoku / Sengoku Denshou	Sengoku / Sengoku Denshou (NGM-017 ~ NGH-017)	—	Sengoku / Sengoku Denshou (NGM-017 ~ NGH-017)	alias
+sengoku2.zip	Sengoku 2	Sengoku 2 / Sengoku Denshou 2	—	Sengoku 2 / Sengoku Denshou 2	alias
+sengoku3.zip	Sengoku 3	Sengoku 3 / Sengoku Densho 2001 (set 1)	—	Sengoku 3 / Sengoku Densho 2001 (set 1)	alias
+senknow.zip	Sen-know	Sen-Know	Japan	Sen-Know (Japan)	alias
+senkyu.zip	Senkyu (Japan, newer)	Senkyu (newer)	Japan	Senkyu (newer) (Japan)	alias
+sf.zip	Street Fighter	Street Fighter (set 1)	USA	Street Fighter (set 1) (USA)	alias
+sf2.zip	Street Fighter II : The World Warrior	Street Fighter II: The World Warrior (World 910522)	—	Street Fighter II: The World Warrior (World 910522)	alias
+sf2ce.zip	Street Fighter II' : Champion Edition	Street Fighter II': Champion Edition (World 920513)	—	Street Fighter II': Champion Edition (World 920513)	alias
+sf2hf.zip	Street Fighter II' : Hyper Fighting	Street Fighter II': Hyper Fighting (World 921209)	—	Street Fighter II': Hyper Fighting (World 921209)	alias
+sfa.zip	Street Fighter Alpha : Warriors' Dreams	Street Fighter Alpha: Warriors' Dreams (Europe 950727)	—	Street Fighter Alpha: Warriors' Dreams (Europe 950727)	alias
+sfa2.zip	Street Fighter Alpha 2	Street Fighter Alpha 2 (Europe 960229)	—	Street Fighter Alpha 2 (Europe 960229)	alias
+sfa3.zip	Street Fighter Alpha 3	Street Fighter Alpha 3 (Europe 980904)	—	Street Fighter Alpha 3 (Europe 980904)	alias
+sfiii.zip	Street Fighter III : New Generation	Street Fighter III: New Generation (Europe 970204)	—	Street Fighter III: New Generation (Europe 970204)	alias
+sfiii2.zip	Street Fighter III 2nd Impact : Giant Attack	Street Fighter III 2nd Impact: Giant Attack (USA 970930)	—	Street Fighter III 2nd Impact: Giant Attack (USA 970930)	alias
+sfiii3.zip	Street Fighter III 3rd Strike : Fight for the Future	Street Fighter III 3rd Strike: Fight for the Future (Europe 990608)	—	Street Fighter III 3rd Strike: Fight for the Future (Europe 990608)	alias
+sftm.zip	Street Fighter: The Movie	Street Fighter: The Movie (v1.12)	—	Street Fighter: The Movie (v1.12)	alias
+sfz2al.zip	Street Fighter Zero 2 Alpha	Street Fighter Zero 2 Alpha (Asia 960826)	—	Street Fighter Zero 2 Alpha (Asia 960826)	alias
+sfzch.zip	Street Fighter Alpha: Warriors' Dreams	Street Fighter Zero (CPS Changer, Japan 951020)	—	Street Fighter Zero (CPS Changer, Japan 951020)	alias
+sgemf.zip	Super Gem Fighter: Mini Mix	Super Gem Fighter: Mini Mix (USA 970904)	—	Super Gem Fighter: Mini Mix (USA 970904)	alias
+sgmast.zip	Super Masters Golf	Super Masters Golf (World?, Floppy Based, FD1094 317-0058-05d?)	—	Super Masters Golf (World?, Floppy Based, FD1094 317-0058-05d?)	alias
+sgunner.zip	Steel Gunner	Steel Gunner (Rev B)	—	Steel Gunner (Rev B)	alias
+sgunner2.zip	Steel Gunner 2	Steel Gunner 2	USA	Steel Gunner 2 (USA)	alias
+shackled.zip	Shackled (US)	Shackled	USA	Shackled (USA)	alias
+shadfrce.zip	Shadow Force	Shadow Force (Version 3)	World	Shadow Force (Version 3) (World)	alias
+shadowld.zip	Shadowland	Shadowland (YD3)	—	Shadowland (YD3)	alias
+shadoww.zip	Ninja Gaiden	Shadow Warriors (set 1)	World	Shadow Warriors (set 1) (World)	check
+shangha3.zip	Shanghai III	Shanghai III	World	Shanghai III (World)	alias
+shangon.zip	Super Hang-on	Super Hang-On (sitdown/upright) (unprotected)	—	Super Hang-On (sitdown/upright) (unprotected)	alias
+sharrier.zip	Space Harrier	Space Harrier (Rev A, 8751 315-5163A)	—	Space Harrier (Rev A, 8751 315-5163A)	alias
+shdancer.zip	Shadow Dancer	Shadow Dancer	World	Shadow Dancer (World)	alias
+shinfz.zip	Shinobi	Shinobi / FZ-2006 (Korean System 16 bootleg) (ISG Selection Master Type 2006)	—	Shinobi / FZ-2006 (Korean System 16 bootleg) (ISG Selection Master Type 2006)	alias
+shippumd.zip	Kingdom Grandprix	Shippu Mahou Daisakusen	Japan	Shippu Mahou Daisakusen (Japan)	check
+shocktr2.zip	Shock Troopers : 2nd Squad	Shock Troopers - 2nd Squad	—	Shock Troopers - 2nd Squad	alias
+shocktro.zip	Shock Troopers	Shock Troopers (set 1)	—	Shock Troopers (set 1)	alias
+shogwarr.zip	Shogun Warriors	Shogun Warriors	World	Shogun Warriors (World)	alias
+shollow.zip	Satan's Hollow	Satan's Hollow (set 1)	—	Satan's Hollow (set 1)	alias
+shootout.zip	Shoot Out	Shoot Out	USA	Shoot Out (USA)	alias
+shoottv.zip	Must Shoot TV	Must Shoot TV (prototype)	—	Must Shoot TV (prototype)	alias
+shtngmst.zip	Shooting Master	Shooting Master (8751 315-5159a)	—	Shooting Master (8751 315-5159a)	alias
+shufshot.zip	Shuffleshot	Shuffleshot (v1.40)	—	Shuffleshot (v1.40)	alias
+sidearms.zip	Side Arms - Hyper Dyne	Side Arms - Hyper Dyne (861129)	World	Side Arms - Hyper Dyne (861129) (World)	alias
+sidepckt.zip	Side Pocket	Side Pocket	World	Side Pocket (World)	alias
+silentd.zip	Silent Dragon	Silent Dragon	World	Silent Dragon (World)	alias
+silkworm.zip	Silk Worm	Silk Worm	World	Silk Worm (World)	alias
+simpsons.zip	The Simpsons	The Simpsons (4 Players World, set 1)	—	The Simpsons (4 Players World, set 1)	alias
+simpsons2p.zip	The Simpsons	The Simpsons (2 Players World, set 1)	—	The Simpsons (2 Players World, set 1)	alias
+sjryuko.zip	Sukeban Jansi Ryuko	Sukeban Jansi Ryuko (set 2, System 16B, FD1089B 317-5021)	—	Sukeban Jansi Ryuko (set 2, System 16B, FD1089B 317-5021)	alias
+skullfng.zip	Skull Fang	Skull Fang (Europe 1.13)	—	Skull Fang (Europe 1.13)	alias
+skullxbo.zip	Skull & Crossbones	Skull & Crossbones (rev 5)	—	Skull & Crossbones (rev 5)	alias
+skyadvnt.zip	Sky Adventure	Sky Adventure	World	Sky Adventure (World)	alias
+skydest.zip	Sky Destroyer	Sky Destroyer	Japan	Sky Destroyer (Japan)	alias
+skykid.zip	Sky Kid	Sky Kid (new version)	—	Sky Kid (new version)	alias
+skykiddx.zip	Sky Kid Deluxe	Sky Kid Deluxe (set 1)	—	Sky Kid Deluxe (set 1)	alias
+skysoldr.zip	Sky Soldiers	Sky Soldiers	USA	Sky Soldiers (USA)	alias
+slammast.zip	Saturday Night Slam Masters	Saturday Night Slam Masters (World 930713)	—	Saturday Night Slam Masters (World 930713)	alias
+slapshot.zip	Slap Shot	Slap Shot (Ver 3.0 O)	—	Slap Shot (Ver 3.0 O)	alias
+slipstrm.zip	Slip Stream	Slip Stream (Brazil 950515)	—	Slip Stream (Brazil 950515)	alias
+smashtv.zip	Smash T.V.	Smash T.V. (rev 8.00)	—	Smash T.V. (rev 8.00)	alias
+smgp.zip	Super Monaco GP	Super Monaco GP (Rev B) (FD1094 317-0126a)	World	Super Monaco GP (Rev B) (FD1094 317-0126a) (World)	alias
+sngkace.zip	Sengoku Ace	Sengoku Ace (set 1)	Japan	Sengoku Ace (set 1) (Japan)	alias
+snowboar.zip	Snow Board Championship	Snow Board Championship (version 2.1)	—	Snow Board Championship (version 2.1)	alias
+snowbro2.zip	Snow Bros. 2 : With New Elves	Snow Bros. 2 - With New Elves / Otenki Paradise (Hanafram)	—	Snow Bros. 2 - With New Elves / Otenki Paradise (Hanafram)	alias
+snowbros.zip	Snow Bros. - Nick & Tom	Snow Bros. - Nick & Tom (set 1)	—	Snow Bros. - Nick & Tom (set 1)	alias
+socbrawl.zip	Soccer Brawl	Soccer Brawl (NGM-031)	—	Soccer Brawl (NGM-031)	alias
+sokoban.zip	Boxy Boy	Sokoban LE	—	Sokoban LE	check
+sokonuke.zip	Sokonuke Taisen Game	Sokonuke Taisen Game	Japan	Sokonuke Taisen Game (Japan)	alias
+solarfox.zip	Solar Fox	Solar Fox (upright)	—	Solar Fox (upright)	alias
+soldivid.zip	Sol Divide: Sword of Darkness	Sol Divide: Sword Of Darkness	—	Sol Divide: Sword Of Darkness	alias
+solfigtr.zip	Solitary Fighter	Solitary Fighter	World	Solitary Fighter (World)	alias
+solomon.zip	Solomon's Key	Solomon's Key	USA	Solomon's Key (USA)	alias
+solrwarr.zip	Soldier of Light	Solar-Warrior	USA	Solar-Warrior (USA)	check
+sonic.zip	Segasonic The Hedgehog	SegaSonic The Hedgehog (rev. C)	Japan	SegaSonic The Hedgehog (rev. C) (Japan)	alias
+sonicbom.zip	Sonic Boom	Sonic Boom (FD1094 317-0053)	—	Sonic Boom (FD1094 317-0053)	alias
+sonicfgt.zip	Sega Sonic Cosmo Fighter	SegaSonic Cosmo Fighter	World	SegaSonic Cosmo Fighter (World)	alias
+sonicwi.zip	Sonic Wings Reunion	Sonic Wings	Japan	Sonic Wings (Japan)	alias
+sonicwi2.zip	Aero Fighters 2	Aero Fighters 2 / Sonic Wings 2	—	Aero Fighters 2 / Sonic Wings 2	alias
+sonicwi3.zip	Aero Fighters 3	Aero Fighters 3 / Sonic Wings 3	—	Aero Fighters 3 / Sonic Wings 3	alias
+sosterm.zip	S.o.s.	S.O.S.	—	S.O.S.	alias
+sotsugyo.zip	Sotsugyo Shousho	Sotsugyo Shousho	Japan	Sotsugyo Shousho (Japan)	alias
+spacduel.zip	Space Duel	Space Duel (version 2)	—	Space Duel (version 2)	alias
+spacedx.zip	Space Invaders DX	Space Invaders DX (v2.1)	USA	Space Invaders DX (v2.1) (USA)	alias
+spacefb.zip	Space Firebird	Space Firebird (rev. 04-u)	—	Space Firebird (rev. 04-u)	alias
+spacegun.zip	Space Gun	Space Gun	World	Space Gun (World)	alias
+spacfury.zip	Space Fury	Space Fury (revision C)	—	Space Fury (revision C)	alias
+spang.zip	Super Pang	Super Pang (World 900914)	—	Super Pang (World 900914)	alias
+sparkman.zip	Spark Man	Spark Man (v2.0, set 1)	—	Spark Man (v2.0, set 1)	alias
+spcinv95.zip	Space Invaders '95: The Attack Of Lunar Loonies	Space Invaders '95: The Attack Of Lunar Loonies (Ver 2.5O 1995/06/14)	—	Space Invaders '95: The Attack Of Lunar Loonies (Ver 2.5O 1995/06/14)	alias
+spcpostn.zip	Space Position	Space Position	Japan	Space Position (Japan)	alias
+spdball.zip	Speed Ball	Speed Ball - Contest at Neonworld (prototype)	—	Speed Ball - Contest at Neonworld (prototype)	alias
+spdcoin.zip	Speed Coin	Speed Coin (prototype)	—	Speed Coin (prototype)	alias
+spdodgeb.zip	Super Dodge Ball	Super Dodge Ball	USA	Super Dodge Ball (USA)	alias
+spec2k.zip	Fire Hawk	Spectrum 2000 (vertical)	Korea	Spectrum 2000 (vertical) (Korea)	check
+speccies.zip	speccies	Speccies 2	—	Speccies 2	alias
+speedbal.zip	Speed Ball	Speed Ball (set 1)	—	Speed Ball (set 1)	alias
+spelunk2.zip	Spelunker II	Spelunker II - 23 no Kagi	Japan	Spelunker II - 23 no Kagi (Japan)	alias
+spf2t.zip	Super Puzzle Fighter II Turbo	Super Puzzle Fighter II Turbo (Europe 960529)	—	Super Puzzle Fighter II Turbo (Europe 960529)	alias
+spidermi.zip	ZZZ(notgame):Demos	Spiderman (FMV Demo)	—	Spiderman (FMV Demo)	check
+spidman.zip	Spider-Man: The Videogame	Spider-Man: The Videogame	World	Spider-Man: The Videogame (World)	alias
+spinlbrk.zip	Spinal Breakers	Spinal Breakers	World	Spinal Breakers (World)	alias
+spinmast.zip	Spin Master	Spin Master / Miracle Adventure	—	Spin Master / Miracle Adventure	alias
+splatter.zip	Splatter House	Splatterhouse (new version (SH3))	World	Splatterhouse (new version (SH3)) (World)	alias
+spnchout.zip	Super Punch-out!!	Super Punch-Out!! (Rev B)	—	Super Punch-Out!! (Rev B)	alias
+spotty.zip	ZZZ(notgame):Spotty	Spotty (Ver. 2.0.2)	—	Spotty (Ver. 2.0.2)	alias
+sprcros2.zip	Super Cross II	Super Cross II (set 1)	Japan	Super Cross II (set 1) (Japan)	alias
+spy.zip	S.P.Y. - Special Project Y	S.P.Y. - Special Project Y (World ver. N)	—	S.P.Y. - Special Project Y (World ver. N)	alias
+spyhunt2.zip	Spy Hunter II	Spy Hunter II (rev 2)	—	Spy Hunter II (rev 2)	alias
+sqbert.zip	Faster, Harder, More Challenging Q*bert	Faster, Harder, More Challenging Q*bert (prototype)	—	Faster, Harder, More Challenging Q*bert (prototype)	alias
+sqij.zip	Sqij Arcade	SQIJ!	—	SQIJ!	alias
+squaitsa.zip	Squash	Squash (Itisa)	—	Squash (Itisa)	alias
+squash.zip	Squash (World, ver. 1.0, checksum 015aef61)	Squash (ver. 1.0, checksum 015aef61)	World	Squash (ver. 1.0, checksum 015aef61) (World)	alias
+sranger.zip	Super Ranger	Super Ranger (v2.0)	—	Super Ranger (v2.0)	alias
+srdarwin.zip	Super Real Darwin	SRD: Super Real Darwin	World	SRD: Super Real Darwin (World)	alias
+srmp4.zip	Super Real Mahjong Piv	Super Real Mahjong PIV	Japan	Super Real Mahjong PIV (Japan)	alias
+srmp7.zip	Super Real Mahjong P7	Super Real Mahjong P7	Japan	Super Real Mahjong P7 (Japan)	alias
+srumbler.zip	The Speed Rumbler	The Speed Rumbler (set 1)	—	The Speed Rumbler (set 1)	alias
+ssf2.zip	Super Street Fighter II: The New Challengers	Super Street Fighter II: The New Challengers (World 931005)	—	Super Street Fighter II: The New Challengers (World 931005)	alias
+ssf2t.zip	Super Street Fighter II Turbo	Super Street Fighter II Turbo (World 940223)	—	Super Street Fighter II Turbo (World 940223)	alias
+sshangha.zip	Super Shanghai Dragon's Eye	Super Shanghai Dragon's Eye	World	Super Shanghai Dragon's Eye (World)	alias
+ssi.zip	Super Space Invaders '91	Super Space Invaders '91 (revised code, Rev 1)	World	Super Space Invaders '91 (revised code, Rev 1) (World)	alias
+ssideki.zip	Super Sidekicks	Super Sidekicks / Tokuten Ou	—	Super Sidekicks / Tokuten Ou	alias
+ssideki2.zip	Super Sidekicks 2 - The World Championship	Super Sidekicks 2 - The World Championship / Tokuten Ou 2 - Real Fight Football (NGM-061 ~ NGH-061)	—	Super Sidekicks 2 - The World Championship / Tokuten Ou 2 - Real Fight Football (NGM-061 ~ NGH-061)	alias
+ssideki3.zip	Super Sidekicks 3 - The Next Glory	Super Sidekicks 3 - The Next Glory / Tokuten Ou 3 - Eikou e no Chousen	—	Super Sidekicks 3 - The Next Glory / Tokuten Ou 3 - Eikou e no Chousen	alias
+ssideki4.zip	The Ultimate 11: SNK Football Championship	The Ultimate 11 - The SNK Football Championship / Tokuten Ou - Honoo no Libero	—	The Ultimate 11 - The SNK Football Championship / Tokuten Ou - Honoo no Libero	alias
+ssoldier.zip	Superior Soldiers	Superior Soldiers	USA	Superior Soldiers (USA)	alias
+ssonicbr.zip	SegaSonic Bros.	SegaSonic Bros. (prototype, hack)	—	SegaSonic Bros. (prototype, hack)	alias
+ssozumo.zip	Syusse Oozumou	Syusse Oozumou	Japan	Syusse Oozumou (Japan)	alias
+sspirits.zip	Scramble Spirits	Scramble Spirits (Floppy Based)	World	Scramble Spirits (Floppy Based) (World)	alias
+ssriders.zip	Sunset Riders	Sunset Riders (4 Players ver EAC)	—	Sunset Riders (4 Players ver EAC)	alias
+ssridersubc.zip	Sunset Riders	Sunset Riders (2 Players ver UBC)	—	Sunset Riders (2 Players ver UBC)	alias
+ssrj.zip	Super Speed Race Junior	Super Speed Race Junior	Japan	Super Speed Race Junior (Japan)	alias
+sstingry.zip	Super Stingray	Super Stingray	Japan	Super Stingray (Japan)	alias
+stadhero.zip	Stadium Hero	Stadium Hero	Japan	Stadium Hero (Japan)	alias
+stadhr96.zip	Stadium Hero '96	Stadium Hero '96 (EAJ, Tuning license)	Europe	Stadium Hero '96 (EAJ, Tuning license) (Europe)	alias
+stagger1.zip	Red Hawk	Stagger I	Japan	Stagger I (Japan)	check
+stakwin.zip	Stakes Winner	Stakes Winner / Stakes Winner - GI Kinzen Seiha e no Michi	—	Stakes Winner / Stakes Winner - GI Kinzen Seiha e no Michi	alias
+starfigh.zip	Star Fighter	Star Fighter (v1)	—	Star Fighter (v1)	alias
+starjack.zip	Star Jacker	Star Jacker (Sega)	—	Star Jacker (Sega)	alias
+starwars.zip	Star Wars	Star Wars (set 1)	—	Star Wars (set 1)	alias
+stdragon.zip	Saint Dragon	Saint Dragon (set 1)	—	Saint Dragon (set 1)	alias
+stkclmns.zip	Stack Columns	Stack Columns	World	Stack Columns (World)	alias
+stmblade.zip	Storm Blade	Storm Blade	USA	Storm Blade (USA)	alias
+stonebal.zip	Stone Ball	Stone Ball (4 Players, v1-20 13/12/1994)	—	Stone Ball (4 Players, v1-20 13/12/1994)	alias
+stratof.zip	Raiga - Strato Fighter	Raiga - Strato Fighter	USA	Raiga - Strato Fighter (USA)	alias
+streakng.zip	Streaking	Streaking (set 1)	—	Streaking (set 1)	alias
+streetsm.zip	Street Smart	Street Smart (US version 2)	—	Street Smart (US version 2)	alias
+strhoop.zip	Street Slam	Street Hoop / Street Slam / Dunk Dream (DEM-004 ~ DEH-004)	—	Street Hoop / Street Slam / Dunk Dream (DEM-004 ~ DEH-004)	alias
+strider.zip	Strider (USA, B-Board 89624B-2)	Strider (B-Board 89624B-2)	USA	Strider (B-Board 89624B-2) (USA)	alias
+strkfgtr.zip	Strike Fighter	Strike Fighter	World	Strike Fighter (World)	alias
+strkforc.zip	Strike Force	Strike Force (rev 1 02/25/91)	—	Strike Force (rev 1 02/25/91)	alias
+sub.zip	Submarine	Submarine (Sigma)	—	Submarine (Sigma)	alias
+subroc3d.zip	Subroc-3d	Subroc-3D	—	Subroc-3D	alias
+sucasino.zip	ZZZ(notgame):Super Casino	Super Casino	—	Super Casino	alias
+suchie2.zip	Idol Janshi Suchie-pai 2	Idol Janshi Suchie-Pai II (ver 1.1)	—	Idol Janshi Suchie-Pai II (ver 1.1)	alias
+sunaq.zip	Suna Quiz 6000 Academy	SunA Quiz 6000 Academy (940620-6)	—	SunA Quiz 6000 Academy (940620-6)	alias
+supbtime.zip	Super Burger Time	Super Burger Time (set 1)	World	Super Burger Time (set 1) (World)	alias
+supduck.zip	Hell Out	Super Duck	—	Super Duck	check
+superbon.zip	Agent Super Bond	Agent Super Bond (Super Cobra conversion, encrypted)	—	Agent Super Bond (Super Cobra conversion, encrypted)	alias
+superchs.zip	Super Chase - Criminal Termination	Super Chase - Criminal Termination	World	Super Chase - Criminal Termination (World)	alias
+superspy.zip	The Super Spy	The Super Spy (NGM-011 ~ NGH-011)	—	The Super Spy (NGM-011 ~ NGH-011)	alias
+superx.zip	Super-x	Super-X (NTC)	—	Super-X (NTC)	alias
+suplup.zip	Super Lup Lup Puzzle	Super Lup Lup Puzzle / Zhuan Zhuan Puzzle (version 4.0 / 990518)	—	Super Lup Lup Puzzle / Zhuan Zhuan Puzzle (version 4.0 / 990518)	alias
+suprleag.zip	Super League	Super League (FD1094 317-0045)	—	Super League (FD1094 317-0045)	alias
+suprloco.zip	Super Locomotive	Super Locomotive (Rev.A)	—	Super Locomotive (Rev.A)	alias
+suratk.zip	Surprise Attack	Surprise Attack (World ver. K)	—	Surprise Attack (World ver. K)	alias
+survarts.zip	Survival Arts	Survival Arts	World	Survival Arts (World)	alias
+suzuk8h2.zip	Suzuka 8 Hours 2	Suzuka 8 Hours 2 (Rev B)	World	Suzuka 8 Hours 2 (Rev B) (World)	alias
+suzuka8h.zip	Suzuka 8 Hours	Suzuka 8 Hours (Rev C)	World	Suzuka 8 Hours (Rev C) (World)	alias
+svc.zip	SVC Chaos - SNK Vs. Capcom	SNK vs. Capcom - SVC Chaos (NGM-2690 ~ NGH-2690)	—	SNK vs. Capcom - SVC Chaos (NGM-2690 ~ NGH-2690)	alias
+svcpcb.zip	SVC Chaos - SNK Vs. Capcom	SNK vs. Capcom - SVC Chaos (JAMMA PCB, NEO-MVH MVO PCB)	—	SNK vs. Capcom - SVC Chaos (JAMMA PCB, NEO-MVH MVO PCB)	alias
+svf.zip	Super Visual Football: European Sega Cup	Super Visual Football: European Sega Cup (Rev A)	—	Super Visual Football: European Sega Cup (Rev A)	alias
+svg.zip	S.v.g. - Spectral Vs Generation	S.V.G. - Spectral vs Generation / Sheng Mo Shiji (M68k label V200) (ARM label V200, ROM 10/11/05 S.V.G V201)	—	S.V.G. - Spectral vs Generation / Sheng Mo Shiji (M68k label V200) (ARM label V200, ROM 10/11/05 S.V.G V201)	alias
+svolley.zip	Super Volleyball	Super Volleyball	Japan	Super Volleyball (Japan)	alias
+swcourt.zip	Super World Court	Super World Court	World	Super World Court (World)	alias
+sws.zip	Super World Stadium	Super World Stadium	Japan	Super World Stadium (Japan)	alias
+sws92.zip	Super World Stadium '92	Super World Stadium '92	Japan	Super World Stadium '92 (Japan)	alias
+sws93.zip	Super World Stadium '93	Super World Stadium '93	Japan	Super World Stadium '93 (Japan)	alias
+sws95.zip	Super World Stadium '95	Super World Stadium '95	Japan	Super World Stadium '95 (Japan)	alias
+sws96.zip	Super World Stadium '96	Super World Stadium '96	Japan	Super World Stadium '96 (Japan)	alias
+sws97.zip	Super World Stadium '97	Super World Stadium '97	Japan	Super World Stadium '97 (Japan)	alias
+sxyreac2.zip	Pachinko Sexy Reaction 2	Pachinko Sexy Reaction 2	Japan	Pachinko Sexy Reaction 2 (Japan)	alias
+sxyreact.zip	Pachinko Sexy Reaction	Pachinko Sexy Reaction	Japan	Pachinko Sexy Reaction (Japan)	alias
+syscheck.zip	ZZZ(notgame):Neo-geo Bios	Neo System Check (ver 1.0b)	—	Neo System Check (ver 1.0b)	alias
+szaxxon.zip	Super Zaxxon	Super Zaxxon (315-5013)	—	Super Zaxxon (315-5013)	alias
+tacscan.zip	Tac/scan	Tac/Scan	—	Tac/Scan	alias
+tactcian.zip	Tactician	Tactician (set 1)	—	Tactician (set 1)	alias
+tail2nos.zip	Tail To Nose - Great Championship	Tail to Nose - Great Championship / Super Formula	—	Tail to Nose - Great Championship / Super Formula	alias
+tangtang.zip	Tang Tang	Tang Tang (ver. 0526, 26/05/2000, set 1)	—	Tang Tang (ver. 0526, 26/05/2000, set 1)	alias
+tankfrce.zip	Tank Force	Tank Force (2 Players)	USA	Tank Force (2 Players) (USA)	alias
+tantr.zip	Puzzle & Action: Tant-R	Puzzle & Action: Tant-R	Japan	Puzzle & Action: Tant-R (Japan)	alias
+taotaido.zip	Tao Taido	Tao Taido (2 button version)	—	Tao Taido (2 button version)	alias
+targeth.zip	Target Hits	Target Hits (ver 1.1, checksum 5152)	—	Target Hits (ver 1.1, checksum 5152)	alias
+tazmania.zip	Tazz-Mania	Tazz-Mania (set 1)	—	Tazz-Mania (set 1)	alias
+tbowl.zip	Tecmo Bowl	Tecmo Bowl (set 1)	World	Tecmo Bowl (set 1) (World)	alias
+tcobra2.zip	Twin Cobra II	Twin Cobra II (Ver 2.1O 1995/11/30)	—	Twin Cobra II (Ver 2.1O 1995/11/30)	alias
+tdpgal.zip	Triple Draw Poker	Triple Draw Poker (Design Labs / Thomas Automatics)	—	Triple Draw Poker (Design Labs / Thomas Automatics)	alias
+tdragon2.zip	Thunder Dragon 2	Thunder Dragon 2 (9th Nov. 1993)	—	Thunder Dragon 2 (9th Nov. 1993)	alias
+tdragonb.zip	Thunder Dragon	Thunder Dragon (bootleg with Raiden sounds, encrypted)	—	Thunder Dragon (bootleg with Raiden sounds, encrypted)	alias
+teddybb.zip	Teddyboy Blues	TeddyBoy Blues (315-5115, New Ver.)	—	TeddyBoy Blues (315-5115, New Ver.)	alias
+tekipaki.zip	The Brain Washing Game	Teki Paki	—	Teki Paki	check
+teot.zip	Eye of Typhoon ,The	The Eye of Typhoon (HB, Beta 7 Version)	—	The Eye of Typhoon (HB, Beta 7 Version)	alias
+term2.zip	Terminator 2 - Judgment Day	Terminator 2 - Judgment Day (rev LA4 08/03/92)	—	Terminator 2 - Judgment Day (rev LA4 08/03/92)	alias
+terracre.zip	Terra Cresta	Terra Cresta (YM3526 set 1)	—	Terra Cresta (YM3526 set 1)	alias
+tetrbx.zip	Tetris / Bloxeed	Tetris / Bloxeed (Korean System 16 bootleg) (ISG Selection Master Type 2006)	—	Tetris / Bloxeed (Korean System 16 bootleg) (ISG Selection Master Type 2006)	alias
+tetris.zip	Tetris (set 4, Japan, System 16a)	Tetris (set 4, System 16A) (FD1094 317-0093)	Japan	Tetris (set 4, System 16A) (FD1094 317-0093) (Japan)	alias
+tetrisp.zip	Tetris Plus	Tetris Plus (ver 1.0)	—	Tetris Plus (ver 1.0)	alias
+tetrisp2.zip	Tetris Plus 2	Tetris Plus 2 (V2.8)	World	Tetris Plus 2 (V2.8) (World)	alias
+tetrisse.zip	Tetris	Tetris (System E)	Japan	Tetris (System E) (Japan)	alias
+tetrsark.zip	Tetris	Tetris (D.R. Korea, set 1, encrypted)	—	Tetris (D.R. Korea, set 1, encrypted)	alias
+tgm2.zip	Tetris The Absolute The Grand Master 2	Tetris: The Absolute - The Grand Master 2	—	Tetris: The Absolute - The Grand Master 2	alias
+thedeep.zip	The Deep	The Deep	Japan	The Deep (Japan)	alias
+theglad.zip	The Gladiator / Road Of The Sword / Shen Jian	The Gladiator / Shenjian Fumo Lu / Shenjian Fengyun (M68k label V101) (ARM label V107, ROM 06/06/03 SHEN JIAN V107)	—	The Gladiator / Shenjian Fumo Lu / Shenjian Fengyun (M68k label V101) (ARM label V107, ROM 06/06/03 SHEN JIAN V107)	alias
+theroes.zip	Thunder Heroes	Thunder Heroes (set 1)	—	Thunder Heroes (set 1)	alias
+thndrbld.zip	Thunder Blade	Thunder Blade (upright) (FD1094 317-0056)	—	Thunder Blade (upright) (FD1094 317-0056)	alias
+thndrx2.zip	Thunder Cross II	Thunder Cross II	World	Thunder Cross II (World)	alias
+thndzone.zip	Desert Assault	Thunder Zone (Rev 1)	World	Thunder Zone (Rev 1) (World)	check
+thoop.zip	Thunder Hoop	Thunder Hoop (ver. 1, checksum 02a09f7d)	—	Thunder Hoop (ver. 1, checksum 02a09f7d)	alias
+thunderj.zip	ThunderJaws	ThunderJaws (rev 3)	—	ThunderJaws (rev 3)	alias
+thunderl.zip	Thunder & Lightning	Thunder & Lightning (set 1)	—	Thunder & Lightning (set 1)	alias
+thunderx.zip	Thunder Cross	Thunder Cross (set 1)	—	Thunder Cross (set 1)	alias
+thundfox.zip	Thunder Fox	Thunder Fox (rev 1)	World	Thunder Fox (rev 1) (World)	alias
+tigerh.zip	Tiger Heli	Tiger-Heli	USA	Tiger-Heli (USA)	alias
+tigeroad.zip	Tiger Road	Tiger Road	USA	Tiger Road (USA)	alias
+timefgtr.zip	Time Fighter	Time Fighter (Time Pilot conversion on Galaxian hardware)	—	Time Fighter (Time Pilot conversion on Galaxian hardware)	alias
+timekill.zip	Time Killers	Time Killers (v1.32)	—	Time Killers (v1.32)	alias
+timescan.zip	Time Scanner	Time Scanner (set 2, System 16B)	—	Time Scanner (set 2, System 16B)	alias
+timesold.zip	Time Soldiers	Time Soldiers (US Rev 3)	—	Time Soldiers (US Rev 3)	alias
+timesup.zip	ZZZ(notgame):Timesup	Time's UP! (HB)	—	Time's UP! (HB)	check
+timesupd.zip	Time's Up	Time's UP! (HB, Demo)	—	Time's UP! (HB, Demo)	alias
+tinklpit.zip	Tinkle Pit	Tinkle Pit	Japan	Tinkle Pit (Japan)	alias
+tinstar.zip	The Tin Star	The Tin Star (A10, 4 PCB version)	—	The Tin Star (A10, 4 PCB version)	alias
+titlef.zip	Title Fight	Title Fight	World	Title Fight (World)	alias
+tkdensho.zip	Toukidenshou - Angel Eyes	Toukidenshou - Angel Eyes (VER. 960614)	—	Toukidenshou - Angel Eyes (VER. 960614)	alias
+tmnt.zip	Teenage Mutant Ninja Turtles	Teenage Mutant Ninja Turtles (World 4 Players, version X)	—	Teenage Mutant Ninja Turtles (World 4 Players, version X)	alias
+tmnt2.zip	Teenage Mutant Ninja Turtles: Turtles in Time	Teenage Mutant Ninja Turtles - Turtles in Time (4 Players ver UAA)	—	Teenage Mutant Ninja Turtles - Turtles in Time (4 Players ver UAA)	alias
+tmnt22pu.zip	Teenage Mutant Ninja Turtles: Turtles in Time	Teenage Mutant Ninja Turtles - Turtles in Time (2 Players ver UDA)	—	Teenage Mutant Ninja Turtles - Turtles in Time (2 Players ver UDA)	alias
+tmnt2pj.zip	Teenage Mutant Ninja Turtles	Teenage Mutant Ninja Turtles (Japan 2 Players, version 1)	—	Teenage Mutant Ninja Turtles (Japan 2 Players, version 1)	alias
+tmnti.zip	ZZZ(notgame):Demos	Teenage Mutant Ninja Turtles (FMV Demo)	—	Teenage Mutant Ninja Turtles (FMV Demo)	check
+tndrcade.zip	Thundercade	Thundercade / Twin Formation	—	Thundercade / Twin Formation	alias
+tnextspc.zip	The Next Space	The Next Space (set 1)	—	The Next Space (set 1)	alias
+tnk3.zip	T.N.K III	T.N.K III	USA	T.N.K III (USA)	alias
+tnzs.zip	The NewZealand Story	The NewZealand Story (new version) (P0-043A PCB)	World	The NewZealand Story (new version) (P0-043A PCB) (World)	alias
+todruaga.zip	The Tower of Druaga	The Tower of Druaga (New Ver.)	—	The Tower of Druaga (New Ver.)	alias
+toki.zip	Toki (World, set 1)	Toki (set 1)	World	Toki (set 1) (World)	alias
+tokisens.zip	Toki no Senshi: Chrono-Soldier	Toki no Senshi - Chrono Soldier (MC-8123, 317-0040)	—	Toki no Senshi - Chrono Soldier (MC-8123, 317-0040)	alias
+toobin.zip	Toobin'	Toobin' (rev 3)	—	Toobin' (rev 3)	alias
+tophuntr.zip	Top Hunter: Roddy & Cathy	Top Hunter - Roddy & Cathy (NGM-046)	—	Top Hunter - Roddy & Cathy (NGM-046)	alias
+topsecex.zip	Top Secret	Top Secret (Exidy) (version 1.0)	—	Top Secret (Exidy) (version 1.0)	alias
+topspeed.zip	Top Speed	Top Speed (rev 1)	World	Top Speed (rev 1) (World)	alias
+totcarn.zip	Total Carnage	Total Carnage (rev LA1 03/10/92)	—	Total Carnage (rev LA1 03/10/92)	alias
+toucheme.zip	Touche Me	Touche Me (set 1)	—	Touche Me (set 1)	alias
+toutrun.zip	Turbo Out Run	Turbo Out Run (Out Run upgrade) (FD1094 317-0118)	—	Turbo Out Run (Out Run upgrade) (FD1094 317-0118)	alias
+tp84.zip	Time Pilot '84	Time Pilot '84 (set 1)	—	Time Pilot '84 (set 1)	alias
+tpgolf.zip	Top Player's Golf	Top Player's Golf (NGM-003 ~ NGH-003)	—	Top Player's Golf (NGM-003 ~ NGH-003)	alias
+trally.zip	Thrash Rally	Thrash Rally (ALM-003 ~ ALH-003)	—	Thrash Rally (ALM-003 ~ ALH-003)	alias
+travrusa.zip	Traverse Usa / Zippy Race	Traverse USA / Zippy Race	—	Traverse USA / Zippy Race	alias
+trckydoc.zip	Tricky Doc	Tricky Doc (set 1)	—	Tricky Doc (set 1)	alias
+tricktrp.zip	Trick Trap	Trick Trap (World?)	—	Trick Trap (World?)	alias
+triothep.zip	Trio The Punch - Never Forget Me...	Trio The Punch - Never Forget Me...	World	Trio The Punch - Never Forget Me... (World)	alias
+triplep.zip	Triple Punch	Triple Punch (set 1)	—	Triple Punch (set 1)	alias
+tripool.zip	Tri-pool	Tri-Pool: 3-In-One (Casino Tech)	—	Tri-Pool: 3-In-One (Casino Tech)	alias
+trisport.zip	Tri-sports	Tri-Sports	—	Tri-Sports	alias
+trophyh.zip	Trophy Hunting - Bear & Moose V1.0	Trophy Hunting - Bear & Moose V1.00	—	Trophy Hunting - Bear & Moose V1.00	alias
+trstar.zip	Top Ranking Stars	Top Ranking Stars (Ver 2.1O 1993/05/21) (New Version)	—	Top Ranking Stars (Ver 2.1O 1993/05/21) (New Version)	alias
+truxton.zip	Truxton (Europe, US) / Tatsujin (Japan)	Truxton / Tatsujin	Europe	Truxton / Tatsujin (Europe)	alias
+truxton2.zip	Truxton II	Truxton II / Tatsujin Oh	—	Truxton II / Tatsujin Oh	alias
+trvmstr.zip	Trivia Master	Trivia Master (set 1)	—	Trivia Master (set 1)	alias
+tsamurai.zip	Samurai Nihon-ichi	Samurai Nihon-Ichi (rev 1)	—	Samurai Nihon-Ichi (rev 1)	alias
+tshingen.zip	Shingen Samurai-fighter	Shingen Samurai-Fighter (English)	Japan	Shingen Samurai-Fighter (English) (Japan)	alias
+tstrike.zip	Thunder Strike	Thunder Strike (set 1)	—	Thunder Strike (set 1)	alias
+tturf.zip	Tough Turf	Tough Turf (set 2) (8751 317-0104)	Japan	Tough Turf (set 2) (8751 317-0104) (Japan)	alias
+tumblep.zip	Tumble Pop	Tumble Pop	World	Tumble Pop (World)	alias
+turbofrc.zip	Turbo Force	Turbo Force (set 1)	World	Turbo Force (set 1) (World)	alias
+turfmast.zip	Neo Turf Masters	Neo Turf Masters / Big Tournament Golf	—	Neo Turf Masters / Big Tournament Golf	alias
+turkhunt.zip	Turkey Hunting Usa V1.0	Turkey Hunting USA V1.00	—	Turkey Hunting USA V1.00	alias
+turtles.zip	600	Turtles	—	Turtles	check
+turtship.zip	Turtle Ship	Turtle Ship (North America)	—	Turtle Ship (North America)	alias
+twcup90.zip	Euro League	Tecmo World Cup '90 (World set 1)	—	Tecmo World Cup '90 (World set 1)	check
+twinadv.zip	Twin Adventure	Twin Adventure	World	Twin Adventure (World)	alias
+twinbrat.zip	Twin Brats	Twin Brats (set 1)	—	Twin Brats (set 1)	alias
+twincobr.zip	Twin Cobra	Twin Cobra	World	Twin Cobra (World)	alias
+twinhawk.zip	Twin Hawk	Twin Hawk	World	Twin Hawk (World)	alias
+twinqix.zip	Twin Qix	Twin Qix (Ver 1.0A 1995/01/17, prototype)	—	Twin Qix (Ver 1.0A 1995/01/17, prototype)	alias
+twocrude.zip	Two Crude Dudes	Two Crude (US FT revision 1)	—	Two Crude (US FT revision 1)	alias
+twotiger.zip	Two Tigers	Two Tigers (dedicated)	—	Two Tigers (dedicated)	alias
+uccops.zip	Undercover Cops	Undercover Cops	World	Undercover Cops (World)	alias
+uccopsj.zip	Undercover Cops	Undercover Cops	Japan	Undercover Cops (Japan)	alias
+ufosensi.zip	UFO Senshi Yoko-chan	Ufo Senshi Yohko Chan (MC-8123, 317-0064)	—	Ufo Senshi Yohko Chan (MC-8123, 317-0064)	alias
+ultrax.zip	Ultra X Weapons	Ultra X Weapons / Ultra Keibitai	—	Ultra X Weapons / Ultra Keibitai	alias
+umk3.zip	Ultimate Mortal Kombat 3	Ultimate Mortal Kombat 3 (rev 1.2)	—	Ultimate Mortal Kombat 3 (rev 1.2)	alias
+undrfire.zip	Under Fire	Under Fire	World	Under Fire (World)	alias
+unkpacg.zip	Unknown Pac-man Gambling Game	unknown 'Pac-Man' gambling game (set 1)	—	unknown 'Pac-Man' gambling game (set 1)	alias
+unksig.zip	unknown 'Space Invaders' gambling game	unknown 'Space Invaders' gambling game (encrypted, set 1)	—	unknown 'Space Invaders' gambling game (encrypted, set 1)	alias
+unsquad.zip	U.N. Squadron	U.N. Squadron	USA	U.N. Squadron (USA)	alias
+uopoko.zip	Puzzle Uo Poko	Puzzle Uo Poko	World	Puzzle Uo Poko (World)	alias
+upndown.zip	Up'n Down	Up'n Down (315-5030)	—	Up'n Down (315-5030)	alias
+usclssic.zip	U.s. Classic	U.S. Classic	—	U.S. Classic	alias
+usg32.zip	Super Duper Casino	Super Duper Casino (California V3.2)	—	Super Duper Casino (California V3.2)	alias
+usgames.zip	Games V25.4x	Games V25.4X	—	Games V25.4X	alias
+utoukond.zip	Ultra Toukon Densetsu	Ultra Toukon Densetsu	Japan	Ultra Toukon Densetsu (Japan)	alias
+vamphalf.zip	Vamf X1/2	Vamf x1/2 (version 1.1.0908)	Europe	Vamf x1/2 (version 1.1.0908) (Europe)	alias
+vaportra.zip	Vapor Trail: Hyper Offence Formation	Vapor Trail - Hyper Offence Formation (World revision 1)	—	Vapor Trail - Hyper Offence Formation (World revision 1)	alias
+varth.zip	Varth: Operation Thunderstorm	Varth: Operation Thunderstorm (World 920714)	—	Varth: Operation Thunderstorm (World 920714)	alias
+vasara2.zip	Vasara 2	Vasara 2 (set 1)	—	Vasara 2 (set 1)	alias
+vblokbrk.zip	Vs Block Breaker	VS Block Breaker	Europe	VS Block Breaker (Europe)	alias
+vendetta.zip	Vendetta (World, 4 Players, ver. T)	Vendetta (4 Players, ver. T)	World	Vendetta (4 Players, ver. T) (World)	alias
+vendetta2pu.zip	Vendetta	Vendetta (2 Players, ver. U)	Asia	Vendetta (2 Players, ver. U) (Asia)	alias
+vfive.zip	Grind Stormer	V-Five	Japan	V-Five (Japan)	check
+vhunt2.zip	Vampire Hunter 2: Darkstalkers' Revenge	Vampire Hunter 2: Darkstalkers Revenge (Japan 970929)	—	Vampire Hunter 2: Darkstalkers Revenge (Japan 970929)	alias
+victoryc.zip	Victory	Victory (Comsoft)	—	Victory (Comsoft)	alias
+vidvince.zip	Video Vince And The Game Factory	Video Vince and the Game Factory (prototype)	—	Video Vince and the Game Factory (prototype)	alias
+vigilant.zip	Vigilante	Vigilante (Rev E)	World	Vigilante (Rev E) (World)	alias
+vimana.zip	Vimana (World, rev A)	Vimana (rev A)	World	Vimana (rev A) (World)	alias
+vindctr2.zip	Vindicators Part II	Vindicators Part II (rev 3)	—	Vindicators Part II (rev 3)	alias
+vindictr.zip	Vindicators	Vindicators (rev 5)	—	Vindicators (rev 5)	alias
+viofight.zip	Violence Fight	Violence Fight	World	Violence Fight (World)	alias
+viostorm.zip	Violent Storm	Violent Storm (ver EAC)	—	Violent Storm (ver EAC)	alias
+viprp1.zip	Viper Phase 1	Viper Phase 1 (New Version)	World	Viper Phase 1 (New Version) (World)	alias
+vliner.zip	V-Liner	V-Liner (v0.7a)	—	V-Liner (v0.7a)	alias
+volfied.zip	Volfied (World, rev 1)	Volfied (rev 1)	World	Volfied (rev 1) (World)	alias
+vsav.zip	Vampire Savior: The Lord of Vampire	Vampire Savior: The Lord of Vampire (Europe 970519)	—	Vampire Savior: The Lord of Vampire (Europe 970519)	alias
+vsav2.zip	Vampire Savior 2 : The Lord of Vampire	Vampire Savior 2: The Lord of Vampire (Japan 970913)	—	Vampire Savior 2: The Lord of Vampire (Japan 970913)	alias
+vsgongf.zip	Vs Gong Fight	VS Gong Fight	—	VS Gong Fight	alias
+vshoot.zip	J-league Soccer V-shoot	J-League Soccer V-Shoot	Japan	J-League Soccer V-Shoot (Japan)	alias
+vulcan.zip	Vulcan Venture	Vulcan Venture (new)	—	Vulcan Venture (new)	alias
+wallc.zip	Wall Crash	Wall Crash (set 1)	—	Wall Crash (set 1)	alias
+warofbug.zip	War of the Bugs or Monsterous Manouvers in a Mushr	War of the Bugs or Monsterous Manouvers in a Mushroom Maze	—	War of the Bugs or Monsterous Manouvers in a Mushroom Maze	alias
+warriorb.zip	Warrior Blade - Rastan Saga Episode III	Warrior Blade - Rastan Saga Episode III	Japan	Warrior Blade - Rastan Saga Episode III (Japan)	alias
+wb3.zip	Wonder Boy III - Monster Lair	Wonder Boy III - Monster Lair (set 6, System 16B) (8751 317-0098)	World	Wonder Boy III - Monster Lair (set 6, System 16B) (8751 317-0098) (World)	alias
+wbeachvl.zip	World Beach Volley	World Beach Volley (set 1, PIC16C57 audio CPU)	—	World Beach Volley (set 1, PIC16C57 audio CPU)	alias
+wbml.zip	Wonder Boy In Monster Land	Wonder Boy: Monster Land (Japan New Ver., MC-8123, 317-0043)	—	Wonder Boy: Monster Land (Japan New Ver., MC-8123, 317-0043)	alias
+wboy.zip	Wonder Boy	Wonder Boy (set 1, 315-5177)	—	Wonder Boy (set 1, 315-5177)	alias
+wcbowl.zip	World Class Bowling	World Class Bowling (v1.66)	—	World Class Bowling (v1.66)	alias
+wcbowldx.zip	World Class Bowling Deluxe	World Class Bowling Deluxe (v2.00)	—	World Class Bowling Deluxe (v2.00)	alias
+wcvol95.zip	World Cup Volley '95	World Cup Volley '95 (Asia v1.0)	—	World Cup Volley '95 (Asia v1.0)	alias
+wecleman.zip	Wec Le Mans 24	WEC Le Mans 24 (v2.01)	—	WEC Le Mans 24 (v2.01)	alias
+wh1.zip	World Heroes	World Heroes (ALM-005)	—	World Heroes (ALM-005)	alias
+wh2.zip	World Heroes 2	World Heroes 2 (ALM-006 ~ ALH-006)	—	World Heroes 2 (ALM-006 ~ ALH-006)	alias
+wh2j.zip	World Heroes 2 Jet	World Heroes 2 Jet (ADM-007 ~ ADH-007)	—	World Heroes 2 Jet (ADM-007 ~ ADH-007)	alias
+whodunit.zip	Who Dunit	Who Dunit (version 9.0)	—	Who Dunit (version 9.0)	alias
+wildfang.zip	Wild Fang	Wild Fang / Tecmo Knight (World?)	—	Wild Fang / Tecmo Knight (World?)	alias
+wingforc.zip	Wing Force	Wing Force (prototype)	Japan	Wing Force (prototype) (Japan)	alias
+wits.zip	Wit's	Wit's	Japan	Wit's (Japan)	alias
+wizdfire.zip	Wizard Fire	Wizard Fire (Over Sea v2.1)	—	Wizard Fire (Over Sea v2.1)	alias
+wizwarz.zip	Wiz Warz	Wiz Warz (prototype)	—	Wiz Warz (prototype)	alias
+wjammers.zip	Windjammers	Windjammers / Flying Power Disc	—	Windjammers / Flying Power Disc	alias
+wldcourt.zip	World Court	Pro Tennis World Court	Japan	Pro Tennis World Court (Japan)	alias
+wlstar.zip	Wonder League Star - Sok-magicball Fighting	Wonder League Star - Sok-Magicball Fighting	Korea	Wonder League Star - Sok-Magicball Fighting (Korea)	alias
+wmatch.zip	Water Match	Water Match (315-5064)	—	Water Match (315-5064)	alias
+wndrplnt.zip	Wonder Planet	Wonder Planet	Japan	Wonder Planet (Japan)	alias
+wof.zip	Warriors of Fate	Warriors of Fate (World 921031)	—	Warriors of Fate (World 921031)	alias
+wofch.zip	Warriors of Fate	Tenchi wo Kurau II: Sekiheki no Tatakai (CPS Changer, Japan 921031)	—	Tenchi wo Kurau II: Sekiheki no Tatakai (CPS Changer, Japan 921031)	check
+wondl96.zip	Wonder League '96	Wonder League '96	Korea	Wonder League '96 (Korea)	alias
+wondstck.zip	Wonder Stick	Wonder Stick (set 1)	—	Wonder Stick (set 1)	alias
+woodpeck.zip	Woodpecker	Woodpecker (set 1)	—	Woodpecker (set 1)	alias
+worldwar.zip	World Wars	World Wars (World?)	—	World Wars (World?)	alias
+wownfant.zip	Wow New Fantasia	WOW New Fantasia (Explicit)	—	WOW New Fantasia (Explicit)	alias
+wpksocv2.zip	World Pk Soccer V2	World PK Soccer V2 (ver 1.1)	—	World PK Soccer V2 (ver 1.1)	alias
+wrestwar.zip	Wrestle War	Wrestle War (set 3) (8751 317-0103)	World	Wrestle War (set 3) (8751 317-0103) (World)	alias
+wrofaero.zip	War of Aero: Project MEIOU	War of Aero - Project MEIOU	—	War of Aero - Project MEIOU	alias
+ws.zip	World Stadium	Pro Yakyuu World Stadium	Japan	Pro Yakyuu World Stadium (Japan)	alias
+wwallyj.zip	Wally Wo Sagase!	Wally wo Sagase! (rev B, 2 players) (FD1094 317-0197B)	Japan	Wally wo Sagase! (rev B, 2 players) (FD1094 317-0197B) (Japan)	alias
+wwestern.zip	Wild Western	Wild Western (set 1)	—	Wild Western (set 1)	alias
+wwfmania.zip	WWF: Wrestlemania	WWF: Wrestlemania (rev 1.30 08/10/95)	—	WWF: Wrestlemania (rev 1.30 08/10/95)	alias
+wwfsstar.zip	Wwf Superstars	WWF Superstars	Europe	WWF Superstars (Europe)	alias
+wwfwfest.zip	Wwf Wrestlefest	WWF WrestleFest	World	WWF WrestleFest (World)	alias
+wwjgtin.zip	Wai Wai Jockey Gate-in!	Wai Wai Jockey Gate-In!	—	Wai Wai Jockey Gate-In!	alias
+wyvernf0.zip	Wyvern F-0	Wyvern F-0 (Rev 1)	—	Wyvern F-0 (Rev 1)	alias
+xenocrisis.zip	Xeno Crisis	Xeno Crisis (HB)	—	Xeno Crisis (HB)	alias
+xeviousng.zip	xeviousng	Xevious - Neo Geo Conversion (HB, Beta1)	—	Xevious - Neo Geo Conversion (HB, Beta1)	check
+xmcota.zip	X-Men: Children of the Atom	X-Men: Children of the Atom (Europe 950331)	—	X-Men: Children of the Atom (Europe 950331)	alias
+xmen.zip	X-Men	X-Men (4 Players ver EBA)	—	X-Men (4 Players ver EBA)	alias
+xmen2pa.zip	X-Men	X-Men (2 Players ver AAA)	—	X-Men (2 Players ver AAA)	alias
+xmen2pe.zip	X-Men	X-Men (2 Players ver EAA)	—	X-Men (2 Players ver EAA)	alias
+xmultipl.zip	X Multiply	X Multiply (M81 hardware)	World	X Multiply (M81 hardware) (World)	alias
+xmvsf.zip	X-Men vs. Street Fighter	X-Men Vs. Street Fighter (Europe 961004)	—	X-Men Vs. Street Fighter (Europe 961004)	alias
+xorworld.zip	Xor World	Xor World (ver 1.2, checksum DB5D0F, prototype)	—	Xor World (ver 1.2, checksum DB5D0F, prototype)	alias
+xsedae.zip	X Se Dae Quiz	X Se Dae Quiz	Korea	X Se Dae Quiz (Korea)	alias
+xsleena.zip	Xain'd Sleena	Xain'd Sleena	World	Xain'd Sleena (World)	alias
+yamatou.zip	Yamato (US)	Yamato	USA	Yamato (USA)	alias
+yiear.zip	Yie Ar Kung-Fu	Yie Ar Kung-Fu (version I)	—	Yie Ar Kung-Fu (version I)	alias
+youjyudn.zip	Youjyuden	Youjyuden	Japan	Youjyuden (Japan)	alias
+zedblade.zip	Zed Blade	Zed Blade / Operation Ragnarok	—	Zed Blade / Operation Ragnarok	alias
+zerohour.zip	Zero Hour	Zero Hour (set 1)	—	Zero Hour (set 1)	alias
+zeropnt.zip	Zero Point	Zero Point (set 1)	—	Zero Point (set 1)	alias
+zeroteam.zip	Zero Team Usa	Zero Team USA	USA	Zero Team USA (USA)	alias
+zerowing.zip	Zero Wing	Zero Wing (2P set)	—	Zero Wing (2P set)	alias
+zigzagb.zip	Zig Zag	Zig Zag (bootleg Dig Dug conversion on Galaxian hardware, set 1)	—	Zig Zag (bootleg Dig Dug conversion on Galaxian hardware, set 1)	alias
+zingzip.zip	Zing Zing Zip	Zing Zing Zip / Zhen Zhen Ji Pao (China?)	World	Zing Zing Zip / Zhen Zhen Ji Pao (China?) (World)	alias
+zintrckb.zip	Zintrick	Zintrick / Oshidashi Zentrix (bootleg of CD version)	—	Zintrick / Oshidashi Zentrix (bootleg of CD version)	alias
+zipzap.zip	Zip & Zap	Zip & Zap (Explicit)	—	Zip & Zap (Explicit)	alias
+zombraid.zip	Zombie Raid	Zombie Raid (9/28/95)	USA	Zombie Raid (9/28/95) (USA)	alias
+zookeep.zip	Zoo Keeper	Zoo Keeper (set 1)	—	Zoo Keeper (set 1)	alias
+zunkyou.zip	Zunzunkyou no Yabou	Zunzunkyou no Yabou	Japan	Zunzunkyou no Yabou (Japan)	alias

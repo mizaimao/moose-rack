@@ -1,0 +1,704 @@
+[
+ {
+  "platform": "3do",
+  "games": 218,
+  "files": 218,
+  "titled": 218,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 58918229589
+ },
+ {
+  "platform": "3ds",
+  "games": 493,
+  "files": 493,
+  "titled": 493,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 234946764493
+ },
+ {
+  "platform": "amiga500",
+  "games": 1798,
+  "files": 1798,
+  "titled": 1794,
+  "untitled": 4,
+  "ghosts": 4,
+  "bytes": 1587853695
+ },
+ {
+  "platform": "amigacd32",
+  "games": 164,
+  "files": 164,
+  "titled": 161,
+  "untitled": 3,
+  "ghosts": 0,
+  "bytes": 17887919738
+ },
+ {
+  "platform": "amigacdtv",
+  "games": 30,
+  "files": 30,
+  "titled": 30,
+  "untitled": 0,
+  "ghosts": 3,
+  "bytes": 959762807
+ },
+ {
+  "platform": "amstradcpc",
+  "games": 1165,
+  "files": 1165,
+  "titled": 1165,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 47778223
+ },
+ {
+  "platform": "atari2600",
+  "games": 664,
+  "files": 664,
+  "titled": 664,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 2987110
+ },
+ {
+  "platform": "atari5200",
+  "games": 71,
+  "files": 71,
+  "titled": 71,
+  "untitled": 0,
+  "ghosts": 1,
+  "bytes": 730310
+ },
+ {
+  "platform": "atari7800",
+  "games": 60,
+  "files": 60,
+  "titled": 60,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 1690433
+ },
+ {
+  "platform": "atari800",
+  "games": 453,
+  "files": 453,
+  "titled": 449,
+  "untitled": 4,
+  "ghosts": 2,
+  "bytes": 26258744
+ },
+ {
+  "platform": "atarist",
+  "games": 1145,
+  "files": 1145,
+  "titled": 1145,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 535507954
+ },
+ {
+  "platform": "c64",
+  "games": 2616,
+  "files": 2616,
+  "titled": 2614,
+  "untitled": 2,
+  "ghosts": 2,
+  "bytes": 121550820
+ },
+ {
+  "platform": "cdi",
+  "games": 55,
+  "files": 55,
+  "titled": 55,
+  "untitled": 0,
+  "ghosts": 1,
+  "bytes": 11454871228
+ },
+ {
+  "platform": "colecovision",
+  "games": 166,
+  "files": 166,
+  "titled": 166,
+  "untitled": 0,
+  "ghosts": 4,
+  "bytes": 1876953
+ },
+ {
+  "platform": "dreamcast",
+  "games": 333,
+  "files": 333,
+  "titled": 333,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 192176336600
+ },
+ {
+  "platform": "famicom",
+  "games": 415,
+  "files": 415,
+  "titled": 413,
+  "untitled": 2,
+  "ghosts": 0,
+  "bytes": 42903288
+ },
+ {
+  "platform": "fds",
+  "games": 215,
+  "files": 215,
+  "titled": 214,
+  "untitled": 1,
+  "ghosts": 0,
+  "bytes": 25374504
+ },
+ {
+  "platform": "gamecube",
+  "games": 638,
+  "files": 638,
+  "titled": 638,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 522737713308
+ },
+ {
+  "platform": "gamegear",
+  "games": 335,
+  "files": 335,
+  "titled": 335,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 59424407
+ },
+ {
+  "platform": "gb",
+  "games": 863,
+  "files": 863,
+  "titled": 863,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 93053076
+ },
+ {
+  "platform": "gba",
+  "games": 1132,
+  "files": 1132,
+  "titled": 1132,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 5487038852
+ },
+ {
+  "platform": "gbah",
+  "games": 22,
+  "files": 22,
+  "titled": 22,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 189451224
+ },
+ {
+  "platform": "gbc",
+  "games": 596,
+  "files": 596,
+  "titled": 596,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 258927011
+ },
+ {
+  "platform": "genesis",
+  "games": 946,
+  "files": 946,
+  "titled": 946,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 654728824
+ },
+ {
+  "platform": "genesish",
+  "games": 159,
+  "files": 159,
+  "titled": 159,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 155985784
+ },
+ {
+  "platform": "gx4000",
+  "games": 25,
+  "files": 25,
+  "titled": 25,
+  "untitled": 0,
+  "ghosts": 2,
+  "bytes": 1511247
+ },
+ {
+  "platform": "hikaru",
+  "games": 7,
+  "files": 7,
+  "titled": 5,
+  "untitled": 2,
+  "ghosts": 1,
+  "bytes": 496768520
+ },
+ {
+  "platform": "intellivision",
+  "games": 140,
+  "files": 140,
+  "titled": 140,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 1239438
+ },
+ {
+  "platform": "jaguar",
+  "games": 54,
+  "files": 54,
+  "titled": 54,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 106044438
+ },
+ {
+  "platform": "lynx",
+  "games": 75,
+  "files": 75,
+  "titled": 75,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 10474555
+ },
+ {
+  "platform": "mastersystem",
+  "games": 335,
+  "files": 335,
+  "titled": 335,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 46761757
+ },
+ {
+  "platform": "mastersystemh",
+  "games": 15,
+  "files": 15,
+  "titled": 15,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 3964928
+ },
+ {
+  "platform": "megadrive",
+  "games": 916,
+  "files": 916,
+  "titled": 916,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 596590305
+ },
+ {
+  "platform": "megadriveh",
+  "games": 29,
+  "files": 29,
+  "titled": 29,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 60909838
+ },
+ {
+  "platform": "megaduck",
+  "games": 24,
+  "files": 24,
+  "titled": 24,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 823883
+ },
+ {
+  "platform": "msx1",
+  "games": 283,
+  "files": 283,
+  "titled": 283,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 10003395
+ },
+ {
+  "platform": "msx2",
+  "games": 123,
+  "files": 123,
+  "titled": 123,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 15275676
+ },
+ {
+  "platform": "msx2+",
+  "games": 53,
+  "files": 53,
+  "titled": 53,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 14508782
+ },
+ {
+  "platform": "n64",
+  "games": 553,
+  "files": 553,
+  "titled": 553,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 6986680466
+ },
+ {
+  "platform": "n64dd",
+  "games": 10,
+  "files": 10,
+  "titled": 10,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 655782608
+ },
+ {
+  "platform": "nds",
+  "games": 2221,
+  "files": 2221,
+  "titled": 2098,
+  "untitled": 123,
+  "ghosts": 0,
+  "bytes": 50892890203
+ },
+ {
+  "platform": "nes",
+  "games": 888,
+  "files": 888,
+  "titled": 888,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 85281662
+ },
+ {
+  "platform": "nesh",
+  "games": 91,
+  "files": 91,
+  "titled": 91,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 9520404
+ },
+ {
+  "platform": "ngp",
+  "games": 10,
+  "files": 10,
+  "titled": 10,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 4559399
+ },
+ {
+  "platform": "ngpc",
+  "games": 40,
+  "files": 40,
+  "titled": 40,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 22151176
+ },
+ {
+  "platform": "openbor",
+  "games": 129,
+  "files": 129,
+  "titled": 127,
+  "untitled": 2,
+  "ghosts": 0,
+  "bytes": 12124956593
+ },
+ {
+  "platform": "pcengine",
+  "games": 300,
+  "files": 300,
+  "titled": 300,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 67248619
+ },
+ {
+  "platform": "pcenginecd",
+  "games": 124,
+  "files": 124,
+  "titled": 124,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 47268759165
+ },
+ {
+  "platform": "pcfx",
+  "games": 70,
+  "files": 142,
+  "titled": 70,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 43701696156
+ },
+ {
+  "platform": "pokemini",
+  "games": 30,
+  "files": 30,
+  "titled": 30,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 15728640
+ },
+ {
+  "platform": "ports",
+  "games": 6,
+  "files": 6,
+  "titled": 0,
+  "untitled": 6,
+  "ghosts": 5,
+  "bytes": 1457440
+ },
+ {
+  "platform": "psp",
+  "games": 825,
+  "files": 825,
+  "titled": 825,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 444812520038
+ },
+ {
+  "platform": "pspminis",
+  "games": 312,
+  "files": 312,
+  "titled": 311,
+  "untitled": 1,
+  "ghosts": 1,
+  "bytes": 7882903449
+ },
+ {
+  "platform": "psvita",
+  "games": 78,
+  "files": 78,
+  "titled": 56,
+  "untitled": 22,
+  "ghosts": 25,
+  "bytes": 702
+ },
+ {
+  "platform": "psx",
+  "games": 1804,
+  "files": 1804,
+  "titled": 1804,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 505154409491
+ },
+ {
+  "platform": "satellaview",
+  "games": 85,
+  "files": 85,
+  "titled": 85,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 43280309
+ },
+ {
+  "platform": "saturn",
+  "games": 306,
+  "files": 306,
+  "titled": 306,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 86635315691
+ },
+ {
+  "platform": "scummvm",
+  "games": 64,
+  "files": 5388,
+  "titled": 64,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 8600818177
+ },
+ {
+  "platform": "sega32x",
+  "games": 35,
+  "files": 35,
+  "titled": 35,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 62394282
+ },
+ {
+  "platform": "segacd",
+  "games": 163,
+  "files": 163,
+  "titled": 163,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 58159867725
+ },
+ {
+  "platform": "sfc",
+  "games": 525,
+  "files": 525,
+  "titled": 525,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 498149351
+ },
+ {
+  "platform": "sg1000",
+  "games": 75,
+  "files": 75,
+  "titled": 75,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 1041503
+ },
+ {
+  "platform": "sgb",
+  "games": 239,
+  "files": 239,
+  "titled": 239,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 57597103
+ },
+ {
+  "platform": "snes",
+  "games": 2172,
+  "files": 2172,
+  "titled": 2172,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 1996319923
+ },
+ {
+  "platform": "snes-msu",
+  "games": 156,
+  "files": 156,
+  "titled": 156,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 69030798937
+ },
+ {
+  "platform": "supergrafx",
+  "games": 5,
+  "files": 5,
+  "titled": 5,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 2511726
+ },
+ {
+  "platform": "supervision",
+  "games": 43,
+  "files": 43,
+  "titled": 43,
+  "untitled": 0,
+  "ghosts": 1,
+  "bytes": 883265
+ },
+ {
+  "platform": "turbografx16",
+  "games": 108,
+  "files": 108,
+  "titled": 108,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 24138149
+ },
+ {
+  "platform": "turbografxcd",
+  "games": 47,
+  "files": 47,
+  "titled": 46,
+  "untitled": 1,
+  "ghosts": 0,
+  "bytes": 12171843666
+ },
+ {
+  "platform": "vectrex",
+  "games": 41,
+  "files": 41,
+  "titled": 41,
+  "untitled": 0,
+  "ghosts": 1,
+  "bytes": 189901
+ },
+ {
+  "platform": "virtualboy",
+  "games": 25,
+  "files": 25,
+  "titled": 25,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 8910255
+ },
+ {
+  "platform": "wii",
+  "games": 887,
+  "files": 887,
+  "titled": 887,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 1166408494616
+ },
+ {
+  "platform": "wiiu",
+  "games": 110,
+  "files": 110,
+  "titled": 109,
+  "untitled": 1,
+  "ghosts": 1,
+  "bytes": 365570686717
+ },
+ {
+  "platform": "wiiware",
+  "games": 403,
+  "files": 403,
+  "titled": 403,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 12936550272
+ },
+ {
+  "platform": "wswanc",
+  "games": 94,
+  "files": 94,
+  "titled": 94,
+  "untitled": 0,
+  "ghosts": 0,
+  "bytes": 159005756
+ },
+ {
+  "platform": "x68000",
+  "games": 313,
+  "files": 313,
+  "titled": 311,
+  "untitled": 2,
+  "ghosts": 1,
+  "bytes": 562425088
+ },
+ {
+  "platform": "xbox",
+  "games": 62,
+  "files": 62,
+  "titled": 62,
+  "untitled": 0,
+  "ghosts": 1,
+  "bytes": 119361241088
+ },
+ {
+  "platform": "zxspectrum",
+  "games": 528,
+  "files": 528,
+  "titled": 528,
+  "untitled": 0,
+  "ghosts": 1,
+  "bytes": 18742737
+ }
+]

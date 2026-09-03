@@ -1,0 +1,18 @@
+# moose-patch. Every path resolves inside /userdata/shaders/moose, so
+# Hotkey + D-pad up/down cycles those four presets and nothing else.
+default:
+  shader: moose/2-sharp-shimmerless-scanlines
+gb:
+  shader: moose/3-sharp-shimmerless-lcd
+gbc:
+  shader: moose/3-sharp-shimmerless-lcd
+gba:
+  shader: moose/3-sharp-shimmerless-lcd
+gamegear:
+  shader: moose/3-sharp-shimmerless-lcd
+n64:
+  shader: moose/1-sharp-shimmerless
+dreamcast:
+  shader: moose/1-sharp-shimmerless
+psp:
+  shader: moose/1-sharp-shimmerless

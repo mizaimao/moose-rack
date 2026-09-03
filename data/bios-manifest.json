@@ -1,0 +1,3891 @@
+[
+ {
+  "path": "aes.zip",
+  "desc": "aes.zip (Neo Geo AES System ROM)",
+  "required": true,
+  "cores": [
+   "geolith"
+  ],
+  "systems": [
+   "arcade",
+   "mame",
+   "neogeo"
+  ]
+ },
+ {
+  "path": "c52.bin",
+  "desc": "c52.bin (Videopac French BIOS - G7000 model)",
+  "required": true,
+  "cores": [
+   "o2em"
+  ],
+  "systems": [
+   "odyssey2",
+   "videopac"
+  ]
+ },
+ {
+  "path": "colecovision.rom",
+  "desc": "colecovision.rom (ColecoVision BIOS)",
+  "required": true,
+  "cores": [
+   "gearcoleco"
+  ],
+  "systems": [
+   "colecovision"
+  ]
+ },
+ {
+  "path": "Databases/msxromdb.xml",
+  "desc": "'Databases' folder",
+  "required": true,
+  "cores": [
+   "bluemsx"
+  ],
+  "systems": [
+   "colecovision",
+   "msx",
+   "msx1",
+   "msx2",
+   "msxturbor",
+   "sg-1000",
+   "spectravideo"
+  ]
+ },
+ {
+  "path": "dolphin-emu/Sys/codehandler.bin",
+  "desc": "Dolphin 'Sys' folder",
+  "required": true,
+  "cores": [
+   "dolphin"
+  ],
+  "systems": [
+   "consolearcade",
+   "gc",
+   "triforce",
+   "wii"
+  ]
+ },
+ {
+  "path": "ecwolf.pk3",
+  "desc": "ecwolf.pk3 (ECWolf System File)",
+  "required": true,
+  "cores": [
+   "ecwolf"
+  ],
+  "systems": [
+   "ports"
+  ]
+ },
+ {
+  "path": "exec.bin",
+  "desc": "exec.bin",
+  "required": true,
+  "cores": [
+   "freeintv"
+  ],
+  "systems": [
+   "intellivision"
+  ]
+ },
+ {
+  "path": "g7400.bin",
+  "desc": "g7400.bin (Videopac+ European BIOS - G7400 model)",
+  "required": true,
+  "cores": [
+   "o2em"
+  ],
+  "systems": [
+   "odyssey2",
+   "videopac"
+  ]
+ },
+ {
+  "path": "gba_bios.bin",
+  "desc": "gba_bios.bin (Game Boy Advance BIOS)",
+  "required": true,
+  "cores": [
+   "gpsp",
+   "mgba",
+   "noods",
+   "vba_next",
+   "vbam"
+  ],
+  "systems": [
+   "gb",
+   "gba",
+   "gbc",
+   "nds",
+   "sgb"
+  ]
+ },
+ {
+  "path": "grom.bin",
+  "desc": "grom.bin",
+  "required": true,
+  "cores": [
+   "freeintv"
+  ],
+  "systems": [
+   "intellivision"
+  ]
+ },
+ {
+  "path": "jopac.bin",
+  "desc": "jopac.bin (Videopac+ French BIOS - G7400 model)",
+  "required": true,
+  "cores": [
+   "o2em"
+  ],
+  "systems": [
+   "odyssey2",
+   "videopac"
+  ]
+ },
+ {
+  "path": "keropi/cgrom.dat",
+  "desc": "cgrom.dat (X68000 BIOS 2)",
+  "required": true,
+  "cores": [
+   "px68k"
+  ],
+  "systems": [
+   "x68000"
+  ]
+ },
+ {
+  "path": "keropi/iplrom.dat",
+  "desc": "iplrom.dat (X68000 BIOS)",
+  "required": true,
+  "cores": [
+   "px68k"
+  ],
+  "systems": [
+   "x68000"
+  ]
+ },
+ {
+  "path": "kick34005.A500",
+  "desc": "kick34005.A500 | amiga-os-130.rom (A500-A2000-CDTV KS v1.3 rev 34.005)",
+  "required": true,
+  "cores": [
+   "puae",
+   "puae2021"
+  ],
+  "systems": [
+   "amiga",
+   "amiga1200",
+   "amiga600",
+   "amigacd32",
+   "cdtv"
+  ]
+ },
+ {
+  "path": "kick40060.CD32",
+  "desc": "kick40060.CD32 | amiga-os-310-cd32.rom (CD32 KS v3.1 rev 40.060)",
+  "required": true,
+  "cores": [
+   "puae",
+   "puae2021"
+  ],
+  "systems": [
+   "amiga",
+   "amiga1200",
+   "amiga600",
+   "amigacd32",
+   "cdtv"
+  ]
+ },
+ {
+  "path": "kick40060.CD32.ext",
+  "desc": "kick40060.CD32.ext | amiga-os-310-cd32-ext.rom (CD32 extended ROM rev 40.060)",
+  "required": true,
+  "cores": [
+   "puae",
+   "puae2021"
+  ],
+  "systems": [
+   "amiga",
+   "amiga1200",
+   "amiga600",
+   "amigacd32",
+   "cdtv"
+  ]
+ },
+ {
+  "path": "kick40068.A1200",
+  "desc": "kick40068.A1200 | amiga-os-310-a1200.rom (A1200 KS v3.1 rev 40.068)",
+  "required": true,
+  "cores": [
+   "puae",
+   "puae2021"
+  ],
+  "systems": [
+   "amiga",
+   "amiga1200",
+   "amiga600",
+   "amigacd32",
+   "cdtv"
+  ]
+ },
+ {
+  "path": "lynxboot.img",
+  "desc": "lynxboot.img (Lynx Boot Image)",
+  "required": true,
+  "cores": [
+   "handy",
+   "holani",
+   "mednafen_lynx"
+  ],
+  "systems": [
+   "atarilynx"
+  ]
+ },
+ {
+  "path": "Machines/Shared Roms/MSX.rom",
+  "desc": "'Machines' folder",
+  "required": true,
+  "cores": [
+   "bluemsx"
+  ],
+  "systems": [
+   "colecovision",
+   "msx",
+   "msx1",
+   "msx2",
+   "msxturbor",
+   "sg-1000",
+   "spectravideo"
+  ]
+ },
+ {
+  "path": "MacII.ROM",
+  "desc": "MacII.ROM",
+  "required": true,
+  "cores": [
+   "minivmac"
+  ],
+  "systems": [
+   "macintosh"
+  ]
+ },
+ {
+  "path": "mpr-17933.bin",
+  "desc": "mpr-17933.bin (Saturn US/EU BIOS)",
+  "required": true,
+  "cores": [
+   "mednafen_saturn"
+  ],
+  "systems": [
+   "saturn",
+   "saturnjp"
+  ]
+ },
+ {
+  "path": "MSX.ROM",
+  "desc": "MSX.ROM (MSX BIOS)",
+  "required": true,
+  "cores": [
+   "fmsx"
+  ],
+  "systems": [
+   "msx",
+   "msx1",
+   "msx2"
+  ]
+ },
+ {
+  "path": "MSX2.ROM",
+  "desc": "MSX2.ROM (MSX2 BIOS)",
+  "required": true,
+  "cores": [
+   "fmsx"
+  ],
+  "systems": [
+   "msx",
+   "msx1",
+   "msx2"
+  ]
+ },
+ {
+  "path": "MSX2EXT.ROM",
+  "desc": "MSX2EXT.ROM (MSX2 ExtROM)",
+  "required": true,
+  "cores": [
+   "fmsx"
+  ],
+  "systems": [
+   "msx",
+   "msx1",
+   "msx2"
+  ]
+ },
+ {
+  "path": "MSX2P.ROM",
+  "desc": "MSX2P.ROM (MSX2+ BIOS)",
+  "required": true,
+  "cores": [
+   "fmsx"
+  ],
+  "systems": [
+   "msx",
+   "msx1",
+   "msx2"
+  ]
+ },
+ {
+  "path": "MSX2PEXT.ROM",
+  "desc": "MSX2PEXT.ROM (MSX2+ ExtROM)",
+  "required": true,
+  "cores": [
+   "fmsx"
+  ],
+  "systems": [
+   "msx",
+   "msx1",
+   "msx2"
+  ]
+ },
+ {
+  "path": "neogeo.zip",
+  "desc": "neogeo.zip (Neo Geo MVS System ROM)",
+  "required": true,
+  "cores": [
+   "geolith"
+  ],
+  "systems": [
+   "arcade",
+   "mame",
+   "neogeo"
+  ]
+ },
+ {
+  "path": "o2rom.bin",
+  "desc": "o2rom.bin (Odyssey2 BIOS - G7000 model)",
+  "required": true,
+  "cores": [
+   "o2em"
+  ],
+  "systems": [
+   "odyssey2",
+   "videopac"
+  ]
+ },
+ {
+  "path": "palmos41-en-m515.rom",
+  "desc": "palmos41-en-m515.rom (Palm OS 4.1)",
+  "required": true,
+  "cores": [
+   "mu"
+  ],
+  "systems": [
+   "palm"
+  ]
+ },
+ {
+  "path": "pcfx.rom",
+  "desc": "pcfx.rom (PC-FX BIOS v1.00 - 2 Sep 1994)",
+  "required": true,
+  "cores": [
+   "mednafen_pcfx"
+  ],
+  "systems": [
+   "pcfx"
+  ]
+ },
+ {
+  "path": "PPSSPP/ppge_atlas.zim",
+  "desc": "ppge_atlas.zim (PPSSPP Data ROM)",
+  "required": true,
+  "cores": [
+   "ppsspp"
+  ],
+  "systems": [
+   "psp"
+  ]
+ },
+ {
+  "path": "quasi88/n88.rom",
+  "desc": "n88.rom (Main BIOS)",
+  "required": true,
+  "cores": [
+   "quasi88"
+  ],
+  "systems": [
+   "pc88"
+  ]
+ },
+ {
+  "path": "quasi88/n88_0.rom",
+  "desc": "n88_0.rom (Extension BIOS 1)",
+  "required": true,
+  "cores": [
+   "quasi88"
+  ],
+  "systems": [
+   "pc88"
+  ]
+ },
+ {
+  "path": "same_cdi/bios/cdimono1.zip",
+  "desc": "same_cdi/bios/cdimono1.zip",
+  "required": true,
+  "cores": [
+   "same_cdi"
+  ],
+  "systems": [
+   "cdimono1"
+  ]
+ },
+ {
+  "path": "saturn_bios.bin",
+  "desc": "saturn_bios.bin (Saturn BIOS)",
+  "required": true,
+  "cores": [
+   "yabasanshiro",
+   "yabause"
+  ],
+  "systems": [
+   "saturn",
+   "saturnjp"
+  ]
+ },
+ {
+  "path": "scph5500.bin",
+  "desc": "scph5500.bin (PS1 JP BIOS)",
+  "required": true,
+  "cores": [
+   "mednafen_psx",
+   "mednafen_psx_hw",
+   "pcsx_rearmed",
+   "swanstation"
+  ],
+  "systems": [
+   "psx"
+  ]
+ },
+ {
+  "path": "scph5501.bin",
+  "desc": "scph5501.bin (PS1 US BIOS)",
+  "required": true,
+  "cores": [
+   "mednafen_psx",
+   "mednafen_psx_hw",
+   "pcsx_rearmed",
+   "swanstation"
+  ],
+  "systems": [
+   "psx"
+  ]
+ },
+ {
+  "path": "scph5502.bin",
+  "desc": "scph5502.bin (PS1 EU BIOS)",
+  "required": true,
+  "cores": [
+   "mednafen_psx",
+   "mednafen_psx_hw",
+   "pcsx_rearmed",
+   "swanstation"
+  ],
+  "systems": [
+   "psx"
+  ]
+ },
+ {
+  "path": "sega_101.bin",
+  "desc": "sega_101.bin (Saturn JP BIOS)",
+  "required": true,
+  "cores": [
+   "mednafen_saturn"
+  ],
+  "systems": [
+   "saturn",
+   "saturnjp"
+  ]
+ },
+ {
+  "path": "sl31253.bin",
+  "desc": "sl31253.bin",
+  "required": true,
+  "cores": [
+   "freechaf"
+  ],
+  "systems": [
+   "channelf"
+  ]
+ },
+ {
+  "path": "sl31254.bin",
+  "desc": "sl31254.bin",
+  "required": true,
+  "cores": [
+   "freechaf"
+  ],
+  "systems": [
+   "channelf"
+  ]
+ },
+ {
+  "path": "sl90025.bin",
+  "desc": "sl90025.bin",
+  "required": true,
+  "cores": [
+   "freechaf"
+  ],
+  "systems": [
+   "channelf"
+  ]
+ },
+ {
+  "path": "tos.img",
+  "desc": "tos.img (TOS 1.02 US aka Mega TOS)",
+  "required": true,
+  "cores": [
+   "hatari"
+  ],
+  "systems": [
+   "atarist"
+  ]
+ },
+ {
+  "path": "3do_arcade_saot.bin",
+  "desc": "3do_arcade_saot.bin (Shootout At Old Tucson BIOS)",
+  "required": false,
+  "cores": [
+   "opera"
+  ],
+  "systems": [
+   "3do"
+  ]
+ },
+ {
+  "path": "5200.rom",
+  "desc": "5200.rom (5200 BIOS)",
+  "required": false,
+  "cores": [
+   "a5200",
+   "atari800"
+  ],
+  "systems": [
+   "atari5200",
+   "atari800",
+   "atarixe"
+  ]
+ },
+ {
+  "path": "64DD_IPL.bin",
+  "desc": "64DD_IPL.bin (64DD IPL ROM)",
+  "required": false,
+  "cores": [
+   "parallel_n64"
+  ],
+  "systems": [
+   "n64",
+   "n64dd"
+  ]
+ },
+ {
+  "path": "7800 BIOS (U).rom",
+  "desc": "7800 BIOS (U).rom (7800 BIOS)",
+  "required": false,
+  "cores": [
+   "prosystem"
+  ],
+  "systems": [
+   "atari7800"
+  ]
+ },
+ {
+  "path": "areplay.bin",
+  "desc": "areplay.bin (Action Replay ROM)",
+  "required": false,
+  "cores": [
+   "genesis_plus_gx",
+   "genesis_plus_gx_wide"
+  ],
+  "systems": [
+   "gamegear",
+   "genesis",
+   "mark3",
+   "mastersystem",
+   "megacd",
+   "megacdjp",
+   "megadrive",
+   "megadrivejp",
+   "segacd",
+   "sg-1000"
+  ]
+ },
+ {
+  "path": "ATARIBAS.ROM",
+  "desc": "ATARIBAS.ROM (Atari BASIC)",
+  "required": false,
+  "cores": [
+   "atari800"
+  ],
+  "systems": [
+   "atari5200",
+   "atari800",
+   "atarixe"
+  ]
+ },
+ {
+  "path": "ATARIOSA.ROM",
+  "desc": "ATARIOSA.ROM (Atari 400/800 OS A)",
+  "required": false,
+  "cores": [
+   "atari800"
+  ],
+  "systems": [
+   "atari5200",
+   "atari800",
+   "atarixe"
+  ]
+ },
+ {
+  "path": "ATARIOSB.ROM",
+  "desc": "ATARIOSB.ROM (Atari 400/800 OS B)",
+  "required": false,
+  "cores": [
+   "atari800"
+  ],
+  "systems": [
+   "atari5200",
+   "atari800",
+   "atarixe"
+  ]
+ },
+ {
+  "path": "ATARIXL.ROM",
+  "desc": "ATARIXL.ROM (Atari XL/XE OS)",
+  "required": false,
+  "cores": [
+   "atari800"
+  ],
+  "systems": [
+   "atari5200",
+   "atari800",
+   "atarixe"
+  ]
+ },
+ {
+  "path": "bass.dll",
+  "desc": "bass.dll (BASS Windows library)",
+  "required": false,
+  "cores": [
+   "dosbox_core"
+  ],
+  "systems": [
+   "dos",
+   "pc"
+  ]
+ },
+ {
+  "path": "bassmidi.dll",
+  "desc": "bassmidi.dll (BASSMIDI Windows library)",
+  "required": false,
+  "cores": [
+   "dosbox_core"
+  ],
+  "systems": [
+   "dos",
+   "pc"
+  ]
+ },
+ {
+  "path": "BB01R4_OS.ROM",
+  "desc": "BB01R4_OS.ROM (Atari XL/XE/XEGS OS v4)",
+  "required": false,
+  "cores": [
+   "atari800"
+  ],
+  "systems": [
+   "atari5200",
+   "atari800",
+   "atarixe"
+  ]
+ },
+ {
+  "path": "BIOS.col",
+  "desc": "BIOS.col (Colecovision BIOS)",
+  "required": false,
+  "cores": [
+   "smsplus"
+  ],
+  "systems": [
+   "gamegear",
+   "mark3",
+   "mastersystem"
+  ]
+ },
+ {
+  "path": "bios.gg",
+  "desc": "bios.gg (GameGear BIOS)",
+  "required": false,
+  "cores": [
+   "genesis_plus_gx",
+   "genesis_plus_gx_wide"
+  ],
+  "systems": [
+   "gamegear",
+   "genesis",
+   "mark3",
+   "mastersystem",
+   "megacd",
+   "megacdjp",
+   "megadrive",
+   "megadrivejp",
+   "segacd",
+   "sg-1000"
+  ]
+ },
+ {
+  "path": "bios.min",
+  "desc": "bios.min (Pokemon Mini BIOS)",
+  "required": false,
+  "cores": [
+   "pokemini"
+  ],
+  "systems": [
+   "pokemini"
+  ]
+ },
+ {
+  "path": "bios.sms",
+  "desc": "bios.sms (Master System BIOS)",
+  "required": false,
+  "cores": [
+   "smsplus"
+  ],
+  "systems": [
+   "gamegear",
+   "mark3",
+   "mastersystem"
+  ]
+ },
+ {
+  "path": "bios7.bin",
+  "desc": "bios7.bin (ARM7 BIOS)",
+  "required": false,
+  "cores": [
+   "desmume",
+   "desmume2015",
+   "melonds",
+   "melondsds",
+   "noods"
+  ],
+  "systems": [
+   "gba",
+   "nds"
+  ]
+ },
+ {
+  "path": "bios9.bin",
+  "desc": "bios9.bin (ARM9 BIOS)",
+  "required": false,
+  "cores": [
+   "desmume",
+   "desmume2015",
+   "melonds",
+   "melondsds",
+   "noods"
+  ],
+  "systems": [
+   "gba",
+   "nds"
+  ]
+ },
+ {
+  "path": "bios_CD_E.bin",
+  "desc": "bios_CD_E.bin (MegaCD EU BIOS)",
+  "required": false,
+  "cores": [
+   "genesis_plus_gx",
+   "genesis_plus_gx_wide",
+   "picodrive"
+  ],
+  "systems": [
+   "gamegear",
+   "genesis",
+   "mark3",
+   "mastersystem",
+   "megacd",
+   "megacdjp",
+   "megadrive",
+   "megadrivejp",
+   "sega32x",
+   "sega32xjp",
+   "sega32xna",
+   "segacd",
+   "sg-1000"
+  ]
+ },
+ {
+  "path": "bios_CD_J.bin",
+  "desc": "bios_CD_J.bin (MegaCD JP BIOS)",
+  "required": false,
+  "cores": [
+   "genesis_plus_gx",
+   "genesis_plus_gx_wide",
+   "picodrive"
+  ],
+  "systems": [
+   "gamegear",
+   "genesis",
+   "mark3",
+   "mastersystem",
+   "megacd",
+   "megacdjp",
+   "megadrive",
+   "megadrivejp",
+   "sega32x",
+   "sega32xjp",
+   "sega32xna",
+   "segacd",
+   "sg-1000"
+  ]
+ },
+ {
+  "path": "bios_CD_U.bin",
+  "desc": "bios_CD_U.bin (SegaCD US BIOS)",
+  "required": false,
+  "cores": [
+   "genesis_plus_gx",
+   "genesis_plus_gx_wide",
+   "picodrive"
+  ],
+  "systems": [
+   "gamegear",
+   "genesis",
+   "mark3",
+   "mastersystem",
+   "megacd",
+   "megacdjp",
+   "megadrive",
+   "megadrivejp",
+   "sega32x",
+   "sega32xjp",
+   "sega32xna",
+   "segacd",
+   "sg-1000"
+  ]
+ },
+ {
+  "path": "bios_E.sms",
+  "desc": "bios_E.sms (MasterSystem EU BIOS)",
+  "required": false,
+  "cores": [
+   "genesis_plus_gx",
+   "genesis_plus_gx_wide"
+  ],
+  "systems": [
+   "gamegear",
+   "genesis",
+   "mark3",
+   "mastersystem",
+   "megacd",
+   "megacdjp",
+   "megadrive",
+   "megadrivejp",
+   "segacd",
+   "sg-1000"
+  ]
+ },
+ {
+  "path": "bios_J.sms",
+  "desc": "bios_J.sms (MasterSystem JP BIOS)",
+  "required": false,
+  "cores": [
+   "genesis_plus_gx",
+   "genesis_plus_gx_wide"
+  ],
+  "systems": [
+   "gamegear",
+   "genesis",
+   "mark3",
+   "mastersystem",
+   "megacd",
+   "megacdjp",
+   "megadrive",
+   "megadrivejp",
+   "segacd",
+   "sg-1000"
+  ]
+ },
+ {
+  "path": "bios_MD.bin",
+  "desc": "bios_MD.bin (Mega Drive startup ROM)",
+  "required": false,
+  "cores": [
+   "genesis_plus_gx",
+   "genesis_plus_gx_wide"
+  ],
+  "systems": [
+   "gamegear",
+   "genesis",
+   "mark3",
+   "mastersystem",
+   "megacd",
+   "megacdjp",
+   "megadrive",
+   "megadrivejp",
+   "segacd",
+   "sg-1000"
+  ]
+ },
+ {
+  "path": "bios_U.sms",
+  "desc": "bios_U.sms (MasterSystem US BIOS)",
+  "required": false,
+  "cores": [
+   "genesis_plus_gx",
+   "genesis_plus_gx_wide"
+  ],
+  "systems": [
+   "gamegear",
+   "genesis",
+   "mark3",
+   "mastersystem",
+   "megacd",
+   "megacdjp",
+   "megadrive",
+   "megadrivejp",
+   "segacd",
+   "sg-1000"
+  ]
+ },
+ {
+  "path": "bootloader-dbvz.rom",
+  "desc": "bootloader-dbvz.rom (MC68VZ328 UART Bootloader)",
+  "required": false,
+  "cores": [
+   "mu"
+  ],
+  "systems": [
+   "palm"
+  ]
+ },
+ {
+  "path": "BS-X.bin",
+  "desc": "BS-X.bin (BS-X - Sore wa Namae o Nusumareta Machi no Monogatari (Japan) (Rev 1))",
+  "required": false,
+  "cores": [
+   "bsnes",
+   "mesen-s",
+   "snes9x"
+  ],
+  "systems": [
+   "gb",
+   "gbc",
+   "satellaview",
+   "sfc",
+   "sgb",
+   "snes",
+   "snesna",
+   "sufami"
+  ]
+ },
+ {
+  "path": "cgb_boot.bin",
+  "desc": "cgb_boot.bin (GBC Boot Image)",
+  "required": false,
+  "cores": [
+   "mesen-s",
+   "sameboy"
+  ],
+  "systems": [
+   "gb",
+   "gbc",
+   "satellaview",
+   "sfc",
+   "sgb",
+   "snes",
+   "snesna"
+  ]
+ },
+ {
+  "path": "CM32L_CONTROL.ROM",
+  "desc": "CM32L_CONTROL.ROM (CM-32L/LAPC-I Control ROM v1.02)",
+  "required": false,
+  "cores": [
+   "dosbox_core"
+  ],
+  "systems": [
+   "dos",
+   "pc"
+  ]
+ },
+ {
+  "path": "CM32L_PCM.ROM",
+  "desc": "CM32L_PCM.ROM (CM-32L/CM-64/LAPC-I PCM ROM)",
+  "required": false,
+  "cores": [
+   "dosbox_core"
+  ],
+  "systems": [
+   "dos",
+   "pc"
+  ]
+ },
+ {
+  "path": "cx4.data.rom",
+  "desc": "cx4.data.rom",
+  "required": false,
+  "cores": [
+   "bsnes",
+   "bsnes_hd_beta",
+   "bsnes_mercury_accuracy"
+  ],
+  "systems": [
+   "gb",
+   "gbc",
+   "satellaview",
+   "sfc",
+   "snes",
+   "snesna",
+   "sufami"
+  ]
+ },
+ {
+  "path": "dc/airlbios.zip",
+  "desc": "dc/airlbios.zip (Naomi Airline Pilots deluxe Bios from MAME)",
+  "required": false,
+  "cores": [
+   "flycast"
+  ],
+  "systems": [
+   "arcade",
+   "atomiswave",
+   "consolearcade",
+   "dreamcast",
+   "mame",
+   "naomi",
+   "naomi2",
+   "naomigd"
+  ]
+ },
+ {
+  "path": "dc/awbios.zip",
+  "desc": "dc/awbios.zip (Atomiswave BIOS from MAME)",
+  "required": false,
+  "cores": [
+   "flycast"
+  ],
+  "systems": [
+   "arcade",
+   "atomiswave",
+   "consolearcade",
+   "dreamcast",
+   "mame",
+   "naomi",
+   "naomi2",
+   "naomigd"
+  ]
+ },
+ {
+  "path": "dc/dc_boot.bin",
+  "desc": "dc/dc_boot.bin (Dreamcast BIOS)",
+  "required": false,
+  "cores": [
+   "flycast"
+  ],
+  "systems": [
+   "arcade",
+   "atomiswave",
+   "consolearcade",
+   "dreamcast",
+   "mame",
+   "naomi",
+   "naomi2",
+   "naomigd"
+  ]
+ },
+ {
+  "path": "dc/f355bios.zip",
+  "desc": "dc/f355bios.zip (Naomi Ferrari F355 Challenge twin/deluxe Bios from MAME)",
+  "required": false,
+  "cores": [
+   "flycast"
+  ],
+  "systems": [
+   "arcade",
+   "atomiswave",
+   "consolearcade",
+   "dreamcast",
+   "mame",
+   "naomi",
+   "naomi2",
+   "naomigd"
+  ]
+ },
+ {
+  "path": "dc/f355dlx.zip",
+  "desc": "dc/f355dlx.zip (Naomi Ferrari F355 Challenge deluxe Bios from MAME)",
+  "required": false,
+  "cores": [
+   "flycast"
+  ],
+  "systems": [
+   "arcade",
+   "atomiswave",
+   "consolearcade",
+   "dreamcast",
+   "mame",
+   "naomi",
+   "naomi2",
+   "naomigd"
+  ]
+ },
+ {
+  "path": "dc/hod2bios.zip",
+  "desc": "dc/hod2bios.zip (Naomi The House of the Dead 2 Bios from MAME)",
+  "required": false,
+  "cores": [
+   "flycast"
+  ],
+  "systems": [
+   "arcade",
+   "atomiswave",
+   "consolearcade",
+   "dreamcast",
+   "mame",
+   "naomi",
+   "naomi2",
+   "naomigd"
+  ]
+ },
+ {
+  "path": "dc/naomi.zip",
+  "desc": "dc/naomi.zip (Naomi Bios from MAME)",
+  "required": false,
+  "cores": [
+   "flycast"
+  ],
+  "systems": [
+   "arcade",
+   "atomiswave",
+   "consolearcade",
+   "dreamcast",
+   "mame",
+   "naomi",
+   "naomi2",
+   "naomigd"
+  ]
+ },
+ {
+  "path": "dc/naomi2.zip",
+  "desc": "dc/naomi2.zip (Naomi2 Bios from MAME)",
+  "required": false,
+  "cores": [
+   "flycast"
+  ],
+  "systems": [
+   "arcade",
+   "atomiswave",
+   "consolearcade",
+   "dreamcast",
+   "mame",
+   "naomi",
+   "naomi2",
+   "naomigd"
+  ]
+ },
+ {
+  "path": "DISK.ROM",
+  "desc": "DISK.ROM (DiskROM/BDOS)",
+  "required": false,
+  "cores": [
+   "fmsx"
+  ],
+  "systems": [
+   "msx",
+   "msx1",
+   "msx2"
+  ]
+ },
+ {
+  "path": "disksys.rom",
+  "desc": "disksys.rom (Family Computer Disk System BIOS)",
+  "required": false,
+  "cores": [
+   "fceumm",
+   "mesen",
+   "nestopia"
+  ],
+  "systems": [
+   "famicom",
+   "fds",
+   "nes"
+  ]
+ },
+ {
+  "path": "dmg_boot.bin",
+  "desc": "dmg_boot.bin (GB Boot Image)",
+  "required": false,
+  "cores": [
+   "mesen-s",
+   "sameboy"
+  ],
+  "systems": [
+   "gb",
+   "gbc",
+   "satellaview",
+   "sfc",
+   "sgb",
+   "snes",
+   "snesna"
+  ]
+ },
+ {
+  "path": "dsi_bios7.bin",
+  "desc": "dsi_bios7.bin (DSi ARM7 BIOS)",
+  "required": false,
+  "cores": [
+   "melonds",
+   "melondsds"
+  ],
+  "systems": [
+   "nds"
+  ]
+ },
+ {
+  "path": "dsi_bios9.bin",
+  "desc": "dsi_bios9.bin (DSi ARM9 BIOS)",
+  "required": false,
+  "cores": [
+   "melonds",
+   "melondsds"
+  ],
+  "systems": [
+   "nds"
+  ]
+ },
+ {
+  "path": "dsi_firmware.bin",
+  "desc": "dsi_firmware.bin (DSi Firmware)",
+  "required": false,
+  "cores": [
+   "melonds",
+   "melondsds"
+  ],
+  "systems": [
+   "nds"
+  ]
+ },
+ {
+  "path": "dsi_nand.bin",
+  "desc": "dsi_nand.bin (DSi NAND)",
+  "required": false,
+  "cores": [
+   "melonds",
+   "melondsds"
+  ],
+  "systems": [
+   "nds"
+  ]
+ },
+ {
+  "path": "dsi_sd_card.bin",
+  "desc": "dsi_sd_card.bin (DSi SD card)",
+  "required": false,
+  "cores": [
+   "melonds"
+  ],
+  "systems": [
+   "nds"
+  ]
+ },
+ {
+  "path": "dsp1.data.rom",
+  "desc": "dsp1.data.rom",
+  "required": false,
+  "cores": [
+   "bsnes",
+   "bsnes-jg",
+   "bsnes_hd_beta",
+   "bsnes_mercury_accuracy",
+   "mesen-s"
+  ],
+  "systems": [
+   "gb",
+   "gbc",
+   "satellaview",
+   "sfc",
+   "sgb",
+   "snes",
+   "snesna",
+   "sufami"
+  ]
+ },
+ {
+  "path": "dsp1.program.rom",
+  "desc": "dsp1.program.rom",
+  "required": false,
+  "cores": [
+   "bsnes",
+   "bsnes-jg",
+   "bsnes_hd_beta",
+   "bsnes_mercury_accuracy",
+   "mesen-s"
+  ],
+  "systems": [
+   "gb",
+   "gbc",
+   "satellaview",
+   "sfc",
+   "sgb",
+   "snes",
+   "snesna",
+   "sufami"
+  ]
+ },
+ {
+  "path": "dsp1b.data.rom",
+  "desc": "dsp1b.data.rom",
+  "required": false,
+  "cores": [
+   "bsnes",
+   "bsnes-jg",
+   "bsnes_hd_beta",
+   "bsnes_mercury_accuracy",
+   "mesen-s"
+  ],
+  "systems": [
+   "gb",
+   "gbc",
+   "satellaview",
+   "sfc",
+   "sgb",
+   "snes",
+   "snesna",
+   "sufami"
+  ]
+ },
+ {
+  "path": "dsp1b.program.rom",
+  "desc": "dsp1b.program.rom",
+  "required": false,
+  "cores": [
+   "bsnes",
+   "bsnes-jg",
+   "bsnes_hd_beta",
+   "bsnes_mercury_accuracy",
+   "mesen-s"
+  ],
+  "systems": [
+   "gb",
+   "gbc",
+   "satellaview",
+   "sfc",
+   "sgb",
+   "snes",
+   "snesna",
+   "sufami"
+  ]
+ },
+ {
+  "path": "dsp2.data.rom",
+  "desc": "dsp2.data.rom",
+  "required": false,
+  "cores": [
+   "bsnes",
+   "bsnes-jg",
+   "bsnes_hd_beta",
+   "bsnes_mercury_accuracy",
+   "mesen-s"
+  ],
+  "systems": [
+   "gb",
+   "gbc",
+   "satellaview",
+   "sfc",
+   "sgb",
+   "snes",
+   "snesna",
+   "sufami"
+  ]
+ },
+ {
+  "path": "dsp2.program.rom",
+  "desc": "dsp2.program.rom",
+  "required": false,
+  "cores": [
+   "bsnes",
+   "bsnes-jg",
+   "bsnes_hd_beta",
+   "bsnes_mercury_accuracy",
+   "mesen-s"
+  ],
+  "systems": [
+   "gb",
+   "gbc",
+   "satellaview",
+   "sfc",
+   "sgb",
+   "snes",
+   "snesna",
+   "sufami"
+  ]
+ },
+ {
+  "path": "dsp3.data.rom",
+  "desc": "dsp3.data.rom",
+  "required": false,
+  "cores": [
+   "bsnes",
+   "bsnes-jg",
+   "bsnes_hd_beta",
+   "bsnes_mercury_accuracy",
+   "mesen-s"
+  ],
+  "systems": [
+   "gb",
+   "gbc",
+   "satellaview",
+   "sfc",
+   "sgb",
+   "snes",
+   "snesna",
+   "sufami"
+  ]
+ },
+ {
+  "path": "dsp3.program.rom",
+  "desc": "dsp3.program.rom",
+  "required": false,
+  "cores": [
+   "bsnes",
+   "bsnes-jg",
+   "bsnes_hd_beta",
+   "bsnes_mercury_accuracy",
+   "mesen-s"
+  ],
+  "systems": [
+   "gb",
+   "gbc",
+   "satellaview",
+   "sfc",
+   "sgb",
+   "snes",
+   "snesna",
+   "sufami"
+  ]
+ },
+ {
+  "path": "dsp4.data.rom",
+  "desc": "dsp4.data.rom",
+  "required": false,
+  "cores": [
+   "bsnes",
+   "bsnes-jg",
+   "bsnes_hd_beta",
+   "bsnes_mercury_accuracy",
+   "mesen-s"
+  ],
+  "systems": [
+   "gb",
+   "gbc",
+   "satellaview",
+   "sfc",
+   "sgb",
+   "snes",
+   "snesna",
+   "sufami"
+  ]
+ },
+ {
+  "path": "dsp4.program.rom",
+  "desc": "dsp4.program.rom",
+  "required": false,
+  "cores": [
+   "bsnes",
+   "bsnes-jg",
+   "bsnes_hd_beta",
+   "bsnes_mercury_accuracy",
+   "mesen-s"
+  ],
+  "systems": [
+   "gb",
+   "gbc",
+   "satellaview",
+   "sfc",
+   "sgb",
+   "snes",
+   "snesna",
+   "sufami"
+  ]
+ },
+ {
+  "path": "fbneo/bubsys.zip",
+  "desc": "fbneo/bubsys.zip (Bubble System BIOS)",
+  "required": false,
+  "cores": [
+   "fbneo"
+  ],
+  "systems": [
+   "arcade",
+   "cps",
+   "cps1",
+   "cps2",
+   "cps3",
+   "fbneo",
+   "mame",
+   "neogeo"
+  ]
+ },
+ {
+  "path": "fbneo/cchip.zip",
+  "desc": "fbneo/cchip.zip (C-Chip Internal ROM)",
+  "required": false,
+  "cores": [
+   "fbneo"
+  ],
+  "systems": [
+   "arcade",
+   "cps",
+   "cps1",
+   "cps2",
+   "cps3",
+   "fbneo",
+   "mame",
+   "neogeo"
+  ]
+ },
+ {
+  "path": "fbneo/channelf.zip",
+  "desc": "fbneo/channelf.zip (Fairchild Channel F BIOS)",
+  "required": false,
+  "cores": [
+   "fbneo"
+  ],
+  "systems": [
+   "arcade",
+   "cps",
+   "cps1",
+   "cps2",
+   "cps3",
+   "fbneo",
+   "mame",
+   "neogeo"
+  ]
+ },
+ {
+  "path": "fbneo/coleco.zip",
+  "desc": "fbneo/coleco.zip (ColecoVision System BIOS)",
+  "required": false,
+  "cores": [
+   "fbneo"
+  ],
+  "systems": [
+   "arcade",
+   "cps",
+   "cps1",
+   "cps2",
+   "cps3",
+   "fbneo",
+   "mame",
+   "neogeo"
+  ]
+ },
+ {
+  "path": "fbneo/decocass.zip",
+  "desc": "fbneo/decocass.zip (DECO Cassette System BIOS)",
+  "required": false,
+  "cores": [
+   "fbneo"
+  ],
+  "systems": [
+   "arcade",
+   "cps",
+   "cps1",
+   "cps2",
+   "cps3",
+   "fbneo",
+   "mame",
+   "neogeo"
+  ]
+ },
+ {
+  "path": "fbneo/fdsbios.zip",
+  "desc": "fbneo/fdsbios.zip (FDS System BIOS)",
+  "required": false,
+  "cores": [
+   "fbneo"
+  ],
+  "systems": [
+   "arcade",
+   "cps",
+   "cps1",
+   "cps2",
+   "cps3",
+   "fbneo",
+   "mame",
+   "neogeo"
+  ]
+ },
+ {
+  "path": "fbneo/hiscore.dat",
+  "desc": "fbneo/hiscore.dat (High Score support database)",
+  "required": false,
+  "cores": [
+   "fbneo"
+  ],
+  "systems": [
+   "arcade",
+   "cps",
+   "cps1",
+   "cps2",
+   "cps3",
+   "fbneo",
+   "mame",
+   "neogeo"
+  ]
+ },
+ {
+  "path": "fbneo/isgsm.zip",
+  "desc": "fbneo/isgsm.zip (ISG Selection Master Type 2006 System BIOS)",
+  "required": false,
+  "cores": [
+   "fbneo"
+  ],
+  "systems": [
+   "arcade",
+   "cps",
+   "cps1",
+   "cps2",
+   "cps3",
+   "fbneo",
+   "mame",
+   "neogeo"
+  ]
+ },
+ {
+  "path": "fbneo/midssio.zip",
+  "desc": "fbneo/midssio.zip (Midway SSIO Sound Board Internal ROM)",
+  "required": false,
+  "cores": [
+   "fbneo"
+  ],
+  "systems": [
+   "arcade",
+   "cps",
+   "cps1",
+   "cps2",
+   "cps3",
+   "fbneo",
+   "mame",
+   "neogeo"
+  ]
+ },
+ {
+  "path": "fbneo/msx.zip",
+  "desc": "fbneo/msx.zip (MSX1 System BIOS)",
+  "required": false,
+  "cores": [
+   "fbneo"
+  ],
+  "systems": [
+   "arcade",
+   "cps",
+   "cps1",
+   "cps2",
+   "cps3",
+   "fbneo",
+   "mame",
+   "neogeo"
+  ]
+ },
+ {
+  "path": "fbneo/namcoc69.zip",
+  "desc": "fbneo/namcoc69.zip (Namco C69 BIOS)",
+  "required": false,
+  "cores": [
+   "fbneo"
+  ],
+  "systems": [
+   "arcade",
+   "cps",
+   "cps1",
+   "cps2",
+   "cps3",
+   "fbneo",
+   "mame",
+   "neogeo"
+  ]
+ },
+ {
+  "path": "fbneo/namcoc70.zip",
+  "desc": "fbneo/namcoc70.zip (Namco C70 BIOS)",
+  "required": false,
+  "cores": [
+   "fbneo"
+  ],
+  "systems": [
+   "arcade",
+   "cps",
+   "cps1",
+   "cps2",
+   "cps3",
+   "fbneo",
+   "mame",
+   "neogeo"
+  ]
+ },
+ {
+  "path": "fbneo/namcoc75.zip",
+  "desc": "fbneo/namcoc75.zip (Namco C75 BIOS)",
+  "required": false,
+  "cores": [
+   "fbneo"
+  ],
+  "systems": [
+   "arcade",
+   "cps",
+   "cps1",
+   "cps2",
+   "cps3",
+   "fbneo",
+   "mame",
+   "neogeo"
+  ]
+ },
+ {
+  "path": "fbneo/neocdz.zip",
+  "desc": "fbneo/neocdz.zip (Neo Geo CDZ System BIOS)",
+  "required": false,
+  "cores": [
+   "fbneo"
+  ],
+  "systems": [
+   "arcade",
+   "cps",
+   "cps1",
+   "cps2",
+   "cps3",
+   "fbneo",
+   "mame",
+   "neogeo"
+  ]
+ },
+ {
+  "path": "fbneo/neogeo.zip",
+  "desc": "fbneo/neogeo.zip (Neo Geo BIOS)",
+  "required": false,
+  "cores": [
+   "fbneo"
+  ],
+  "systems": [
+   "arcade",
+   "cps",
+   "cps1",
+   "cps2",
+   "cps3",
+   "fbneo",
+   "mame",
+   "neogeo"
+  ]
+ },
+ {
+  "path": "fbneo/ngp.zip",
+  "desc": "fbneo/ngp.zip (NeoGeo Pocket BIOS)",
+  "required": false,
+  "cores": [
+   "fbneo"
+  ],
+  "systems": [
+   "arcade",
+   "cps",
+   "cps1",
+   "cps2",
+   "cps3",
+   "fbneo",
+   "mame",
+   "neogeo"
+  ]
+ },
+ {
+  "path": "fbneo/nmk004.zip",
+  "desc": "fbneo/nmk004.zip (NMK004 Internal ROM)",
+  "required": false,
+  "cores": [
+   "fbneo"
+  ],
+  "systems": [
+   "arcade",
+   "cps",
+   "cps1",
+   "cps2",
+   "cps3",
+   "fbneo",
+   "mame",
+   "neogeo"
+  ]
+ },
+ {
+  "path": "fbneo/pgm.zip",
+  "desc": "fbneo/pgm.zip (PGM System BIOS)",
+  "required": false,
+  "cores": [
+   "fbneo"
+  ],
+  "systems": [
+   "arcade",
+   "cps",
+   "cps1",
+   "cps2",
+   "cps3",
+   "fbneo",
+   "mame",
+   "neogeo"
+  ]
+ },
+ {
+  "path": "fbneo/skns.zip",
+  "desc": "fbneo/skns.zip (Super Kaneko Nova System BIOS)",
+  "required": false,
+  "cores": [
+   "fbneo"
+  ],
+  "systems": [
+   "arcade",
+   "cps",
+   "cps1",
+   "cps2",
+   "cps3",
+   "fbneo",
+   "mame",
+   "neogeo"
+  ]
+ },
+ {
+  "path": "fbneo/spec128.zip",
+  "desc": "fbneo/spec128.zip (ZX Spectrum 128 BIOS)",
+  "required": false,
+  "cores": [
+   "fbneo"
+  ],
+  "systems": [
+   "arcade",
+   "cps",
+   "cps1",
+   "cps2",
+   "cps3",
+   "fbneo",
+   "mame",
+   "neogeo"
+  ]
+ },
+ {
+  "path": "fbneo/spec1282a.zip",
+  "desc": "fbneo/spec1282a.zip (ZX Spectrum 128 +2a BIOS)",
+  "required": false,
+  "cores": [
+   "fbneo"
+  ],
+  "systems": [
+   "arcade",
+   "cps",
+   "cps1",
+   "cps2",
+   "cps3",
+   "fbneo",
+   "mame",
+   "neogeo"
+  ]
+ },
+ {
+  "path": "fbneo/spectrum.zip",
+  "desc": "fbneo/spectrum.zip (ZX Spectrum BIOS)",
+  "required": false,
+  "cores": [
+   "fbneo"
+  ],
+  "systems": [
+   "arcade",
+   "cps",
+   "cps1",
+   "cps2",
+   "cps3",
+   "fbneo",
+   "mame",
+   "neogeo"
+  ]
+ },
+ {
+  "path": "fbneo/ym2608.zip",
+  "desc": "fbneo/ym2608.zip (YM2608 Internal ROM)",
+  "required": false,
+  "cores": [
+   "fbneo"
+  ],
+  "systems": [
+   "arcade",
+   "cps",
+   "cps1",
+   "cps2",
+   "cps3",
+   "fbneo",
+   "mame",
+   "neogeo"
+  ]
+ },
+ {
+  "path": "firmware.bin",
+  "desc": "firmware.bin (NDS Firmware)",
+  "required": false,
+  "cores": [
+   "desmume",
+   "desmume2015",
+   "melonds",
+   "melondsds",
+   "noods"
+  ],
+  "systems": [
+   "gba",
+   "nds"
+  ]
+ },
+ {
+  "path": "FMPAC.ROM",
+  "desc": "FMPAC.ROM (FMPAC BIOS)",
+  "required": false,
+  "cores": [
+   "fmsx"
+  ],
+  "systems": [
+   "msx",
+   "msx1",
+   "msx2"
+  ]
+ },
+ {
+  "path": "fuse/128p-0.rom",
+  "desc": "128p-0.rom (Pentagon machines)",
+  "required": false,
+  "cores": [
+   "fuse"
+  ],
+  "systems": [
+   "zxspectrum"
+  ]
+ },
+ {
+  "path": "fuse/128p-1.rom",
+  "desc": "128p-1.rom (Pentagon machines)",
+  "required": false,
+  "cores": [
+   "fuse"
+  ],
+  "systems": [
+   "zxspectrum"
+  ]
+ },
+ {
+  "path": "fuse/256s-0.rom",
+  "desc": "256s-0.rom (Scorpion 256K)",
+  "required": false,
+  "cores": [
+   "fuse"
+  ],
+  "systems": [
+   "zxspectrum"
+  ]
+ },
+ {
+  "path": "fuse/256s-1.rom",
+  "desc": "256s-1.rom (Scorpion 256K)",
+  "required": false,
+  "cores": [
+   "fuse"
+  ],
+  "systems": [
+   "zxspectrum"
+  ]
+ },
+ {
+  "path": "fuse/256s-2.rom",
+  "desc": "256s-2.rom (Scorpion 256K)",
+  "required": false,
+  "cores": [
+   "fuse"
+  ],
+  "systems": [
+   "zxspectrum"
+  ]
+ },
+ {
+  "path": "fuse/256s-3.rom",
+  "desc": "256s-3.rom (Scorpion 256K)",
+  "required": false,
+  "cores": [
+   "fuse"
+  ],
+  "systems": [
+   "zxspectrum"
+  ]
+ },
+ {
+  "path": "fuse/gluck.rom",
+  "desc": "gluck.rom (Pentagon 512K / 1024)",
+  "required": false,
+  "cores": [
+   "fuse"
+  ],
+  "systems": [
+   "zxspectrum"
+  ]
+ },
+ {
+  "path": "fuse/trdos.rom",
+  "desc": "trdos.rom (Pentagon machines)",
+  "required": false,
+  "cores": [
+   "fuse"
+  ],
+  "systems": [
+   "zxspectrum"
+  ]
+ },
+ {
+  "path": "gamegenie.nes",
+  "desc": "gamegenie.nes (Game Genie add-on cartridge)",
+  "required": false,
+  "cores": [
+   "fceumm"
+  ],
+  "systems": [
+   "famicom",
+   "fds",
+   "nes"
+  ]
+ },
+ {
+  "path": "gb_bios.bin",
+  "desc": "gb_bios.bin (Game Boy BIOS)",
+  "required": false,
+  "cores": [
+   "gambatte",
+   "mgba",
+   "vbam"
+  ],
+  "systems": [
+   "gb",
+   "gba",
+   "gbc",
+   "sgb"
+  ]
+ },
+ {
+  "path": "gbc_bios.bin",
+  "desc": "gbc_bios.bin (Game Boy Color BIOS)",
+  "required": false,
+  "cores": [
+   "gambatte",
+   "mgba",
+   "vbam"
+  ],
+  "systems": [
+   "gb",
+   "gba",
+   "gbc",
+   "sgb"
+  ]
+ },
+ {
+  "path": "gexpress.pce",
+  "desc": "gexpress.pce (Game Express CD Card)",
+  "required": false,
+  "cores": [
+   "mednafen_pce",
+   "mednafen_pce_fast",
+   "mednafen_supergrafx"
+  ],
+  "systems": [
+   "pcengine",
+   "pcenginecd",
+   "supergrafx",
+   "tg-cd",
+   "tg16"
+  ]
+ },
+ {
+  "path": "ggenie.bin",
+  "desc": "ggenie.bin (Game Genie ROM)",
+  "required": false,
+  "cores": [
+   "genesis_plus_gx",
+   "genesis_plus_gx_wide"
+  ],
+  "systems": [
+   "gamegear",
+   "genesis",
+   "mark3",
+   "mastersystem",
+   "megacd",
+   "megacdjp",
+   "megadrive",
+   "megadrivejp",
+   "segacd",
+   "sg-1000"
+  ]
+ },
+ {
+  "path": "goldstar.bin",
+  "desc": "goldstar.bin (Goldstar GDO-101M BIOS)",
+  "required": false,
+  "cores": [
+   "opera"
+  ],
+  "systems": [
+   "3do"
+  ]
+ },
+ {
+  "path": "KANJI.ROM",
+  "desc": "KANJI.ROM (Kanji Font)",
+  "required": false,
+  "cores": [
+   "fmsx"
+  ],
+  "systems": [
+   "msx",
+   "msx1",
+   "msx2"
+  ]
+ },
+ {
+  "path": "keropi/iplrom30.dat",
+  "desc": "iplrom30.dat (X68000 BIOS 3)",
+  "required": false,
+  "cores": [
+   "px68k"
+  ],
+  "systems": [
+   "x68000"
+  ]
+ },
+ {
+  "path": "kick33180.A500",
+  "desc": "kick33180.A500 | amiga-os-120.rom (A500-A2000 KS v1.2 rev 33.180)",
+  "required": false,
+  "cores": [
+   "puae",
+   "puae2021"
+  ],
+  "systems": [
+   "amiga",
+   "amiga1200",
+   "amiga600",
+   "amigacd32",
+   "cdtv"
+  ]
+ },
+ {
+  "path": "kick34005.CDTV",
+  "desc": "kick34005.CDTV | amiga-os-130-cdtv-ext.rom (CDTV extended ROM v1.0)",
+  "required": false,
+  "cores": [
+   "puae",
+   "puae2021"
+  ],
+  "systems": [
+   "amiga",
+   "amiga1200",
+   "amiga600",
+   "amigacd32",
+   "cdtv"
+  ]
+ },
+ {
+  "path": "kick37175.A500",
+  "desc": "kick37175.A500 | amiga-os-204.rom (A500+ KS v2.04 rev 37.175)",
+  "required": false,
+  "cores": [
+   "puae",
+   "puae2021"
+  ],
+  "systems": [
+   "amiga",
+   "amiga1200",
+   "amiga600",
+   "amigacd32",
+   "cdtv"
+  ]
+ },
+ {
+  "path": "kick37350.A600",
+  "desc": "kick37350.A600 | amiga-os-205-a600.rom (A600 KS v2.05 rev 37.350)",
+  "required": false,
+  "cores": [
+   "puae",
+   "puae2021"
+  ],
+  "systems": [
+   "amiga",
+   "amiga1200",
+   "amiga600",
+   "amigacd32",
+   "cdtv"
+  ]
+ },
+ {
+  "path": "kick39106.A1200",
+  "desc": "kick39106.A1200 | amiga-os-300-a1200.rom (A1200 KS v3.0 rev 39.106)",
+  "required": false,
+  "cores": [
+   "puae",
+   "puae2021"
+  ],
+  "systems": [
+   "amiga",
+   "amiga1200",
+   "amiga600",
+   "amigacd32",
+   "cdtv"
+  ]
+ },
+ {
+  "path": "kick39106.A4000",
+  "desc": "kick39106.A4000 | amiga-os-300-a4000.rom (A4000 KS v3.0 rev 39.106)",
+  "required": false,
+  "cores": [
+   "puae",
+   "puae2021"
+  ],
+  "systems": [
+   "amiga",
+   "amiga1200",
+   "amiga600",
+   "amigacd32",
+   "cdtv"
+  ]
+ },
+ {
+  "path": "kick40063.A600",
+  "desc": "kick40063.A600 | amiga-os-310-a600.rom (A600-A2000 KS v3.1 rev 40.063)",
+  "required": false,
+  "cores": [
+   "puae",
+   "puae2021"
+  ],
+  "systems": [
+   "amiga",
+   "amiga1200",
+   "amiga600",
+   "amigacd32",
+   "cdtv"
+  ]
+ },
+ {
+  "path": "kick40068.A4000",
+  "desc": "kick40068.A4000 | amiga-os-310-a4000.rom (A4000 KS v3.1 rev 40.068)",
+  "required": false,
+  "cores": [
+   "puae",
+   "puae2021"
+  ],
+  "systems": [
+   "amiga",
+   "amiga1200",
+   "amiga600",
+   "amigacd32",
+   "cdtv"
+  ]
+ },
+ {
+  "path": "libbass.dylib",
+  "desc": "libbass.dylib (BASS macOS library)",
+  "required": false,
+  "cores": [
+   "dosbox_core"
+  ],
+  "systems": [
+   "dos",
+   "pc"
+  ]
+ },
+ {
+  "path": "libbass.so",
+  "desc": "libbass.so (BASS Linux library)",
+  "required": false,
+  "cores": [
+   "dosbox_core"
+  ],
+  "systems": [
+   "dos",
+   "pc"
+  ]
+ },
+ {
+  "path": "libbassmidi.dylib",
+  "desc": "libbassmidi.dylib (BASSMIDI macOS library)",
+  "required": false,
+  "cores": [
+   "dosbox_core"
+  ],
+  "systems": [
+   "dos",
+   "pc"
+  ]
+ },
+ {
+  "path": "libbassmidi.so",
+  "desc": "libbassmidi.so (BASSMIDI Linux library)",
+  "required": false,
+  "cores": [
+   "dosbox_core"
+  ],
+  "systems": [
+   "dos",
+   "pc"
+  ]
+ },
+ {
+  "path": "mpr-18811-mx.ic1",
+  "desc": "mpr-18811-mx.ic1 (The King of Fighters '95 ROM Cartridge)",
+  "required": false,
+  "cores": [
+   "mednafen_saturn"
+  ],
+  "systems": [
+   "saturn",
+   "saturnjp"
+  ]
+ },
+ {
+  "path": "mpr-19367-mx.ic1",
+  "desc": "mpr-19367-mx.ic1 (Ultraman: Hikari no Kyojin Densetsu ROM Cartridge)",
+  "required": false,
+  "cores": [
+   "mednafen_saturn"
+  ],
+  "systems": [
+   "saturn",
+   "saturnjp"
+  ]
+ },
+ {
+  "path": "MSXDOS2.ROM",
+  "desc": "MSXDOS2.ROM (MSX-DOS 2)",
+  "required": false,
+  "cores": [
+   "fmsx"
+  ],
+  "systems": [
+   "msx",
+   "msx1",
+   "msx2"
+  ]
+ },
+ {
+  "path": "MT32_CONTROL.ROM",
+  "desc": "MT32_CONTROL.ROM (MT-32 Control ROM v1.07)",
+  "required": false,
+  "cores": [
+   "dosbox_core"
+  ],
+  "systems": [
+   "dos",
+   "pc"
+  ]
+ },
+ {
+  "path": "MT32_PCM.ROM",
+  "desc": "MT32_PCM.ROM (MT-32 PCM ROM)",
+  "required": false,
+  "cores": [
+   "dosbox_core"
+  ],
+  "systems": [
+   "dos",
+   "pc"
+  ]
+ },
+ {
+  "path": "nds_sd_card.bin",
+  "desc": "nds_sd_card.bin (NDS SD card)",
+  "required": false,
+  "cores": [
+   "noods"
+  ],
+  "systems": [
+   "gba",
+   "nds"
+  ]
+ },
+ {
+  "path": "neocd/000-lo.lo",
+  "desc": "neocd/000-lo.lo (Y-ZOOM ROM (MAME))",
+  "required": false,
+  "cores": [
+   "neocd"
+  ],
+  "systems": [
+   "neogeocd",
+   "neogeocdjp"
+  ]
+ },
+ {
+  "path": "neocd/front-sp1.bin",
+  "desc": "neocd/front-sp1.bin (Front Loader BIOS (MAME))",
+  "required": false,
+  "cores": [
+   "neocd"
+  ],
+  "systems": [
+   "neogeocd",
+   "neogeocdjp"
+  ]
+ },
+ {
+  "path": "neocd/neocd.bin",
+  "desc": "neocd/neocd.bin (CDZ BIOS (MAME))",
+  "required": false,
+  "cores": [
+   "neocd"
+  ],
+  "systems": [
+   "neogeocd",
+   "neogeocdjp"
+  ]
+ },
+ {
+  "path": "neocd/neocd_f.rom",
+  "desc": "neocd/neocd_f.rom (Front Loader BIOS)",
+  "required": false,
+  "cores": [
+   "neocd"
+  ],
+  "systems": [
+   "neogeocd",
+   "neogeocdjp"
+  ]
+ },
+ {
+  "path": "neocd/neocd_sf.rom",
+  "desc": "neocd/neocd_sf.rom (Front Loader BIOS (SMKDAN))",
+  "required": false,
+  "cores": [
+   "neocd"
+  ],
+  "systems": [
+   "neogeocd",
+   "neogeocdjp"
+  ]
+ },
+ {
+  "path": "neocd/neocd_st.rom",
+  "desc": "neocd/neocd_st.rom (Top Loader BIOS (SMKDAN))",
+  "required": false,
+  "cores": [
+   "neocd"
+  ],
+  "systems": [
+   "neogeocd",
+   "neogeocdjp"
+  ]
+ },
+ {
+  "path": "neocd/neocd_sz.rom",
+  "desc": "neocd/neocd_sz.rom (CDZ BIOS (SMKDAN))",
+  "required": false,
+  "cores": [
+   "neocd"
+  ],
+  "systems": [
+   "neogeocd",
+   "neogeocdjp"
+  ]
+ },
+ {
+  "path": "neocd/neocd_t.rom",
+  "desc": "neocd/neocd_t.rom (Top Loader BIOS))",
+  "required": false,
+  "cores": [
+   "neocd"
+  ],
+  "systems": [
+   "neogeocd",
+   "neogeocdjp"
+  ]
+ },
+ {
+  "path": "neocd/neocd_z.rom",
+  "desc": "neocd/neocd_z.rom (CDZ BIOS)",
+  "required": false,
+  "cores": [
+   "neocd"
+  ],
+  "systems": [
+   "neogeocd",
+   "neogeocdjp"
+  ]
+ },
+ {
+  "path": "neocd/ng-lo.rom",
+  "desc": "neocd/ng-lo.rom (Y-ZOOM ROM)",
+  "required": false,
+  "cores": [
+   "neocd"
+  ],
+  "systems": [
+   "neogeocd",
+   "neogeocdjp"
+  ]
+ },
+ {
+  "path": "neocd/top-sp1.bin",
+  "desc": "neocd/top-sp1.bin (Top Loader BIOS (MAME))",
+  "required": false,
+  "cores": [
+   "neocd"
+  ],
+  "systems": [
+   "neogeocd",
+   "neogeocdjp"
+  ]
+ },
+ {
+  "path": "neocd/uni-bioscd.rom",
+  "desc": "neocd/uni-bioscd.rom (Universe BIOS 3.2)",
+  "required": false,
+  "cores": [
+   "neocd"
+  ],
+  "systems": [
+   "neogeocd",
+   "neogeocdjp"
+  ]
+ },
+ {
+  "path": "nes.pal",
+  "desc": "nes.pal (custom NES Palette)",
+  "required": false,
+  "cores": [
+   "fceumm"
+  ],
+  "systems": [
+   "famicom",
+   "fds",
+   "nes"
+  ]
+ },
+ {
+  "path": "np2kai/2608_BD.WAV",
+  "desc": "np2kai/2608_BD.WAV (YM2608 rhythm sample)",
+  "required": false,
+  "cores": [
+   "np2kai"
+  ],
+  "systems": [
+   "pc98"
+  ]
+ },
+ {
+  "path": "np2kai/2608_HH.WAV",
+  "desc": "np2kai/2608_HH.WAV (YM2608 rhythm sample)",
+  "required": false,
+  "cores": [
+   "np2kai"
+  ],
+  "systems": [
+   "pc98"
+  ]
+ },
+ {
+  "path": "np2kai/2608_RIM.WAV",
+  "desc": "np2kai/2608_RIM.WAV (YM2608 rhythm sample)",
+  "required": false,
+  "cores": [
+   "np2kai"
+  ],
+  "systems": [
+   "pc98"
+  ]
+ },
+ {
+  "path": "np2kai/2608_SD.WAV",
+  "desc": "np2kai/2608_SD.WAV (YM2608 rhythm sample)",
+  "required": false,
+  "cores": [
+   "np2kai"
+  ],
+  "systems": [
+   "pc98"
+  ]
+ },
+ {
+  "path": "np2kai/2608_TOM.WAV",
+  "desc": "np2kai/2608_TOM.WAV (YM2608 rhythm sample)",
+  "required": false,
+  "cores": [
+   "np2kai"
+  ],
+  "systems": [
+   "pc98"
+  ]
+ },
+ {
+  "path": "np2kai/2608_TOP.WAV",
+  "desc": "np2kai/2608_TOP.WAV (YM2608 rhythm sample)",
+  "required": false,
+  "cores": [
+   "np2kai"
+  ],
+  "systems": [
+   "pc98"
+  ]
+ },
+ {
+  "path": "np2kai/bios.rom",
+  "desc": "np2kai/bios.rom",
+  "required": false,
+  "cores": [
+   "np2kai"
+  ],
+  "systems": [
+   "pc98"
+  ]
+ },
+ {
+  "path": "np2kai/font.bmp",
+  "desc": "np2kai/font.bmp (needed to display text)",
+  "required": false,
+  "cores": [
+   "np2kai"
+  ],
+  "systems": [
+   "pc98"
+  ]
+ },
+ {
+  "path": "np2kai/FONT.ROM",
+  "desc": "np2kai/FONT.ROM (alt font file)",
+  "required": false,
+  "cores": [
+   "np2kai"
+  ],
+  "systems": [
+   "pc98"
+  ]
+ },
+ {
+  "path": "np2kai/itf.rom",
+  "desc": "np2kai/itf.rom",
+  "required": false,
+  "cores": [
+   "np2kai"
+  ],
+  "systems": [
+   "pc98"
+  ]
+ },
+ {
+  "path": "np2kai/sound.rom",
+  "desc": "np2kai/sound.rom",
+  "required": false,
+  "cores": [
+   "np2kai"
+  ],
+  "systems": [
+   "pc98"
+  ]
+ },
+ {
+  "path": "PAINTER.ROM",
+  "desc": "PAINTER.ROM (Yamaha Painter)",
+  "required": false,
+  "cores": [
+   "fmsx"
+  ],
+  "systems": [
+   "msx",
+   "msx1",
+   "msx2"
+  ]
+ },
+ {
+  "path": "palmos40-en-m500.rom",
+  "desc": "palmos40-en-m500.rom (Palm OS 4.0)",
+  "required": false,
+  "cores": [
+   "mu"
+  ],
+  "systems": [
+   "palm"
+  ]
+ },
+ {
+  "path": "palmos52-en-t3.rom",
+  "desc": "palmos52-en-t3.rom (Palm OS 5.2.1)",
+  "required": false,
+  "cores": [
+   "mu"
+  ],
+  "systems": [
+   "palm"
+  ]
+ },
+ {
+  "path": "palmos60-en-t3.rom",
+  "desc": "palmos60-en-t3.rom (Palm OS 6.0)",
+  "required": false,
+  "cores": [
+   "mu"
+  ],
+  "systems": [
+   "palm"
+  ]
+ },
+ {
+  "path": "panafz1-kanji.bin",
+  "desc": "panafz1-kanji.bin (Panasonic FZ-1 Kanji Font ROM)",
+  "required": false,
+  "cores": [
+   "opera"
+  ],
+  "systems": [
+   "3do"
+  ]
+ },
+ {
+  "path": "panafz1.bin",
+  "desc": "panafz1.bin (Panasonic FZ-1 BIOS)",
+  "required": false,
+  "cores": [
+   "opera"
+  ],
+  "systems": [
+   "3do"
+  ]
+ },
+ {
+  "path": "panafz10-norsa.bin",
+  "desc": "panafz10-norsa.bin (Panasonic FZ-10 BIOS [Encryption Check Disabled])",
+  "required": false,
+  "cores": [
+   "opera"
+  ],
+  "systems": [
+   "3do"
+  ]
+ },
+ {
+  "path": "panafz10.bin",
+  "desc": "panafz10.bin (Panasonic FZ-10 BIOS)",
+  "required": false,
+  "cores": [
+   "opera"
+  ],
+  "systems": [
+   "3do"
+  ]
+ },
+ {
+  "path": "panafz10e-anvil-norsa.bin",
+  "desc": "panafz10e-anvil-norsa.bin (Panasonic FZ-10E ANVIL BIOS [Encryption Check Disabled])",
+  "required": false,
+  "cores": [
+   "opera"
+  ],
+  "systems": [
+   "3do"
+  ]
+ },
+ {
+  "path": "panafz10e-anvil.bin",
+  "desc": "panafz10e-anvil.bin (Panasonic FZ-10E ANVIL BIOS)",
+  "required": false,
+  "cores": [
+   "opera"
+  ],
+  "systems": [
+   "3do"
+  ]
+ },
+ {
+  "path": "panafz10ja-anvil-kanji.bin",
+  "desc": "panafz10ja-anvil-kanji.bin (Panasonic FZ-10JA Kanji Font ROM)",
+  "required": false,
+  "cores": [
+   "opera"
+  ],
+  "systems": [
+   "3do"
+  ]
+ },
+ {
+  "path": "panafz1j-kanji.bin",
+  "desc": "panafz1j-kanji.bin (Panasonic FZ-1J Kanji Font ROM)",
+  "required": false,
+  "cores": [
+   "opera"
+  ],
+  "systems": [
+   "3do"
+  ]
+ },
+ {
+  "path": "panafz1j-norsa.bin",
+  "desc": "panafz1j-norsa.bin (Panasonic FZ-1J BIOS [Encryption Check Disabled])",
+  "required": false,
+  "cores": [
+   "opera"
+  ],
+  "systems": [
+   "3do"
+  ]
+ },
+ {
+  "path": "panafz1j.bin",
+  "desc": "panafz1j.bin (Panasonic FZ-1J BIOS)",
+  "required": false,
+  "cores": [
+   "opera"
+  ],
+  "systems": [
+   "3do"
+  ]
+ },
+ {
+  "path": "ps1_rom.bin",
+  "desc": "ps1_rom.bin (PS3 PS1 BIOS)",
+  "required": false,
+  "cores": [
+   "mednafen_psx",
+   "mednafen_psx_hw",
+   "swanstation"
+  ],
+  "systems": [
+   "psx"
+  ]
+ },
+ {
+  "path": "psxonpsp660.bin",
+  "desc": "psxonpsp660.bin (PSP PS1 BIOS)",
+  "required": false,
+  "cores": [
+   "mednafen_psx",
+   "mednafen_psx_hw",
+   "pcsx_rearmed",
+   "swanstation"
+  ],
+  "systems": [
+   "psx"
+  ]
+ },
+ {
+  "path": "quasi88/disk.rom",
+  "desc": "disk.rom (Sub BIOS)",
+  "required": false,
+  "cores": [
+   "quasi88"
+  ],
+  "systems": [
+   "pc88"
+  ]
+ },
+ {
+  "path": "quasi88/n88_1.rom",
+  "desc": "n88_1.rom (Extension BIOS 2)",
+  "required": false,
+  "cores": [
+   "quasi88"
+  ],
+  "systems": [
+   "pc88"
+  ]
+ },
+ {
+  "path": "quasi88/n88_2.rom",
+  "desc": "n88_2.rom (Extension BIOS 3)",
+  "required": false,
+  "cores": [
+   "quasi88"
+  ],
+  "systems": [
+   "pc88"
+  ]
+ },
+ {
+  "path": "quasi88/n88_3.rom",
+  "desc": "n88_3.rom (Extension BIOS 4)",
+  "required": false,
+  "cores": [
+   "quasi88"
+  ],
+  "systems": [
+   "pc88"
+  ]
+ },
+ {
+  "path": "quasi88/n88jisho.rom",
+  "desc": "n88jisho.rom (Jisho)",
+  "required": false,
+  "cores": [
+   "quasi88"
+  ],
+  "systems": [
+   "pc88"
+  ]
+ },
+ {
+  "path": "quasi88/n88knj1.rom",
+  "desc": "n88knj1.rom (Kanji Font 1)",
+  "required": false,
+  "cores": [
+   "quasi88"
+  ],
+  "systems": [
+   "pc88"
+  ]
+ },
+ {
+  "path": "quasi88/n88knj2.rom",
+  "desc": "n88knj2.rom (Kanji Font 2)",
+  "required": false,
+  "cores": [
+   "quasi88"
+  ],
+  "systems": [
+   "pc88"
+  ]
+ },
+ {
+  "path": "quasi88/n88n.rom",
+  "desc": "n88n.rom (N Basic BIOS)",
+  "required": false,
+  "cores": [
+   "quasi88"
+  ],
+  "systems": [
+   "pc88"
+  ]
+ },
+ {
+  "path": "same_cdi/bios/cdibios.zip",
+  "desc": "same_cdi/bios/cdibios.zip",
+  "required": false,
+  "cores": [
+   "same_cdi"
+  ],
+  "systems": [
+   "cdimono1"
+  ]
+ },
+ {
+  "path": "same_cdi/bios/cdimono2.zip",
+  "desc": "same_cdi/bios/cdimono2.zip",
+  "required": false,
+  "cores": [
+   "same_cdi"
+  ],
+  "systems": [
+   "cdimono1"
+  ]
+ },
+ {
+  "path": "sanyotry.bin",
+  "desc": "sanyotry.bin (Sanyo Try IMP-21J BIOS)",
+  "required": false,
+  "cores": [
+   "opera"
+  ],
+  "systems": [
+   "3do"
+  ]
+ },
+ {
+  "path": "scummvm/extra/access.dat",
+  "desc": "access.dat",
+  "required": false,
+  "cores": [
+   "scummvm"
+  ],
+  "systems": [
+   "scummvm"
+  ]
+ },
+ {
+  "path": "scummvm/extra/achievements.dat",
+  "desc": "achievements.dat",
+  "required": false,
+  "cores": [
+   "scummvm"
+  ],
+  "systems": [
+   "scummvm"
+  ]
+ },
+ {
+  "path": "scummvm/extra/cryo.dat",
+  "desc": "cryo.dat",
+  "required": false,
+  "cores": [
+   "scummvm"
+  ],
+  "systems": [
+   "scummvm"
+  ]
+ },
+ {
+  "path": "scummvm/extra/cryomni3d.dat",
+  "desc": "cryomni3d.dat",
+  "required": false,
+  "cores": [
+   "scummvm"
+  ],
+  "systems": [
+   "scummvm"
+  ]
+ },
+ {
+  "path": "scummvm/extra/drascula.dat",
+  "desc": "drascula.dat",
+  "required": false,
+  "cores": [
+   "scummvm"
+  ],
+  "systems": [
+   "scummvm"
+  ]
+ },
+ {
+  "path": "scummvm/extra/encoding.dat",
+  "desc": "encoding.dat",
+  "required": false,
+  "cores": [
+   "scummvm"
+  ],
+  "systems": [
+   "scummvm"
+  ]
+ },
+ {
+  "path": "scummvm/extra/fonts.dat",
+  "desc": "fonts.dat",
+  "required": false,
+  "cores": [
+   "scummvm"
+  ],
+  "systems": [
+   "scummvm"
+  ]
+ },
+ {
+  "path": "scummvm/extra/freescape.dat",
+  "desc": "freescape.dat",
+  "required": false,
+  "cores": [
+   "scummvm"
+  ],
+  "systems": [
+   "scummvm"
+  ]
+ },
+ {
+  "path": "scummvm/extra/grim-patch.lab",
+  "desc": "grim-patch.lab",
+  "required": false,
+  "cores": [
+   "scummvm"
+  ],
+  "systems": [
+   "scummvm"
+  ]
+ },
+ {
+  "path": "scummvm/extra/hadesch_translations.dat",
+  "desc": "hadesch_translations.dat",
+  "required": false,
+  "cores": [
+   "scummvm"
+  ],
+  "systems": [
+   "scummvm"
+  ]
+ },
+ {
+  "path": "scummvm/extra/hugo.dat",
+  "desc": "hugo.dat",
+  "required": false,
+  "cores": [
+   "scummvm"
+  ],
+  "systems": [
+   "scummvm"
+  ]
+ },
+ {
+  "path": "scummvm/extra/kyra.dat",
+  "desc": "kyra.dat",
+  "required": false,
+  "cores": [
+   "scummvm"
+  ],
+  "systems": [
+   "scummvm"
+  ]
+ },
+ {
+  "path": "scummvm/extra/lure.dat",
+  "desc": "lure.dat",
+  "required": false,
+  "cores": [
+   "scummvm"
+  ],
+  "systems": [
+   "scummvm"
+  ]
+ },
+ {
+  "path": "scummvm/extra/macgui.dat",
+  "desc": "macgui.dat",
+  "required": false,
+  "cores": [
+   "scummvm"
+  ],
+  "systems": [
+   "scummvm"
+  ]
+ },
+ {
+  "path": "scummvm/extra/macventure.dat",
+  "desc": "macventure.dat",
+  "required": false,
+  "cores": [
+   "scummvm"
+  ],
+  "systems": [
+   "scummvm"
+  ]
+ },
+ {
+  "path": "scummvm/extra/mm.dat",
+  "desc": "mm.dat",
+  "required": false,
+  "cores": [
+   "scummvm"
+  ],
+  "systems": [
+   "scummvm"
+  ]
+ },
+ {
+  "path": "scummvm/extra/monkey4-patch.m4b",
+  "desc": "monkey4-patch.m4b",
+  "required": false,
+  "cores": [
+   "scummvm"
+  ],
+  "systems": [
+   "scummvm"
+  ]
+ },
+ {
+  "path": "scummvm/extra/mort.dat",
+  "desc": "mort.dat",
+  "required": false,
+  "cores": [
+   "scummvm"
+  ],
+  "systems": [
+   "scummvm"
+  ]
+ },
+ {
+  "path": "scummvm/extra/myst3.dat",
+  "desc": "myst3.dat",
+  "required": false,
+  "cores": [
+   "scummvm"
+  ],
+  "systems": [
+   "scummvm"
+  ]
+ },
+ {
+  "path": "scummvm/extra/nancy.dat",
+  "desc": "nancy.dat",
+  "required": false,
+  "cores": [
+   "scummvm"
+  ],
+  "systems": [
+   "scummvm"
+  ]
+ },
+ {
+  "path": "scummvm/extra/neverhood.dat",
+  "desc": "neverhood.dat",
+  "required": false,
+  "cores": [
+   "scummvm"
+  ],
+  "systems": [
+   "scummvm"
+  ]
+ },
+ {
+  "path": "scummvm/extra/queen.tbl",
+  "desc": "queen.tbl",
+  "required": false,
+  "cores": [
+   "scummvm"
+  ],
+  "systems": [
+   "scummvm"
+  ]
+ },
+ {
+  "path": "scummvm/extra/Roland_SC-55.sf2",
+  "desc": "Roland_SC-55.sf2",
+  "required": false,
+  "cores": [
+   "scummvm"
+  ],
+  "systems": [
+   "scummvm"
+  ]
+ },
+ {
+  "path": "scummvm/extra/sky.cpt",
+  "desc": "sky.cpt",
+  "required": false,
+  "cores": [
+   "scummvm"
+  ],
+  "systems": [
+   "scummvm"
+  ]
+ },
+ {
+  "path": "scummvm/extra/supernova.dat",
+  "desc": "supernova.dat",
+  "required": false,
+  "cores": [
+   "scummvm"
+  ],
+  "systems": [
+   "scummvm"
+  ]
+ },
+ {
+  "path": "scummvm/extra/teenagent.dat",
+  "desc": "teenagent.dat",
+  "required": false,
+  "cores": [
+   "scummvm"
+  ],
+  "systems": [
+   "scummvm"
+  ]
+ },
+ {
+  "path": "scummvm/extra/titanic.dat",
+  "desc": "titanic.dat",
+  "required": false,
+  "cores": [
+   "scummvm"
+  ],
+  "systems": [
+   "scummvm"
+  ]
+ },
+ {
+  "path": "scummvm/extra/tony.dat",
+  "desc": "tony.dat",
+  "required": false,
+  "cores": [
+   "scummvm"
+  ],
+  "systems": [
+   "scummvm"
+  ]
+ },
+ {
+  "path": "scummvm/extra/toon.dat",
+  "desc": "toon.dat",
+  "required": false,
+  "cores": [
+   "scummvm"
+  ],
+  "systems": [
+   "scummvm"
+  ]
+ },
+ {
+  "path": "scummvm/extra/ultima.dat",
+  "desc": "ultima.dat",
+  "required": false,
+  "cores": [
+   "scummvm"
+  ],
+  "systems": [
+   "scummvm"
+  ]
+ },
+ {
+  "path": "scummvm/extra/vkeybd_default.zip",
+  "desc": "vkeybd_default.zip",
+  "required": false,
+  "cores": [
+   "scummvm"
+  ],
+  "systems": [
+   "scummvm"
+  ]
+ },
+ {
+  "path": "scummvm/extra/wintermute.zip",
+  "desc": "wintermute.zip",
+  "required": false,
+  "cores": [
+   "scummvm"
+  ],
+  "systems": [
+   "scummvm"
+  ]
+ },
+ {
+  "path": "scummvm/theme/gui-icons.dat",
+  "desc": "gui-icons.dat",
+  "required": false,
+  "cores": [
+   "scummvm"
+  ],
+  "systems": [
+   "scummvm"
+  ]
+ },
+ {
+  "path": "scummvm/theme/residualvm.zip",
+  "desc": "residualvm.zip",
+  "required": false,
+  "cores": [
+   "scummvm"
+  ],
+  "systems": [
+   "scummvm"
+  ]
+ },
+ {
+  "path": "scummvm/theme/scummclassic.zip",
+  "desc": "scummclassic.zip",
+  "required": false,
+  "cores": [
+   "scummvm"
+  ],
+  "systems": [
+   "scummvm"
+  ]
+ },
+ {
+  "path": "scummvm/theme/scummmodern.zip",
+  "desc": "scummmodern.zip",
+  "required": false,
+  "cores": [
+   "scummvm"
+  ],
+  "systems": [
+   "scummvm"
+  ]
+ },
+ {
+  "path": "scummvm/theme/scummremastered.zip",
+  "desc": "scummremastered.zip",
+  "required": false,
+  "cores": [
+   "scummvm"
+  ],
+  "systems": [
+   "scummvm"
+  ]
+ },
+ {
+  "path": "scummvm/theme/shaders.dat",
+  "desc": "shaders.dat",
+  "required": false,
+  "cores": [
+   "scummvm"
+  ],
+  "systems": [
+   "scummvm"
+  ]
+ },
+ {
+  "path": "scummvm/theme/translations.dat",
+  "desc": "translations.dat",
+  "required": false,
+  "cores": [
+   "scummvm"
+  ],
+  "systems": [
+   "scummvm"
+  ]
+ },
+ {
+  "path": "sgb.boot.rom",
+  "desc": "sgb.boot.rom (SGB Boot Image)",
+  "required": false,
+  "cores": [
+   "bsnes_mercury_accuracy"
+  ],
+  "systems": [
+   "satellaview",
+   "sfc",
+   "snes",
+   "snesna",
+   "sufami"
+  ]
+ },
+ {
+  "path": "SGB1.sfc",
+  "desc": "SGB1.sfc (SGB Boot Image)",
+  "required": false,
+  "cores": [
+   "bsnes",
+   "bsnes_hd_beta",
+   "mesen-s"
+  ],
+  "systems": [
+   "gb",
+   "gbc",
+   "satellaview",
+   "sfc",
+   "sgb",
+   "snes",
+   "snesna",
+   "sufami"
+  ]
+ },
+ {
+  "path": "SGB2.sfc",
+  "desc": "SGB2.sfc (SGB Boot Image)",
+  "required": false,
+  "cores": [
+   "bsnes",
+   "bsnes_hd_beta",
+   "mesen-s"
+  ],
+  "systems": [
+   "gb",
+   "gbc",
+   "satellaview",
+   "sfc",
+   "sgb",
+   "snes",
+   "snesna",
+   "sufami"
+  ]
+ },
+ {
+  "path": "sgb2_boot.bin",
+  "desc": "sgb2_boot.bin (SGB2 Boot Image)",
+  "required": false,
+  "cores": [
+   "mesen-s"
+  ],
+  "systems": [
+   "gb",
+   "gbc",
+   "satellaview",
+   "sfc",
+   "sgb",
+   "snes",
+   "snesna"
+  ]
+ },
+ {
+  "path": "sgb_bios.bin",
+  "desc": "sgb_bios.bin (Super Game Boy BIOS)",
+  "required": false,
+  "cores": [
+   "mgba"
+  ],
+  "systems": [
+   "gb",
+   "gba",
+   "gbc",
+   "sgb"
+  ]
+ },
+ {
+  "path": "sgb_boot.bin",
+  "desc": "sgb_boot.bin (SGB Boot Image)",
+  "required": false,
+  "cores": [
+   "mesen-s"
+  ],
+  "systems": [
+   "gb",
+   "gbc",
+   "satellaview",
+   "sfc",
+   "sgb",
+   "snes",
+   "snesna"
+  ]
+ },
+ {
+  "path": "sk.bin",
+  "desc": "sk.bin (Sonic & Knuckles ROM)",
+  "required": false,
+  "cores": [
+   "genesis_plus_gx",
+   "genesis_plus_gx_wide"
+  ],
+  "systems": [
+   "gamegear",
+   "genesis",
+   "mark3",
+   "mastersystem",
+   "megacd",
+   "megacdjp",
+   "megadrive",
+   "megadrivejp",
+   "segacd",
+   "sg-1000"
+  ]
+ },
+ {
+  "path": "sk2chip.bin",
+  "desc": "sk2chip.bin (Sonic & Knuckles UPMEM ROM)",
+  "required": false,
+  "cores": [
+   "genesis_plus_gx",
+   "genesis_plus_gx_wide"
+  ],
+  "systems": [
+   "gamegear",
+   "genesis",
+   "mark3",
+   "mastersystem",
+   "megacd",
+   "megacdjp",
+   "megadrive",
+   "megadrivejp",
+   "segacd",
+   "sg-1000"
+  ]
+ },
+ {
+  "path": "squirreljme.sqc",
+  "desc": "squirreljme.sqc (SquirrelJME ROM)",
+  "required": false,
+  "cores": [
+   "squirreljme"
+  ],
+  "systems": [
+   "j2me"
+  ]
+ },
+ {
+  "path": "st010.data.rom",
+  "desc": "st010.data.rom",
+  "required": false,
+  "cores": [
+   "bsnes",
+   "bsnes-jg",
+   "bsnes_hd_beta",
+   "bsnes_mercury_accuracy",
+   "mesen-s"
+  ],
+  "systems": [
+   "gb",
+   "gbc",
+   "satellaview",
+   "sfc",
+   "sgb",
+   "snes",
+   "snesna",
+   "sufami"
+  ]
+ },
+ {
+  "path": "st010.program.rom",
+  "desc": "st010.program.rom",
+  "required": false,
+  "cores": [
+   "bsnes",
+   "bsnes-jg",
+   "bsnes_hd_beta",
+   "bsnes_mercury_accuracy",
+   "mesen-s"
+  ],
+  "systems": [
+   "gb",
+   "gbc",
+   "satellaview",
+   "sfc",
+   "sgb",
+   "snes",
+   "snesna",
+   "sufami"
+  ]
+ },
+ {
+  "path": "st011.data.rom",
+  "desc": "st011.data.rom",
+  "required": false,
+  "cores": [
+   "bsnes",
+   "bsnes-jg",
+   "bsnes_hd_beta",
+   "bsnes_mercury_accuracy",
+   "mesen-s"
+  ],
+  "systems": [
+   "gb",
+   "gbc",
+   "satellaview",
+   "sfc",
+   "sgb",
+   "snes",
+   "snesna",
+   "sufami"
+  ]
+ },
+ {
+  "path": "st011.program.rom",
+  "desc": "st011.program.rom",
+  "required": false,
+  "cores": [
+   "bsnes",
+   "bsnes-jg",
+   "bsnes_hd_beta",
+   "bsnes_mercury_accuracy",
+   "mesen-s"
+  ],
+  "systems": [
+   "gb",
+   "gbc",
+   "satellaview",
+   "sfc",
+   "sgb",
+   "snes",
+   "snesna",
+   "sufami"
+  ]
+ },
+ {
+  "path": "st018.data.rom",
+  "desc": "st018.data.rom",
+  "required": false,
+  "cores": [
+   "bsnes",
+   "bsnes-jg",
+   "bsnes_hd_beta",
+   "bsnes_mercury_accuracy"
+  ],
+  "systems": [
+   "gb",
+   "gbc",
+   "satellaview",
+   "sfc",
+   "snes",
+   "snesna",
+   "sufami"
+  ]
+ },
+ {
+  "path": "st018.program.rom",
+  "desc": "st018.program.rom",
+  "required": false,
+  "cores": [
+   "bsnes",
+   "bsnes-jg",
+   "bsnes_hd_beta",
+   "bsnes_mercury_accuracy"
+  ],
+  "systems": [
+   "gb",
+   "gbc",
+   "satellaview",
+   "sfc",
+   "snes",
+   "snesna",
+   "sufami"
+  ]
+ },
+ {
+  "path": "STBIOS.bin",
+  "desc": "STBIOS.bin (Sufami Turbo (Japan))",
+  "required": false,
+  "cores": [
+   "snes9x"
+  ],
+  "systems": [
+   "satellaview",
+   "sfc",
+   "snes",
+   "snesna",
+   "sufami"
+  ]
+ },
+ {
+  "path": "syscard1.pce",
+  "desc": "syscard1.pce (CD-ROM System V1.xx)",
+  "required": false,
+  "cores": [
+   "mednafen_pce",
+   "mednafen_pce_fast",
+   "mednafen_supergrafx"
+  ],
+  "systems": [
+   "pcengine",
+   "pcenginecd",
+   "supergrafx",
+   "tg-cd",
+   "tg16"
+  ]
+ },
+ {
+  "path": "syscard2.pce",
+  "desc": "syscard2.pce (CD-ROM System V2.xx)",
+  "required": false,
+  "cores": [
+   "mednafen_pce",
+   "mednafen_pce_fast",
+   "mednafen_supergrafx"
+  ],
+  "systems": [
+   "pcengine",
+   "pcenginecd",
+   "supergrafx",
+   "tg-cd",
+   "tg16"
+  ]
+ },
+ {
+  "path": "syscard3.pce",
+  "desc": "syscard3.pce (Super CD-ROM2 System V3.xx)",
+  "required": false,
+  "cores": [
+   "mednafen_pce",
+   "mednafen_pce_fast",
+   "mednafen_supergrafx"
+  ],
+  "systems": [
+   "pcengine",
+   "pcenginecd",
+   "supergrafx",
+   "tg-cd",
+   "tg16"
+  ]
+ },
+ {
+  "path": "vice/JiffyDOS_1541-II.bin",
+  "desc": "vice/JiffyDOS_1541-II.bin (JiffyDOS 1541 drive BIOS)",
+  "required": false,
+  "cores": [
+   "vice_x128",
+   "vice_x64",
+   "vice_x64sc",
+   "vice_xscpu64"
+  ],
+  "systems": [
+   "c64"
+  ]
+ },
+ {
+  "path": "vice/JiffyDOS_1571_repl310654.bin",
+  "desc": "vice/JiffyDOS_1571_repl310654.bin (JiffyDOS 1571 drive BIOS)",
+  "required": false,
+  "cores": [
+   "vice_x128",
+   "vice_x64",
+   "vice_x64sc",
+   "vice_xscpu64"
+  ],
+  "systems": [
+   "c64"
+  ]
+ },
+ {
+  "path": "vice/JiffyDOS_1581.bin",
+  "desc": "vice/JiffyDOS_1581.bin (JiffyDOS 1581 drive BIOS)",
+  "required": false,
+  "cores": [
+   "vice_x128",
+   "vice_x64",
+   "vice_x64sc",
+   "vice_xscpu64"
+  ],
+  "systems": [
+   "c64"
+  ]
+ },
+ {
+  "path": "vice/JiffyDOS_C128.bin",
+  "desc": "vice/JiffyDOS_C128.bin (JiffyDOS C128 Kernal)",
+  "required": false,
+  "cores": [
+   "vice_x128"
+  ],
+  "systems": [
+   "c64"
+  ]
+ },
+ {
+  "path": "vice/JiffyDOS_C64.bin",
+  "desc": "vice/JiffyDOS_C64.bin (JiffyDOS C64 Kernal)",
+  "required": false,
+  "cores": [
+   "vice_x128",
+   "vice_x64",
+   "vice_x64sc",
+   "vice_xscpu64"
+  ],
+  "systems": [
+   "c64"
+  ]
+ },
+ {
+  "path": "Vircon32Bios.v32",
+  "desc": "Vircon32Bios.v32 (alternative BIOS file)",
+  "required": false,
+  "cores": [
+   "vircon32"
+  ],
+  "systems": [
+   "vircon32"
+  ]
+ },
+ {
+  "path": "XEGAME.ROM",
+  "desc": "XEGAME.ROM (Atari XEGS Missile Command)",
+  "required": false,
+  "cores": [
+   "atari800"
+  ],
+  "systems": [
+   "atari5200",
+   "atari800",
+   "atarixe"
+  ]
+ },
+ {
+  "path": "xmil/IPLROM.X1",
+  "desc": "xmil/IPLROM.X1 (Sharp X1 IPL ROM)",
+  "required": false,
+  "cores": [
+   "x1"
+  ],
+  "systems": [
+   "x1"
+  ]
+ },
+ {
+  "path": "xmil/IPLROM.X1T",
+  "desc": "xmil/IPLROM.X1T (Sharp X1 8x8 Font ROM)",
+  "required": false,
+  "cores": [
+   "x1"
+  ],
+  "systems": [
+   "x1"
+  ]
+ }
+]

@@ -1,0 +1,4341 @@
+{
+  "_comment": "Extracted from an ES-DE Android config export (custom_systems). Source XML was deleted after extraction; regenerate only from a fresh device pull. Emulators are listed in ES-DE preference order; the first entry is the default.",
+  "source": {
+    "device_export": {
+      "device": "Android handheld running ES-DE",
+      "files": [
+        "es_systems.xml",
+        "es_find_rules.xml",
+        "es_settings.xml"
+      ],
+      "note": "es_systems.xml from the device is the custom_systems override file (ROM-hack and modern-console systems), NOT ES-DE's full system list. es_find_rules.xml is Android package names only and has no value off Android. es_settings.xml sets AlternativeEmulatorPerGame=true, so per-game emulator overrides live in the gamelist.xml files, which were not exported."
+    },
+    "bundled": {
+      "file": "data/vendor/esde_android_es_systems.xml",
+      "origin": "https://gitlab.com/es-de/emulationstation-de/-/raw/master/resources/systems/android/es_systems.xml",
+      "note": "Upstream ES-DE defaults; identical for every user."
+    }
+  },
+  "core_filename_pattern": {
+    "macos": "<stem>_libretro.dylib",
+    "linux": "<stem>_libretro.so",
+    "windows": "<stem>_libretro.dll",
+    "android": "<stem>_libretro_android.so",
+    "buildbot": "https://buildbot.libretro.com/nightly/apple/osx/arm64/latest/<stem>_libretro.dylib.zip"
+  },
+  "default_core_by_server_platform": {
+    "3do": "opera",
+    "arcade": "mame",
+    "dc": "flycast",
+    "famicom": "mesen",
+    "gamegear": "genesis_plus_gx",
+    "gb": "gambatte",
+    "gba": "mgba",
+    "gbc": "gambatte",
+    "mame": "mame",
+    "mastersystem": "genesis_plus_gx",
+    "megadrive": "genesis_plus_gx",
+    "n64": "mupen64plus_next",
+    "nds": "melondsds",
+    "neo-geo-pocket": "mednafen_ngp",
+    "neogeoaes": "fbneo",
+    "nes": "mesen",
+    "ngc": "dolphin",
+    "pcengine": "mednafen_pce",
+    "psp": "ppsspp",
+    "psx": "mednafen_psx",
+    "sfc": "snes9x",
+    "snes": "snes9x",
+    "wonderswan": "mednafen_wswan",
+    "wonderswancolor": "mednafen_wswan",
+    "naomi": "flycast",
+    "saturn": "mednafen_saturn",
+    "wii": "dolphin",
+    "easyrpg": "easyrpg",
+    "pico8": "retro8",
+    "g-and-w": "gw"
+  },
+  "server_platforms_without_mapping": [
+    "new-nintendo-3ds",
+    "ps2",
+    "ps3",
+    "switch",
+    "wiiu",
+    "xbox360"
+  ],
+  "systems": {
+    "3do": {
+      "fullname": "3DO Interactive Multiplayer",
+      "extensions": [
+        ".7z",
+        ".bin",
+        ".chd",
+        ".cue",
+        ".iso",
+        ".zip"
+      ],
+      "server_platforms": [
+        "3do"
+      ],
+      "emulators": [
+        {
+          "label": "Opera",
+          "kind": "libretro",
+          "core": "opera",
+          "core_android": "opera",
+          "files": {
+            "macos": "opera_libretro.dylib",
+            "linux": "opera_libretro.so",
+            "windows": "opera_libretro.dll",
+            "android": "opera_libretro_android.so"
+          },
+          "default": true
+        },
+        {
+          "label": "Real3DOPlayer (Standalone)",
+          "kind": "standalone",
+          "app": "REAL3DOPLAYER",
+          "default": false,
+          "command": null
+        }
+      ]
+    },
+    "arcade": {
+      "fullname": "Arcade",
+      "extensions": [
+        ".7z",
+        ".cmd",
+        ".neo",
+        ".zip"
+      ],
+      "server_platforms": [
+        "arcade"
+      ],
+      "emulators": [
+        {
+          "label": "MAME - Current",
+          "kind": "libretro",
+          "core": "mame",
+          "core_android": "mamearcade",
+          "files": {
+            "macos": "mame_libretro.dylib",
+            "linux": "mame_libretro.so",
+            "windows": "mame_libretro.dll",
+            "android": "mamearcade_libretro_android.so"
+          },
+          "default": true
+        },
+        {
+          "label": "MAME 2010",
+          "kind": "libretro",
+          "core": "mame2010",
+          "core_android": "mame2010",
+          "files": {
+            "macos": "mame2010_libretro.dylib",
+            "linux": "mame2010_libretro.so",
+            "windows": "mame2010_libretro.dll",
+            "android": "mame2010_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "MAME 2003-Plus",
+          "kind": "libretro",
+          "core": "mame2003_plus",
+          "core_android": "mame2003_plus",
+          "files": {
+            "macos": "mame2003_plus_libretro.dylib",
+            "linux": "mame2003_plus_libretro.so",
+            "windows": "mame2003_plus_libretro.dll",
+            "android": "mame2003_plus_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "MAME 2003",
+          "kind": "libretro",
+          "core": "mame2003",
+          "core_android": "mame2003",
+          "files": {
+            "macos": "mame2003_libretro.dylib",
+            "linux": "mame2003_libretro.so",
+            "windows": "mame2003_libretro.dll",
+            "android": "mame2003_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "MAME 2000",
+          "kind": "libretro",
+          "core": "mame2000",
+          "core_android": "mame2000",
+          "files": {
+            "macos": "mame2000_libretro.dylib",
+            "linux": "mame2000_libretro.so",
+            "windows": "mame2000_libretro.dll",
+            "android": "mame2000_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "HBMAME",
+          "kind": "libretro",
+          "core": "hbmame",
+          "core_android": "hbmame",
+          "files": {
+            "macos": "hbmame_libretro.dylib",
+            "linux": "hbmame_libretro.so",
+            "windows": "hbmame_libretro.dll",
+            "android": "hbmame_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "MAME4droid Current (Standalone)",
+          "kind": "standalone",
+          "app": "MAME4DROID-CURRENT",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "MAME4droid (Standalone)",
+          "kind": "standalone",
+          "app": "MAME4DROID",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "NEO.emu (Standalone)",
+          "kind": "standalone",
+          "app": "NEO-EMU",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "FinalBurn Neo",
+          "kind": "libretro",
+          "core": "fbneo",
+          "core_android": "fbneo",
+          "files": {
+            "macos": "fbneo_libretro.dylib",
+            "linux": "fbneo_libretro.so",
+            "windows": "fbneo_libretro.dll",
+            "android": "fbneo_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "FB Alpha 2012",
+          "kind": "libretro",
+          "core": "fbalpha2012",
+          "core_android": "fbalpha2012",
+          "files": {
+            "macos": "fbalpha2012_libretro.dylib",
+            "linux": "fbalpha2012_libretro.so",
+            "windows": "fbalpha2012_libretro.dll",
+            "android": "fbalpha2012_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "Geolith",
+          "kind": "libretro",
+          "core": "geolith",
+          "core_android": "geolith",
+          "files": {
+            "macos": "geolith_libretro.dylib",
+            "linux": "geolith_libretro.so",
+            "windows": "geolith_libretro.dll",
+            "android": "geolith_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "Flycast",
+          "kind": "libretro",
+          "core": "flycast",
+          "core_android": "flycast",
+          "files": {
+            "macos": "flycast_libretro.dylib",
+            "linux": "flycast_libretro.so",
+            "windows": "flycast_libretro.dll",
+            "android": "flycast_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "Flycast (Standalone)",
+          "kind": "standalone",
+          "app": "FLYCAST",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "DICE",
+          "kind": "libretro",
+          "core": "dice",
+          "core_android": "dice",
+          "files": {
+            "macos": "dice_libretro.dylib",
+            "linux": "dice_libretro.so",
+            "windows": "dice_libretro.dll",
+            "android": "dice_libretro_android.so"
+          },
+          "default": false
+        }
+      ]
+    },
+    "dreamcast": {
+      "fullname": "Sega Dreamcast",
+      "extensions": [
+        ".7z",
+        ".cdi",
+        ".chd",
+        ".cue",
+        ".dat",
+        ".elf",
+        ".gdi",
+        ".iso",
+        ".lst",
+        ".m3u",
+        ".zip"
+      ],
+      "server_platforms": [
+        "dc"
+      ],
+      "emulators": [
+        {
+          "label": "Flycast",
+          "kind": "libretro",
+          "core": "flycast",
+          "core_android": "flycast",
+          "files": {
+            "macos": "flycast_libretro.dylib",
+            "linux": "flycast_libretro.so",
+            "windows": "flycast_libretro.dll",
+            "android": "flycast_libretro_android.so"
+          },
+          "default": true
+        },
+        {
+          "label": "Flycast (Standalone)",
+          "kind": "standalone",
+          "app": "FLYCAST",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "Redream (Standalone)",
+          "kind": "standalone",
+          "app": "REDREAM",
+          "default": false,
+          "command": null
+        }
+      ]
+    },
+    "famicom": {
+      "fullname": "Nintendo Family Computer",
+      "extensions": [
+        ".3dsen",
+        ".7z",
+        ".fds",
+        ".nes",
+        ".unf",
+        ".unif",
+        ".zip"
+      ],
+      "server_platforms": [
+        "famicom"
+      ],
+      "emulators": [
+        {
+          "label": "Mesen",
+          "kind": "libretro",
+          "core": "mesen",
+          "core_android": "mesen",
+          "files": {
+            "macos": "mesen_libretro.dylib",
+            "linux": "mesen_libretro.so",
+            "windows": "mesen_libretro.dll",
+            "android": "mesen_libretro_android.so"
+          },
+          "default": true
+        },
+        {
+          "label": "Nestopia UE",
+          "kind": "libretro",
+          "core": "nestopia",
+          "core_android": "nestopia",
+          "files": {
+            "macos": "nestopia_libretro.dylib",
+            "linux": "nestopia_libretro.so",
+            "windows": "nestopia_libretro.dll",
+            "android": "nestopia_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "FCEUmm",
+          "kind": "libretro",
+          "core": "fceumm",
+          "core_android": "fceumm",
+          "files": {
+            "macos": "fceumm_libretro.dylib",
+            "linux": "fceumm_libretro.so",
+            "windows": "fceumm_libretro.dll",
+            "android": "fceumm_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "QuickNES",
+          "kind": "libretro",
+          "core": "quicknes",
+          "core_android": "quicknes",
+          "files": {
+            "macos": "quicknes_libretro.dylib",
+            "linux": "quicknes_libretro.so",
+            "windows": "quicknes_libretro.dll",
+            "android": "quicknes_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "NES.emu (Standalone)",
+          "kind": "standalone",
+          "app": "NES-EMU",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "iNES (Standalone)",
+          "kind": "standalone",
+          "app": "INES",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "Nesoid (Standalone)",
+          "kind": "standalone",
+          "app": "NESOID",
+          "default": false,
+          "command": null
+        }
+      ]
+    },
+    "gamegear": {
+      "fullname": "Sega Game Gear",
+      "extensions": [
+        ".68k",
+        ".7z",
+        ".bin",
+        ".bms",
+        ".chd",
+        ".col",
+        ".cue",
+        ".gen",
+        ".gg",
+        ".iso",
+        ".m3u",
+        ".md",
+        ".mdx",
+        ".rom",
+        ".sg",
+        ".sgd",
+        ".smd",
+        ".sms",
+        ".zip"
+      ],
+      "server_platforms": [
+        "gamegear"
+      ],
+      "emulators": [
+        {
+          "label": "Genesis Plus GX",
+          "kind": "libretro",
+          "core": "genesis_plus_gx",
+          "core_android": "genesis_plus_gx",
+          "files": {
+            "macos": "genesis_plus_gx_libretro.dylib",
+            "linux": "genesis_plus_gx_libretro.so",
+            "windows": "genesis_plus_gx_libretro.dll",
+            "android": "genesis_plus_gx_libretro_android.so"
+          },
+          "default": true
+        },
+        {
+          "label": "Genesis Plus GX Wide",
+          "kind": "libretro",
+          "core": "genesis_plus_gx_wide",
+          "core_android": "genesis_plus_gx_wide",
+          "files": {
+            "macos": "genesis_plus_gx_wide_libretro.dylib",
+            "linux": "genesis_plus_gx_wide_libretro.so",
+            "windows": "genesis_plus_gx_wide_libretro.dll",
+            "android": "genesis_plus_gx_wide_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "Gearsystem",
+          "kind": "libretro",
+          "core": "gearsystem",
+          "core_android": "gearsystem",
+          "files": {
+            "macos": "gearsystem_libretro.dylib",
+            "linux": "gearsystem_libretro.so",
+            "windows": "gearsystem_libretro.dll",
+            "android": "gearsystem_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "SMS Plus GX",
+          "kind": "libretro",
+          "core": "smsplus",
+          "core_android": "smsplus",
+          "files": {
+            "macos": "smsplus_libretro.dylib",
+            "linux": "smsplus_libretro.so",
+            "windows": "smsplus_libretro.dll",
+            "android": "smsplus_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "PicoDrive",
+          "kind": "libretro",
+          "core": "picodrive",
+          "core_android": "picodrive",
+          "files": {
+            "macos": "picodrive_libretro.dylib",
+            "linux": "picodrive_libretro.so",
+            "windows": "picodrive_libretro.dll",
+            "android": "picodrive_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "Pizza Boy SC (Standalone)",
+          "kind": "standalone",
+          "app": "PIZZA-BOY-SC",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "MasterGear (Standalone)",
+          "kind": "standalone",
+          "app": "MASTERGEAR",
+          "default": false,
+          "command": null
+        }
+      ]
+    },
+    "gb": {
+      "fullname": "Nintendo Game Boy",
+      "extensions": [
+        ".7z",
+        ".bs",
+        ".cgb",
+        ".dmg",
+        ".gb",
+        ".gbc",
+        ".gbx",
+        ".sfc",
+        ".sgb",
+        ".smc",
+        ".zip"
+      ],
+      "server_platforms": [
+        "gb"
+      ],
+      "emulators": [
+        {
+          "label": "Gambatte",
+          "kind": "libretro",
+          "core": "gambatte",
+          "core_android": "gambatte",
+          "files": {
+            "macos": "gambatte_libretro.dylib",
+            "linux": "gambatte_libretro.so",
+            "windows": "gambatte_libretro.dll",
+            "android": "gambatte_libretro_android.so"
+          },
+          "default": true
+        },
+        {
+          "label": "SameBoy",
+          "kind": "libretro",
+          "core": "sameboy",
+          "core_android": "sameboy",
+          "files": {
+            "macos": "sameboy_libretro.dylib",
+            "linux": "sameboy_libretro.so",
+            "windows": "sameboy_libretro.dll",
+            "android": "sameboy_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "Gearboy",
+          "kind": "libretro",
+          "core": "gearboy",
+          "core_android": "gearboy",
+          "files": {
+            "macos": "gearboy_libretro.dylib",
+            "linux": "gearboy_libretro.so",
+            "windows": "gearboy_libretro.dll",
+            "android": "gearboy_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "TGB Dual",
+          "kind": "libretro",
+          "core": "tgbdual",
+          "core_android": "tgbdual",
+          "files": {
+            "macos": "tgbdual_libretro.dylib",
+            "linux": "tgbdual_libretro.so",
+            "windows": "tgbdual_libretro.dll",
+            "android": "tgbdual_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "DoubleCherryGB",
+          "kind": "libretro",
+          "core": "DoubleCherryGB",
+          "core_android": "DoubleCherryGB",
+          "files": {
+            "macos": "DoubleCherryGB_libretro.dylib",
+            "linux": "DoubleCherryGB_libretro.so",
+            "windows": "DoubleCherryGB_libretro.dll",
+            "android": "DoubleCherryGB_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "IroGB",
+          "kind": "libretro",
+          "core": "irogb",
+          "core_android": "irogb",
+          "files": {
+            "macos": "irogb_libretro.dylib",
+            "linux": "irogb_libretro.so",
+            "windows": "irogb_libretro.dll",
+            "android": "irogb_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "Mesen-S",
+          "kind": "libretro",
+          "core": "mesen-s",
+          "core_android": "mesen-s",
+          "files": {
+            "macos": "mesen-s_libretro.dylib",
+            "linux": "mesen-s_libretro.so",
+            "windows": "mesen-s_libretro.dll",
+            "android": "mesen-s_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "bsnes",
+          "kind": "libretro",
+          "core": "bsnes",
+          "core_android": "bsnes",
+          "files": {
+            "macos": "bsnes_libretro.dylib",
+            "linux": "bsnes_libretro.so",
+            "windows": "bsnes_libretro.dll",
+            "android": "bsnes_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "mGBA",
+          "kind": "libretro",
+          "core": "mgba",
+          "core_android": "mgba",
+          "files": {
+            "macos": "mgba_libretro.dylib",
+            "linux": "mgba_libretro.so",
+            "windows": "mgba_libretro.dll",
+            "android": "mgba_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "VBA-M",
+          "kind": "libretro",
+          "core": "vbam",
+          "core_android": "vbam",
+          "files": {
+            "macos": "vbam_libretro.dylib",
+            "linux": "vbam_libretro.so",
+            "windows": "vbam_libretro.dll",
+            "android": "vbam_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "SkyEmu",
+          "kind": "libretro",
+          "core": "skyemu",
+          "core_android": "skyemu",
+          "files": {
+            "macos": "skyemu_libretro.dylib",
+            "linux": "skyemu_libretro.so",
+            "windows": "skyemu_libretro.dll",
+            "android": "skyemu_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "SkyEmu (Standalone)",
+          "kind": "standalone",
+          "app": "SKYEMU",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "GBC.emu (Standalone)",
+          "kind": "standalone",
+          "app": "GBC-EMU",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "My OldBoy! (Standalone)",
+          "kind": "standalone",
+          "app": "MY-OLDBOY",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "Linkboy (Standalone)",
+          "kind": "standalone",
+          "app": "LINKBOY",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "Pizza Boy GBC (Standalone)",
+          "kind": "standalone",
+          "app": "PIZZA-BOY-GBC",
+          "default": false,
+          "command": null
+        }
+      ]
+    },
+    "gba": {
+      "fullname": "Nintendo Game Boy Advance",
+      "extensions": [
+        ".7z",
+        ".agb",
+        ".bin",
+        ".cgb",
+        ".dmg",
+        ".gb",
+        ".gba",
+        ".gbc",
+        ".gbx",
+        ".sgb",
+        ".zip"
+      ],
+      "server_platforms": [
+        "gba"
+      ],
+      "emulators": [
+        {
+          "label": "mGBA",
+          "kind": "libretro",
+          "core": "mgba",
+          "core_android": "mgba",
+          "files": {
+            "macos": "mgba_libretro.dylib",
+            "linux": "mgba_libretro.so",
+            "windows": "mgba_libretro.dll",
+            "android": "mgba_libretro_android.so"
+          },
+          "default": true
+        },
+        {
+          "label": "VBA-M",
+          "kind": "libretro",
+          "core": "vbam",
+          "core_android": "vbam",
+          "files": {
+            "macos": "vbam_libretro.dylib",
+            "linux": "vbam_libretro.so",
+            "windows": "vbam_libretro.dll",
+            "android": "vbam_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "VBA Next",
+          "kind": "libretro",
+          "core": "vba_next",
+          "core_android": "vba_next",
+          "files": {
+            "macos": "vba_next_libretro.dylib",
+            "linux": "vba_next_libretro.so",
+            "windows": "vba_next_libretro.dll",
+            "android": "vba_next_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "gpSP",
+          "kind": "libretro",
+          "core": "gpsp",
+          "core_android": "gpsp",
+          "files": {
+            "macos": "gpsp_libretro.dylib",
+            "linux": "gpsp_libretro.so",
+            "windows": "gpsp_libretro.dll",
+            "android": "gpsp_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "NooDS",
+          "kind": "libretro",
+          "core": "noods",
+          "core_android": "noods",
+          "files": {
+            "macos": "noods_libretro.dylib",
+            "linux": "noods_libretro.so",
+            "windows": "noods_libretro.dll",
+            "android": "noods_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "NooDS (Standalone)",
+          "kind": "standalone",
+          "app": "NOODS",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "SkyEmu",
+          "kind": "libretro",
+          "core": "skyemu",
+          "core_android": "skyemu",
+          "files": {
+            "macos": "skyemu_libretro.dylib",
+            "linux": "skyemu_libretro.so",
+            "windows": "skyemu_libretro.dll",
+            "android": "skyemu_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "SkyEmu (Standalone)",
+          "kind": "standalone",
+          "app": "SKYEMU",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "GBA.emu (Standalone)",
+          "kind": "standalone",
+          "app": "GBA-EMU",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "My Boy! (Standalone)",
+          "kind": "standalone",
+          "app": "MY-BOY",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "Linkboy (Standalone)",
+          "kind": "standalone",
+          "app": "LINKBOY",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "Pizza Boy GBA (Standalone)",
+          "kind": "standalone",
+          "app": "PIZZA-BOY-GBA",
+          "default": false,
+          "command": null
+        }
+      ]
+    },
+    "gbc": {
+      "fullname": "Nintendo Game Boy Color",
+      "extensions": [
+        ".7z",
+        ".bs",
+        ".cgb",
+        ".dmg",
+        ".gb",
+        ".gbc",
+        ".gbx",
+        ".sfc",
+        ".sgb",
+        ".smc",
+        ".zip"
+      ],
+      "server_platforms": [
+        "gbc"
+      ],
+      "emulators": [
+        {
+          "label": "Gambatte",
+          "kind": "libretro",
+          "core": "gambatte",
+          "core_android": "gambatte",
+          "files": {
+            "macos": "gambatte_libretro.dylib",
+            "linux": "gambatte_libretro.so",
+            "windows": "gambatte_libretro.dll",
+            "android": "gambatte_libretro_android.so"
+          },
+          "default": true
+        },
+        {
+          "label": "SameBoy",
+          "kind": "libretro",
+          "core": "sameboy",
+          "core_android": "sameboy",
+          "files": {
+            "macos": "sameboy_libretro.dylib",
+            "linux": "sameboy_libretro.so",
+            "windows": "sameboy_libretro.dll",
+            "android": "sameboy_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "Gearboy",
+          "kind": "libretro",
+          "core": "gearboy",
+          "core_android": "gearboy",
+          "files": {
+            "macos": "gearboy_libretro.dylib",
+            "linux": "gearboy_libretro.so",
+            "windows": "gearboy_libretro.dll",
+            "android": "gearboy_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "TGB Dual",
+          "kind": "libretro",
+          "core": "tgbdual",
+          "core_android": "tgbdual",
+          "files": {
+            "macos": "tgbdual_libretro.dylib",
+            "linux": "tgbdual_libretro.so",
+            "windows": "tgbdual_libretro.dll",
+            "android": "tgbdual_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "DoubleCherryGB",
+          "kind": "libretro",
+          "core": "DoubleCherryGB",
+          "core_android": "DoubleCherryGB",
+          "files": {
+            "macos": "DoubleCherryGB_libretro.dylib",
+            "linux": "DoubleCherryGB_libretro.so",
+            "windows": "DoubleCherryGB_libretro.dll",
+            "android": "DoubleCherryGB_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "IroGB",
+          "kind": "libretro",
+          "core": "irogb",
+          "core_android": "irogb",
+          "files": {
+            "macos": "irogb_libretro.dylib",
+            "linux": "irogb_libretro.so",
+            "windows": "irogb_libretro.dll",
+            "android": "irogb_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "Mesen-S",
+          "kind": "libretro",
+          "core": "mesen-s",
+          "core_android": "mesen-s",
+          "files": {
+            "macos": "mesen-s_libretro.dylib",
+            "linux": "mesen-s_libretro.so",
+            "windows": "mesen-s_libretro.dll",
+            "android": "mesen-s_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "bsnes",
+          "kind": "libretro",
+          "core": "bsnes",
+          "core_android": "bsnes",
+          "files": {
+            "macos": "bsnes_libretro.dylib",
+            "linux": "bsnes_libretro.so",
+            "windows": "bsnes_libretro.dll",
+            "android": "bsnes_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "mGBA",
+          "kind": "libretro",
+          "core": "mgba",
+          "core_android": "mgba",
+          "files": {
+            "macos": "mgba_libretro.dylib",
+            "linux": "mgba_libretro.so",
+            "windows": "mgba_libretro.dll",
+            "android": "mgba_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "VBA-M",
+          "kind": "libretro",
+          "core": "vbam",
+          "core_android": "vbam",
+          "files": {
+            "macos": "vbam_libretro.dylib",
+            "linux": "vbam_libretro.so",
+            "windows": "vbam_libretro.dll",
+            "android": "vbam_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "SkyEmu",
+          "kind": "libretro",
+          "core": "skyemu",
+          "core_android": "skyemu",
+          "files": {
+            "macos": "skyemu_libretro.dylib",
+            "linux": "skyemu_libretro.so",
+            "windows": "skyemu_libretro.dll",
+            "android": "skyemu_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "SkyEmu (Standalone)",
+          "kind": "standalone",
+          "app": "SKYEMU",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "GBC.emu (Standalone)",
+          "kind": "standalone",
+          "app": "GBC-EMU",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "My OldBoy! (Standalone)",
+          "kind": "standalone",
+          "app": "MY-OLDBOY",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "Linkboy (Standalone)",
+          "kind": "standalone",
+          "app": "LINKBOY",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "Pizza Boy GBC (Standalone)",
+          "kind": "standalone",
+          "app": "PIZZA-BOY-GBC",
+          "default": false,
+          "command": null
+        }
+      ]
+    },
+    "gc": {
+      "fullname": "Nintendo GameCube",
+      "extensions": [
+        ".7z",
+        ".ciso",
+        ".dff",
+        ".dol",
+        ".elf",
+        ".gcm",
+        ".gcz",
+        ".iso",
+        ".json",
+        ".m3u",
+        ".rvz",
+        ".tgc",
+        ".wad",
+        ".wbfs",
+        ".wia",
+        ".zip"
+      ],
+      "server_platforms": [
+        "ngc"
+      ],
+      "emulators": [
+        {
+          "label": "Dolphin",
+          "kind": "libretro",
+          "core": "dolphin",
+          "core_android": "dolphin",
+          "files": {
+            "macos": "dolphin_libretro.dylib",
+            "linux": "dolphin_libretro.so",
+            "windows": "dolphin_libretro.dll",
+            "android": "dolphin_libretro_android.so"
+          },
+          "default": true
+        },
+        {
+          "label": "Dolphin (Standalone)",
+          "kind": "standalone",
+          "app": "DOLPHIN",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "Dolphin MMJR (Standalone)",
+          "kind": "standalone",
+          "app": "DOLPHIN-MMJR",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "Dolphin MMJR2 (Standalone)",
+          "kind": "standalone",
+          "app": "DOLPHIN-MMJR2",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "Dolphin Enhanced (Standalone)",
+          "kind": "standalone",
+          "app": "DOLPHIN-ENHANCED",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "Dolphin Primehack (Standalone)",
+          "kind": "standalone",
+          "app": "DOLPHIN-PRIMEHACK",
+          "default": false,
+          "command": null
+        }
+      ]
+    },
+    "mame": {
+      "fullname": "Multiple Arcade Machine Emulator",
+      "extensions": [
+        ".7z",
+        ".cmd",
+        ".neo",
+        ".zip"
+      ],
+      "server_platforms": [
+        "mame"
+      ],
+      "emulators": [
+        {
+          "label": "MAME - Current",
+          "kind": "libretro",
+          "core": "mame",
+          "core_android": "mamearcade",
+          "files": {
+            "macos": "mame_libretro.dylib",
+            "linux": "mame_libretro.so",
+            "windows": "mame_libretro.dll",
+            "android": "mamearcade_libretro_android.so"
+          },
+          "default": true
+        },
+        {
+          "label": "MAME 2010",
+          "kind": "libretro",
+          "core": "mame2010",
+          "core_android": "mame2010",
+          "files": {
+            "macos": "mame2010_libretro.dylib",
+            "linux": "mame2010_libretro.so",
+            "windows": "mame2010_libretro.dll",
+            "android": "mame2010_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "MAME 2003-Plus",
+          "kind": "libretro",
+          "core": "mame2003_plus",
+          "core_android": "mame2003_plus",
+          "files": {
+            "macos": "mame2003_plus_libretro.dylib",
+            "linux": "mame2003_plus_libretro.so",
+            "windows": "mame2003_plus_libretro.dll",
+            "android": "mame2003_plus_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "MAME 2003",
+          "kind": "libretro",
+          "core": "mame2003",
+          "core_android": "mame2003",
+          "files": {
+            "macos": "mame2003_libretro.dylib",
+            "linux": "mame2003_libretro.so",
+            "windows": "mame2003_libretro.dll",
+            "android": "mame2003_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "MAME 2000",
+          "kind": "libretro",
+          "core": "mame2000",
+          "core_android": "mame2000",
+          "files": {
+            "macos": "mame2000_libretro.dylib",
+            "linux": "mame2000_libretro.so",
+            "windows": "mame2000_libretro.dll",
+            "android": "mame2000_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "HBMAME",
+          "kind": "libretro",
+          "core": "hbmame",
+          "core_android": "hbmame",
+          "files": {
+            "macos": "hbmame_libretro.dylib",
+            "linux": "hbmame_libretro.so",
+            "windows": "hbmame_libretro.dll",
+            "android": "hbmame_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "MAME4droid Current (Standalone)",
+          "kind": "standalone",
+          "app": "MAME4DROID-CURRENT",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "MAME4droid (Standalone)",
+          "kind": "standalone",
+          "app": "MAME4DROID",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "NEO.emu (Standalone)",
+          "kind": "standalone",
+          "app": "NEO-EMU",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "FinalBurn Neo",
+          "kind": "libretro",
+          "core": "fbneo",
+          "core_android": "fbneo",
+          "files": {
+            "macos": "fbneo_libretro.dylib",
+            "linux": "fbneo_libretro.so",
+            "windows": "fbneo_libretro.dll",
+            "android": "fbneo_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "FB Alpha 2012",
+          "kind": "libretro",
+          "core": "fbalpha2012",
+          "core_android": "fbalpha2012",
+          "files": {
+            "macos": "fbalpha2012_libretro.dylib",
+            "linux": "fbalpha2012_libretro.so",
+            "windows": "fbalpha2012_libretro.dll",
+            "android": "fbalpha2012_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "Geolith",
+          "kind": "libretro",
+          "core": "geolith",
+          "core_android": "geolith",
+          "files": {
+            "macos": "geolith_libretro.dylib",
+            "linux": "geolith_libretro.so",
+            "windows": "geolith_libretro.dll",
+            "android": "geolith_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "Flycast",
+          "kind": "libretro",
+          "core": "flycast",
+          "core_android": "flycast",
+          "files": {
+            "macos": "flycast_libretro.dylib",
+            "linux": "flycast_libretro.so",
+            "windows": "flycast_libretro.dll",
+            "android": "flycast_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "Flycast (Standalone)",
+          "kind": "standalone",
+          "app": "FLYCAST",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "DICE",
+          "kind": "libretro",
+          "core": "dice",
+          "core_android": "dice",
+          "files": {
+            "macos": "dice_libretro.dylib",
+            "linux": "dice_libretro.so",
+            "windows": "dice_libretro.dll",
+            "android": "dice_libretro_android.so"
+          },
+          "default": false
+        }
+      ]
+    },
+    "mastersystem": {
+      "fullname": "Sega Master System",
+      "extensions": [
+        ".68k",
+        ".7z",
+        ".bin",
+        ".bms",
+        ".chd",
+        ".col",
+        ".cue",
+        ".gen",
+        ".gg",
+        ".iso",
+        ".m3u",
+        ".md",
+        ".mdx",
+        ".rom",
+        ".sg",
+        ".sgd",
+        ".smd",
+        ".sms",
+        ".zip"
+      ],
+      "server_platforms": [
+        "mastersystem"
+      ],
+      "emulators": [
+        {
+          "label": "Genesis Plus GX",
+          "kind": "libretro",
+          "core": "genesis_plus_gx",
+          "core_android": "genesis_plus_gx",
+          "files": {
+            "macos": "genesis_plus_gx_libretro.dylib",
+            "linux": "genesis_plus_gx_libretro.so",
+            "windows": "genesis_plus_gx_libretro.dll",
+            "android": "genesis_plus_gx_libretro_android.so"
+          },
+          "default": true
+        },
+        {
+          "label": "Genesis Plus GX Wide",
+          "kind": "libretro",
+          "core": "genesis_plus_gx_wide",
+          "core_android": "genesis_plus_gx_wide",
+          "files": {
+            "macos": "genesis_plus_gx_wide_libretro.dylib",
+            "linux": "genesis_plus_gx_wide_libretro.so",
+            "windows": "genesis_plus_gx_wide_libretro.dll",
+            "android": "genesis_plus_gx_wide_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "SMS Plus GX",
+          "kind": "libretro",
+          "core": "smsplus",
+          "core_android": "smsplus",
+          "files": {
+            "macos": "smsplus_libretro.dylib",
+            "linux": "smsplus_libretro.so",
+            "windows": "smsplus_libretro.dll",
+            "android": "smsplus_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "Gearsystem",
+          "kind": "libretro",
+          "core": "gearsystem",
+          "core_android": "gearsystem",
+          "files": {
+            "macos": "gearsystem_libretro.dylib",
+            "linux": "gearsystem_libretro.so",
+            "windows": "gearsystem_libretro.dll",
+            "android": "gearsystem_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "PicoDrive",
+          "kind": "libretro",
+          "core": "picodrive",
+          "core_android": "picodrive",
+          "files": {
+            "macos": "picodrive_libretro.dylib",
+            "linux": "picodrive_libretro.so",
+            "windows": "picodrive_libretro.dll",
+            "android": "picodrive_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "MD.emu (Standalone)",
+          "kind": "standalone",
+          "app": "MD-EMU",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "Pizza Boy SC (Standalone)",
+          "kind": "standalone",
+          "app": "PIZZA-BOY-SC",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "MasterGear (Standalone)",
+          "kind": "standalone",
+          "app": "MASTERGEAR",
+          "default": false,
+          "command": null
+        }
+      ]
+    },
+    "megadrive": {
+      "fullname": "Sega Mega Drive",
+      "extensions": [
+        ".32x",
+        ".68k",
+        ".7z",
+        ".bin",
+        ".bms",
+        ".chd",
+        ".cue",
+        ".gen",
+        ".gg",
+        ".iso",
+        ".m3u",
+        ".md",
+        ".mdx",
+        ".sg",
+        ".sgd",
+        ".smd",
+        ".sms",
+        ".zip"
+      ],
+      "server_platforms": [
+        "megadrive"
+      ],
+      "emulators": [
+        {
+          "label": "Genesis Plus GX",
+          "kind": "libretro",
+          "core": "genesis_plus_gx",
+          "core_android": "genesis_plus_gx",
+          "files": {
+            "macos": "genesis_plus_gx_libretro.dylib",
+            "linux": "genesis_plus_gx_libretro.so",
+            "windows": "genesis_plus_gx_libretro.dll",
+            "android": "genesis_plus_gx_libretro_android.so"
+          },
+          "default": true
+        },
+        {
+          "label": "Genesis Plus GX Wide",
+          "kind": "libretro",
+          "core": "genesis_plus_gx_wide",
+          "core_android": "genesis_plus_gx_wide",
+          "files": {
+            "macos": "genesis_plus_gx_wide_libretro.dylib",
+            "linux": "genesis_plus_gx_wide_libretro.so",
+            "windows": "genesis_plus_gx_wide_libretro.dll",
+            "android": "genesis_plus_gx_wide_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "PicoDrive",
+          "kind": "libretro",
+          "core": "picodrive",
+          "core_android": "picodrive",
+          "files": {
+            "macos": "picodrive_libretro.dylib",
+            "linux": "picodrive_libretro.so",
+            "windows": "picodrive_libretro.dll",
+            "android": "picodrive_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "ClownMDEmu",
+          "kind": "libretro",
+          "core": "clownmdemu",
+          "core_android": "clownmdemu",
+          "files": {
+            "macos": "clownmdemu_libretro.dylib",
+            "linux": "clownmdemu_libretro.so",
+            "windows": "clownmdemu_libretro.dll",
+            "android": "clownmdemu_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "MD.emu (Standalone)",
+          "kind": "standalone",
+          "app": "MD-EMU",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "Pizza Boy SC (Standalone)",
+          "kind": "standalone",
+          "app": "PIZZA-BOY-SC",
+          "default": false,
+          "command": null
+        }
+      ]
+    },
+    "n64": {
+      "fullname": "Nintendo 64",
+      "extensions": [
+        ".7z",
+        ".app",
+        ".bin",
+        ".d64",
+        ".n64",
+        ".ndd",
+        ".u1",
+        ".v64",
+        ".z64",
+        ".zip"
+      ],
+      "server_platforms": [
+        "n64"
+      ],
+      "emulators": [
+        {
+          "label": "Mupen64Plus-Next",
+          "kind": "libretro",
+          "core": "mupen64plus_next",
+          "core_android": "mupen64plus_next_gles3",
+          "files": {
+            "macos": "mupen64plus_next_libretro.dylib",
+            "linux": "mupen64plus_next_libretro.so",
+            "windows": "mupen64plus_next_libretro.dll",
+            "android": "mupen64plus_next_gles3_libretro_android.so"
+          },
+          "default": true
+        },
+        {
+          "label": "M64Plus FZ (Standalone)",
+          "kind": "standalone",
+          "app": "M64PLUS-FZ",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "Mupen64Plus AE (Standalone)",
+          "kind": "standalone",
+          "app": "MUPEN64PLUS-AE",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "ParaLLEl N64",
+          "kind": "libretro",
+          "core": "parallel_n64",
+          "core_android": "parallel_n64",
+          "files": {
+            "macos": "parallel_n64_libretro.dylib",
+            "linux": "parallel_n64_libretro.so",
+            "windows": "parallel_n64_libretro.dll",
+            "android": "parallel_n64_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "Native port",
+          "kind": "standalone",
+          "app": null,
+          "default": false,
+          "command": "%ANDROIDAPP%=%FILEINJECT%"
+        }
+      ]
+    },
+    "nds": {
+      "fullname": "Nintendo DS",
+      "extensions": [
+        ".7z",
+        ".app",
+        ".bin",
+        ".dsi",
+        ".ids",
+        ".nds",
+        ".zip"
+      ],
+      "server_platforms": [
+        "nds"
+      ],
+      "emulators": [
+        {
+          "label": "melonDS DS",
+          "kind": "libretro",
+          "core": "melondsds",
+          "core_android": "melondsds",
+          "files": {
+            "macos": "melondsds_libretro.dylib",
+            "linux": "melondsds_libretro.so",
+            "windows": "melondsds_libretro.dll",
+            "android": "melondsds_libretro_android.so"
+          },
+          "default": true
+        },
+        {
+          "label": "melonDS",
+          "kind": "libretro",
+          "core": "melonds",
+          "core_android": "melonds",
+          "files": {
+            "macos": "melonds_libretro.dylib",
+            "linux": "melonds_libretro.so",
+            "windows": "melonds_libretro.dll",
+            "android": "melonds_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "melonDS (Standalone)",
+          "kind": "standalone",
+          "app": "MELONDS",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "melonDS Nightly (Standalone)",
+          "kind": "standalone",
+          "app": "MELONDS-NIGHTLY",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "DeSmuME",
+          "kind": "libretro",
+          "core": "desmume",
+          "core_android": "desmume",
+          "files": {
+            "macos": "desmume_libretro.dylib",
+            "linux": "desmume_libretro.so",
+            "windows": "desmume_libretro.dll",
+            "android": "desmume_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "DeSmuME 2015",
+          "kind": "libretro",
+          "core": "desmume2015",
+          "core_android": "desmume2015",
+          "files": {
+            "macos": "desmume2015_libretro.dylib",
+            "linux": "desmume2015_libretro.so",
+            "windows": "desmume2015_libretro.dll",
+            "android": "desmume2015_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "NooDS",
+          "kind": "libretro",
+          "core": "noods",
+          "core_android": "noods",
+          "files": {
+            "macos": "noods_libretro.dylib",
+            "linux": "noods_libretro.so",
+            "windows": "noods_libretro.dll",
+            "android": "noods_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "NooDS (Standalone)",
+          "kind": "standalone",
+          "app": "NOODS",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "DraStic (Standalone)",
+          "kind": "standalone",
+          "app": "DRASTIC",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "SkyEmu",
+          "kind": "libretro",
+          "core": "skyemu",
+          "core_android": "skyemu",
+          "files": {
+            "macos": "skyemu_libretro.dylib",
+            "linux": "skyemu_libretro.so",
+            "windows": "skyemu_libretro.dll",
+            "android": "skyemu_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "SkyEmu (Standalone)",
+          "kind": "standalone",
+          "app": "SKYEMU",
+          "default": false,
+          "command": null
+        }
+      ]
+    },
+    "neogeo": {
+      "fullname": "SNK Neo Geo",
+      "extensions": [
+        ".7z",
+        ".neo",
+        ".zip"
+      ],
+      "server_platforms": [
+        "neogeoaes"
+      ],
+      "emulators": [
+        {
+          "label": "FinalBurn Neo",
+          "kind": "libretro",
+          "core": "fbneo",
+          "core_android": "fbneo",
+          "files": {
+            "macos": "fbneo_libretro.dylib",
+            "linux": "fbneo_libretro.so",
+            "windows": "fbneo_libretro.dll",
+            "android": "fbneo_libretro_android.so"
+          },
+          "default": true
+        },
+        {
+          "label": "Geolith",
+          "kind": "libretro",
+          "core": "geolith",
+          "core_android": "geolith",
+          "files": {
+            "macos": "geolith_libretro.dylib",
+            "linux": "geolith_libretro.so",
+            "windows": "geolith_libretro.dll",
+            "android": "geolith_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "NEO.emu (Standalone)",
+          "kind": "standalone",
+          "app": "NEO-EMU",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "MAME - Current",
+          "kind": "libretro",
+          "core": "mame",
+          "core_android": "mamearcade",
+          "files": {
+            "macos": "mame_libretro.dylib",
+            "linux": "mame_libretro.so",
+            "windows": "mame_libretro.dll",
+            "android": "mamearcade_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "MAME4droid Current (Standalone)",
+          "kind": "standalone",
+          "app": "MAME4DROID-CURRENT",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "MAME4droid (Standalone)",
+          "kind": "standalone",
+          "app": "MAME4DROID",
+          "default": false,
+          "command": null
+        }
+      ]
+    },
+    "nes": {
+      "fullname": "Nintendo Entertainment System",
+      "extensions": [
+        ".3dsen",
+        ".7z",
+        ".fds",
+        ".nes",
+        ".unf",
+        ".unif",
+        ".zip"
+      ],
+      "server_platforms": [
+        "nes"
+      ],
+      "emulators": [
+        {
+          "label": "Mesen",
+          "kind": "libretro",
+          "core": "mesen",
+          "core_android": "mesen",
+          "files": {
+            "macos": "mesen_libretro.dylib",
+            "linux": "mesen_libretro.so",
+            "windows": "mesen_libretro.dll",
+            "android": "mesen_libretro_android.so"
+          },
+          "default": true
+        },
+        {
+          "label": "Nestopia UE",
+          "kind": "libretro",
+          "core": "nestopia",
+          "core_android": "nestopia",
+          "files": {
+            "macos": "nestopia_libretro.dylib",
+            "linux": "nestopia_libretro.so",
+            "windows": "nestopia_libretro.dll",
+            "android": "nestopia_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "FCEUmm",
+          "kind": "libretro",
+          "core": "fceumm",
+          "core_android": "fceumm",
+          "files": {
+            "macos": "fceumm_libretro.dylib",
+            "linux": "fceumm_libretro.so",
+            "windows": "fceumm_libretro.dll",
+            "android": "fceumm_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "QuickNES",
+          "kind": "libretro",
+          "core": "quicknes",
+          "core_android": "quicknes",
+          "files": {
+            "macos": "quicknes_libretro.dylib",
+            "linux": "quicknes_libretro.so",
+            "windows": "quicknes_libretro.dll",
+            "android": "quicknes_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "NES.emu (Standalone)",
+          "kind": "standalone",
+          "app": "NES-EMU",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "iNES (Standalone)",
+          "kind": "standalone",
+          "app": "INES",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "Nesoid (Standalone)",
+          "kind": "standalone",
+          "app": "NESOID",
+          "default": false,
+          "command": null
+        }
+      ]
+    },
+    "ngp": {
+      "fullname": "SNK Neo Geo Pocket",
+      "extensions": [
+        ".7z",
+        ".ngc",
+        ".ngp",
+        ".ngpc",
+        ".npc",
+        ".zip"
+      ],
+      "server_platforms": [
+        "neo-geo-pocket"
+      ],
+      "emulators": [
+        {
+          "label": "Beetle NeoPop",
+          "kind": "libretro",
+          "core": "mednafen_ngp",
+          "core_android": "mednafen_ngp",
+          "files": {
+            "macos": "mednafen_ngp_libretro.dylib",
+            "linux": "mednafen_ngp_libretro.so",
+            "windows": "mednafen_ngp_libretro.dll",
+            "android": "mednafen_ngp_libretro_android.so"
+          },
+          "default": true
+        },
+        {
+          "label": "RACE",
+          "kind": "libretro",
+          "core": "race",
+          "core_android": "race",
+          "files": {
+            "macos": "race_libretro.dylib",
+            "linux": "race_libretro.so",
+            "windows": "race_libretro.dll",
+            "android": "race_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "NGP.emu (Standalone)",
+          "kind": "standalone",
+          "app": "NGP-EMU",
+          "default": false,
+          "command": null
+        }
+      ]
+    },
+    "pcengine": {
+      "fullname": "NEC PC Engine",
+      "extensions": [
+        ".7z",
+        ".ccd",
+        ".chd",
+        ".cue",
+        ".img",
+        ".iso",
+        ".m3u",
+        ".pce",
+        ".rom",
+        ".sgx",
+        ".toc",
+        ".zip"
+      ],
+      "server_platforms": [
+        "pcengine"
+      ],
+      "emulators": [
+        {
+          "label": "Beetle PCE",
+          "kind": "libretro",
+          "core": "mednafen_pce",
+          "core_android": "mednafen_pce",
+          "files": {
+            "macos": "mednafen_pce_libretro.dylib",
+            "linux": "mednafen_pce_libretro.so",
+            "windows": "mednafen_pce_libretro.dll",
+            "android": "mednafen_pce_libretro_android.so"
+          },
+          "default": true
+        },
+        {
+          "label": "Beetle PCE FAST",
+          "kind": "libretro",
+          "core": "mednafen_pce_fast",
+          "core_android": "mednafen_pce_fast",
+          "files": {
+            "macos": "mednafen_pce_fast_libretro.dylib",
+            "linux": "mednafen_pce_fast_libretro.so",
+            "windows": "mednafen_pce_fast_libretro.dll",
+            "android": "mednafen_pce_fast_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "Beetle SuperGrafx",
+          "kind": "libretro",
+          "core": "mednafen_supergrafx",
+          "core_android": "mednafen_supergrafx",
+          "files": {
+            "macos": "mednafen_supergrafx_libretro.dylib",
+            "linux": "mednafen_supergrafx_libretro.so",
+            "windows": "mednafen_supergrafx_libretro.dll",
+            "android": "mednafen_supergrafx_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "Geargrafx",
+          "kind": "libretro",
+          "core": "geargrafx",
+          "core_android": "geargrafx",
+          "files": {
+            "macos": "geargrafx_libretro.dylib",
+            "linux": "geargrafx_libretro.so",
+            "windows": "geargrafx_libretro.dll",
+            "android": "geargrafx_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "PCE.emu (Standalone)",
+          "kind": "standalone",
+          "app": "PCE-EMU",
+          "default": false,
+          "command": null
+        }
+      ]
+    },
+    "psp": {
+      "fullname": "Sony PlayStation Portable",
+      "extensions": [
+        ".7z",
+        ".chd",
+        ".cso",
+        ".elf",
+        ".iso",
+        ".pbp",
+        ".prx",
+        ".zip"
+      ],
+      "server_platforms": [
+        "psp"
+      ],
+      "emulators": [
+        {
+          "label": "PPSSPP",
+          "kind": "libretro",
+          "core": "ppsspp",
+          "core_android": "ppsspp",
+          "files": {
+            "macos": "ppsspp_libretro.dylib",
+            "linux": "ppsspp_libretro.so",
+            "windows": "ppsspp_libretro.dll",
+            "android": "ppsspp_libretro_android.so"
+          },
+          "default": true
+        },
+        {
+          "label": "PPSSPP (Standalone)",
+          "kind": "standalone",
+          "app": "PPSSPP",
+          "default": false,
+          "command": null
+        }
+      ]
+    },
+    "psx": {
+      "fullname": "Sony PlayStation",
+      "extensions": [
+        ".7z",
+        ".bin",
+        ".cbn",
+        ".ccd",
+        ".chd",
+        ".cue",
+        ".ecm",
+        ".exe",
+        ".img",
+        ".iso",
+        ".m3u",
+        ".mdf",
+        ".mds",
+        ".minipsf",
+        ".pbp",
+        ".psexe",
+        ".psf",
+        ".toc",
+        ".z",
+        ".zip",
+        ".znx"
+      ],
+      "server_platforms": [
+        "psx"
+      ],
+      "emulators": [
+        {
+          "label": "Beetle PSX",
+          "kind": "libretro",
+          "core": "mednafen_psx",
+          "core_android": "mednafen_psx",
+          "files": {
+            "macos": "mednafen_psx_libretro.dylib",
+            "linux": "mednafen_psx_libretro.so",
+            "windows": "mednafen_psx_libretro.dll",
+            "android": "mednafen_psx_libretro_android.so"
+          },
+          "default": true
+        },
+        {
+          "label": "Beetle PSX HW",
+          "kind": "libretro",
+          "core": "mednafen_psx_hw",
+          "core_android": "mednafen_psx_hw",
+          "files": {
+            "macos": "mednafen_psx_hw_libretro.dylib",
+            "linux": "mednafen_psx_hw_libretro.so",
+            "windows": "mednafen_psx_hw_libretro.dll",
+            "android": "mednafen_psx_hw_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "PCSX ReARMed",
+          "kind": "libretro",
+          "core": "pcsx_rearmed",
+          "core_android": "pcsx_rearmed",
+          "files": {
+            "macos": "pcsx_rearmed_libretro.dylib",
+            "linux": "pcsx_rearmed_libretro.so",
+            "windows": "pcsx_rearmed_libretro.dll",
+            "android": "pcsx_rearmed_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "SwanStation",
+          "kind": "libretro",
+          "core": "swanstation",
+          "core_android": "swanstation",
+          "files": {
+            "macos": "swanstation_libretro.dylib",
+            "linux": "swanstation_libretro.so",
+            "windows": "swanstation_libretro.dll",
+            "android": "swanstation_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "DuckStation (Standalone)",
+          "kind": "standalone",
+          "app": "DUCKSTATION",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "ePSXe (Standalone)",
+          "kind": "standalone",
+          "app": "EPSXE",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "FPseNG (Standalone)",
+          "kind": "standalone",
+          "app": "FPSE-NG",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "FPse (Standalone)",
+          "kind": "standalone",
+          "app": "FPSE",
+          "default": false,
+          "command": null
+        }
+      ]
+    },
+    "sfc": {
+      "fullname": "Nintendo SFC (Super Famicom)",
+      "extensions": [
+        ".7z",
+        ".bin",
+        ".bml",
+        ".bs",
+        ".bsx",
+        ".dx2",
+        ".fig",
+        ".gd3",
+        ".gd7",
+        ".mgd",
+        ".sfc",
+        ".smc",
+        ".st",
+        ".swc",
+        ".zip"
+      ],
+      "server_platforms": [
+        "sfc"
+      ],
+      "emulators": [
+        {
+          "label": "Snes9x - Current",
+          "kind": "libretro",
+          "core": "snes9x",
+          "core_android": "snes9x",
+          "files": {
+            "macos": "snes9x_libretro.dylib",
+            "linux": "snes9x_libretro.so",
+            "windows": "snes9x_libretro.dll",
+            "android": "snes9x_libretro_android.so"
+          },
+          "default": true
+        },
+        {
+          "label": "Snes9x 2010",
+          "kind": "libretro",
+          "core": "snes9x2010",
+          "core_android": "snes9x2010",
+          "files": {
+            "macos": "snes9x2010_libretro.dylib",
+            "linux": "snes9x2010_libretro.so",
+            "windows": "snes9x2010_libretro.dll",
+            "android": "snes9x2010_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "Snes9x 2005 Plus",
+          "kind": "libretro",
+          "core": "snes9x2005_plus",
+          "core_android": "snes9x2005_plus",
+          "files": {
+            "macos": "snes9x2005_plus_libretro.dylib",
+            "linux": "snes9x2005_plus_libretro.so",
+            "windows": "snes9x2005_plus_libretro.dll",
+            "android": "snes9x2005_plus_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "Snes9x EX+ (Standalone)",
+          "kind": "standalone",
+          "app": "SNES9X-EXPLUS",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "bsnes",
+          "kind": "libretro",
+          "core": "bsnes",
+          "core_android": "bsnes",
+          "files": {
+            "macos": "bsnes_libretro.dylib",
+            "linux": "bsnes_libretro.so",
+            "windows": "bsnes_libretro.dll",
+            "android": "bsnes_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "bsnes-hd",
+          "kind": "libretro",
+          "core": "bsnes_hd_beta",
+          "core_android": "bsnes_hd_beta",
+          "files": {
+            "macos": "bsnes_hd_beta_libretro.dylib",
+            "linux": "bsnes_hd_beta_libretro.so",
+            "windows": "bsnes_hd_beta_libretro.dll",
+            "android": "bsnes_hd_beta_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "bsnes-jg",
+          "kind": "libretro",
+          "core": "bsnes-jg",
+          "core_android": "bsnes-jg",
+          "files": {
+            "macos": "bsnes-jg_libretro.dylib",
+            "linux": "bsnes-jg_libretro.so",
+            "windows": "bsnes-jg_libretro.dll",
+            "android": "bsnes-jg_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "bsnes-mercury Accuracy",
+          "kind": "libretro",
+          "core": "bsnes_mercury_accuracy",
+          "core_android": "bsnes_mercury_accuracy",
+          "files": {
+            "macos": "bsnes_mercury_accuracy_libretro.dylib",
+            "linux": "bsnes_mercury_accuracy_libretro.so",
+            "windows": "bsnes_mercury_accuracy_libretro.dll",
+            "android": "bsnes_mercury_accuracy_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "Beetle Supafaust",
+          "kind": "libretro",
+          "core": "mednafen_supafaust",
+          "core_android": "mednafen_supafaust",
+          "files": {
+            "macos": "mednafen_supafaust_libretro.dylib",
+            "linux": "mednafen_supafaust_libretro.so",
+            "windows": "mednafen_supafaust_libretro.dll",
+            "android": "mednafen_supafaust_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "Mesen-S",
+          "kind": "libretro",
+          "core": "mesen-s",
+          "core_android": "mesen-s",
+          "files": {
+            "macos": "mesen-s_libretro.dylib",
+            "linux": "mesen-s_libretro.so",
+            "windows": "mesen-s_libretro.dll",
+            "android": "mesen-s_libretro_android.so"
+          },
+          "default": false
+        }
+      ]
+    },
+    "snes": {
+      "fullname": "Nintendo SNES (Super Nintendo)",
+      "extensions": [
+        ".7z",
+        ".bin",
+        ".bml",
+        ".bs",
+        ".bsx",
+        ".dx2",
+        ".fig",
+        ".gd3",
+        ".gd7",
+        ".mgd",
+        ".sfc",
+        ".smc",
+        ".st",
+        ".swc",
+        ".zip"
+      ],
+      "server_platforms": [
+        "snes"
+      ],
+      "emulators": [
+        {
+          "label": "Snes9x - Current",
+          "kind": "libretro",
+          "core": "snes9x",
+          "core_android": "snes9x",
+          "files": {
+            "macos": "snes9x_libretro.dylib",
+            "linux": "snes9x_libretro.so",
+            "windows": "snes9x_libretro.dll",
+            "android": "snes9x_libretro_android.so"
+          },
+          "default": true
+        },
+        {
+          "label": "Snes9x 2010",
+          "kind": "libretro",
+          "core": "snes9x2010",
+          "core_android": "snes9x2010",
+          "files": {
+            "macos": "snes9x2010_libretro.dylib",
+            "linux": "snes9x2010_libretro.so",
+            "windows": "snes9x2010_libretro.dll",
+            "android": "snes9x2010_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "Snes9x 2005 Plus",
+          "kind": "libretro",
+          "core": "snes9x2005_plus",
+          "core_android": "snes9x2005_plus",
+          "files": {
+            "macos": "snes9x2005_plus_libretro.dylib",
+            "linux": "snes9x2005_plus_libretro.so",
+            "windows": "snes9x2005_plus_libretro.dll",
+            "android": "snes9x2005_plus_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "Snes9x EX+ (Standalone)",
+          "kind": "standalone",
+          "app": "SNES9X-EXPLUS",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "bsnes",
+          "kind": "libretro",
+          "core": "bsnes",
+          "core_android": "bsnes",
+          "files": {
+            "macos": "bsnes_libretro.dylib",
+            "linux": "bsnes_libretro.so",
+            "windows": "bsnes_libretro.dll",
+            "android": "bsnes_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "bsnes-hd",
+          "kind": "libretro",
+          "core": "bsnes_hd_beta",
+          "core_android": "bsnes_hd_beta",
+          "files": {
+            "macos": "bsnes_hd_beta_libretro.dylib",
+            "linux": "bsnes_hd_beta_libretro.so",
+            "windows": "bsnes_hd_beta_libretro.dll",
+            "android": "bsnes_hd_beta_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "bsnes-jg",
+          "kind": "libretro",
+          "core": "bsnes-jg",
+          "core_android": "bsnes-jg",
+          "files": {
+            "macos": "bsnes-jg_libretro.dylib",
+            "linux": "bsnes-jg_libretro.so",
+            "windows": "bsnes-jg_libretro.dll",
+            "android": "bsnes-jg_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "bsnes-mercury Accuracy",
+          "kind": "libretro",
+          "core": "bsnes_mercury_accuracy",
+          "core_android": "bsnes_mercury_accuracy",
+          "files": {
+            "macos": "bsnes_mercury_accuracy_libretro.dylib",
+            "linux": "bsnes_mercury_accuracy_libretro.so",
+            "windows": "bsnes_mercury_accuracy_libretro.dll",
+            "android": "bsnes_mercury_accuracy_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "Beetle Supafaust",
+          "kind": "libretro",
+          "core": "mednafen_supafaust",
+          "core_android": "mednafen_supafaust",
+          "files": {
+            "macos": "mednafen_supafaust_libretro.dylib",
+            "linux": "mednafen_supafaust_libretro.so",
+            "windows": "mednafen_supafaust_libretro.dll",
+            "android": "mednafen_supafaust_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "Mesen-S",
+          "kind": "libretro",
+          "core": "mesen-s",
+          "core_android": "mesen-s",
+          "files": {
+            "macos": "mesen-s_libretro.dylib",
+            "linux": "mesen-s_libretro.so",
+            "windows": "mesen-s_libretro.dll",
+            "android": "mesen-s_libretro_android.so"
+          },
+          "default": false
+        }
+      ]
+    },
+    "wonderswan": {
+      "fullname": "Bandai WonderSwan",
+      "extensions": [
+        ".7z",
+        ".pc2",
+        ".ws",
+        ".zip"
+      ],
+      "server_platforms": [
+        "wonderswan"
+      ],
+      "emulators": [
+        {
+          "label": "Beetle Cygne",
+          "kind": "libretro",
+          "core": "mednafen_wswan",
+          "core_android": "mednafen_wswan",
+          "files": {
+            "macos": "mednafen_wswan_libretro.dylib",
+            "linux": "mednafen_wswan_libretro.so",
+            "windows": "mednafen_wswan_libretro.dll",
+            "android": "mednafen_wswan_libretro_android.so"
+          },
+          "default": true
+        },
+        {
+          "label": "Swan.emu (Standalone)",
+          "kind": "standalone",
+          "app": "SWAN-EMU",
+          "default": false,
+          "command": null
+        }
+      ]
+    },
+    "wonderswancolor": {
+      "fullname": "Bandai WonderSwan Color",
+      "extensions": [
+        ".7z",
+        ".pc2",
+        ".ws",
+        ".wsc",
+        ".zip"
+      ],
+      "server_platforms": [
+        "wonderswancolor"
+      ],
+      "emulators": [
+        {
+          "label": "Beetle Cygne",
+          "kind": "libretro",
+          "core": "mednafen_wswan",
+          "core_android": "mednafen_wswan",
+          "files": {
+            "macos": "mednafen_wswan_libretro.dylib",
+            "linux": "mednafen_wswan_libretro.so",
+            "windows": "mednafen_wswan_libretro.dll",
+            "android": "mednafen_wswan_libretro_android.so"
+          },
+          "default": true
+        },
+        {
+          "label": "Swan.emu (Standalone)",
+          "kind": "standalone",
+          "app": "SWAN-EMU",
+          "default": false,
+          "command": null
+        }
+      ]
+    },
+    "gbh": {
+      "fullname": "Nintendo Game Boy Hacks",
+      "extensions": [
+        ".7z",
+        ".bs",
+        ".cgb",
+        ".dmg",
+        ".gb",
+        ".gbc",
+        ".sfc",
+        ".sgb",
+        ".smc",
+        ".zip"
+      ],
+      "server_platforms": [
+        "gb"
+      ],
+      "emulators": [
+        {
+          "label": "Gambatte",
+          "kind": "libretro",
+          "core": "gambatte",
+          "core_android": "gambatte",
+          "files": {
+            "macos": "gambatte_libretro.dylib",
+            "linux": "gambatte_libretro.so",
+            "windows": "gambatte_libretro.dll",
+            "android": "gambatte_libretro_android.so"
+          },
+          "default": true
+        },
+        {
+          "label": "SameBoy",
+          "kind": "libretro",
+          "core": "sameboy",
+          "core_android": "sameboy",
+          "files": {
+            "macos": "sameboy_libretro.dylib",
+            "linux": "sameboy_libretro.so",
+            "windows": "sameboy_libretro.dll",
+            "android": "sameboy_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "Gearboy",
+          "kind": "libretro",
+          "core": "gearboy",
+          "core_android": "gearboy",
+          "files": {
+            "macos": "gearboy_libretro.dylib",
+            "linux": "gearboy_libretro.so",
+            "windows": "gearboy_libretro.dll",
+            "android": "gearboy_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "TGB Dual",
+          "kind": "libretro",
+          "core": "tgbdual",
+          "core_android": "tgbdual",
+          "files": {
+            "macos": "tgbdual_libretro.dylib",
+            "linux": "tgbdual_libretro.so",
+            "windows": "tgbdual_libretro.dll",
+            "android": "tgbdual_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "DoubleCherryGB",
+          "kind": "libretro",
+          "core": "DoubleCherryGB",
+          "core_android": "DoubleCherryGB",
+          "files": {
+            "macos": "DoubleCherryGB_libretro.dylib",
+            "linux": "DoubleCherryGB_libretro.so",
+            "windows": "DoubleCherryGB_libretro.dll",
+            "android": "DoubleCherryGB_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "Mesen-S",
+          "kind": "libretro",
+          "core": "mesen-s",
+          "core_android": "mesen-s",
+          "files": {
+            "macos": "mesen-s_libretro.dylib",
+            "linux": "mesen-s_libretro.so",
+            "windows": "mesen-s_libretro.dll",
+            "android": "mesen-s_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "bsnes",
+          "kind": "libretro",
+          "core": "bsnes",
+          "core_android": "bsnes",
+          "files": {
+            "macos": "bsnes_libretro.dylib",
+            "linux": "bsnes_libretro.so",
+            "windows": "bsnes_libretro.dll",
+            "android": "bsnes_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "mGBA",
+          "kind": "libretro",
+          "core": "mgba",
+          "core_android": "mgba",
+          "files": {
+            "macos": "mgba_libretro.dylib",
+            "linux": "mgba_libretro.so",
+            "windows": "mgba_libretro.dll",
+            "android": "mgba_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "VBA-M",
+          "kind": "libretro",
+          "core": "vbam",
+          "core_android": "vbam",
+          "files": {
+            "macos": "vbam_libretro.dylib",
+            "linux": "vbam_libretro.so",
+            "windows": "vbam_libretro.dll",
+            "android": "vbam_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "GBC.emu (Standalone)",
+          "kind": "standalone",
+          "app": "GBC-EMU",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "SkyEmu (Standalone)",
+          "kind": "standalone",
+          "app": "SKYEMU",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "My OldBoy! (Standalone)",
+          "kind": "standalone",
+          "app": "MY-OLDBOY",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "Pizza Boy GBC (Standalone)",
+          "kind": "standalone",
+          "app": "PIZZA-BOY-GBC",
+          "default": false,
+          "command": null
+        }
+      ]
+    },
+    "gbah": {
+      "fullname": "Nintendo Game Boy Advance Hacks",
+      "extensions": [
+        ".7z",
+        ".agb",
+        ".bin",
+        ".cgb",
+        ".dmg",
+        ".gb",
+        ".gba",
+        ".gbc",
+        ".sgb",
+        ".zip"
+      ],
+      "server_platforms": [
+        "gba"
+      ],
+      "emulators": [
+        {
+          "label": "mGBA",
+          "kind": "libretro",
+          "core": "mgba",
+          "core_android": "mgba",
+          "files": {
+            "macos": "mgba_libretro.dylib",
+            "linux": "mgba_libretro.so",
+            "windows": "mgba_libretro.dll",
+            "android": "mgba_libretro_android.so"
+          },
+          "default": true
+        },
+        {
+          "label": "VBA-M",
+          "kind": "libretro",
+          "core": "vbam",
+          "core_android": "vbam",
+          "files": {
+            "macos": "vbam_libretro.dylib",
+            "linux": "vbam_libretro.so",
+            "windows": "vbam_libretro.dll",
+            "android": "vbam_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "VBA Next",
+          "kind": "libretro",
+          "core": "vba_next",
+          "core_android": "vba_next",
+          "files": {
+            "macos": "vba_next_libretro.dylib",
+            "linux": "vba_next_libretro.so",
+            "windows": "vba_next_libretro.dll",
+            "android": "vba_next_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "gpSP",
+          "kind": "libretro",
+          "core": "gpsp",
+          "core_android": "gpsp",
+          "files": {
+            "macos": "gpsp_libretro.dylib",
+            "linux": "gpsp_libretro.so",
+            "windows": "gpsp_libretro.dll",
+            "android": "gpsp_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "NooDS",
+          "kind": "libretro",
+          "core": "noods",
+          "core_android": "noods",
+          "files": {
+            "macos": "noods_libretro.dylib",
+            "linux": "noods_libretro.so",
+            "windows": "noods_libretro.dll",
+            "android": "noods_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "NooDS (Standalone)",
+          "kind": "standalone",
+          "app": "NOODS",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "GBA.emu (Standalone)",
+          "kind": "standalone",
+          "app": "GBA-EMU",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "SkyEmu (Standalone)",
+          "kind": "standalone",
+          "app": "SKYEMU",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "My Boy! (Standalone)",
+          "kind": "standalone",
+          "app": "MY-BOY",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "Pizza Boy GBA (Standalone)",
+          "kind": "standalone",
+          "app": "PIZZA-BOY-GBA",
+          "default": false,
+          "command": null
+        }
+      ]
+    },
+    "gbch": {
+      "fullname": "Nintendo Game Boy Color Hacks",
+      "extensions": [
+        ".7z",
+        ".bs",
+        ".cgb",
+        ".dmg",
+        ".gb",
+        ".gbc",
+        ".sfc",
+        ".sgb",
+        ".smc",
+        ".zip"
+      ],
+      "server_platforms": [
+        "gbc"
+      ],
+      "emulators": [
+        {
+          "label": "Gambatte",
+          "kind": "libretro",
+          "core": "gambatte",
+          "core_android": "gambatte",
+          "files": {
+            "macos": "gambatte_libretro.dylib",
+            "linux": "gambatte_libretro.so",
+            "windows": "gambatte_libretro.dll",
+            "android": "gambatte_libretro_android.so"
+          },
+          "default": true
+        },
+        {
+          "label": "SameBoy",
+          "kind": "libretro",
+          "core": "sameboy",
+          "core_android": "sameboy",
+          "files": {
+            "macos": "sameboy_libretro.dylib",
+            "linux": "sameboy_libretro.so",
+            "windows": "sameboy_libretro.dll",
+            "android": "sameboy_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "Gearboy",
+          "kind": "libretro",
+          "core": "gearboy",
+          "core_android": "gearboy",
+          "files": {
+            "macos": "gearboy_libretro.dylib",
+            "linux": "gearboy_libretro.so",
+            "windows": "gearboy_libretro.dll",
+            "android": "gearboy_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "TGB Dual",
+          "kind": "libretro",
+          "core": "tgbdual",
+          "core_android": "tgbdual",
+          "files": {
+            "macos": "tgbdual_libretro.dylib",
+            "linux": "tgbdual_libretro.so",
+            "windows": "tgbdual_libretro.dll",
+            "android": "tgbdual_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "DoubleCherryGB",
+          "kind": "libretro",
+          "core": "DoubleCherryGB",
+          "core_android": "DoubleCherryGB",
+          "files": {
+            "macos": "DoubleCherryGB_libretro.dylib",
+            "linux": "DoubleCherryGB_libretro.so",
+            "windows": "DoubleCherryGB_libretro.dll",
+            "android": "DoubleCherryGB_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "Mesen-S",
+          "kind": "libretro",
+          "core": "mesen-s",
+          "core_android": "mesen-s",
+          "files": {
+            "macos": "mesen-s_libretro.dylib",
+            "linux": "mesen-s_libretro.so",
+            "windows": "mesen-s_libretro.dll",
+            "android": "mesen-s_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "bsnes",
+          "kind": "libretro",
+          "core": "bsnes",
+          "core_android": "bsnes",
+          "files": {
+            "macos": "bsnes_libretro.dylib",
+            "linux": "bsnes_libretro.so",
+            "windows": "bsnes_libretro.dll",
+            "android": "bsnes_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "mGBA",
+          "kind": "libretro",
+          "core": "mgba",
+          "core_android": "mgba",
+          "files": {
+            "macos": "mgba_libretro.dylib",
+            "linux": "mgba_libretro.so",
+            "windows": "mgba_libretro.dll",
+            "android": "mgba_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "VBA-M",
+          "kind": "libretro",
+          "core": "vbam",
+          "core_android": "vbam",
+          "files": {
+            "macos": "vbam_libretro.dylib",
+            "linux": "vbam_libretro.so",
+            "windows": "vbam_libretro.dll",
+            "android": "vbam_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "GBC.emu (Standalone)",
+          "kind": "standalone",
+          "app": "GBC-EMU",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "SkyEmu (Standalone)",
+          "kind": "standalone",
+          "app": "SKYEMU",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "My OldBoy! (Standalone)",
+          "kind": "standalone",
+          "app": "MY-OLDBOY",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "Pizza Boy GBC (Standalone)",
+          "kind": "standalone",
+          "app": "PIZZA-BOY-GBC",
+          "default": false,
+          "command": null
+        }
+      ]
+    },
+    "genh": {
+      "fullname": "Sega Genesis Hacks",
+      "extensions": [
+        ".32x",
+        ".68k",
+        ".7z",
+        ".bin",
+        ".bms",
+        ".chd",
+        ".cue",
+        ".gen",
+        ".gg",
+        ".iso",
+        ".m3u",
+        ".md",
+        ".mdx",
+        ".sg",
+        ".sgd",
+        ".smd",
+        ".sms",
+        ".zip"
+      ],
+      "server_platforms": [
+        "megadrive"
+      ],
+      "emulators": [
+        {
+          "label": "Genesis Plus GX",
+          "kind": "libretro",
+          "core": "genesis_plus_gx",
+          "core_android": "genesis_plus_gx",
+          "files": {
+            "macos": "genesis_plus_gx_libretro.dylib",
+            "linux": "genesis_plus_gx_libretro.so",
+            "windows": "genesis_plus_gx_libretro.dll",
+            "android": "genesis_plus_gx_libretro_android.so"
+          },
+          "default": true
+        },
+        {
+          "label": "Genesis Plus GX Wide",
+          "kind": "libretro",
+          "core": "genesis_plus_gx_wide",
+          "core_android": "genesis_plus_gx_wide",
+          "files": {
+            "macos": "genesis_plus_gx_wide_libretro.dylib",
+            "linux": "genesis_plus_gx_wide_libretro.so",
+            "windows": "genesis_plus_gx_wide_libretro.dll",
+            "android": "genesis_plus_gx_wide_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "PicoDrive",
+          "kind": "libretro",
+          "core": "picodrive",
+          "core_android": "picodrive",
+          "files": {
+            "macos": "picodrive_libretro.dylib",
+            "linux": "picodrive_libretro.so",
+            "windows": "picodrive_libretro.dll",
+            "android": "picodrive_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "MD.emu (Standalone)",
+          "kind": "standalone",
+          "app": "MD-EMU",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "Pizza Boy SC (Standalone)",
+          "kind": "standalone",
+          "app": "PIZZA-BOY-SC",
+          "default": false,
+          "command": null
+        }
+      ]
+    },
+    "msu-md": {
+      "fullname": "Sega Mega Drive MSU",
+      "extensions": [
+        ".32x",
+        ".68k",
+        ".7z",
+        ".bin",
+        ".bms",
+        ".chd",
+        ".cue",
+        ".gen",
+        ".gg",
+        ".iso",
+        ".m3u",
+        ".md",
+        ".mdx",
+        ".sg",
+        ".sgd",
+        ".smd",
+        ".sms",
+        ".zip"
+      ],
+      "server_platforms": [
+        "megadrive"
+      ],
+      "emulators": [
+        {
+          "label": "Genesis Plus GX",
+          "kind": "libretro",
+          "core": "genesis_plus_gx",
+          "core_android": "genesis_plus_gx",
+          "files": {
+            "macos": "genesis_plus_gx_libretro.dylib",
+            "linux": "genesis_plus_gx_libretro.so",
+            "windows": "genesis_plus_gx_libretro.dll",
+            "android": "genesis_plus_gx_libretro_android.so"
+          },
+          "default": true
+        },
+        {
+          "label": "Genesis Plus GX Wide",
+          "kind": "libretro",
+          "core": "genesis_plus_gx_wide",
+          "core_android": "genesis_plus_gx_wide",
+          "files": {
+            "macos": "genesis_plus_gx_wide_libretro.dylib",
+            "linux": "genesis_plus_gx_wide_libretro.so",
+            "windows": "genesis_plus_gx_wide_libretro.dll",
+            "android": "genesis_plus_gx_wide_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "PicoDrive",
+          "kind": "libretro",
+          "core": "picodrive",
+          "core_android": "picodrive",
+          "files": {
+            "macos": "picodrive_libretro.dylib",
+            "linux": "picodrive_libretro.so",
+            "windows": "picodrive_libretro.dll",
+            "android": "picodrive_libretro_android.so"
+          },
+          "default": false
+        }
+      ]
+    },
+    "n3ds": {
+      "fullname": "Nintendo 3DS",
+      "extensions": [
+        ".3ds",
+        ".3dsx",
+        ".7z",
+        ".app",
+        ".axf",
+        ".cci",
+        ".cxi",
+        ".elf",
+        ".zip"
+      ],
+      "server_platforms": [],
+      "emulators": [
+        {
+          "label": "Citra",
+          "kind": "libretro",
+          "core": "citra",
+          "core_android": "citra",
+          "files": {
+            "macos": "citra_libretro.dylib",
+            "linux": "citra_libretro.so",
+            "windows": "citra_libretro.dll",
+            "android": "citra_libretro_android.so"
+          },
+          "default": true
+        },
+        {
+          "label": "Citra (Standalone)",
+          "kind": "standalone",
+          "app": "CITRA",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "Citra Canary (Standalone)",
+          "kind": "standalone",
+          "app": "CITRA-CANARY",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "Citra MMJ (Standalone)",
+          "kind": "standalone",
+          "app": "CITRA-MMJ",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "Citra Enhanced (Standalone)",
+          "kind": "standalone",
+          "app": "CITRA-ENHANCED",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "Azahar (Standalone)",
+          "kind": "standalone",
+          "app": "AZAHAR",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "AzaharPlus-Coexist (Standalone)",
+          "kind": "standalone",
+          "app": "AZAHARPLUS",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "Borked3DS (Standalone)",
+          "kind": "standalone",
+          "app": "BORKED3DS",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "Cytrus (Standalone)",
+          "kind": "standalone",
+          "app": "CYTRUS",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "Lime3DS (Standalone)",
+          "kind": "standalone",
+          "app": "LIME3DS",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "Mandarine (Standalone)",
+          "kind": "standalone",
+          "app": "MANDARINE",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "Panda3DS (Standalone)",
+          "kind": "standalone",
+          "app": "PANDA3DS",
+          "default": false,
+          "command": null
+        }
+      ]
+    },
+    "nesh": {
+      "fullname": "Nintendo Entertainment System Hacks",
+      "extensions": [
+        ".3dsen",
+        ".7z",
+        ".fds",
+        ".nes",
+        ".unf",
+        ".unif",
+        ".zip"
+      ],
+      "server_platforms": [
+        "nes",
+        "famicom"
+      ],
+      "emulators": [
+        {
+          "label": "Mesen",
+          "kind": "libretro",
+          "core": "mesen",
+          "core_android": "mesen",
+          "files": {
+            "macos": "mesen_libretro.dylib",
+            "linux": "mesen_libretro.so",
+            "windows": "mesen_libretro.dll",
+            "android": "mesen_libretro_android.so"
+          },
+          "default": true
+        },
+        {
+          "label": "Nestopia UE",
+          "kind": "libretro",
+          "core": "nestopia",
+          "core_android": "nestopia",
+          "files": {
+            "macos": "nestopia_libretro.dylib",
+            "linux": "nestopia_libretro.so",
+            "windows": "nestopia_libretro.dll",
+            "android": "nestopia_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "FCEUmm",
+          "kind": "libretro",
+          "core": "fceumm",
+          "core_android": "fceumm",
+          "files": {
+            "macos": "fceumm_libretro.dylib",
+            "linux": "fceumm_libretro.so",
+            "windows": "fceumm_libretro.dll",
+            "android": "fceumm_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "QuickNES",
+          "kind": "libretro",
+          "core": "quicknes",
+          "core_android": "quicknes",
+          "files": {
+            "macos": "quicknes_libretro.dylib",
+            "linux": "quicknes_libretro.so",
+            "windows": "quicknes_libretro.dll",
+            "android": "quicknes_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "NES.emu (Standalone)",
+          "kind": "standalone",
+          "app": "NES-EMU",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "iNES (Standalone)",
+          "kind": "standalone",
+          "app": "INES",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "Nesoid (Standalone)",
+          "kind": "standalone",
+          "app": "NESOID",
+          "default": false,
+          "command": null
+        }
+      ]
+    },
+    "ps2": {
+      "fullname": "Sony PlayStation 2",
+      "extensions": [
+        ".bin",
+        ".chd",
+        ".ciso",
+        ".cso",
+        ".dump",
+        ".elf",
+        ".gz",
+        ".img",
+        ".iso",
+        ".isz",
+        ".m3u",
+        ".mdf",
+        ".ngr",
+        ".nrg"
+      ],
+      "server_platforms": [],
+      "emulators": [
+        {
+          "label": "AetherSX2 (Standalone)",
+          "kind": "standalone",
+          "app": "AETHERSX2",
+          "default": true,
+          "command": null
+        },
+        {
+          "label": "AetherSX2-Turnip (Standalone)",
+          "kind": "standalone",
+          "app": "AETHERSX2-TURNIP",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "Play! (Standalone)",
+          "kind": "standalone",
+          "app": null,
+          "default": false,
+          "command": "%EMULATOR_PLAY!% %ACTION%=android.intent.action.VIEW %DATA%=%ROMSAF%"
+        }
+      ]
+    },
+    "ps3": {
+      "fullname": "Sony PlayStation 3",
+      "extensions": [
+        ".7z",
+        ".ps3",
+        ".zip"
+      ],
+      "server_platforms": [],
+      "emulators": [
+        {
+          "label": "(default)",
+          "kind": "standalone",
+          "app": "RPCSX",
+          "default": true,
+          "command": null
+        }
+      ]
+    },
+    "psvita": {
+      "fullname": "Sony PlayStation Vita",
+      "extensions": [
+        ".psvita"
+      ],
+      "server_platforms": [],
+      "emulators": [
+        {
+          "label": "Vita3K (Standalone)",
+          "kind": "standalone",
+          "app": "VITA3K",
+          "default": true,
+          "command": null
+        },
+        {
+          "label": "Vita3KZX (Standalone)",
+          "kind": "standalone",
+          "app": "VITA3KZX",
+          "default": false,
+          "command": null
+        }
+      ]
+    },
+    "snesh": {
+      "fullname": "Nintendo SNES (Super Nintendo) Hacks",
+      "extensions": [
+        ".7z",
+        ".bin",
+        ".bml",
+        ".bs",
+        ".bsx",
+        ".dx2",
+        ".fig",
+        ".gd3",
+        ".gd7",
+        ".mgd",
+        ".sfc",
+        ".smc",
+        ".st",
+        ".swc",
+        ".zip"
+      ],
+      "server_platforms": [
+        "snes",
+        "sfc"
+      ],
+      "emulators": [
+        {
+          "label": "Snes9x - Current",
+          "kind": "libretro",
+          "core": "snes9x",
+          "core_android": "snes9x",
+          "files": {
+            "macos": "snes9x_libretro.dylib",
+            "linux": "snes9x_libretro.so",
+            "windows": "snes9x_libretro.dll",
+            "android": "snes9x_libretro_android.so"
+          },
+          "default": true
+        },
+        {
+          "label": "Snes9x 2010",
+          "kind": "libretro",
+          "core": "snes9x2010",
+          "core_android": "snes9x2010",
+          "files": {
+            "macos": "snes9x2010_libretro.dylib",
+            "linux": "snes9x2010_libretro.so",
+            "windows": "snes9x2010_libretro.dll",
+            "android": "snes9x2010_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "Snes9x 2005 Plus",
+          "kind": "libretro",
+          "core": "snes9x2005_plus",
+          "core_android": "snes9x2005_plus",
+          "files": {
+            "macos": "snes9x2005_plus_libretro.dylib",
+            "linux": "snes9x2005_plus_libretro.so",
+            "windows": "snes9x2005_plus_libretro.dll",
+            "android": "snes9x2005_plus_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "Snes9x EX+ (Standalone)",
+          "kind": "standalone",
+          "app": "SNES9X-EXPLUS",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "bsnes",
+          "kind": "libretro",
+          "core": "bsnes",
+          "core_android": "bsnes",
+          "files": {
+            "macos": "bsnes_libretro.dylib",
+            "linux": "bsnes_libretro.so",
+            "windows": "bsnes_libretro.dll",
+            "android": "bsnes_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "bsnes-hd",
+          "kind": "libretro",
+          "core": "bsnes_hd_beta",
+          "core_android": "bsnes_hd_beta",
+          "files": {
+            "macos": "bsnes_hd_beta_libretro.dylib",
+            "linux": "bsnes_hd_beta_libretro.so",
+            "windows": "bsnes_hd_beta_libretro.dll",
+            "android": "bsnes_hd_beta_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "bsnes-jg",
+          "kind": "libretro",
+          "core": "bsnes-jg",
+          "core_android": "bsnes-jg",
+          "files": {
+            "macos": "bsnes-jg_libretro.dylib",
+            "linux": "bsnes-jg_libretro.so",
+            "windows": "bsnes-jg_libretro.dll",
+            "android": "bsnes-jg_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "bsnes-mercury Accuracy",
+          "kind": "libretro",
+          "core": "bsnes_mercury_accuracy",
+          "core_android": "bsnes_mercury_accuracy",
+          "files": {
+            "macos": "bsnes_mercury_accuracy_libretro.dylib",
+            "linux": "bsnes_mercury_accuracy_libretro.so",
+            "windows": "bsnes_mercury_accuracy_libretro.dll",
+            "android": "bsnes_mercury_accuracy_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "Beetle Supafaust",
+          "kind": "libretro",
+          "core": "mednafen_supafaust",
+          "core_android": "mednafen_supafaust",
+          "files": {
+            "macos": "mednafen_supafaust_libretro.dylib",
+            "linux": "mednafen_supafaust_libretro.so",
+            "windows": "mednafen_supafaust_libretro.dll",
+            "android": "mednafen_supafaust_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "Mesen-S",
+          "kind": "libretro",
+          "core": "mesen-s",
+          "core_android": "mesen-s",
+          "files": {
+            "macos": "mesen-s_libretro.dylib",
+            "linux": "mesen-s_libretro.so",
+            "windows": "mesen-s_libretro.dll",
+            "android": "mesen-s_libretro_android.so"
+          },
+          "default": false
+        }
+      ]
+    },
+    "snes-msu1": {
+      "fullname": "Nintendo SNES (Super Nintendo)",
+      "extensions": [
+        ".7z",
+        ".bin",
+        ".bml",
+        ".bs",
+        ".bsx",
+        ".dx2",
+        ".fig",
+        ".gd3",
+        ".gd7",
+        ".mgd",
+        ".sfc",
+        ".smc",
+        ".st",
+        ".swc",
+        ".zip"
+      ],
+      "server_platforms": [
+        "snes",
+        "sfc"
+      ],
+      "emulators": [
+        {
+          "label": "Snes9x - Current",
+          "kind": "libretro",
+          "core": "snes9x",
+          "core_android": "snes9x",
+          "files": {
+            "macos": "snes9x_libretro.dylib",
+            "linux": "snes9x_libretro.so",
+            "windows": "snes9x_libretro.dll",
+            "android": "snes9x_libretro_android.so"
+          },
+          "default": true
+        },
+        {
+          "label": "Snes9x 2010",
+          "kind": "libretro",
+          "core": "snes9x2010",
+          "core_android": "snes9x2010",
+          "files": {
+            "macos": "snes9x2010_libretro.dylib",
+            "linux": "snes9x2010_libretro.so",
+            "windows": "snes9x2010_libretro.dll",
+            "android": "snes9x2010_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "Snes9x 2005 Plus",
+          "kind": "libretro",
+          "core": "snes9x2005_plus",
+          "core_android": "snes9x2005_plus",
+          "files": {
+            "macos": "snes9x2005_plus_libretro.dylib",
+            "linux": "snes9x2005_plus_libretro.so",
+            "windows": "snes9x2005_plus_libretro.dll",
+            "android": "snes9x2005_plus_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "Snes9x EX+ (Standalone)",
+          "kind": "standalone",
+          "app": "SNES9X-EXPLUS",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "bsnes",
+          "kind": "libretro",
+          "core": "bsnes",
+          "core_android": "bsnes",
+          "files": {
+            "macos": "bsnes_libretro.dylib",
+            "linux": "bsnes_libretro.so",
+            "windows": "bsnes_libretro.dll",
+            "android": "bsnes_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "bsnes-hd",
+          "kind": "libretro",
+          "core": "bsnes_hd_beta",
+          "core_android": "bsnes_hd_beta",
+          "files": {
+            "macos": "bsnes_hd_beta_libretro.dylib",
+            "linux": "bsnes_hd_beta_libretro.so",
+            "windows": "bsnes_hd_beta_libretro.dll",
+            "android": "bsnes_hd_beta_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "bsnes-jg",
+          "kind": "libretro",
+          "core": "bsnes-jg",
+          "core_android": "bsnes-jg",
+          "files": {
+            "macos": "bsnes-jg_libretro.dylib",
+            "linux": "bsnes-jg_libretro.so",
+            "windows": "bsnes-jg_libretro.dll",
+            "android": "bsnes-jg_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "bsnes-mercury Accuracy",
+          "kind": "libretro",
+          "core": "bsnes_mercury_accuracy",
+          "core_android": "bsnes_mercury_accuracy",
+          "files": {
+            "macos": "bsnes_mercury_accuracy_libretro.dylib",
+            "linux": "bsnes_mercury_accuracy_libretro.so",
+            "windows": "bsnes_mercury_accuracy_libretro.dll",
+            "android": "bsnes_mercury_accuracy_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "Beetle Supafaust",
+          "kind": "libretro",
+          "core": "mednafen_supafaust",
+          "core_android": "mednafen_supafaust",
+          "files": {
+            "macos": "mednafen_supafaust_libretro.dylib",
+            "linux": "mednafen_supafaust_libretro.so",
+            "windows": "mednafen_supafaust_libretro.dll",
+            "android": "mednafen_supafaust_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "Mesen-S",
+          "kind": "libretro",
+          "core": "mesen-s",
+          "core_android": "mesen-s",
+          "files": {
+            "macos": "mesen-s_libretro.dylib",
+            "linux": "mesen-s_libretro.so",
+            "windows": "mesen-s_libretro.dll",
+            "android": "mesen-s_libretro_android.so"
+          },
+          "default": false
+        }
+      ]
+    },
+    "switch": {
+      "fullname": "Nintendo Switch",
+      "extensions": [
+        ".nca",
+        ".nro",
+        ".nso",
+        ".nsp",
+        ".xci"
+      ],
+      "server_platforms": [],
+      "emulators": [
+        {
+          "label": "Yuzu (Standalone)",
+          "kind": "standalone",
+          "app": "YUZU",
+          "default": true,
+          "command": null
+        },
+        {
+          "label": "Yuzu EA (Standalone)",
+          "kind": "standalone",
+          "app": "YUZU-EA",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "Citron (Standalone)",
+          "kind": "standalone",
+          "app": "CITRON",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "Eden (Standalone)",
+          "kind": "standalone",
+          "app": "EDEN",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "Nyushu (Standalone)",
+          "kind": "standalone",
+          "app": "NYUSHU",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "Skyline (Standalone)",
+          "kind": "standalone",
+          "app": "SKYLINE",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "Sudachi (Standalone)",
+          "kind": "standalone",
+          "app": "SUDACHI",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "Suyu (Standalone)",
+          "kind": "standalone",
+          "app": "SUYU",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "Uzuy (Standalone)",
+          "kind": "standalone",
+          "app": "UZUY",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "Ziunx (Standalone)",
+          "kind": "standalone",
+          "app": "ZIUNX",
+          "default": false,
+          "command": null
+        }
+      ]
+    },
+    "wii": {
+      "fullname": "Nintendo Wii",
+      "extensions": [
+        ".7z",
+        ".ciso",
+        ".dff",
+        ".dol",
+        ".elf",
+        ".gcm",
+        ".gcz",
+        ".iso",
+        ".json",
+        ".m3u",
+        ".rvz",
+        ".tgc",
+        ".wad",
+        ".wbfs",
+        ".wia",
+        ".zip"
+      ],
+      "server_platforms": [],
+      "emulators": [
+        {
+          "label": "Dolphin",
+          "kind": "libretro",
+          "core": "dolphin",
+          "core_android": "dolphin",
+          "files": {
+            "macos": "dolphin_libretro.dylib",
+            "linux": "dolphin_libretro.so",
+            "windows": "dolphin_libretro.dll",
+            "android": "dolphin_libretro_android.so"
+          },
+          "default": true
+        },
+        {
+          "label": "Dolphin (Standalone)",
+          "kind": "standalone",
+          "app": "DOLPHIN",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "Dolphin MMJR (Standalone)",
+          "kind": "standalone",
+          "app": "DOLPHIN-MMJR",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "Dolphin MMJR2 (Standalone)",
+          "kind": "standalone",
+          "app": "DOLPHIN-MMJR2",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "Dolphin Enhanced (Standalone)",
+          "kind": "standalone",
+          "app": "DOLPHIN-ENHANCED",
+          "default": false,
+          "command": null
+        },
+        {
+          "label": "Dolphin Primehack (Standalone)",
+          "kind": "standalone",
+          "app": "DOLPHIN-PRIMEHACK",
+          "default": false,
+          "command": null
+        }
+      ]
+    }
+  },
+  "android_packages": {
+    "2600-EMU": [
+      "com.explusalpha.A2600Emu/com.imagine.BaseActivity"
+    ],
+    "AETHERSX2-TURNIP": [
+      "xyz.aethersx2.custom/xyz.aethersx2.android.EmulationActivity"
+    ],
+    "APS3E": [
+      "aenu.aps3e.premium/aenu.aps3e.EmulatorActivity",
+      "aenu.aps3e/aenu.aps3e.EmulatorActivity"
+    ],
+    "ARMSX1": [
+      "com.nanodata.armsx/com.armsx2.Main"
+    ],
+    "ARMSX2": [
+      "com.armsx2/.MainActivity",
+      "come.nanodata.armsx2/kr.co.iefriends.pcsx2.MainActivity",
+      "come.nanodata.armsx2.debug/kr.co.iefriends.pcsx2.MainActivity"
+    ],
+    "ARMSX3": [
+      "com.armsx3/com.armsx2.Main"
+    ],
+    "AX360E": [
+      "aenu.ax360e/aenu.ax360e.EmulatorActivity",
+      "aenu.ax360e.free/aenu.ax360e.EmulatorActivity"
+    ],
+    "AZAHAR": [
+      "org.azahar_emu.azahar/org.citra.citra_emu.activities.EmulationActivity",
+      "io.github.lime3ds.android/org.citra.citra_emu.activities.EmulationActivity"
+    ],
+    "AZAHARPLUS": [
+      "io.github.azaharplus.android/org.citra.citra_emu.activities.EmulationActivity"
+    ],
+    "BACHATAS4": [
+      "com.bachatas4.android/.DirectLaunchActivity"
+    ],
+    "BORKED3DS": [
+      "io.github.borked3ds.android/.activities.EmulationActivity"
+    ],
+    "C64-EMU": [
+      "com.explusalpha.C64Emu/com.imagine.BaseActivity"
+    ],
+    "CEMU": [
+      "info.cemu.cemu/info.cemu.cemu.emulation.EmulationActivity",
+      "info.cemu.Cemu/info.cemu.Cemu.emulation.EmulationActivity"
+    ],
+    "CITRA": [
+      "org.citra.citra_emu/.activities.EmulationActivity",
+      "org.citra.citra_emu/.ui.main.MainActivity"
+    ],
+    "CITRA-CANARY": [
+      "org.citra.citra_emu.canary/org.citra.citra_emu.activities.EmulationActivity"
+    ],
+    "CITRA-ENHANCED": [
+      "org.gamerytb.citra.canary/org.citra.citra_emu.ui.main.MainActivity"
+    ],
+    "CITRA-MMJ": [
+      "org.citra.emu/.ui.EmulationActivity",
+      "com.antutu.ABenchMark/org.citra.emu.ui.EmulationActivity"
+    ],
+    "CITRON": [
+      "org.citron.citron_emu/.activities.EmulationActivity",
+      "org.citron.citron_emu.ea/org.citron.citron_emu.activities.EmulationActivity",
+      "com.antutu.ABenchMark/org.citron.citron_emu.activities.EmulationActivity",
+      "com.miHoYo.Yuanshen/org.citron.citron_emu.activities.EmulationActivity"
+    ],
+    "COLEM": [
+      "com.fms.colem.deluxe/com.fms.emulib.TVActivity",
+      "com.fms.colem/com.fms.emulib.TVActivity"
+    ],
+    "CYTRUS": [
+      "org.cytrus.cytrus_emu/.activities.EmulationActivity"
+    ],
+    "DOLPHIN": [
+      "org.dolphinemu.dolphinemu/.ui.main.TvMainActivity"
+    ],
+    "DOLPHIN-ENHANCED": [
+      "org.mm.j/org.dolphinemu.dolphinemu.ui.main.MainActivity"
+    ],
+    "DOLPHIN-MMJR": [
+      "org.mm.jr/org.dolphinemu.dolphinemu.ui.main.MainActivity"
+    ],
+    "DOLPHIN-MMJR2": [
+      "org.dolphinemu.mmjr/org.dolphinemu.dolphinemu.ui.main.MainActivity"
+    ],
+    "DOLPHIN-PRIMEHACK": [
+      "org.shiiion.primehack/org.dolphinemu.dolphinemu.ui.main.MainActivity"
+    ],
+    "DRASTIC": [
+      "com.dsemu.drastic/.DraSticActivity"
+    ],
+    "DROIDARCADIA": [
+      "com.amigan.droidarcadia/.MainActivity"
+    ],
+    "DSMILE": [
+      "com.dsmile.emulator/.ui.EmuActivity"
+    ],
+    "DUCKSTATION": [
+      "com.github.stenzek.duckstation/.EmulationActivity"
+    ],
+    "EDEN": [
+      "com.antutu.ABenchMark/org.yuzu.yuzu_emu.activities.EmulationActivity",
+      "dev.eden.eden_emulator/org.yuzu.yuzu_emu.activities.EmulationActivity",
+      "dev.legacy.eden_emulator/org.yuzu.yuzu_emu.activities.EmulationActivity",
+      "com.miHoYo.Yuanshen/org.yuzu.yuzu_emu.activities.EmulationActivity"
+    ],
+    "EDEN-NIGHTLY": [
+      "dev.eden.eden_emulator.nightly/org.yuzu.yuzu_emu.activities.EmulationActivity",
+      "dev.legacy.eden_emulator.nightly/org.yuzu.yuzu_emu.activities.EmulationActivity",
+      "com.miHoYo.Yuanshen.nightly/org.yuzu.yuzu_emu.activities.EmulationActivity"
+    ],
+    "EKA2L1": [
+      "com.github.eka2l1/.emu.EmulatorActivity"
+    ],
+    "EMUCOREC": [
+      "com.sbro.emucorec/.core.ps3.Emulator"
+    ],
+    "EMUCOREV": [
+      "com.sbro.emucorev/.core.vita.Emulator"
+    ],
+    "EMUCOREX": [
+      "com.sbro.emucorex/.MainActivity"
+    ],
+    "EPSXE": [
+      "com.epsxe.ePSXe/.ePSXe"
+    ],
+    "FLYCAST": [
+      "com.flycast.emulator/com.flycast.emulator.MainActivity",
+      "com.flycast.emulator/com.reicast.emulator.MainActivity"
+    ],
+    "FMSX": [
+      "com.fms.fmsx.deluxe/com.fms.emulib.TVActivity",
+      "com.fms.fmsx/com.fms.emulib.TVActivity"
+    ],
+    "FPSE": [
+      "com.emulator.fpse/.Main"
+    ],
+    "FPSE-NG": [
+      "com.emulator.fpse64/.Main"
+    ],
+    "GAMEHUB-LITE": [
+      "emuready.gamehub.lite/com.xj.landscape.launcher.ui.gamedetail.GameDetailActivity",
+      "gamehub.lite/com.xj.landscape.launcher.ui.gamedetail.GameDetailActivity",
+      "com.antutu.ABenchMark/com.xj.landscape.launcher.ui.gamedetail.GameDetailActivity",
+      "com.tencent.ig/com.xj.landscape.launcher.ui.gamedetail.GameDetailActivity",
+      "com.ludashi.aibench/com.xj.landscape.launcher.ui.gamedetail.GameDetailActivity",
+      "com.antutu.benchmark.full/com.xj.landscape.launcher.ui.gamedetail.GameDetailActivity"
+    ],
+    "GAMENATIVE": [
+      "app.gamenative/.MainActivity"
+    ],
+    "GBA-EMU": [
+      "com.explusalpha.GbaEmu/com.imagine.BaseActivity"
+    ],
+    "GBC-EMU": [
+      "com.explusalpha.GbcEmu/com.imagine.BaseActivity"
+    ],
+    "HAKUX": [
+      "com.rfandango.haku_x/.LauncherActivity"
+    ],
+    "IDTECH4A++": [
+      "com.karin.idTech4Amm/com.n0n3m4.q3e.Q3EMain"
+    ],
+    "INES": [
+      "com.fms.ines.free/com.fms.emulib.TVActivity"
+    ],
+    "INFINITY": [
+      "me.dt2dev.infinity/.SchemeActivity"
+    ],
+    "IRATAJAGUAR": [
+      "ru.vastness.altmer.iratajaguar/.EmulatorActivity"
+    ],
+    "J2ME-LOADER": [
+      "ru.playsoftware.j2meloader/.MainActivity"
+    ],
+    "JL-MOD": [
+      "ru.woesss.j2meloader/ru.playsoftware.j2meloader.MainActivity"
+    ],
+    "KENJI-NX": [
+      "org.kenjinx.android/.MainActivity"
+    ],
+    "LIME3DS": [
+      "io.github.lime3ds.android/.activities.EmulationActivity"
+    ],
+    "LINKBOY": [
+      "com.pixelrespawn.linkboy/.EmulatorActivity"
+    ],
+    "LYNX-EMU": [
+      "com.explusalpha.LynxEmu/com.imagine.BaseActivity"
+    ],
+    "M64PLUS-FZ": [
+      "org.mupen64plusae.v3.fzurita.amazon/paulscode.android.mupen64plusae.SplashActivity",
+      "org.mupen64plusae.v3.fzurita.pro/paulscode.android.mupen64plusae.SplashActivity",
+      "org.mupen64plusae.v3.fzurita/paulscode.android.mupen64plusae.SplashActivity"
+    ],
+    "MAME4DROID": [
+      "com.seleuco.mame4droid/.MAME4droid"
+    ],
+    "MAME4DROID-2024": [
+      "com.seleuco.mame4d2024/com.seleuco.mame4droid.MAME4droid"
+    ],
+    "MAME4DROID-CURRENT": [
+      "com.seleuco.mame4d2024/com.seleuco.mame4droid.MAME4droid"
+    ],
+    "MANDARINE": [
+      "io.github.mandarine3ds.mandarine/.activities.EmulationActivity"
+    ],
+    "MASTERGEAR": [
+      "com.fms.mg/com.fms.emulib.TVActivity"
+    ],
+    "MD-EMU": [
+      "com.explusalpha.MdEmu/com.imagine.BaseActivity"
+    ],
+    "MELONDS": [
+      "me.magnum.melonds/.ui.emulator.EmulatorActivity",
+      "me.magnum.melondualds/me.magnum.melonds.ui.emulator.EmulatorActivity"
+    ],
+    "MELONDS-NIGHTLY": [
+      "me.magnum.melonds.nightly/me.magnum.melonds.ui.emulator.EmulatorActivity"
+    ],
+    "MSX-EMU": [
+      "com.explusalpha.MsxEmu/com.imagine.BaseActivity"
+    ],
+    "MUPEN64PLUS-AE": [
+      "org.mupen64plusae.v3.alpha/paulscode.android.mupen64plusae.SplashActivity"
+    ],
+    "MY-BOY": [
+      "com.fastemulator.gba/.EmulatorActivity"
+    ],
+    "MY-OLDBOY": [
+      "com.fastemulator.gbc/.EmulatorActivity"
+    ],
+    "NEO-EMU": [
+      "com.explusalpha.NeoEmu/com.imagine.BaseActivity"
+    ],
+    "NES-EMU": [
+      "com.explusalpha.NesEmu/com.imagine.BaseActivity"
+    ],
+    "NESOID": [
+      "com.androidemu.nes/.EmulatorActivity"
+    ],
+    "NETHERSX2": [
+      "xyz.aethersx2.android/.EmulationActivity"
+    ],
+    "NETHERSX2-TURNIP": [
+      "xyz.aethersx2.tturnip/xyz.aethersx2.android.EmulationActivity"
+    ],
+    "NETHERSX2-TURNIP-CLASSIC": [
+      "xyz.aethersx2.cturnip/xyz.aethersx2.android.EmulationActivity"
+    ],
+    "NGP-EMU": [
+      "com.explusalpha.NgpEmu/com.imagine.BaseActivity"
+    ],
+    "NOODS": [
+      "com.hydra.noods/.FileBrowser"
+    ],
+    "NYUSHU": [
+      "com.andromeda.androbench2/org.suyu.suyu_emu.activities.EmulationActivity"
+    ],
+    "OPENBOR": [
+      "org.openbor.engine/.GameActivity"
+    ],
+    "PANDA3DS": [
+      "com.panda3ds.pandroid/.app.MainActivity"
+    ],
+    "PCE-EMU": [
+      "com.PceEmu/com.imagine.BaseActivity"
+    ],
+    "PICO-8": [
+      "io.wip.pico8/com.godot.game.GodotAppLauncher"
+    ],
+    "PIZZA-BOY-GBA": [
+      "it.dbtecno.pizzaboygbapro/it.dbtecno.pizzaboygbapro.MainActivity",
+      "it.dbtecno.pizzaboygba/it.dbtecno.pizzaboygba.MainActivity"
+    ],
+    "PIZZA-BOY-GBC": [
+      "it.dbtecno.pizzaboypro/it.dbtecno.pizzaboypro.MainActivity",
+      "it.dbtecno.pizzaboy/it.dbtecno.pizzaboy.MainActivity"
+    ],
+    "PIZZA-BOY-SC": [
+      "it.dbtecno.pizzaboyscpro/.MainActivity",
+      "it.dbtecno.pizzaboyscbasic/.MainActivity"
+    ],
+    "PLAY!": [
+      "com.virtualapplications.play/.MainActivity"
+    ],
+    "PPSSPP": [
+      "org.ppsspp.ppssppgold/org.ppsspp.ppsspp.PpssppActivity",
+      "org.ppsspp.ppsspp/.PpssppActivity"
+    ],
+    "REAL3DOPLAYER": [
+      "ru.vastness.altmer.real3doplayer/.EmulatorActivity"
+    ],
+    "REDREAM": [
+      "io.recompiled.redream/.MainActivity"
+    ],
+    "RETROARCH": [
+      "com.retroarch.aarch64/com.retroarch.browser.retroactivity.RetroActivityFuture",
+      "com.retroarch.ra32/com.retroarch.browser.retroactivity.RetroActivityFuture",
+      "com.retroarch/com.retroarch.browser.retroactivity.RetroActivityFuture"
+    ],
+    "RPCSX": [
+      "net.rpcsx/.MainActivity"
+    ],
+    "RUFFLE": [
+      "rs.ruffle/.PlayerActivity"
+    ],
+    "SATURN-EMU": [
+      "com.explusalpha.SaturnEmu/com.imagine.BaseActivity"
+    ],
+    "SCUMMVM": [
+      "org.scummvm.scummvm.debug/org.scummvm.scummvm.SplashActivity",
+      "org.scummvm.scummvm/org.scummvm.scummvm.SplashActivity"
+    ],
+    "SEEDLESSDS": [
+      "com.seedlessds.app/.LaunchGame"
+    ],
+    "SKYEMU": [
+      "com.sky.SkyEmu/.EnhancedNativeActivity"
+    ],
+    "SKYLINE": [
+      "skyline.emu/emu.skyline.EmulationActivity"
+    ],
+    "SNES9X-EXPLUS": [
+      "com.explusalpha.Snes9xPlus/com.imagine.BaseActivity"
+    ],
+    "SPECCY": [
+      "com.fms.speccy.deluxe/com.fms.emulib.TVActivity",
+      "com.fms.speccy/com.fms.emulib.TVActivity"
+    ],
+    "STARBOARD": [
+      "org.force9.starboard/.ui.game.GameActivity"
+    ],
+    "SUDACHI": [
+      "org.sudachi.sudachi_emu/org.sudachi.sudachi_emu.activities.EmulationActivity",
+      "org.sudachi.sudachi_emu.ea/org.sudachi.sudachi_emu.activities.EmulationActivity"
+    ],
+    "SUPER3": [
+      "com.izzy2lost.super3/com.izzy2lost.super3.MainActivity"
+    ],
+    "SUYU": [
+      "org.suyu.suyu_emu/org.suyu.suyu_emu.activities.EmulationActivity",
+      "dev.suyu.suyu_emu.relWithDebInfo/dev.suyu.suyu_emu.activities.EmulationActivity",
+      "dev.suyu.suyu_emu/dev.suyu.suyu_emu.activities.EmulationActivity"
+    ],
+    "SWAN-EMU": [
+      "com.explusalpha.SwanEmu/com.imagine.BaseActivity"
+    ],
+    "SWF-PLAYER": [
+      "com.issess.flashplayerpro/com.issess.flashplayer.player.FlashPlayerActivity",
+      "com.issess.flashplayer/.player.FlashPlayerActivity"
+    ],
+    "UZUY": [
+      "org.uzuy.uzuy_emu/.activities.EmulationActivity",
+      "org.uzuy.uzuy_emu.ea/org.uzuy.uzuy_emu.activities.EmulationActivity",
+      "org.uzuy.uzuy_emu.mmjr/org.uzuy.uzuy_emu.activities.EmulationActivity",
+      "com.antutu.ABenchMark.ea/org.uzuy.uzuy_emu.activities.EmulationActivity",
+      "com.antutu.ABenchMark/org.uzuy.uzuy_emu.activities.EmulationActivity"
+    ],
+    "VIRTUAL-VIRTUAL-BOY": [
+      "com.simongellis.vvb/.MainActivity"
+    ],
+    "VISUAL-PINBALL": [
+      "org.vpinball.vpinball_bgfx/org.vpinball.app.VPinballActivity",
+      "org.vpinball.app/.VpxLauncherActivity",
+      "org.vpinball.app.gl/org.vpinball.app.VPinballActivity"
+    ],
+    "VITA3K": [
+      "org.vita3k.emulator/.Emulator",
+      "org.vita3k.emulator.ikhoeyZX/org.vita3k.emulator.Emulator"
+    ],
+    "VITA3KZX": [
+      "org.vita3k.emulator.ikhoeyZX/org.vita3k.emulator.Emulator"
+    ],
+    "WATERMELONDS": [
+      "me.magnum.melondualds/me.magnum.melonds.ui.emulator.EmulatorActivity"
+    ],
+    "WINLATOR-CMOD": [
+      "com.winlator.cmod/.XServerDisplayActivity"
+    ],
+    "WINLATOR-GLIBC": [
+      "com.winlator/.XServerDisplayActivity"
+    ],
+    "WINLATOR-PROOT": [
+      "com.cmodded.winlator/com.winlator.XServerDisplayActivity"
+    ],
+    "X1-BOX": [
+      "com.izzy2lost.x1box/.LauncherActivity"
+    ],
+    "XENDROID": [
+      "xendroid.compose/.EmulatorHostActivity"
+    ],
+    "XENRA": [
+      "Ali.Xanite.green/Ali.Xanite.LauncherActivity",
+      "Ali.Xanite/Ali.Xanite.LauncherActivity"
+    ],
+    "YABASANSHIRO-2": [
+      "org.devmiyax.yabasanshioro2.pro/org.uoyabause.android.Yabause",
+      "org.devmiyax.yabasanshioro2/org.uoyabause.android.Yabause"
+    ],
+    "YUZU": [
+      "org.yuzu.yuzu_emu/org.yuzu.yuzu_emu.activities.EmulationActivity"
+    ],
+    "YUZU-EA": [
+      "org.yuzu.yuzu_emu.ea/org.yuzu.yuzu_emu.activities.EmulationActivity"
+    ],
+    "ZIUNX": [
+      "org.Ziunx.Ziunx_emu.ea/org.yuzu.yuzu_emu.activities.EmulationActivity"
+    ]
+  },
+  "relevant_settings": {
+    "AlternativeEmulatorPerGame": "true"
+  },
+  "default_core_source": {
+    "_comment": "Defaults come from the Android ES-DE export first — that device is known to work, so its choices win. Platforms the export never covered fall back to community consensus (libretro docs / ES-DE defaults) and are listed under community_consensus so the two are never confused.",
+    "android_export": [
+      "3do",
+      "arcade",
+      "dc",
+      "famicom",
+      "gamegear",
+      "gb",
+      "gba",
+      "gbc",
+      "mame",
+      "mastersystem",
+      "megadrive",
+      "n64",
+      "nds",
+      "neo-geo-pocket",
+      "neogeoaes",
+      "nes",
+      "ngc",
+      "pcengine",
+      "psp",
+      "psx",
+      "sfc",
+      "snes",
+      "wonderswan",
+      "wonderswancolor"
+    ],
+    "community_consensus": {
+      "naomi": "flycast",
+      "saturn": "mednafen_saturn",
+      "wii": "dolphin",
+      "easyrpg": "easyrpg",
+      "pico8": "retro8",
+      "g-and-w": "gw"
+    },
+    "no_libretro_core": {
+      "ps2": "LRPS2 has no usable macOS build; PCSX2 is standalone",
+      "ps3": "RPCS3 is standalone, no libretro core",
+      "switch": "no libretro core exists",
+      "wiiu": "no libretro core exists",
+      "xbox360": "no libretro core exists",
+      "new-nintendo-3ds": "Citra cores are unmaintained and absent for macOS arm64"
+    }
+  }
+}
