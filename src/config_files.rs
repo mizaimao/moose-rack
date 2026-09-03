@@ -238,8 +238,22 @@ mod tests {
         fn sections(toml: &str) -> Vec<&str> {
             toml.lines().map(str::trim_end).filter(|l| l.starts_with('[')).collect()
         }
+        /// The example's sections, including ones it only offers commented out.
+        ///
+        /// `# [esde]` is a real position in the template — a config that fills
+        /// it in has not moved anything, so counting only uncommented headers
+        /// would fail every config that takes an optional section up.
+        fn template_sections(toml: &str) -> Vec<&str> {
+            toml.lines()
+                .map(str::trim_end)
+                .filter_map(|l| {
+                    let bare = l.strip_prefix("# ").unwrap_or(l);
+                    bare.starts_with('[').then_some(bare)
+                })
+                .collect()
+        }
         let Some(mine) = current() else { return };
-        let template = sections(EXAMPLE);
+        let template = template_sections(EXAMPLE);
         let mut at = 0;
         let mut seen: Vec<&str> = Vec::new();
         for s in sections(&mine) {
