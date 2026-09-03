@@ -1,0 +1,12 @@
+# Pin the toolchain so a local check predicts CI.
+#
+# Three rounds of CI failures came from version skew rather than the code: the
+# machine here was on 1.94 while the runners resolved `stable` to 1.97, whose
+# clippy carries lints the older one does not. `cargo clippy` passed locally and
+# failed on push, once per lint.
+#
+# Bump this deliberately, run clippy, fix what the new version finds, and commit
+# the two together.
+[toolchain]
+channel = "1.97.1"
+components = ["clippy"]

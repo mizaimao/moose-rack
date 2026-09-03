@@ -1,0 +1,130 @@
+# Missing ROM files — FBNeo want-list
+
+Generated from FBNeo's own load errors (core GIT8813808).
+Format: romset / filename / CRC32. Feed to a ROM manager, or search individually.
+
+## avengers — Avengers (US, rev. D)  [UNPLAYABLE]
+avengers	avu_04d.10n	0xa94aadcc
+avengers	avu_06d.13n	0x39cd80bd
+avengers	avu_05d.12n	0x06b1cec9
+avengers	av.13k	0x505a0987
+
+## catacomb — Catacomb  [UNPLAYABLE]
+catacomb	74s288.bin	0x7e0b79cb
+
+## chuckieegg — Chuckie Egg  [UNPLAYABLE]
+chuckieegg	ppokoj2.bin	0x80285be4
+
+## kikikai — KiKi KaiKai  [UNPLAYABLE]
+kikikai	a85-01_jph1020p.h8	0x01771197
+
+## lordgun — Lord of Gun (World)  [UNPLAYABLE]
+lordgun	lord_gun_u144-ch.u144	0xea54ee18
+lordgun	lord_gun_u122-ch.u122	0x969a0348
+lordgun	lord_gun_u24.u24	0x454a5b11
+lordgun	lord_gun_u23.u23	0xa0d7aada
+lordgun	lord_gun_u7.u7	0x95ef3894
+lordgun	lord_gun_u14.u14	0xdc8a77a1
+lordgun	lord_gun_u5.u5	0x63aa10c3
+lordgun	lord_gun_u13.u13	0x478e248c
+lordgun	lord_gun_u4.u4	0xd203c24e
+lordgun	lord_gun_u11.u11	0x72277dcd
+lordgun	lord_gun_u12.u12	0xa2a55d65
+lordgun	lord_gun_u6.u6	0xfe649605
+lordgun	lord_gun_u10.u10	0xeea39e5e
+lordgun	lord_gun_u3.u3	0x233782f8
+lordgun	eeprom	0x0dad0e43
+
+## maniacsq — Maniac Square (unprotected, version 1.0, checksum BB73)  [UNPLAYABLE]
+maniacsq	d8-d15.1m	0x9121d1b6
+maniacsq	d0-d7.1m	0xa95cfd2a
+
+## touchgo — Touch and Go (World, checksum 059D0235)  [UNPLAYABLE]
+touchgo	tg_873d_56_5-2.ic56	0x6d0f5c65
+touchgo	tg_cee8_57_5-2.ic57	0x845787b5
+
+## wrally2 — World Rally 2: Twin Racing (version 20-07, checksum B1B8)  [UNPLAYABLE]
+wrally2	dallas_usa_wr-2_2_64_usa_e47e_31-7.bin	0x5e6a364a
+wrally2	dallas_usa_wr-2_1_63_usa_c584_31-7.bin	0x5c106494
+wrally2	wrally2_ds5002fp_sram_new.bin	0xbcf47f69
+wrally2	wr2.16d	0xad26086b
+wrally2	wr2.17d	0xc1ec0745
+wrally2	wr2.18d	0xe3617814
+wrally2	wr2.19d	0x2dae988c
+wrally2	wr2.09d	0x372d70c8
+wrally2	wr2.10d	0x5db67eb3
+wrally2	wr2.11d	0xae66b97c
+wrally2	wr2.12d	0x6dbdaa95
+wrally2	wr2.01d	0x753a138d
+wrally2	wr2.02d	0x9c2a723c
+wrally2	wr2.20d	0x4f7ade84
+wrally2	wr2.13d	0xa4cd32f8
+wrally2	wr2.21d	0x899b0583
+wrally2	wr2.14d	0x6eb781d5
+
+## acrobatm — Acrobat Mission  [works on mame2003_plus]
+acrobatm	nmk004.bin	0x8ae61a09
+
+## alienar — Alien Arena  [works on mame2003_plus]
+alienar	sg.snd	0x2fcf6c4d
+
+## bang — Bang! (version 2, checksum 140E)  [works on mame2003_plus]
+bang	so_demo_bang_ic53_6ff0_15-2-99.ic53	0x0de5e331
+bang	so_demo_bang_ic55_abfc_15-2-99.ic55	0xb97b9d3a
+bang	ba_16_468a_27c040.ic16	0xc926486c
+
+## bioship — Bio-ship Paladin  [works on mame2003_plus]
+bioship	nmk004.bin	0x8ae61a09
+
+## blkheart — Black Heart  [works on mame2003_plus]
+blkheart	nmk004.bin	0x8ae61a09
+
+## bloodstm — BloodStorm (v2.22)  [works on mame2003_plus]
+bloodstm	bldsnd_v2.01_u17.u17	0x5aa452ee
+
+## cclimber — Crazy Climber (US set 1)  [works on mame2003_plus]
+cclimber	dm7052.cpu	0xf4179117
+
+## gunnail — GunNail (28th May. 1992)  [works on mame2003_plus]
+gunnail	nmk004.bin	0x8ae61a09
+
+## macross — Super Spacefortress Macross / Chou-Jikuu Yousai Macross  [works on mame2003_plus]
+macross	nmk004.bin	0x8ae61a09
+
+## matchit — Match It  [works on mame2003_plus]
+matchit	sis_a-27-i.ic27	0xc7190125
+matchit	c2l.ic51	0xe19276a9
+matchit	c2h.ic50	0xe1dc099e
+matchit	c0l.ic53	0x10fde9fb
+matchit	sd.ic14	0x80448f72
+
+## mustang — US AAF Mustang (25th May. 1990)  [works on mame2003_plus]
+mustang	nmk004.bin	0x8ae61a09
+
+## nspirit — Ninja Spirit (World)  [works on mame2003_plus]
+nspirit	nin_c-pr-b.ic1	0x0f7b2713
+
+## paddlema — Paddle Mania  [works on mame2003_plus]
+paddlema	padlem.18n	0x488df971
+
+## recalh — Recalhorn (Ver 1.42J 1994/5/11, prototype)  [works on mame2003_plus]
+recalh	recalh.nv	0x3e24cc80
+
+## strahl — Koutetsu Yousai Strahl (World)  [works on mame]
+strahl	nmk004.bin	0x8ae61a09
+
+## tdragon — Thunder Dragon (8th Jan. 1992, unprotected)  [works on mame2003_plus]
+tdragon	nmk004.bin	0x8ae61a09
+
+## valkyrie — Valkyrie no Densetsu (Japan)  [works on mame2003_plus]
+valkyrie	valkyrie.nv	0xd5ce4069
+
+## vandyke — Vandyke (Japan)  [works on mame2003_plus]
+vandyke	nmk004.bin	0x8ae61a09
+
+## vball — U.S. Championship V'ball (US)  [works on mame]
+vball	25a2-4.124	0xbe04c2b5
+
+## warlords — Warlords  [works on mame2003_plus]
+warlords	037161-01.m6	0x6fa3093a
+

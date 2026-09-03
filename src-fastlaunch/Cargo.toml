@@ -1,0 +1,28 @@
+[package]
+name = "moose-fastlaunch"
+version.workspace = true
+edition = "2024"
+
+# The launcher that starts games, in place of KNULLI's Python one.
+#
+# `configgen` is 83% of the wait when a game starts — 3.43 s of a 4.26 s
+# launch, measured on the Flip. It is 272 Python files, re-imported from
+# nothing on every single launch, to produce one 114 KB text file and an
+# argv. None of that work is hard; it is just being done by an interpreter
+# that has to be built from scratch each time.
+#
+# This does the same job natively for the systems that are actually played
+# here — twelve, all libretro — and hands anything it does not recognise
+# straight back to the Python launcher. The fallback is the whole safety
+# story: an unfamiliar system, a malformed config, a core it has never heard
+# of, all end in `exec emulatorlauncher` rather than a guess.
+#
+# See docs/fast-launch.md.
+
+[[bin]]
+name = "moose-fastlaunch"
+path = "src/main.rs"
+
+# Deliberately none. This runs on the launch path of every game, so its
+# start-up cost is the whole point — nothing here is worth a crate.
+[dependencies]

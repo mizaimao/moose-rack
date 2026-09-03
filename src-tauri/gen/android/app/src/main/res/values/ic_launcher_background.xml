@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!--
+    The colour behind the adaptive launcher icon, sampled from the edges of
+    src-tauri/icons/icon.png rather than left at the generator's white.
+
+    An adaptive icon is a foreground inset into a larger canvas, and whatever
+    is not covered is this colour. The artwork is an arcade cabinet on a
+    near-black purple field with no transparency, so white put a bright ring
+    around it on the launcher and under every mask shape the system applies.
+  -->
+  <color name="ic_launcher_background">#211926</color>
+</resources>

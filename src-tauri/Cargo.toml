@@ -1,0 +1,37 @@
+[package]
+name = "moose-gui"
+version.workspace = true
+edition = "2024"
+description = "Moose Rack desktop client"
+
+# Android loads the app as a shared library rather than running a binary, so
+# this crate needs a `[lib]` target — without one `cargo tauri android build`
+# stops at "no library targets found in package `moose-gui`".
+#
+# `_lib` rather than `moose_gui`: a lib and a bin with the same name collide on
+# Windows, and the desktop binary is still called `moose-gui`.
+#
+# All three crate types are wanted. `cdylib` is the `.so` the APK loads,
+# `staticlib` is what an iOS build would want if there is ever one, and `rlib`
+# is what keeps `cargo test -p moose-gui` able to see into this crate.
+[lib]
+name = "moose_gui_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# The whole backend — API client, cache, downloader, RetroArch launcher — is
+# reused from the core crate. This crate only adds a window.
+moose-rack = { path = ".." }
+
+# protocol-asset lets the webview load local cover art and videos
+# through asset: URLs; it must match assetProtocol in tauri.conf.json.
+# image-png is what lets set_icon take a PNG at runtime, which is how the
+# app icon changes on Windows and Linux without a rebuild.
+tauri = { version = "2", features = ["protocol-asset", "image-png"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync"] }
+tauri-plugin-dialog = "2.7.2"

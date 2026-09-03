@@ -1,0 +1,42 @@
+# Fonts the app ships, fetched at build time and never committed.
+#
+# The handheld's rootfs installs `fonts-noto-cjk` and nothing else — no Latin
+# face at all. EmulationStation papered over that by fetching Android's
+# DroidSansFallbackFull itself; strip ES and the gap is ours. So these are the
+# scripts CJK does not cover, and they come to about 2.3 MB.
+#
+# CJK is not in the default set, and that is a decision rather than an
+# oversight. Both targets already have it:
+#
+#   * the handheld installs `fonts-noto-cjk` — one NotoSansCJK-Regular.ttc
+#     holding the JP, KR, SC, TC and HK faces, which the font database reads
+#     out separately, so asking for "Noto Sans CJK TC" by name works there;
+#   * macOS ships Hiragino, PingFang SC and PingFang TC.
+#
+# and it is 50 MB against the 2.3 MB of everything above. Where a machine
+# turns out to lack it the app says so at startup rather than drawing boxes.
+#
+# For a machine that needs them — a Linux desktop without the Debian package,
+# or Windows — `scripts/fetch-fonts.sh --with-cjk` adds the four below. They
+# are per-language on purpose: one pan-CJK font is what EmulationStation ships
+# and is exactly the thing that draws Japanese titles in Chinese shapes.
+#
+# All SIL Open Font License 1.1, which permits redistribution as long as the
+# licence travels with the font — hence OFL.txt below, and hence LICENSES.md.
+#
+# Pinned to a tag, not a branch: a font that changes under a release is a
+# layout that changes under a release.
+#
+# name	sha256	bytes	url
+NotoSans[wdth,wght].ttf	511cc04b442ffcc3b24d65c2cc780bdffaf482b20ba0aebdc8f27b37017ff0f5	1581884	https://raw.githubusercontent.com/notofonts/notofonts.github.io/noto-monthly-release-2026.08.01/fonts/NotoSans/unhinted/variable-ttf/NotoSans%5Bwdth%2Cwght%5D.ttf
+NotoSansArabic[wdth,wght].ttf	3b735d0b7f04ddd5c6a3d7fafba8d8216420d3cbbba93ded80f34ba37369de00	682836	https://raw.githubusercontent.com/notofonts/notofonts.github.io/noto-monthly-release-2026.08.01/fonts/NotoSansArabic/unhinted/variable-ttf/NotoSansArabic%5Bwdth%2Cwght%5D.ttf
+NotoSansHebrew[wdth,wght].ttf	2a0af06d3e959ebc3f50a8c0042c24b671b6b3283d1ebbf3e7d39ef2b4ce62ba	35508	https://raw.githubusercontent.com/notofonts/notofonts.github.io/noto-monthly-release-2026.08.01/fonts/NotoSansHebrew/unhinted/variable-ttf/NotoSansHebrew%5Bwdth%2Cwght%5D.ttf
+NotoSansThai[wdth,wght].ttf	70bcda1aae0976b35ff22660b918d0f610a4bd5c7136cf7313072c0fe0186825	94872	https://raw.githubusercontent.com/notofonts/notofonts.github.io/noto-monthly-release-2026.08.01/fonts/NotoSansThai/unhinted/variable-ttf/NotoSansThai%5Bwdth%2Cwght%5D.ttf
+OFL.txt	cee9892f9f0cc8fe882c9e9537ee6a89621d86ee7ceaf70b02e2b2b1c25c061a	4396	https://raw.githubusercontent.com/google/fonts/main/ofl/notosans/OFL.txt
+
+# --with-cjk only. Sizes are why.
+[cjk]
+NotoSansJP[wght].ttf	-	9648020	https://raw.githubusercontent.com/google/fonts/main/ofl/notosansjp/NotoSansJP%5Bwght%5D.ttf
+NotoSansSC[wght].ttf	-	17752608	https://raw.githubusercontent.com/google/fonts/main/ofl/notosanssc/NotoSansSC%5Bwght%5D.ttf
+NotoSansTC[wght].ttf	-	11895460	https://raw.githubusercontent.com/google/fonts/main/ofl/notosanstc/NotoSansTC%5Bwght%5D.ttf
+NotoSansKR[wght].ttf	-	10352044	https://raw.githubusercontent.com/google/fonts/main/ofl/notosanskr/NotoSansKR%5Bwght%5D.ttf

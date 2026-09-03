@@ -1,0 +1,722 @@
+[
+ {
+  "id": 6151,
+  "old": "16t (Japan).zip",
+  "final": "V-V (Japan, En).zip",
+  "source": "romanised",
+  "rom_sha1": "ca344521cb5015d142bdbce0eb44cea050b8e86b",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/V-V (Japan, En).zip"
+ },
+ {
+  "id": 6157,
+  "old": "Aa Harimanada (Japan).zip",
+  "final": "雀偵物語 (Japan).zip",
+  "source": "japanese",
+  "rom_sha1": "8e109961a89e1366c83808fb0bb33333f88a82b7",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/雀偵物語 (Japan).zip"
+ },
+ {
+  "id": 6199,
+  "old": "Aworg (Japan).zip",
+  "final": "Gynoug (Japan, En).zip",
+  "source": "english",
+  "rom_sha1": "9b99b109f5f1f221f08672a7c4752a94067b62b0",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Gynoug (Japan, En).zip"
+ },
+ {
+  "id": 6204,
+  "old": "Ball Jacks (Japan, Europe).zip",
+  "final": "Bonanza Bros. (Japan, Europe, En,Ja).zip",
+  "source": "english",
+  "rom_sha1": "ce46f2b53988f06e0bdfaad1b0dc3e9ca936e1e8",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Bonanza Bros. (Japan, Europe, En,Ja).zip"
+ },
+ {
+  "id": 6205,
+  "old": "Ballz 3D - Fighting at Its Ballziest (USA, Europe).zip",
+  "final": "Ballz 3D - The Battle of the Ballz (USA, Europe).zip",
+  "source": "romanised",
+  "rom_sha1": "4825cb9245a701cc59900c57a7a5fa70edc160f0",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Ballz 3D - The Battle of the Ballz (USA, Europe).zip"
+ },
+ {
+  "id": 6211,
+  "old": "Barver Battle Saga - Tai Kong Zhan Shi (China) (Unl) (Translated En).zip",
+  "final": "Taikong Zhanshi - Mofa Zhanshi (Barver Battle Saga, Taiwan).zip",
+  "source": "romanised",
+  "rom_sha1": "6d49a0db7687ccad3441f47fbc483c87cd6eab53",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Taikong Zhanshi - Mofa Zhanshi (Barver Battle Saga, Taiwan).zip"
+ },
+ {
+  "id": 6224,
+  "old": "Beast Ball (USA) (Proto).zip",
+  "final": "Fun Car Rally (USA, Beta).zip",
+  "source": "english",
+  "rom_sha1": "779aba11bf77ca59e6ae981854805bf3fabe4b0e",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Fun Car Rally (USA, Beta).zip"
+ },
+ {
+  "id": 6244,
+  "old": "Bloodshot (Europe).zip",
+  "final": "Cool Spot (Europe).zip",
+  "source": "english",
+  "rom_sha1": "b6dc5d4c29b2161f7252828cf267117e726d8e82",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Cool Spot (Europe).zip"
+ },
+ {
+  "id": 6290,
+  "old": "Chinese Fighter III (China) (Unl).zip",
+  "final": "Tunshi Tiandi III (Taiwan, Traditional).zip",
+  "source": "romanised",
+  "rom_sha1": "534bf8f951ee30d47df18202246245b998c0eced",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Tunshi Tiandi III (Taiwan, Traditional).zip"
+ },
+ {
+  "id": 6291,
+  "old": "Chou Kyuukai Miracle Nine (Japan).zip",
+  "final": "Daikoukai Jidai II (Japan).zip",
+  "source": "romanised",
+  "rom_sha1": "74f61092067d82127cae3306d5a66d3efe946bc3",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Daikoukai Jidai II (Japan).zip"
+ },
+ {
+  "id": 6312,
+  "old": "Crayon Shin-chan - Arashi o Yobu Enji (Japan).zip",
+  "final": "三国志列伝 (Japan).zip",
+  "source": "japanese",
+  "rom_sha1": "9b79f91060e68b9f6f48c8a5f38bc9873d03c4a9",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/三国志列伝 (Japan).zip"
+ },
+ {
+  "id": 6317,
+  "old": "Curse (Japan).zip",
+  "final": "OutRun (Japan, En).zip",
+  "source": "english",
+  "rom_sha1": "a94c96ffb53080b2c098be86e715f1dc727be07d",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/OutRun (Japan, En).zip"
+ },
+ {
+  "id": 6333,
+  "old": "Davis Cup Tennis (USA, Europe).zip",
+  "final": "Davis Cup World Tour (USA, Europe).zip",
+  "source": "romanised",
+  "rom_sha1": "735cf7c84869bfa795114f5eff835a74252a4adc",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Davis Cup World Tour (USA, Europe).zip"
+ },
+ {
+  "id": 6341,
+  "old": "Desert Strike - Return To The Gulf (USA, Europe).zip",
+  "final": "Desert Strike - Wangan Sakusen (Japan, Korea, Ja).zip",
+  "source": "romanised",
+  "rom_sha1": "9e01c6c45670e2950242facfba6c5b79052550ed",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Desert Strike - Wangan Sakusen (Japan, Korea, Ja).zip"
+ },
+ {
+  "id": 6342,
+  "old": "Devil's Course (Japan).zip",
+  "final": "Devil Crash MD (Japan, En).zip",
+  "source": "english",
+  "rom_sha1": "58d447ecd6a6af9845cdd90ac3df0b5503535117",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Devil Crash MD (Japan, En).zip"
+ },
+ {
+  "id": 6343,
+  "old": "Devilish - The Next Possession (USA).zip",
+  "final": "Mahjong Emo Ta - Devilish Mahjong Tower (Taiwan).zip",
+  "source": "romanised",
+  "rom_sha1": "84e8bf546283c73396e40c4cfa05986ebeb123bb",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Mahjong Emo Ta - Devilish Mahjong Tower (Taiwan).zip"
+ },
+ {
+  "id": 6350,
+  "old": "Divine Sealing (Japan) (Unl).zip",
+  "final": "Dial Q o Mawase! (Japan).zip",
+  "source": "romanised",
+  "rom_sha1": "08967e04d992264f193ecdfd0e0457baaf25f4f2",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Dial Q o Mawase! (Japan).zip"
+ },
+ {
+  "id": 6351,
+  "old": "Doki Doki Penguin Land (Japan).zip",
+  "final": "Dino Land (Japan, En).zip",
+  "source": "english",
+  "rom_sha1": "4bee752cd2205d60b9d3c7a58e0e90a4837522de",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Dino Land (Japan, En).zip"
+ },
+ {
+  "id": 6354,
+  "old": "Doraemon - Yume Dorobou to 7 Nin no Gozans (Japan).zip",
+  "final": "Air Management II - Koukuuou o Mezase (Japan).zip",
+  "source": "romanised",
+  "rom_sha1": "6ed89fc3302023bc95c2bba0d45fe1d30e1c5d86",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Air Management II - Koukuuou o Mezase (Japan).zip"
+ },
+ {
+  "id": 6359,
+  "old": "Double Dragon II - The Revenge (Japan).zip",
+  "final": "Nobunaga's Ambition III (Japan).zip",
+  "source": "english",
+  "rom_sha1": "1ed50cae48405ec8ad9257df3d445521e60636d8",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Nobunaga's Ambition III (Japan).zip"
+ },
+ {
+  "id": 6388,
+  "old": "Eliminate Down (Japan).zip",
+  "final": "Killing Game Show, The (Japan, En).zip",
+  "source": "romanised",
+  "rom_sha1": "47cdd668998139c92305e1b5abf7e196901490d6",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Killing Game Show, The (Japan, En).zip"
+ },
+ {
+  "id": 6416,
+  "old": "Fido Dido (USA) (Proto).zip",
+  "final": "Frog Dude (Europe, Proto).zip",
+  "source": "romanised",
+  "rom_sha1": "93b50bc93a3cbd510190fa7f0920ca4e07ba86ab",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Frog Dude (Europe, Proto).zip"
+ },
+ {
+  "id": 6422,
+  "old": "Flash Point (Japan) (Proto).zip",
+  "final": "Soleil (Japan, Beta).zip",
+  "source": "english",
+  "rom_sha1": "963f13f74d648c573ced103b2803d15d0a2742e8",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Soleil (Japan, Beta).zip"
+ },
+ {
+  "id": 6425,
+  "old": "Flink (Europe).zip",
+  "final": "F1 (Europe).zip",
+  "source": "romanised",
+  "rom_sha1": "a8327157f6537f4cd5daaff648864e8e0bf945f1",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/F1 (Europe).zip"
+ },
+ {
+  "id": 6429,
+  "old": "Formula One (USA).zip",
+  "final": "Corporation (Europe).zip",
+  "source": "english",
+  "rom_sha1": "520e01abe76120dbd680b9fc34eb1303c780b069",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Corporation (Europe).zip"
+ },
+ {
+  "id": 6437,
+  "old": "Gaiares (Japan, USA).zip",
+  "final": "Gauntlet (Japan, En,Ja).zip",
+  "source": "romanised",
+  "rom_sha1": "30208982dd1f50634943d894e7458a556127f8e4",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Gauntlet (Japan, En,Ja).zip"
+ },
+ {
+  "id": 6464,
+  "old": "Gunship (Europe).zip",
+  "final": "Gynoug (Europe).zip",
+  "source": "english",
+  "rom_sha1": "fada42bed3a97e1d1b0c6128ddb1f202a50cb1b0",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Gynoug (Europe).zip"
+ },
+ {
+  "id": 6471,
+  "old": "Harukanaru Augusta (Japan).zip",
+  "final": "Fatal Fury 2 (Japan).zip",
+  "source": "english",
+  "rom_sha1": "08eadaf6177d884b8e1fb66c5949850f10c5d77c",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Fatal Fury 2 (Japan).zip"
+ },
+ {
+  "id": 6473,
+  "old": "Head-On Soccer (USA).zip",
+  "final": "Fever Pitch Soccer (Europe, En,Fr,De,Es,It).zip",
+  "source": "romanised",
+  "rom_sha1": "e3489b80a4b21049170fedee7630111773fe592c",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Fever Pitch Soccer (Europe, En,Fr,De,Es,It).zip"
+ },
+ {
+  "id": 6475,
+  "old": "Heavy Unit - Mega Drive Special (Japan).zip",
+  "final": "Dyna Brothers 2 Special (Japan, Virtual Console).zip",
+  "source": "romanised",
+  "rom_sha1": "8e10298dfff521397f0e82d1787e701d6928750b",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Dyna Brothers 2 Special (Japan, Virtual Console).zip"
+ },
+ {
+  "id": 6483,
+  "old": "Honoo no Toukyuuji Dodge Danpei (Japan).zip",
+  "final": "信長の野望・覇王伝 (Japan).zip",
+  "source": "japanese",
+  "rom_sha1": "9246a29b25e276dc1f7edfae87229549cf87d92e",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/信長の野望・覇王伝 (Japan).zip"
+ },
+ {
+  "id": 6488,
+  "old": "Hyper Marbles (Japan).zip",
+  "final": "Jewel Master (Japan, En).zip",
+  "source": "english",
+  "rom_sha1": "52fbcf9902a4a3f70aeb9c3df31019e07e679ea8",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Jewel Master (Japan, En).zip"
+ },
+ {
+  "id": 6499,
+  "old": "It Came from the Desert (USA) (Proto).zip",
+  "final": "Lufia & The Fortress of Doom (USA, Proto).zip",
+  "source": "romanised",
+  "rom_sha1": "ede3a48b9115166cb47df72ec7065f0a427aae5d",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Lufia & The Fortress of Doom (USA, Proto).zip"
+ },
+ {
+  "id": 6500,
+  "old": "Itchy and Scratchy Game, The (USA) (Proto).zip",
+  "final": "Young Indiana Jones Chronicles, The (USA, Beta).zip",
+  "source": "romanised",
+  "rom_sha1": "1b1a2dc24e4decebc6f1717d387d560a1ae9332c",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Young Indiana Jones Chronicles, The (USA, Beta).zip"
+ },
+ {
+  "id": 6527,
+  "old": "John Madden Football (USA, Europe).zip",
+  "final": "Marko's Magic Football (Europe, En,Fr,De,Es).zip",
+  "source": "english",
+  "rom_sha1": "717e924db1ac7cfd099adb6031a08606fcb30219",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Marko's Magic Football (Europe, En,Fr,De,Es).zip"
+ },
+ {
+  "id": 6546,
+  "old": "Kiss Shot (Japan).zip",
+  "final": "King Salmon (Japan).zip",
+  "source": "english",
+  "rom_sha1": "62bea17b1e9152bde2355deb98347a802518d08d",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/King Salmon (Japan).zip"
+ },
+ {
+  "id": 6549,
+  "old": "Kyuukai Douchuuki (Japan).zip",
+  "final": "Twin Cobra (Japan, En).zip",
+  "source": "english",
+  "rom_sha1": "cbe207732c6ce5e5e5846e44847ce902315f2bc3",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Twin Cobra (Japan, En).zip"
+ },
+ {
+  "id": 6566,
+  "old": "Ling Huan Daoshi - Super Magician (China) (Unl).zip",
+  "final": "Menghuan Shuiguo Pan - 777 Casino (Taiwan).zip",
+  "source": "romanised",
+  "rom_sha1": "df20a28d03a2cd481af134ef7602062636c3cc79",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Menghuan Shuiguo Pan - 777 Casino (Taiwan).zip"
+ },
+ {
+  "id": 6567,
+  "old": "Link Dragon (China) (Unl).zip",
+  "final": "Taiwan Daheng (Taiwan).zip",
+  "source": "romanised",
+  "rom_sha1": "88726c11e5ed7927830bf5ae0b83d85dfff4a2a4",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Taiwan Daheng (Taiwan).zip"
+ },
+ {
+  "id": 6569,
+  "old": "Lobo (USA) (Proto).zip",
+  "final": "Dominus (USA, Proto, Alt).zip",
+  "source": "english",
+  "rom_sha1": "fde8160bf51575463e81cbd0b5d12fb5d49eb695",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Dominus (USA, Proto, Alt).zip"
+ },
+ {
+  "id": 6582,
+  "old": "Magic Bubble (China) (Unl).zip",
+  "final": "Sanguozhi V (Taiwan).zip",
+  "source": "romanised",
+  "rom_sha1": "1a3333983f40dd242ad86187e50d1abed68d5ae9",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Sanguozhi V (Taiwan).zip"
+ },
+ {
+  "id": 6585,
+  "old": "Magical Taruruuto-kun (Japan).zip",
+  "final": "雀皇登龍門 (Japan).zip",
+  "source": "japanese",
+  "rom_sha1": "4f307e0146e944fbbd4537f5cdc5da136204fc9b",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/雀皇登龍門 (Japan).zip"
+ },
+ {
+  "id": 6586,
+  "old": "Mamono Hunter Youko - Dai 7 no Keishou (Japan).zip",
+  "final": "Landstalker (Japan).zip",
+  "source": "english",
+  "rom_sha1": "cdbc7cd9ceb181cad9e49b641ff717072546f0d9",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Landstalker (Japan).zip"
+ },
+ {
+  "id": 6596,
+  "old": "Master of Weapon (Japan).zip",
+  "final": "Ambition of Caesar (Japan).zip",
+  "source": "english",
+  "rom_sha1": "4a5b9169262caf81fb7ae76fc3835107769f28a1",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Ambition of Caesar (Japan).zip"
+ },
+ {
+  "id": 6600,
+  "old": "Medal City (Japan).zip",
+  "final": "Samurai Shodown (Japan).zip",
+  "source": "english",
+  "rom_sha1": "54a54996035b220ce72aa7e725f99860e3cd66a0",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Samurai Shodown (Japan).zip"
+ },
+ {
+  "id": 6605,
+  "old": "MegaMind (Japan).zip",
+  "final": "MegaTrax (Japan, En).zip",
+  "source": "romanised",
+  "rom_sha1": "9e611f2a70fb2505a661d0906b535c484db99d0b",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/MegaTrax (Japan, En).zip"
+ },
+ {
+  "id": 6606,
+  "old": "MegaPanel (Japan).zip",
+  "final": "Ex-Ranza (Japan, En).zip",
+  "source": "english",
+  "rom_sha1": "0006f55e826148cff9e717b582a39a04adf100df",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Ex-Ranza (Japan, En).zip"
+ },
+ {
+  "id": 6609,
+  "old": "Metal Fangs (Japan).zip",
+  "final": "Mega lo Mania (Japan).zip",
+  "source": "romanised",
+  "rom_sha1": "66e391c69dfbe7329654550ebf4464b4f426c5a0",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Mega lo Mania (Japan).zip"
+ },
+ {
+  "id": 6620,
+  "old": "Might and Magic - Gates to Another World (USA, Europe).zip",
+  "final": "Might and Magic III - Isles of Terra (USA, Proto).zip",
+  "source": "romanised",
+  "rom_sha1": "d366d05644eb59a14baf3c2e7281c1584630c021",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Might and Magic III - Isles of Terra (USA, Proto).zip"
+ },
+ {
+  "id": 6640,
+  "old": "NBA Action '94 (USA).zip",
+  "final": "NBA Action '95 Starring David Robinson (USA, Europe).zip",
+  "source": "romanised",
+  "rom_sha1": "34e2df219e09c24c95c588a37d2a2c5e15814d68",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/NBA Action '95 Starring David Robinson (USA, Europe).zip"
+ },
+ {
+  "id": 6659,
+  "old": "NHL '94 (USA, Europe).zip",
+  "final": "NHLPA Hockey 93 (USA, Europe, Rev 1).zip",
+  "source": "english",
+  "rom_sha1": "2ab048fc7209df28b00ef47f2f686f5b7208466e",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/NHLPA Hockey 93 (USA, Europe, Rev 1).zip"
+ },
+ {
+  "id": 6660,
+  "old": "NHL 95 (USA, Europe).zip",
+  "final": "Elitserien 95 (Sweden).zip",
+  "source": "english",
+  "rom_sha1": "5f2c8303099ce13fe1e5760b7ef598a2967bfa8d",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Elitserien 95 (Sweden).zip"
+ },
+ {
+  "id": 6665,
+  "old": "NHL Hockey (USA).zip",
+  "final": "NHL '94 (USA, Europe).zip",
+  "source": "romanised",
+  "rom_sha1": "7b1489ab501258133bf03e5f0892b77d04312580",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/NHL '94 (USA, Europe).zip"
+ },
+ {
+  "id": 6668,
+  "old": "Nakajima Satoru Kanshuu F1 Super License (Japan).zip",
+  "final": "Ozaki Naomichi no Super Masters (Japan).zip",
+  "source": "romanised",
+  "rom_sha1": "662a87d679066aad0638b2ffb01c807d9f376121",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Ozaki Naomichi no Super Masters (Japan).zip"
+ },
+ {
+  "id": 6671,
+  "old": "New Zealand Story, The (Japan).zip",
+  "final": "Hybrid Front, The (Japan).zip",
+  "source": "romanised",
+  "rom_sha1": "ed592c78ef60d91a6c5723d11cd553d3798524e1",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Hybrid Front, The (Japan).zip"
+ },
+ {
+  "id": 6675,
+  "old": "Ninja Gaiden (Japan) (Proto).zip",
+  "final": "Sonic Crackers (USA, Proto).zip",
+  "source": "romanised",
+  "rom_sha1": "05f460a6ebbc1f86eb40b5f762083a59fb29f3e2",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Sonic Crackers (USA, Proto).zip"
+ },
+ {
+  "id": 6701,
+  "old": "Paddle Fighter (Japan).zip",
+  "final": "Crude Buster (Japan, En).zip",
+  "source": "english",
+  "rom_sha1": "9122ef0e920133449266cf437a87a110e0343425",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Crude Buster (Japan, En).zip"
+ },
+ {
+  "id": 6752,
+  "old": "Putter Golf (Japan).zip",
+  "final": "Battle Golfer Yui (Japan).zip",
+  "source": "english",
+  "rom_sha1": "84db25ff7a0d2db6afddcfe4cdc7c26e20d0dd72",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Battle Golfer Yui (Japan).zip"
+ },
+ {
+  "id": 6754,
+  "old": "Puyo Puyo (Japan).zip",
+  "final": "獣王記 (Japan, En).zip",
+  "source": "japanese",
+  "rom_sha1": "bf5782b6f25dcf2bd1ff987e2821441c77da3c5d",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/獣王記 (Japan, En).zip"
+ },
+ {
+  "id": 6756,
+  "old": "Puzzle & Action - Ichidanto-R (Japan).zip",
+  "final": "F-117 Stealth - Operation - Night Storm (Japan).zip",
+  "source": "romanised",
+  "rom_sha1": "ded62d63676664c5b9e8a38e36ce1d2659d1c8d6",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/F-117 Stealth - Operation - Night Storm (Japan).zip"
+ },
+ {
+  "id": 6757,
+  "old": "Puzzle & Action - Tanto-R (Japan).zip",
+  "final": "空牙 VAPOR TRAIL (Japan).zip",
+  "source": "japanese",
+  "rom_sha1": "54d257ad1f941fdb39f6f7b2a3a168eb30ebd9ff",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/空牙 VAPOR TRAIL (Japan).zip"
+ },
+ {
+  "id": 6758,
+  "old": "Pyramid Magic (Japan).zip",
+  "final": "Party Quiz Mega Q (Japan).zip",
+  "source": "romanised",
+  "rom_sha1": "3f82b2f028345b6fc84801fa38d70475645d6aa2",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Party Quiz Mega Q (Japan).zip"
+ },
+ {
+  "id": 6759,
+  "old": "Pyramid Magic II (Japan).zip",
+  "final": "Caesar no Yabou II (Japan).zip",
+  "source": "romanised",
+  "rom_sha1": "cdb2f47bde3ff412c7b1f560637f2ccec023980f",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Caesar no Yabou II (Japan).zip"
+ },
+ {
+  "id": 6760,
+  "old": "Pyramid Magic III (Japan).zip",
+  "final": "Sangokushi III (Japan).zip",
+  "source": "romanised",
+  "rom_sha1": "c85d03a6bcfeccc66ea3fa3cbda006c83576815f",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Sangokushi III (Japan).zip"
+ },
+ {
+  "id": 6761,
+  "old": "Pyramid Magic Special (Japan).zip",
+  "final": "Wardner no Mori Special (Japan).zip",
+  "source": "english",
+  "rom_sha1": "28844399b73628a3507ca38e855d0afe24c59f4b",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Wardner no Mori Special (Japan).zip"
+ },
+ {
+  "id": 6803,
+  "old": "Sagaia (USA).zip",
+  "final": "Soleil (France).zip",
+  "source": "english",
+  "rom_sha1": "7890074018f165eeb1281d81039fb07ccde7d197",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Soleil (France).zip"
+ },
+ {
+  "id": 6809,
+  "old": "Scrabble (Europe) (Proto).zip",
+  "final": "Stargate (USA, Europe, Beta).zip",
+  "source": "english",
+  "rom_sha1": "95a0dab802a313281d74fe66b21c7877078c57e9",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Stargate (USA, Europe, Beta).zip"
+ },
+ {
+  "id": 6813,
+  "old": "Sensible Soccer - International Edition (Europe).zip",
+  "final": "International Sensible Soccer (Europe, En,Fr,De,It).zip",
+  "source": "romanised",
+  "rom_sha1": "b88833ba92e084d4433e2b22eeb67e71ed36cd5c",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/International Sensible Soccer (Europe, En,Fr,De,It).zip"
+ },
+ {
+  "id": 6822,
+  "old": "Shi Jie Zhi Bang Zheng Ba Zhan - World Pro Baseball 94 (China) (Unl).zip",
+  "final": "San Guo Zhi Lie Zhuan - Luan Shi Qun Ying (Asia).zip",
+  "source": "romanised",
+  "rom_sha1": "7aaa0cc1dafaa14e6d62d6c1dbd462e69617bf7e",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/San Guo Zhi Lie Zhuan - Luan Shi Qun Ying (Asia).zip"
+ },
+ {
+  "id": 6823,
+  "old": "Shikinjoh (Japan).zip",
+  "final": "Chelnov (Japan).zip",
+  "source": "romanised",
+  "rom_sha1": "ac1ae7b38f6498472bc4f072726a4ca069e41204",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Chelnov (Japan).zip"
+ },
+ {
+  "id": 6829,
+  "old": "Shogi no Hoshi (Japan).zip",
+  "final": "天下統一 (Japan).zip",
+  "source": "japanese",
+  "rom_sha1": "7c431e26226b99d09d61c4dc64131b2d81ae870e",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/天下統一 (Japan).zip"
+ },
+ {
+  "id": 6838,
+  "old": "Slap Fight MD (Japan).zip",
+  "final": "Ａ列車で行こうＭＤ (Japan).zip",
+  "source": "japanese",
+  "rom_sha1": "d0d0aaad68978fd15c5857773141ae639de1abc7",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Ａ列車で行こうＭＤ (Japan).zip"
+ },
+ {
+  "id": 6840,
+  "old": "Smurfs Travel the World, The (Europe).zip",
+  "final": "Schtroumpfs Autour du Monde, Les (Europe, En,Fr,De,Es).zip",
+  "source": "romanised",
+  "rom_sha1": "b4368369e1d5b9a60bc565fe09a9c5fff6b79fd4",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Schtroumpfs Autour du Monde, Les (Europe, En,Fr,De,Es).zip"
+ },
+ {
+  "id": 6841,
+  "old": "Smurfs, The (Europe).zip",
+  "final": "Ooze, The (Europe).zip",
+  "source": "romanised",
+  "rom_sha1": "0e45b84e875aa4e27bf003cbc0f857f2e5659625",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Ooze, The (Europe).zip"
+ },
+ {
+  "id": 6876,
+  "old": "Squirrel King (China) (Unl).zip",
+  "final": "Shiliu Zhang Mahjong - Xiangyan Meiren Pian (Taiwan).zip",
+  "source": "romanised",
+  "rom_sha1": "7857c797245b52641a3d1d4512089bccb0ed5359",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Shiliu Zhang Mahjong - Xiangyan Meiren Pian (Taiwan).zip"
+ },
+ {
+  "id": 6894,
+  "old": "Strider Returns - Journey from Darkness (USA).zip",
+  "final": "Journey from Darkness - Strider Returns (USA).zip",
+  "source": "romanised",
+  "rom_sha1": "8febb4aff32f40148f572d54e158f4b791736f55",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Journey from Darkness - Strider Returns (USA).zip"
+ },
+ {
+  "id": 6913,
+  "old": "Super Tank War (China) (Unl).zip",
+  "final": "Ah Q Lianhuan Pao (Taiwan).zip",
+  "source": "romanised",
+  "rom_sha1": "fcd1c7fcfb9027ae7baad9c67847ef5f1090991a",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Ah Q Lianhuan Pao (Taiwan).zip"
+ },
+ {
+  "id": 6943,
+  "old": "Teddy Boy Blues (Japan).zip",
+  "final": "NBA Playoffs - Bulls vs Blazers (Japan).zip",
+  "source": "romanised",
+  "rom_sha1": "66a25cf2d7ddf17dde137e29381202f48456d173",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/NBA Playoffs - Bulls vs Blazers (Japan).zip"
+ },
+ {
+  "id": 6946,
+  "old": "Tel-Tel Mahjong (Japan).zip",
+  "final": "ＴＥＬ ＴＥＬ スタジアム (Japan).zip",
+  "source": "japanese",
+  "rom_sha1": "2924ed0b4266edddbb981f97acb93bbdf90494e6",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/ＴＥＬ ＴＥＬ スタジアム (Japan).zip"
+ },
+ {
+  "id": 6949,
+  "old": "Tetris (Japan).zip",
+  "final": "SD Valis (Japan).zip",
+  "source": "english",
+  "rom_sha1": "4b4509936a75cb9b3b6fbf75b617be475cb99ffd",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/SD Valis (Japan).zip"
+ },
+ {
+  "id": 6957,
+  "old": "Thunderbolt II (China) (Unl).zip",
+  "final": "Leidian Chuanshuo II (Thunderbolt II, Taiwan, En).zip",
+  "source": "romanised",
+  "rom_sha1": "3dca68795b6c9a16cafa5e71218d5ce83aa465fc",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Leidian Chuanshuo II (Thunderbolt II, Taiwan, En).zip"
+ },
+ {
+  "id": 6991,
+  "old": "Turma da Monica na Terra dos Monstros (Brazil).zip",
+  "final": "Show do Milhao - Volume 2 (Brazil).zip",
+  "source": "english",
+  "rom_sha1": "8f713ef6035b616877ed9a09bac07913470c1f2f",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Show do Milhao - Volume 2 (Brazil).zip"
+ },
+ {
+  "id": 6994,
+  "old": "Twin Hawk (Japan, Europe).zip",
+  "final": "Crack Down (Japan, En).zip",
+  "source": "english",
+  "rom_sha1": "1082c89920699dbc6f6672c9b0519b3d0f626ba5",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Crack Down (Japan, En).zip"
+ },
+ {
+  "id": 6995,
+  "old": "Twinkle Tale (Japan) (Translated En).zip",
+  "final": "Olympic Gold (Japan, USA, Korea, En,Fr,De,Es,It,Nl,Pt,Sv, Rev A).zip",
+  "source": "english",
+  "rom_sha1": "ce640bb979fcb285729b58de4da421c5493ef5e2",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Olympic Gold (Japan, USA, Korea, En,Fr,De,Es,It,Nl,Pt,Sv, Rev A).zip"
+ },
+ {
+  "id": 7004,
+  "old": "Ultraman (Japan).zip",
+  "final": "Batman (Japan, En).zip",
+  "source": "english",
+  "rom_sha1": "7f96c72cc7bbdb4a7847d1058f5a751b2dc00ab5",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Batman (Japan, En).zip"
+ },
+ {
+  "id": 7011,
+  "old": "Uzu Keobukseon (Korea).zip",
+  "final": "Dongguri Techi Jakjeon (Korea).zip",
+  "source": "romanised",
+  "rom_sha1": "a698c4eda62032d1f98b3e4f824b6475c2612859",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Dongguri Techi Jakjeon (Korea).zip"
+ },
+ {
+  "id": 7018,
+  "old": "Verytex (Japan).zip",
+  "final": "Volfied (Japan, En).zip",
+  "source": "english",
+  "rom_sha1": "7de808400f64dd0e4f468049fff7d29212ea0215",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Volfied (Japan, En).zip"
+ },
+ {
+  "id": 7030,
+  "old": "Waialae no Kiseki (Japan).zip",
+  "final": "Bahamut Senki (Japan).zip",
+  "source": "romanised",
+  "rom_sha1": "cee49b613298e060d938de523dfcbb27e790b5af",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Bahamut Senki (Japan).zip"
+ },
+ {
+  "id": 7031,
+  "old": "Wani Wani World (Japan).zip",
+  "final": "Slime World (Japan, En).zip",
+  "source": "romanised",
+  "rom_sha1": "02cf05687a7f3f8177b2aff0a0cfbd5c490e557d",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Slime World (Japan, En).zip"
+ },
+ {
+  "id": 7078,
+  "old": "Yang Jia Jiang - Yang Warrior Family (China) (Unl).zip",
+  "final": "Yimen Yinglie - Yangjia Jiang (Taiwan).zip",
+  "source": "romanised",
+  "rom_sha1": "6fcc3102fc22b42049e6eae9a1c30c8a7f022d14",
+  "staged": "/private/tmp/claude-501/-Users-frank-Projects-moose-rack/eea75096-3dcd-416e-8033-1d2da7c0bd51/scratchpad/stage/Yimen Yinglie - Yangjia Jiang (Taiwan).zip"
+ }
+]

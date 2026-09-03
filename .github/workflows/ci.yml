@@ -1,0 +1,124 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  # Callable so the release workflow can gate on exactly these checks rather
+  # than a second copy of them that drifts. See release.yml.
+  workflow_call:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  check:
+    name: check (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # ubuntu-22.04 rather than 24.04: Tauri v2 wants webkit2gtk-4.1, which
+        # 24.04 packages under different names.
+        os: [ubuntu-22.04, macos-14, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # @master honours rust-toolchain.toml, so the runners use the pinned
+      # version rather than whatever `stable` resolves to that week.
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.97.1"
+          components: clippy
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.os }}
+
+      - name: Install Linux GUI dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev \
+            libayatana-appindicator3-dev patchelf \
+            libsdl2-dev libsdl2-image-dev \
+            fonts-noto-cjk fonts-dejavu-core fonts-thai-tlwg
+
+      # Fonts are installed above, not mocked.
+      #
+      # Thai as well as CJK: a library with Thai titles in it is a library this
+      # front end has to draw, and the test that says so found the runner had
+      # no Thai face. The handheld has one.
+      #
+      # The text tests ask the system for a face that can draw Japanese, and a
+      # bare Ubuntu runner has none — so they failed there and passed on macOS,
+      # which has CJK faces by default. Faking the answer would test the fake;
+      # the handheld genuinely has Noto CJK, and `fonts-noto-cjk` is the same
+      # `.ttc` holding JP, KR, SC and TC in one file, which is exactly the case
+      # those tests exist to cover.
+
+      # SDL, for the handheld front end.
+      #
+      # `sdl2-sys` asks pkg-config where the library is and fails the build when
+      # nothing answers, so the workspace stopped compiling here the moment
+      # `src-sdl` joined it. Installed on the two platforms that can run it;
+      # Windows excludes the crate below instead, because there is no handheld
+      # running Windows and vcpkg for one unbuildable target is not a trade
+      # worth making.
+      - name: Install SDL
+        if: runner.os == 'macOS'
+        run: brew install sdl2 sdl2_image
+
+      # No `cargo fmt --check` gate: the tree predates rustfmt and currently
+      # differs in 152 files. Run `cargo fmt --all` once and add the gate back
+      # if you want it enforced.
+      - name: Clippy
+        if: runner.os != 'Windows'
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Tests
+        if: runner.os != 'Windows'
+        run: cargo test --workspace
+
+      # Windows checks everything except the handheld front end. See the SDL
+      # step above for why.
+      #
+      # The addon has to be excluded as well as the renderer, and that is not a
+      # second exclusion for tidiness: `moose-patch` depends on `moose-sdl`, so
+      # excluding only the renderer drops it from what is *checked* while cargo
+      # still has to *build* it for the addon — and it builds `sdl2-sys`, which
+      # is what has no SDL to link against on this runner. The failure names
+      # sdl2-sys and looks like the exclusion was ignored.
+      #
+      # `moose-fastlaunch` is the third. It replaces EmulationStation's Python
+      # launcher on the Flip, so it is Linux-only by construction: it execs the
+      # stock launcher through `std::os::unix::process::CommandExt`, and there
+      # is no Windows equivalent to write. Nothing here ships it to Windows —
+      # the release builds one binary, not the workspace — so the fix is to
+      # stop asking for it rather than to add a stub that could never run.
+      - name: Clippy (without the SDL front end)
+        if: runner.os == 'Windows'
+        run: cargo clippy --workspace --exclude moose-sdl --exclude moose-patch --exclude moose-fastlaunch --all-targets -- -D warnings
+
+      - name: Tests (without the SDL front end)
+        if: runner.os == 'Windows'
+        run: cargo test --workspace --exclude moose-sdl --exclude moose-patch --exclude moose-fastlaunch
+
+  ui:
+    name: ui
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # Runs the real ui/js modules against index.html in jsdom. Cheap, and it
+      # catches the class of break that is invisible in the app itself: a throw
+      # inside requestAnimationFrame leaves the loop running and says nothing.
+      - run: npm test

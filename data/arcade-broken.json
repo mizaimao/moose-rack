@@ -1,0 +1,226 @@
+[
+ {
+  "romset": "acrobatm",
+  "title": "Acrobat Mission",
+  "missing_roms": 1,
+  "example_missing": "nmk004.bin",
+  "plays_on": "mame2003_plus",
+  "category": "Shooter / Flying Vertical"
+ },
+ {
+  "romset": "alienar",
+  "title": "Alien Arena",
+  "missing_roms": 1,
+  "example_missing": "sg.snd",
+  "plays_on": "mame2003_plus",
+  "category": "Maze / Collect"
+ },
+ {
+  "romset": "bioship",
+  "title": "Bio-ship Paladin",
+  "missing_roms": 1,
+  "example_missing": "nmk004.bin",
+  "plays_on": "mame2003_plus",
+  "category": "Shooter / Flying Horizontal"
+ },
+ {
+  "romset": "blkheart",
+  "title": "Black Heart",
+  "missing_roms": 1,
+  "example_missing": "nmk004.bin",
+  "plays_on": "mame2003_plus",
+  "category": "Shooter / Flying Horizontal"
+ },
+ {
+  "romset": "bloodstm",
+  "title": "BloodStorm (v2.22)",
+  "missing_roms": 1,
+  "example_missing": "bldsnd_v2.01_u17.u17",
+  "plays_on": "mame2003_plus",
+  "category": "Fighter / Versus"
+ },
+ {
+  "romset": "catacomb",
+  "title": "Catacomb",
+  "missing_roms": 1,
+  "example_missing": "74s288.bin",
+  "plays_on": null,
+  "category": "Shooter / Flying Vertical"
+ },
+ {
+  "romset": "cclimber",
+  "title": "Crazy Climber (US set 1)",
+  "missing_roms": 1,
+  "example_missing": "dm7052.cpu",
+  "plays_on": "mame2003_plus",
+  "category": "Climbing / Building"
+ },
+ {
+  "romset": "chuckieegg",
+  "title": "Chuckie Egg",
+  "missing_roms": 1,
+  "example_missing": "ppokoj2.bin",
+  "plays_on": null,
+  "category": "?"
+ },
+ {
+  "romset": "gunnail",
+  "title": "GunNail (28th May. 1992)",
+  "missing_roms": 1,
+  "example_missing": "nmk004.bin",
+  "plays_on": "mame2003_plus",
+  "category": "Shooter / Flying Vertical"
+ },
+ {
+  "romset": "kikikai",
+  "title": "KiKi KaiKai",
+  "missing_roms": 1,
+  "example_missing": "a85-01_jph1020p.h8",
+  "plays_on": null,
+  "category": "Shooter / Walking"
+ },
+ {
+  "romset": "macross",
+  "title": "Super Spacefortress Macross / Chou-Jikuu Yousai Macross",
+  "missing_roms": 1,
+  "example_missing": "nmk004.bin",
+  "plays_on": "mame2003_plus",
+  "category": "Shooter / Flying Vertical"
+ },
+ {
+  "romset": "mustang",
+  "title": "US AAF Mustang (25th May. 1990)",
+  "missing_roms": 1,
+  "example_missing": "nmk004.bin",
+  "plays_on": "mame2003_plus",
+  "category": "Shooter / Flying Horizontal"
+ },
+ {
+  "romset": "nspirit",
+  "title": "Ninja Spirit (World)",
+  "missing_roms": 1,
+  "example_missing": "nin_c-pr-b.ic1",
+  "plays_on": "mame2003_plus",
+  "category": "Fighter / 2D"
+ },
+ {
+  "romset": "paddlema",
+  "title": "Paddle Mania",
+  "missing_roms": 1,
+  "example_missing": "padlem.18n",
+  "plays_on": "mame2003_plus",
+  "category": "Sports / Misc."
+ },
+ {
+  "romset": "recalh",
+  "title": "Recalhorn (Ver 1.42J 1994/5/11, prototype)",
+  "missing_roms": 1,
+  "example_missing": "recalh.nv",
+  "plays_on": "mame2003_plus",
+  "category": "Platform / Run, Jump & Scrolling"
+ },
+ {
+  "romset": "strahl",
+  "title": "Koutetsu Yousai Strahl (World)",
+  "missing_roms": 1,
+  "example_missing": "nmk004.bin",
+  "plays_on": "mame",
+  "category": "Shooter / Flying Horizontal"
+ },
+ {
+  "romset": "tdragon",
+  "title": "Thunder Dragon (8th Jan. 1992, unprotected)",
+  "missing_roms": 1,
+  "example_missing": "nmk004.bin",
+  "plays_on": "mame2003_plus",
+  "category": "Shooter / Flying Vertical"
+ },
+ {
+  "romset": "valkyrie",
+  "title": "Valkyrie no Densetsu (Japan)",
+  "missing_roms": 1,
+  "example_missing": "valkyrie.nv",
+  "plays_on": "mame2003_plus",
+  "category": "Shooter / Walking"
+ },
+ {
+  "romset": "vandyke",
+  "title": "Vandyke (Japan)",
+  "missing_roms": 1,
+  "example_missing": "nmk004.bin",
+  "plays_on": "mame2003_plus",
+  "category": "Fighter / Vertical"
+ },
+ {
+  "romset": "vball",
+  "title": "U.S. Championship V'ball (US)",
+  "missing_roms": 1,
+  "example_missing": "25a2-4.124",
+  "plays_on": "mame",
+  "category": "Sports / Volleyball"
+ },
+ {
+  "romset": "warlords",
+  "title": "Warlords",
+  "missing_roms": 1,
+  "example_missing": "037161-01.m6",
+  "plays_on": "mame2003_plus",
+  "category": "Ball & Paddle / Breakout"
+ },
+ {
+  "romset": "maniacsq",
+  "title": "Maniac Square (unprotected, version 1.0, checksum BB73)",
+  "missing_roms": 2,
+  "example_missing": "d8-d15.1m",
+  "plays_on": null,
+  "category": "Puzzle / Drop"
+ },
+ {
+  "romset": "touchgo",
+  "title": "Touch and Go (World, checksum 059D0235)",
+  "missing_roms": 2,
+  "example_missing": "tg_873d_56_5-2.ic56",
+  "plays_on": null,
+  "category": "Sports / Volleyball"
+ },
+ {
+  "romset": "bang",
+  "title": "Bang! (version 2, checksum 140E)",
+  "missing_roms": 3,
+  "example_missing": "so_demo_bang_ic53_6ff0_15-2-99.ic53",
+  "plays_on": "mame2003_plus",
+  "category": "Shooter / Gun"
+ },
+ {
+  "romset": "avengers",
+  "title": "Avengers (US, rev. D)",
+  "missing_roms": 4,
+  "example_missing": "avu_04d.10n",
+  "plays_on": null,
+  "category": "Fighter / Vertical"
+ },
+ {
+  "romset": "matchit",
+  "title": "Match It",
+  "missing_roms": 5,
+  "example_missing": "sis_a-27-i.ic27",
+  "plays_on": "mame2003_plus",
+  "category": "Puzzle / Match"
+ },
+ {
+  "romset": "lordgun",
+  "title": "Lord of Gun (World)",
+  "missing_roms": 15,
+  "example_missing": "lord_gun_u144-ch.u144",
+  "plays_on": null,
+  "category": "Shooter / Gun"
+ },
+ {
+  "romset": "wrally2",
+  "title": "World Rally 2: Twin Racing (version 20-07, checksum B1B8)",
+  "missing_roms": 17,
+  "example_missing": "dallas_usa_wr-2_2_64_usa_e47e_31-7.bin",
+  "plays_on": null,
+  "category": "Driving / Race"
+ }
+]

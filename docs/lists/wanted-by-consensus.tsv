@@ -1,0 +1,629 @@
+# Per-platform want-lists by consensus: Time Extension reader rankings
+# (main list plus the genre list where one exists) and Wikipedia's cited
+# 'listed among the best'. votes = how many of those carry the game.
+platform	game	votes	status	path_on_drive
+3do	Samurai Shodown	2	on_disk	./roms/USA/Samurai Shodown (USA, Europe).chd
+3do	Star Control II	2	on_disk	./roms/USA/Star Control II (USA, Europe).chd
+3do	Wolfenstein 3D	2	on_disk	./roms/USA/Wolfenstein 3D (USA).chd
+3do	Advanced Dungeons & Dragons: Slayer	1	on_disk	./roms/USA/Slayer (USA).chd
+3do	Blade Force	1	on_disk	./roms/USA/Blade Force (USA).chd
+3do	Crash 'n Burn	1	on_disk	./roms/USA/Crash 'n Burn (USA).chd
+3do	FIFA International Soccer	1	on_disk	./roms/USA/FIFA International Soccer (USA).chd
+3do	Gex	1	on_disk	./roms/USA/Gex (USA, Europe).chd
+3do	Guardian War	1	source	
+3do	Immercenary	1	on_disk	./roms/USA/Immercenary (USA).chd
+3do	John Madden Football	1	source	
+3do	Killing Time	1	on_disk	./roms/USA/Killing Time (USA).chd
+3do	Lucienne's Quest	1	source	
+3do	Off-World Interceptor	1	on_disk	./roms/USA/Off-world Interceptor (USA, Europe).chd
+3do	Return Fire	1	have	
+3do	Road Rash	1	on_disk	./roms/USA/Road Rash (USA).chd
+3do	Super Street Fighter II Turbo	1	on_disk	./roms/USA/Super Street Fighter II Turbo (USA).chd
+3do	The Horde	1	source	
+3do	The Need For Speed	1	source	
+3do	Total Eclipse	1	have	
+dc	Ikaruga	2	on_disk	./roms/Ikaruga (Japan).chd
+dc	Jet Set Radio	2	on_disk	./roms/Jet Set Radio (Europe).chd
+dc	Marvel vs. Capcom 2: New Age Of Heroes	2	source	
+dc	Quake III Arena	2	on_disk	./roms/Quake III Arena (USA).chd
+dc	Rez	2	have	
+dc	Shenmue	2	have	
+dc	Skies Of Arcadia	2	on_disk	./roms/Skies of Arcadia (USA) (Disc 1).chd
+dc	Soulcalibur	2	have	
+dc	Bangai-O	1	on_disk	./roms/Bangai-O (USA).chd
+dc	Border Down	1	on_disk	./roms/Border Down (Japan).chd
+dc	Capcom vs. SNK 2: Mark of the Millennium 2001	1	source	
+dc	ChuChu Rocket!	1	have	
+dc	Cosmic Smash	1	on_disk	./roms/Cosmic Smash (Japan).chd
+dc	Crazy Taxi 2	1	have	
+dc	Cyber Troopers Virtual-On Oratorio Tangram	1	source	
+dc	Daytona USA 2001	1	source	
+dc	Dead Or Alive 2	1	on_disk	./roms/Dead or Alive 2 (USA).chd
+dc	Ferrari F355 Challenge	1	source	
+dc	Garou: Mark Of The Wolves	1	source	
+dc	Headhunter	1	on_disk	./roms/Headhunter (Europe) (Disc 1).chd
+dc	Metropolis Street Racer	1	on_disk	./roms/Metropolis Street Racer (USA).chd
+dc	NBA 2K2	1	on_disk	./roms/NBA 2K2 (USA).chd
+dc	NFL 2K2	1	on_disk	./roms/NFL 2K2 (USA).chd
+dc	Phantasy Star Online	1	on_disk	./roms/Phantasy Star Online (USA).chd
+dc	Power Stone 2	1	on_disk	./roms/Power Stone 2 (USA).chd
+dc	Resident Evil - Code: Veronica	1	on_disk	./roms/Resident Evil Code - Veronica (USA) (Disc 1).chd
+dc	Samba De Amigo	1	on_disk	./roms/Samba de Amigo (USA).chd
+dc	Seaman	1	source	
+dc	Sega Bass Fishing	1	on_disk	./roms/Sega Bass Fishing (USA).chd
+dc	Sega Rally 2	1	on_disk	./roms/Sega Rally Championship 2 (USA).chd
+dc	Segagaga	1	source	
+dc	Sonic Adventure 2	1	have	
+dc	Space Channel 5	1	have	
+dc	Street Fighter III 3rd Strike: Fight for the Future	1	source	
+dc	The House Of The Dead 2	1	source	
+dc	The King of Fighters: Dream Match 1999	1	source	
+dc	The Typing Of The Dead	1	source	
+dc	Under Defeat	1	on_disk	./roms/Under Defeat (Japan).chd
+dc	Virtua Fighter 3tb	1	on_disk	./roms/Virtua Fighter 3tb (USA).chd
+dc	Virtua Tennis 2	1	source	
+famicom	Mega Man 2	2	source	
+famicom	Metroid	2	source	
+famicom	Micro Machines	2	source	
+famicom	Super Mario Bros. 3	2	on_disk	./roms/Super Mario Bros. 3 (Japan).zip
+famicom	The Legend of Zelda	2	source	
+famicom	Batman: Return of the Joker	1	source	
+famicom	Blaster Master	1	source	
+famicom	Castlevania III: Dracula's Curse	1	source	
+famicom	Crisis Force	1	have	
+famicom	Dragon Warrior IV	1	source	
+famicom	DuckTales	1	source	
+famicom	Final Fantasy	1	source	
+famicom	Gargoyle's Quest II: The Demon Darkness	1	source	
+famicom	Kid Icarus	1	source	
+famicom	Kirby's Adventure	1	source	
+famicom	Little Nemo: The Dream Master	1	source	
+famicom	Mighty Final Fight	1	source	
+famicom	Ninja Gaiden II: The Dark Sword of Chaos	1	source	
+famicom	Punch-Out!! Featuring Mr. Dream	1	source	
+famicom	R.C. Pro-Am	1	source	
+famicom	River City Ransom	1	source	
+famicom	StarTropics	1	source	
+famicom	Super C	1	source	
+famicom	Teenage Mutant Ninja Turtles III: The Manhattan Project	1	source	
+famicom	The Guardian Legend	1	source	
+famicom	Zanac	1	source	
+gamegear	Gunstar Heroes	2	have	
+gamegear	Ninja Gaiden	2	have	
+gamegear	Sonic the Hedgehog	2	have	
+gamegear	Streets Of Rage 2	2	have	
+gamegear	Baku Baku Animal	1	source	
+gamegear	Castle of Illusion Starring Mickey Mouse	1	have	
+gamegear	Columns	1	have	
+gamegear	Defenders of Oasis	1	have	
+gamegear	Dr. Robotnik's Mean Bean Machine	1	have	
+gamegear	Dynamite Headdy	1	have	
+gamegear	Factory Panic	1	have	
+gamegear	GG Aleste II	1	on_disk	./roms/Power Strike II (Japan, Europe).zip
+gamegear	Mega Man	1	have	
+gamegear	Shining Force: The Sword of Hajya	1	source	
+gamegear	Shinobi II: The Silent Fury	1	have	
+gamegear	Sonic Drift 2	1	on_disk	./roms/Sonic Drift 2 (Japan, USA).zip
+gamegear	Sylvan Tale	1	have	
+gamegear	Tails Adventure	1	have	
+gamegear	Vampire: Master of Darkness	1	have	
+gamegear	Wonder Boy: The Dragon's Trap	1	have	
+gb	Donkey Kong	2	have	
+gb	R-Type	2	have	
+gb	Tetris	2	have	
+gb	The Legend of Zelda: Link's Awakening	2	have	
+gb	Castlevania II: Belmont's Revenge	1	have	
+gb	Donkey Kong Land	1	have	
+gb	Final Fantasy Adventure	1	have	
+gb	Gargoyle's Quest	1	have	
+gb	Gradius: The Interstellar Assault	1	have	
+gb	Harvest Moon GB	1	have	
+gb	Kid Dracula	1	have	
+gb	Kid Icarus: Of Myths and Monsters	1	have	
+gb	Kirby's Dream Land 2	1	have	
+gb	Metroid II: Return of Samus	1	have	
+gb	Mole Mania	1	source	
+gb	Operation C	1	have	
+gb	Pokémon Yellow Version: Special Pikachu Edition	1	have	
+gb	Super Mario Land 2: 6 Golden Coins	1	on_disk	./roms/Super Mario Land 2 - 6 Golden Coins (USA, Europe).zip
+gb	Tiny Toon Adventures: Babs' Big Break	1	have	
+gb	Wario Land: Super Mario Land 3	1	on_disk	./roms/Wario Land - Super Mario Land 3 (World).zip
+gba	Advance Wars 2: Black Hole Rising	1	have	
+gba	Astro Boy: The Omega Factor	1	have	
+gba	Castlevania: Aria of Sorrow	1	have	
+gba	Densetsu no Starfy 3	1	source	
+gba	Drill Dozer	1	have	
+gba	F-Zero Maximum Velocity	1	have	
+gba	Final Fantasy Tactics Advance	1	have	
+gba	Final Fantasy VI Advance	1	have	
+gba	Fire Emblem	1	have	
+gba	Golden Sun	1	have	
+gba	Harvest Moon: More Friends of Mineral Town	1	have	
+gba	Kirby: Nightmare in Dream Land	1	have	
+gba	Mario & Luigi: Superstar Saga	1	have	
+gba	Mario Kart Super Circuit	1	have	
+gba	Mario Tennis: Power Tour	1	on_disk	./roms/Mario Tennis - Power Tour (USA, Australia).zip
+gba	Metroid Fusion	1	have	
+gba	Metroid: Zero Mission	1	have	
+gba	Mother 3	1	on_disk	./roms/Mother 3 (Japan) (Translated En).7z
+gba	Pokémon Emerald	1	source	
+gba	Pokémon FireRed and LeafGreen	1	source	
+gba	Super Mario Advance 2: Super Mario World	1	source	
+gba	Tactics Ogre: The Knight of Lodis	1	have	
+gba	The Legend of Zelda: A Link to the Past and Four Swords	1	source	
+gba	The Legend of Zelda: The Minish Cap	1	have	
+gba	Wario Land 4	1	have	
+gba	WarioWare, Inc.: Mega Microgame$!	1	have	
+gbc	Metal Gear Solid	2	source	
+gbc	Pokémon Gold And Silver	2	source	
+gbc	Blaster Master: Enemy Below	1	have	
+gbc	Crystalis	1	have	
+gbc	Dragon Warrior III	1	have	
+gbc	Dragon Warrior Monsters 2: Tara's Adventure & Cobi's Journey	1	source	
+gbc	Game & Watch Gallery 3	1	on_disk	./roms/Game & Watch Gallery 3 (USA, Europe).zip
+gbc	Harvest Moon 2	1	source	
+gbc	Kirby Tilt 'n' Tumble	1	have	
+gbc	Legend of the River King 2	1	have	
+gbc	Mario Golf	1	on_disk	./roms/Mario Golf (USA).zip
+gbc	Mario Tennis	1	source	
+gbc	Pokémon Crystal	1	source	
+gbc	Pokémon Puzzle Challenge	1	have	
+gbc	Pokémon Trading Card Game	1	have	
+gbc	R-Type DX	1	have	
+gbc	Resident Evil Gaiden	1	have	
+gbc	Shantae	1	have	
+gbc	Super Mario Bros. Deluxe	1	on_disk	./roms/Super Mario Bros. Deluxe (USA, Europe) (Rev B).zip
+gbc	Survival Kids	1	have	
+gbc	The Legend of Zelda: Link's Awakening DX	1	have	
+gbc	The Legend of Zelda: Oracle of Ages	1	have	
+gbc	The Legend of Zelda: Oracle of Seasons	1	have	
+gbc	Wario Land 3	1	have	
+mastersystem	R-Type	2	have	
+mastersystem	Alex Kidd in Miracle World	1	have	
+mastersystem	Asterix	1	source	
+mastersystem	Dragon Crystal	1	have	
+mastersystem	Dynamite Headdy	1	have	
+mastersystem	Enduro Racer	1	have	
+mastersystem	Golden Axe Warrior	1	have	
+mastersystem	Golvellius: Valley Of Doom	1	have	
+mastersystem	Legend Of Illusion Starring Mickey Mouse	1	have	
+mastersystem	Megumi Rescue	1	have	
+mastersystem	Operation Wolf	1	have	
+mastersystem	Phantasy Star	1	have	
+mastersystem	Power Strike II	1	have	
+mastersystem	Rescue Mission	1	have	
+mastersystem	Sagaia	1	on_disk	./roms/Sagaia (Europe).zip
+mastersystem	Shinobi	1	have	
+mastersystem	Sonic Chaos	1	on_disk	./roms/Sonic Chaos (Europe).zip
+mastersystem	The Lucky Dime Caper Starring Donald Duck	1	have	
+mastersystem	Wonder Boy III: The Dragon's Trap	1	have	
+mastersystem	Ys: The Vanished Omens	1	have	
+megadrive	Phantasy Star IV	3	on_disk	./roms/Europe/Phantasy Star IV (Europe).7z
+megadrive	Beyond Oasis	2	have	
+megadrive	Crusader of Centy	2	have	
+megadrive	Flashback	2	on_disk	./roms/Japan/Flashback (Japan).zip
+megadrive	Gunstar Heroes	2	have	
+megadrive	Landstalker: The Treasures of King Nole	2	source	
+megadrive	Shining Force II: Ancient Sealing	2	source	
+megadrive	Shining in the Darkness	2	have	
+megadrive	Sonic the Hedgehog 2	2	have	
+megadrive	Streets of Rage 2	2	have	
+megadrive	Virtua Racing	2	have	
+megadrive	Warsong	2	have	
+megadrive	Wonder Boy in Monster World	2	have	
+megadrive	Alien Soldier	1	have	
+megadrive	Alisia Dragoon	1	have	
+megadrive	Castle of Illusion Starring Mickey Mouse	1	have	
+megadrive	Castlevania: Bloodlines	1	have	
+megadrive	Comix Zone	1	have	
+megadrive	Contra: Hard Corps	1	have	
+megadrive	Desert Strike: Return To The Gulf	1	have	
+megadrive	Devil Crash MD	1	on_disk	./roms/Japan/Devil Crash MD (Japan).zip
+megadrive	Dragon Slayer: The Legend of Heroes	1	source	
+megadrive	Dungeons & Dragons: Warriors of the Eternal Sun	1	have	
+megadrive	Dynamite Headdy	1	have	
+megadrive	ESWAT: City Under Siege	1	have	
+megadrive	FIFA 95	1	source	
+megadrive	Fatal Labyrinth	1	have	
+megadrive	Gauntlet IV	1	have	
+megadrive	Ghouls 'n Ghosts	1	have	
+megadrive	Gley Lancer	1	source	
+megadrive	Golden Axe	1	have	
+megadrive	Gynoug	1	on_disk	./roms/Japan/Gynoug (Japan).zip
+megadrive	Herzog Zwei	1	have	
+megadrive	James Pond 2: Codename: RoboCod	1	have	
+megadrive	John Madden Football '93	1	have	
+megadrive	Light Crusader	1	have	
+megadrive	MUSHA	1	source	
+megadrive	Magical Hat no Buttobi Tābo! Daibōken	1	source	
+megadrive	Mega Bomberman	1	have	
+megadrive	Monster World IV	1	on_disk	./roms/Japan/Monster World IV (USA, Europe) (En,Ja) (Virtual Console).zip
+megadrive	NHL '94	1	have	
+megadrive	Phantasy Star II	1	have	
+megadrive	Phantasy Star III	1	source	
+megadrive	Pier Solar and the Great Architects	1	have	
+megadrive	Rainbow Islands Extra	1	on_disk	./roms/Japan/Rainbow Islands Extra (Japan).zip
+megadrive	Ranger X	1	have	
+megadrive	Rent A Hero	1	source	
+megadrive	Road Rash	1	have	
+megadrive	Rocket Knight Adventures	1	have	
+megadrive	Shadow Dancer: The Secret of Shinobi	1	have	
+megadrive	Shadowrun	1	have	
+megadrive	Shining Force	1	have	
+megadrive	Sorcerian	1	on_disk	./roms/Japan/Sorcerian (Japan).zip
+megadrive	Starflight	1	have	
+megadrive	Steel Empire	1	have	
+megadrive	Strider	1	have	
+megadrive	Sword of Vermilion	1	have	
+megadrive	Teenage Mutant Ninja Turtles: The Hyperstone Heist	1	have	
+megadrive	The Revenge of Shinobi	1	have	
+megadrive	Thunder Force IV	1	have	
+megadrive	ToeJam & Earl	1	have	
+megadrive	Xeno Crisis	1	have	
+megadrive	Yu Yu Hakusho Makyō Tōitsusen	1	source	
+megadrive	Zero Wing	1	have	
+n64	Banjo-Kazooie	2	have	
+n64	GoldenEye 007	2	have	
+n64	Mario Kart 64	2	on_disk	./roms/Europe/Mario Kart 64 (Europe) (Rev A).zip
+n64	Perfect Dark	2	have	
+n64	Star Fox 64	2	have	
+n64	Super Mario 64	2	have	
+n64	The Legend of Zelda: Majora's Mask	2	have	
+n64	The Legend of Zelda: Ocarina of Time	2	have	
+n64	Blast Corps	1	have	
+n64	Conker's Bad Fur Day	1	have	
+n64	Diddy Kong Racing	1	on_disk	./roms/USA/Diddy Kong Racing (USA).7z
+n64	F-Zero X	1	have	
+n64	International Superstar Soccer 2000	1	on_disk	./roms/USA/International Superstar Soccer 2000 (USA) (En,Es).zip
+n64	Jet Force Gemini	1	on_disk	./roms/USA/Jet Force Gemini (USA).zip
+n64	Mario Party 2	1	on_disk	./roms/USA/Mario Party 2 (USA).zip
+n64	Mischief Makers	1	have	
+n64	Ogre Battle 64: Person of Lordly Caliber	1	on_disk	./roms/USA/Ogre Battle 64 - Person of Lordly Caliber (USA).7z
+n64	Paper Mario	1	have	
+n64	Pilotwings 64	1	on_disk	./roms/USA/Pilotwings 64 (USA).zip
+n64	Pokémon Snap	1	on_disk	./roms/USA/Pokemon Snap (USA).zip
+n64	Sin and Punishment	1	on_disk	./roms/USA/Sin and Punishment (Japan) (Translated En).7z
+n64	Snowboard Kids 2	1	have	
+n64	Super Smash Bros.	1	on_disk	./roms/USA/Super Smash Bros. (USA).zip
+n64	Turok 2: Seeds of Evil	1	on_disk	./roms/USA/Turok 2 - Seeds of Evil (USA) (Rev A).zip
+n64	WWF No Mercy	1	on_disk	./roms/USA/WWF No Mercy (USA) (Rev A).zip
+nds	Chrono Trigger	2	have	
+nds	Phoenix Wright: Ace Attorney	2	on_disk	./roms/Phoenix Wright - Ace Attorney (USA).7z
+nds	The World Ends With You	2	have	
+nds	999: Nine Hours, Nine Persons, Nine Doors	1	on_disk	./roms/Nine Hours, Nine Persons, Nine Doors (USA).7z
+nds	Advance Wars: Dual Strike	1	have	
+nds	Animal Crossing: Wild World	1	have	
+nds	Castlevania: Dawn of Sorrow	1	have	
+nds	Dragon Quest V: Hand of the Heavenly Bride	1	source	
+nds	Ghost Trick: Phantom Detective	1	have	
+nds	Golden Sun: Dark Dawn	1	on_disk	./roms/Golden Sun - Dark Dawn (USA).zip
+nds	Mario Kart DS	1	on_disk	./roms/Mario Kart DS (USA).7z
+nds	Meteos	1	have	
+nds	New Super Mario Bros.	1	have	
+nds	Osu! Tatakae! Ouendan	1	source	
+nds	Pokémon HeartGold & SoulSilver	1	source	
+nds	Professor Layton and the Curious Village	1	have	
+nds	Rhythm Heaven	1	have	
+nds	Tetris DS	1	have	
+nds	The Legend of Zelda: Phantom Hourglass	1	have	
+nds	WarioWare Touched!	1	have	
+neo-geo-pocket	Pac-Man	2	have	
+neo-geo-pocket	Biomotor Unitron	1	have	
+neo-geo-pocket	Bust-a-Move Pocket	1	have	
+neo-geo-pocket	Cotton: Fantastic Night Dreams	1	have	
+neo-geo-pocket	Faselei!	1	have	
+neo-geo-pocket	King of Fighters R-2	1	have	
+neo-geo-pocket	Metal Slug: 2nd Mission	1	have	
+neo-geo-pocket	Neo Turf Masters	1	have	
+neo-geo-pocket	Ogre Battle Gaiden: Prince of Zenobia	1	source	
+neo-geo-pocket	Pocket Tennis Color	1	source	
+neo-geo-pocket	Puyo Pop	1	have	
+neo-geo-pocket	Puzzle Link 2	1	have	
+neo-geo-pocket	Rockman: Battle & Fighters	1	source	
+neo-geo-pocket	SNK Gals' Fighters	1	have	
+neo-geo-pocket	SNK vs. Capcom: Card Fighter's Clash	1	source	
+neo-geo-pocket	SNK vs. Capcom: Card Fighter's Clash 2 Expand Edition	1	source	
+neo-geo-pocket	SNK vs. Capcom: Match of the Millennium	1	have	
+neo-geo-pocket	Samurai Shodown! 2	1	source	
+neo-geo-pocket	Sonic the Hedgehog Pocket Adventure	1	have	
+neo-geo-pocket	The Last Blade: Beyond The Destiny	1	have	
+neogeoaes	Puzzle Bobble	2	source	
+neogeoaes	2020 Super Baseball	1	source	
+neogeoaes	Blazing Star	1	have	
+neogeoaes	Crossed Swords	1	have	
+neogeoaes	Garou: Mark of the Wolves	1	have	
+neogeoaes	Last Resort	1	have	
+neogeoaes	Magician Lord	1	have	
+neogeoaes	Metal Slug 3	1	have	
+neogeoaes	Neo Bomberman	1	have	
+neogeoaes	Neo Drift Out: New Technology	1	have	
+neogeoaes	Neo Turf Masters	1	have	
+neogeoaes	Nightmare In The Dark	1	have	
+neogeoaes	Pulstar	1	have	
+neogeoaes	Real Bout Fatal Fury 2: The Newcomers	1	have	
+neogeoaes	Samurai Shodown II	1	source	
+neogeoaes	Shock Troopers	1	source	
+neogeoaes	The King of Fighters '98	1	source	
+neogeoaes	Twinkle Star Sprites	1	have	
+neogeoaes	Windjammers	1	source	
+nes	Mega Man 2	2	have	
+nes	Metroid	2	have	
+nes	Micro Machines	2	have	
+nes	Super Mario Bros. 3	2	have	
+nes	The Legend of Zelda	2	have	
+nes	Batman: Return of the Joker	1	have	
+nes	Blaster Master	1	have	
+nes	Castlevania III: Dracula's Curse	1	have	
+nes	Crisis Force	1	source	
+nes	Dragon Warrior IV	1	have	
+nes	DuckTales	1	source	
+nes	Final Fantasy	1	have	
+nes	Gargoyle's Quest II: The Demon Darkness	1	source	
+nes	Kid Icarus	1	have	
+nes	Kirby's Adventure	1	have	
+nes	Little Nemo: The Dream Master	1	have	
+nes	Mighty Final Fight	1	have	
+nes	Ninja Gaiden II: The Dark Sword of Chaos	1	have	
+nes	Punch-Out!! Featuring Mr. Dream	1	source	
+nes	R.C. Pro-Am	1	have	
+nes	River City Ransom	1	have	
+nes	StarTropics	1	have	
+nes	Super C	1	have	
+nes	Teenage Mutant Ninja Turtles III: The Manhattan Project	1	have	
+nes	The Guardian Legend	1	have	
+nes	Zanac	1	have	
+ngc	Animal Crossing	2	on_disk	./roms/Animal Crossing (USA).rvz
+ngc	Eternal Darkness: Sanity's Requiem	2	have	
+ngc	F-Zero GX	2	have	
+ngc	Ikaruga	2	have	
+ngc	Metroid Prime	2	have	
+ngc	Resident Evil 4	2	have	
+ngc	Super Smash Bros. Melee	2	have	
+ngc	The Legend of Zelda: The Wind Waker	2	have	
+ngc	The Legend of Zelda: Twilight Princess	2	have	
+ngc	Chibi-Robo	1	source	
+ngc	Doshin The Giant	1	source	
+ngc	Fire Emblem: Path of Radiance	1	have	
+ngc	Luigi's Mansion	1	have	
+ngc	Mario Kart: Double Dash!!	1	have	
+ngc	Metal Gear Solid: The Twin Snakes	1	have	
+ngc	Paper Mario: The Thousand-Year Door	1	have	
+ngc	Pikmin 2	1	have	
+ngc	Skies of Arcadia Legends	1	have	
+ngc	Star Wars Rogue Squadron II: Rogue Leader	1	have	
+ngc	Super Mario Sunshine	1	have	
+ngc	Super Monkey Ball	1	have	
+ngc	TimeSplitters 2	1	on_disk	./roms/TimeSplitters 2 (USA).rvz
+ngc	Viewtiful Joe	1	have	
+ngc	WarioWare, Inc: Mega Party Game$!	1	on_disk	./roms/WarioWare, Inc. - Mega Party Game$! (USA).rvz
+pcengine	R-Type	2	have	
+pcengine	Air Zonk	1	have	
+pcengine	Alien Crush	1	have	
+pcengine	Blazing Lazers	1	have	
+pcengine	Bomberman '94	1	on_disk	./roms/Bomberman '94 (Japan).zip
+pcengine	Bonk 3: Bonk's Big Adventure	1	have	
+pcengine	Castlevania: Rondo of Blood	1	source	
+pcengine	Dungeon Explorer	1	have	
+pcengine	Gate of Thunder	1	source	
+pcengine	Gekibo: Gekisha Boy	1	source	
+pcengine	Gomola Speed	1	have	
+pcengine	Lords of Thunder	1	source	
+pcengine	Military Madness	1	have	
+pcengine	Neutopia II	1	have	
+pcengine	Seirei Senshi Spriggan	1	source	
+pcengine	Soldier Blade	1	have	
+pcengine	Splatterhouse	1	have	
+pcengine	Star Parodier	1	source	
+pcengine	Street Fighter II': Champion Edition	1	have	
+pcengine	Ys Book I & II	1	source	
+psx	Castlevania: Symphony of the Night	3	have	
+psx	Final Fantasy Tactics	3	on_disk	./roms/Final Fantasy Tactics (USA).chd
+psx	Final Fantasy VII	3	have	
+psx	Vagrant Story	3	have	
+psx	Breath of Fire IV	2	have	
+psx	Chrono Cross	2	on_disk	./roms/Chrono Cross (USA) (Disc 2).chd
+psx	Final Fantasy IX	2	have	
+psx	Gran Turismo	2	have	
+psx	Metal Gear Solid	2	have	
+psx	PaRappa the Rapper	2	have	
+psx	Resident Evil 2	2	on_disk	./roms/Resident Evil 2 - Dual Shock Edition (USA) (Disc 2).chd
+psx	Silent Hill	2	have	
+psx	Suikoden II	2	on_disk	./roms/Suikoden II (USA).chd
+psx	Tekken 3	2	have	
+psx	Tomb Raider	2	on_disk	./roms/Tomb Raider (USA).chd
+psx	Tony Hawk's Pro Skater 2	2	have	
+psx	WipEout 2097	2	source	
+psx	Xenogears	2	on_disk	./roms/Xenogears (USA) (Disc 2).chd
+psx	Arc the Lad Collection	1	source	
+psx	Crash Bandicoot 3: Warped	1	source	
+psx	Einhänder	1	source	
+psx	Front Mission 3	1	have	
+psx	Grandia	1	on_disk	./roms/Grandia (USA) (Disc 2).chd
+psx	International Superstar Soccer Pro 98	1	on_disk	./roms/International Superstar Soccer Pro '98 (USA).chd
+psx	Legacy of Kain: Soul Reaver	1	on_disk	./roms/Legacy of Kain - Soul Reaver (USA).chd
+psx	Lunar: Silver Star Story Complete	1	have	
+psx	Oddworld: Abe's Oddysee	1	have	
+psx	Parasite Eve	1	on_disk	./roms/Parasite Eve (USA) (Disc 2).chd
+psx	Persona 2: Eternal Punishment	1	on_disk	./roms/Persona 2 - Eternal Punishment (USA).chd
+psx	Racing Lagoon	1	source	
+psx	Ridge Racer Type 4	1	source	
+psx	Spider-Man	1	have	
+psx	Spyro: Year of the Dragon	1	have	
+psx	Star Ocean: The Second Story	1	source	
+psx	Street Fighter Alpha 3	1	on_disk	./roms/Street Fighter Alpha 3 (USA).chd
+psx	Tactics Ogre: Let Us Cling Together	1	source	
+psx	Tales of Destiny	1	on_disk	./roms/Tales of Destiny (USA).chd
+psx	The Granstream Saga	1	source	
+psx	The Legend of Dragoon	1	source	
+psx	Time Crisis	1	on_disk	./roms/Time Crisis (USA).chd
+psx	Valkyrie Profile	1	on_disk	./roms/Valkyrie Profile (USA) (Disc 2).chd
+psx	Vandal Hearts	1	on_disk	./roms/Vandal Hearts (USA).chd
+psx	Wild Arms 2	1	on_disk	./roms/Wild Arms 2 (USA) (Disc 2).chd
+saturn	Castlevania: Symphony of the Night	2	source	
+saturn	NiGHTS into Dreams	2	on_disk	./roms/Nights Into Dreams... (USA).chd
+saturn	Panzer Dragoon Saga	2	on_disk	./roms/Panzer Dragoon Saga (USA) (Disc 4).chd
+saturn	Sega Rally Championship	2	on_disk	./roms/Sega Rally Championship Plus (Japan).chd
+saturn	Virtua Fighter 2	2	on_disk	./roms/Virtua Fighter 2 (USA).chd
+saturn	Assault Suit Leynos 2	1	source	
+saturn	Baku Baku Animal	1	on_disk	./roms/Baku Baku (USA).chd
+saturn	Batsugun	1	source	
+saturn	Battle Garegga	1	source	
+saturn	Burning Rangers	1	on_disk	./roms/Burning Rangers (USA).chd
+saturn	Daytona USA: Championship Circuit Edition	1	on_disk	./roms/Daytona USA - Championship Circuit Edition (USA).chd
+saturn	DoDonPachi	1	source	
+saturn	Dragon Force	1	on_disk	./roms/Dragon Force (USA).chd
+saturn	Dungeons & Dragons Collection	1	source	
+saturn	Elevator Action Returns	1	source	
+saturn	Fighters Megamix	1	on_disk	./roms/Fighters Megamix (USA).chd
+saturn	Guardian Heroes	1	on_disk	./roms/Guardian Heroes (USA).chd
+saturn	Hyper Duel	1	source	
+saturn	Keio Flying Squadron 2	1	on_disk	./roms/Keio Flying Squadron 2 (Europe).chd
+saturn	Kingdom Grand Prix	1	source	
+saturn	Metal Slug	1	source	
+saturn	Panzer Dragoon II Zwei	1	on_disk	./roms/Panzer Dragoon II - Zwei (USA).chd
+saturn	Policenauts	1	source	
+saturn	PowerSlave	1	on_disk	./roms/PowerSlave (USA).chd
+saturn	Princess Crown	1	source	
+saturn	Radiant Silvergun	1	on_disk	./roms/Radiant Silvergun (Japan).chd
+saturn	Sakura Wars	1	source	
+saturn	Saturn Bomberman	1	on_disk	./roms/Saturn Bomberman (USA).chd
+saturn	Sega Worldwide Soccer '98	1	on_disk	./roms/Sega Worldwide Soccer '98 (USA).chd
+saturn	Shining Force III	1	on_disk	./roms/Shining Force III (USA).chd
+saturn	Shining The Holy Ark	1	source	
+saturn	Shinrei Jusatsushi Tarōmaru	1	source	
+saturn	Sonic Jam	1	on_disk	./roms/Sonic Jam (USA).chd
+saturn	Sonic R	1	on_disk	./roms/Sonic R (USA).chd
+saturn	Soukyugurentai	1	source	
+saturn	Street Fighter Zero 3	1	source	
+saturn	The King Of Fighters '97	1	source	
+saturn	Vampire Savior: The Lord Of Vampire	1	source	
+saturn	Virtua Cop 2	1	on_disk	./roms/Virtua Cop 2 (USA).chd
+saturn	Virtual On: Cyber Troopers	1	on_disk	./roms/Virtual-On - Cyber Troopers (USA).chd
+sfc	Chrono Trigger	3	source	
+sfc	EarthBound	3	source	
+sfc	Secret of Mana	3	source	
+sfc	Arcana	2	source	
+sfc	Contra III: The Alien Wars	2	source	
+sfc	Donkey Kong Country	2	source	
+sfc	Final Fantasy III	2	source	
+sfc	Illusion of Gaia	2	source	
+sfc	Mega Man X	2	source	
+sfc	Pilotwings	2	source	
+sfc	Soul Blazer	2	source	
+sfc	Star Fox	2	source	
+sfc	Super Castlevania IV	2	source	
+sfc	Super Mario Kart	2	source	
+sfc	Super Mario World	2	source	
+sfc	Super Metroid	2	source	
+sfc	Terranigma	2	source	
+sfc	The Legend of Zelda: A Link to the Past	2	source	
+sfc	ActRaiser	1	on_disk	./roms/ActRaiser (Japan) (Translated En).7z
+sfc	Axelay	1	source	
+sfc	Bahamut Lagoon	1	on_disk	./roms/Bahamut Lagoon (Japan) (Translated En).7z
+sfc	Breath of Fire	1	source	
+sfc	Breath of Fire II	1	source	
+sfc	Cybernator	1	source	
+sfc	Demon's Crest	1	source	
+sfc	Dragon Quest V: Hand of the Heavenly Bride	1	source	
+sfc	F-Zero	1	source	
+sfc	Fire Emblem: Mystery Of The Emblem	1	source	
+sfc	Front Mission	1	on_disk	./roms/Front Mission (Japan) (Translated En).7z
+sfc	Harvest Moon	1	source	
+sfc	International Superstar Soccer Deluxe	1	source	
+sfc	Kirby Super Star	1	source	
+sfc	Live A Live	1	source	
+sfc	Ogre Battle: The March of the Black Queen	1	source	
+sfc	R-Type III: The Third Lightning	1	source	
+sfc	Secret of Evermore	1	source	
+sfc	Seiken Densetsu 3	1	on_disk	./roms/Seiken Densetsu 3 (Japan) (Translated En).7z
+sfc	Shadowrun	1	source	
+sfc	Star Ocean	1	on_disk	./roms/Star Ocean (Japan) (Translated En).7z
+sfc	Street Fighter II' Turbo: Hyper Fighting	1	source	
+sfc	Super Bomberman 3	1	source	
+sfc	Super Ghouls 'n Ghosts	1	source	
+sfc	Super Mario RPG: Legend of the Seven Stars	1	source	
+sfc	Super Mario World 2: Yoshi's Island	1	source	
+sfc	Super Punch-Out!!	1	source	
+sfc	Super Smash TV	1	source	
+sfc	Super Tennis	1	source	
+sfc	Teenage Mutant Ninja Turtles IV: Turtles in Time	1	source	
+sfc	Tetris Attack	1	source	
+sfc	The Legend of the Mystical Ninja	1	source	
+sfc	U.N. Squadron	1	source	
+sfc	Zombies Ate My Neighbors	1	source	
+snes	Chrono Trigger	3	have	
+snes	EarthBound	3	have	
+snes	Secret of Mana	3	have	
+snes	Arcana	2	on_disk	./roms/USA/Arcana (USA).zip
+snes	Contra III: The Alien Wars	2	have	
+snes	Donkey Kong Country	2	have	
+snes	Final Fantasy III	2	have	
+snes	Illusion of Gaia	2	have	
+snes	Mega Man X	2	have	
+snes	Pilotwings	2	have	
+snes	Soul Blazer	2	have	
+snes	Star Fox	2	have	
+snes	Super Castlevania IV	2	have	
+snes	Super Mario Kart	2	have	
+snes	Super Mario World	2	have	
+snes	Super Metroid	2	have	
+snes	Terranigma	2	have	
+snes	The Legend of Zelda: A Link to the Past	2	have	
+snes	ActRaiser	1	have	
+snes	Axelay	1	have	
+snes	Bahamut Lagoon	1	on_disk	./roms/USA/Bahamut Lagoon (Japan) (Translated En).7z
+snes	Breath of Fire	1	on_disk	./roms/USA/Breath of Fire (USA).zip
+snes	Breath of Fire II	1	on_disk	./roms/Europe/Breath of Fire II (Europe).zip
+snes	Cybernator	1	on_disk	./roms/Europe/Cybernator (Europe).zip
+snes	Demon's Crest	1	on_disk	./roms/USA/Demon's Crest (USA).zip
+snes	Dragon Quest V: Hand of the Heavenly Bride	1	source	
+snes	F-Zero	1	have	
+snes	Fire Emblem: Mystery Of The Emblem	1	source	
+snes	Front Mission	1	on_disk	./roms/USA/Front Mission (Japan) (Translated En).7z
+snes	Harvest Moon	1	have	
+snes	International Superstar Soccer Deluxe	1	have	
+snes	Kirby Super Star	1	on_disk	./roms/USA/Kirby Super Star (USA).zip
+snes	Live A Live	1	source	
+snes	Ogre Battle: The March of the Black Queen	1	source	
+snes	R-Type III: The Third Lightning	1	have	
+snes	Secret of Evermore	1	have	
+snes	Seiken Densetsu 3	1	on_disk	./roms/USA/Seiken Densetsu 3 (Japan) (Translated En).7z
+snes	Shadowrun	1	have	
+snes	Star Ocean	1	on_disk	./roms/USA/Star Ocean (Japan) (Translated En).7z
+snes	Street Fighter II' Turbo: Hyper Fighting	1	source	
+snes	Super Bomberman 3	1	have	
+snes	Super Ghouls 'n Ghosts	1	have	
+snes	Super Mario RPG: Legend of the Seven Stars	1	source	
+snes	Super Mario World 2: Yoshi's Island	1	have	
+snes	Super Punch-Out!!	1	on_disk	./roms/USA/Super Punch-Out!! (USA).zip
+snes	Super Smash TV	1	on_disk	./roms/USA/Super Smash T.V. (USA).zip
+snes	Super Tennis	1	on_disk	./roms/USA/Super Tennis (USA).zip
+snes	Teenage Mutant Ninja Turtles IV: Turtles in Time	1	have	
+snes	Tetris Attack	1	on_disk	./roms/USA/Tetris Attack (USA).zip
+snes	The Legend of the Mystical Ninja	1	have	
+snes	U.N. Squadron	1	have	
+snes	Zombies Ate My Neighbors	1	have	
+wonderswan	Final Fantasy IV	2	source	
+wonderswan	Tetris	2	source	
+wonderswan	Beatmania For WonderSwan	1	source	
+wonderswan	Guilty Gear Petit 2	1	have	
+wonderswan	Gunpey	1	source	
+wonderswan	Judgement Silversword -Rebirth Edition-	1	source	
+wonderswan	Kaze no Klonoa: Moonlight Museum	1	source	
+wonderswan	Makaimura For WonderSwan	1	source	
+wonderswan	Mr. Driller	1	have	
+wonderswan	One Piece Grand Battle Swan Colosseum	1	source	
+wonderswan	Pocket Fighter	1	source	
+wonderswan	Rainbow Islands: Putty's Party	1	source	
+wonderswancolor	Final Fantasy IV	2	on_disk	./roms/Final Fantasy IV (Japan).zip
+wonderswancolor	Tetris	2	on_disk	./roms/Tetris (Japan).zip
+wonderswancolor	Beatmania For WonderSwan	1	have	
+wonderswancolor	Guilty Gear Petit 2	1	on_disk	./roms/Guilty Gear Petit 2 (Japan).zip
+wonderswancolor	Gunpey	1	source	
+wonderswancolor	Judgement Silversword -Rebirth Edition-	1	have	
+wonderswancolor	Kaze no Klonoa: Moonlight Museum	1	have	
+wonderswancolor	Makaimura For WonderSwan	1	have	
+wonderswancolor	Mr. Driller	1	have	
+wonderswancolor	One Piece Grand Battle Swan Colosseum	1	source	
+wonderswancolor	Pocket Fighter	1	have	
+wonderswancolor	Rainbow Islands: Putty's Party	1	have	

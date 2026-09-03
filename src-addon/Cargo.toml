@@ -1,0 +1,50 @@
+[package]
+name = "moose-patch"
+version.workspace = true
+edition = "2024"
+
+# The addon. Not a front end — see docs/knulli-addon.md.
+#
+# It patches a stock KNULLI install and syncs with a RomM server, and it is
+# built on top of the archived front end rather than beside it: `moose-sdl` is
+# a library as well as a binary, and its drawing, text and pad handling are
+# already tuned for this exact screen. That work does not want doing twice.
+[lib]
+name = "moose_patch"
+path = "src/lib.rs"
+# No doc examples here, and rustdoc's harness cannot resolve moose-sdl when it
+# goes looking for them.
+doctest = false
+
+[[bin]]
+name = "moose-patch"
+path = "src/main.rs"
+
+[features]
+default = []
+knulli = ["moose-rack/knulli", "moose-sdl/knulli"]
+linux = ["moose-rack/linux", "moose-sdl/linux"]
+
+[dependencies]
+moose-rack = { path = ".." }
+moose-sdl = { path = "../src-sdl" }
+anyhow = "1.0.104"
+
+# The favourites baseline — what the last sync agreed on — is a small JSON
+# file beside the addon's own cache. See `favsync`.
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# The core's API client is async and this app's loop is not, so the worker
+# thread builds a current-thread runtime for the one request it has in flight.
+# Not the multi-threaded one: four slow cores, and nothing to parallelise.
+tokio = { version = "1.53.1", features = ["rt", "net", "time"] }
+
+[dependencies.sdl2]
+version = "0.38"
+default-features = false
+features = ["use-pkgconfig", "image"]
+
+[dev-dependencies]
+# The favourites run is async; its tests drive it without a server.
+tokio = { version = "1.53.1", features = ["rt", "macros"] }
