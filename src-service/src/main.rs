@@ -370,6 +370,50 @@ fn load_hashes(
     Ok(out)
 }
 
+/// A page for a person who typed the address into a browser.
+///
+/// There was nothing here and `/` answered 404, which reads as "the server is
+/// down" rather than "you asked for a path that does not exist". Everything on
+/// it is already public through the API; it is a signpost, not an interface.
+async fn index(State(lib): State<Arc<Library>>) -> axum::response::Html<String> {
+    let platforms = {
+        let mut m: std::collections::BTreeMap<&str, usize> = Default::default();
+        for g in &lib.games {
+            *m.entry(g.platform_slug.as_str()).or_default() += 1;
+        }
+        m
+    };
+    let saves = lib.sync.lock().map(|s| s.store.list(None).len()).unwrap_or(0);
+    let cols: i64 = lib.collections.iter().map(|c| c.rom_count).sum();
+    let rows = platforms
+        .iter()
+        .map(|(p, n)| format!("<tr><td>{p}</td><td align=right>{n}</td></tr>"))
+        .collect::<String>();
+    let tmpl = r#"<!doctype html><meta charset=utf-8><title>Moose Rack</title>
+<style>body{font:14px/1.5 system-ui;margin:3rem auto;max-width:40rem;padding:0 1rem}
+td{padding:.1rem .8rem .1rem 0}code{background:#eee;padding:.1rem .3rem}</style>
+<h1>Moose Rack</h1>
+<p>Library service {v}. This is the API host; the app talks to it.</p>
+<p><b>{games}</b> games &middot; <b>{plat}</b> platforms &middot; <b>{fw}</b> firmware files
+&middot; <b>{cn}</b> collections ({cm} memberships) &middot; <b>{saves}</b> saves</p>
+<table>{rows}</table>
+<p>Point the app's <code>[server] url</code> here. Routes live under <code>/api/</code>:
+<a href="/api/heartbeat">heartbeat</a>,
+<a href="/api/platforms">platforms</a>,
+<a href="/api/collections">collections</a>.</p>
+"#;
+    axum::response::Html(
+        tmpl.replace("{v}", env!("CARGO_PKG_VERSION"))
+            .replace("{games}", &lib.games.len().to_string())
+            .replace("{plat}", &platforms.len().to_string())
+            .replace("{fw}", &lib.firmware.len().to_string())
+            .replace("{cn}", &lib.collections.len().to_string())
+            .replace("{cm}", &cols.to_string())
+            .replace("{saves}", &saves.to_string())
+            .replace("{rows}", &rows),
+    )
+}
+
 async fn heartbeat() -> Json<Heartbeat> {
     Json(Heartbeat {
         system: HeartbeatSystem {
@@ -648,6 +692,7 @@ async fn rom_by_id(
 /// The routes, as a function so tests can build one without a socket.
 fn app(lib: Arc<Library>, media_dir: std::path::PathBuf) -> Router {
         Router::new()
+            .route("/", get(index))
             .route("/api/heartbeat", get(heartbeat))
             .route("/api/config", get(config))
             .route("/api/users/me", get(users_me))
@@ -1160,5 +1205,17 @@ mod tests {
     async fn an_unknown_firmware_id_is_404() {
         let (_d, app) = built();
         assert_eq!(get(&app, "/api/firmware/999/content/x.bin").await.0, StatusCode::NOT_FOUND);
+    }
+
+    /// `/` answered 404, which reads as "the server is down" rather than "that
+    /// path does not exist". A person who types the address gets a page.
+    #[tokio::test]
+    async fn the_root_is_a_page_not_a_404() {
+        let (_d, app) = built();
+        let (s, body) = get(&app, "/").await;
+        assert_eq!(s, StatusCode::OK);
+        assert!(body.contains("Moose Rack"), "should name itself");
+        assert!(body.contains("/api/heartbeat"), "should point at the API");
+        assert!(body.contains("nes"), "should list what it holds");
     }
 }
