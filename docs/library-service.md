@@ -87,6 +87,23 @@ exFAT, where macOS synthesises inode numbers that do not survive a remount.
 
 ### A folder is one game only when it says so
 
+> **Checked against ES-DE, 2026-09-03, and this needs less work than it says
+> below.** ES-DE's rule is explicit rather than heuristic: a directory is a game
+> **iff its name ends in a file extension configured for that system**. Then
+> either a file inside sharing the directory's name is passed to the emulator
+> (`Final Fantasy VII.m3u/Final Fantasy VII.m3u`) or the directory itself is
+> (`Gran Turismo 5.ps3` to RPCS3). Everything else is a folder you walk into.
+>
+> `esde.rs` already does the walking, and it is right: n64 comes back as 419
+> games with 395 of them inside `AdditionalRoms/USA`, `/Japan` and so on,
+> recorded in `rel_dir`. The 1,254 games that vanished were lost to RomM's
+> assumption that any directory inside a platform is one multi-file game, and
+> that assumption is not ours to inherit.
+>
+> This library barely uses the feature anyway — PS3 here is 50 `.lnk` shortcuts,
+> not `.ps3` directories. What remains is supporting directories-with-extensions
+> for completeness, which is small, and not the heuristic below.
+
 The rule RomM applies — any directory is a multi-file game — is right for
 `psx/MultiDisk/Final Fantasy IX (USA)` and wrong for
 `n64/AdditionalRoms/USA/`, and it cannot tell them apart.
@@ -219,7 +236,7 @@ this is the practical line and it is worth staying well clear of it.
 | --- | --- |
 | New | `src-serve/` — 24 method/path pairs over the existing `Cache` |
 | New | filesystem watcher and fingerprint index. Extends `cache.rs` |
-| New | the folder-is-a-game rule. ~100 lines and a pile of tests |
+| Smaller than thought | directories-with-extensions, ES-DE's actual rule. The heuristic this row planned is not needed — see above |
 | One-off | migration from the RomM export already sitting in the scratchpad |
 | **Untouched** | **`api.rs`** — the service speaks RomM's API, so the client does not change |
 | Unchanged | `esde.rs`, `media.rs`, `gamelist.rs`, `coremap.rs`, `gamesort`, `gamefilter`, `gridnav`, `launch`, `download`, `binds`, `padpoll` |
