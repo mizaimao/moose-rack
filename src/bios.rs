@@ -111,6 +111,8 @@ pub async fn ensure(
             continue;
         };
         if let Ok(bytes) = client.firmware_content(fw.id, &fw.file_name).await {
+            // This one stays flat on purpose: it fetches a *named* BIOS a core
+            // asked for, and RetroArch looks for that name in `system/` itself.
             let part = dest.join(format!("{name}.part"));
             if std::fs::write(&part, &bytes).is_ok()
                 && std::fs::rename(&part, dest.join(name)).is_ok()
@@ -189,6 +191,40 @@ fn already_have(path: &Path, want: &Firmware) -> bool {
 /// took, which reads as a control that does nothing. Asking first costs one
 /// request and answers the only questions worth asking: is this already done,
 /// and how much would it fetch.
+
+/// Where one firmware file belongs under `system/`.
+///
+/// The server reports a `file_path` — `mame`, `pcsx2/Langs/de_DE` — and the tree
+/// is reproduced, because a flat directory silently loses files: the real set
+/// has 3,339 entries under 2,738 distinct names, so flattening overwrites 601 of
+/// them. `config.ini` alone appears 199 times, once per MSX machine.
+///
+/// Neither half is trusted as a path. A server that answers `../../.ssh` or an
+/// absolute path is answering something this must not write to, so every
+/// component is checked and `..`, `.`, empty and rooted segments are dropped.
+/// The name contributes its leaf only.
+pub fn local_path(dest: &Path, file_path: Option<&str>, file_name: &str) -> Option<PathBuf> {
+    let leaf = Path::new(file_name).file_name()?.to_string_lossy().into_owned();
+    if leaf.is_empty() {
+        return None;
+    }
+    let mut out = dest.to_path_buf();
+    if let Some(rel) = file_path {
+        for part in rel.split(['/', '\\']) {
+            let part = part.trim();
+            if part.is_empty() || part == "." || part == ".." {
+                continue;
+            }
+            // Anything that is not a plain name is not a path component here.
+            if Path::new(part).components().count() != 1 {
+                continue;
+            }
+            out.push(part);
+        }
+    }
+    Some(out.join(leaf))
+}
+
 pub async fn status(client: &Client, library_root: &Path) -> Result<(usize, usize, u64)> {
     let list = client
         .firmware()
@@ -202,11 +238,10 @@ pub async fn status(client: &Client, library_root: &Path) -> Result<(usize, usiz
         if fw.file_name.is_empty() {
             continue;
         }
-        let leaf = Path::new(&fw.file_name)
-            .file_name()
-            .map(|n| n.to_string_lossy().into_owned())
-            .unwrap_or_else(|| fw.file_name.clone());
-        if already_have(&dest.join(&leaf), fw) {
+        let Some(path) = local_path(&dest, fw.file_path.as_deref(), &fw.file_name) else {
+            continue;
+        };
+        if already_have(&path, fw) {
             have += 1;
         } else {
             bytes += fw.file_size_bytes.max(0) as u64;
@@ -236,12 +271,19 @@ pub async fn sync(
         if fw.file_name.is_empty() {
             continue;
         }
-        // A server-side name is not a path component to trust blindly.
-        let leaf = Path::new(&fw.file_name)
+        // Neither the name nor the reported path is trusted; see `local_path`.
+        let Some(path) = local_path(&dest, fw.file_path.as_deref(), &fw.file_name) else {
+            continue;
+        };
+        let leaf = path
             .file_name()
             .map(|n| n.to_string_lossy().into_owned())
-            .unwrap_or_else(|| fw.file_name.clone());
-        let path = dest.join(&leaf);
+            .unwrap_or_default();
+        if let Some(parent) = path.parent() {
+            if std::fs::create_dir_all(parent).is_err() {
+                continue;
+            }
+        }
         progress(i + 1, total, &leaf);
 
         if already_have(&path, fw) {
@@ -428,5 +470,57 @@ mod tests {
                 }
             }
         }
+    }
+}
+#[cfg(test)]
+mod local_path_tests {
+    use super::local_path;
+    use std::path::Path;
+
+    #[test]
+    fn a_sub_path_is_reproduced() {
+        let p = local_path(Path::new("/lib/system"), Some("mame"), "neogeo.zip").unwrap();
+        assert_eq!(p, Path::new("/lib/system/mame/neogeo.zip"));
+    }
+
+    #[test]
+    fn no_sub_path_lands_at_the_top() {
+        let p = local_path(Path::new("/lib/system"), None, "scph1001.bin").unwrap();
+        assert_eq!(p, Path::new("/lib/system/scph1001.bin"));
+    }
+
+    /// The real collision: 199 `config.ini`, one per MSX machine. Flattened they
+    /// are one file; with the tree they are 199.
+    #[test]
+    fn same_name_under_two_directories_is_two_files() {
+        let a = local_path(Path::new("/s"), Some("Machines/COL - ColecoVision"), "config.ini");
+        let b = local_path(Path::new("/s"), Some("Machines/COL - Spectravideo SVI-603"), "config.ini");
+        assert_ne!(a, b);
+    }
+
+    /// A server-supplied path is not trusted. None of these may escape `dest`.
+    #[test]
+    fn traversal_is_stripped_not_honoured() {
+        for evil in ["../../.ssh", "..", "./..", "/etc", "a/../../b"] {
+            let p = local_path(Path::new("/lib/system"), Some(evil), "x.bin").unwrap();
+            assert!(
+                p.starts_with("/lib/system"),
+                "{evil} escaped to {}",
+                p.display()
+            );
+            assert!(!p.to_string_lossy().contains(".."), "{evil} left a .. in {}", p.display());
+        }
+    }
+
+    /// A name carrying a path contributes its leaf only.
+    #[test]
+    fn a_name_with_directories_in_it_keeps_only_the_leaf() {
+        let p = local_path(Path::new("/s"), Some("mame"), "../../evil/neogeo.zip").unwrap();
+        assert_eq!(p, Path::new("/s/mame/neogeo.zip"));
+    }
+
+    #[test]
+    fn an_empty_name_is_no_path_at_all() {
+        assert!(local_path(Path::new("/s"), None, "").is_none());
     }
 }
