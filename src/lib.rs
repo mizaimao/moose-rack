@@ -3,6 +3,7 @@
 //! a window, not a second implementation.
 
 pub mod achievements;
+pub mod app;
 pub mod api;
 pub mod appicon;
 pub mod binds;
@@ -11,6 +12,7 @@ pub mod arcade;
 pub mod aspect;
 pub mod bulk;
 pub mod cache;
+pub mod commands;
 pub mod config;
 pub mod configpatch;
 // No longer test-only: it now carries the template the app seeds a first run
@@ -34,6 +36,7 @@ pub mod launch;
 pub mod layout;
 pub mod lightgun;
 pub mod macdisplay;
+pub mod iconsets;
 pub mod media;
 pub mod platform;
 pub mod platformfacts;
