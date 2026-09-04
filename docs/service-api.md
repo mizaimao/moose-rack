@@ -187,6 +187,15 @@ is the rule the rest of this file already follows. A failure is printed and not
 fatal: the API half is unaffected, and a stale list beats a service that will
 not start.
 
+The curated lists are loaded twice, on purpose. `/api/collections` answers the
+*client*, which keys its own cache by the ids it syncs; the UI in this process
+reads the cache directly and goes nowhere near the client. So
+`collections::into_cache` resolves the same files a second time against the ids
+the cache just wrote. The scan's numbering and the cache's numbering are not the
+same, and reusing the first set silently produced empty lists -- which is the
+whole reason membership is by name and not by id. `collections::name_table` is
+shared so both resolutions agree on what a name is.
+
 **Do not write those three calls out again.** `scan-esde` did, left out
 `absorb_local_into_server`, and the CLI's scan sat beside the rows a server sync
 had already stored -- 11,062 against 11,473 in a library of about 11,500, every

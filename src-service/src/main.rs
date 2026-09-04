@@ -905,18 +905,15 @@ async fn main() -> Result<()> {
             Vec::new()
         }
     };
-    // Name -> id, from the scan, so a list resolves without a database.
-    // Keyed on both the display name and the file stem. ES-DE uses the
-    // gamelist `<name>` where a scraper filled one in and the stem where it did
-    // not, so one key alone resolves part of the library and misses the rest.
-    let mut by_name: std::collections::HashMap<(String, String), i64> = Default::default();
-    for (i, g) in games.iter().enumerate() {
-        let id = i as i64 + 1;
-        let p = g.platform_slug.to_lowercase();
-        by_name.entry((p.clone(), g.name.to_lowercase())).or_insert(id);
-        let stem = g.fs_name.rsplit_once('.').map(|(s, _)| s).unwrap_or(&g.fs_name);
-        by_name.entry((p, stem.to_lowercase())).or_insert(id);
-    }
+    // Name -> id, from the scan, so a list resolves without a database. The
+    // keying rule lives in `collections` because the web UI resolves the same
+    // lists against different ids and the two must agree on what a name is.
+    let by_name = collections::name_table(
+        games
+            .iter()
+            .enumerate()
+            .map(|(i, g)| (g.platform_slug.as_str(), g.name.as_str(), g.fs_name.as_str(), i as i64 + 1)),
+    );
     let col_dir = pick(args.collections.clone(), &cfg.library.collections)
         .map(std::path::PathBuf::from)
         .unwrap_or_else(|| std::path::Path::new(&root).join("collections"));
@@ -985,6 +982,22 @@ async fn main() -> Result<()> {
             // Not fatal. The API half is unaffected, and a UI listing a stale
             // cache beats a service that refuses to start.
             Err(e) => eprintln!("ui cache   not rebuilt: {e}"),
+        }
+        // The lists again, against the ids the cache just wrote. Without this
+        // the Collections tab is empty on a server serving all 27 of them --
+        // `/api/collections` answers the client, and the UI here does not go
+        // through the client.
+        match state
+            .cache
+            .lock()
+            .map_err(|e| anyhow::anyhow!("{e}"))
+            .and_then(|mut c| collections::into_cache(&mut c, &col_dir))
+        {
+            Ok((n, miss)) => println!(
+                "ui lists   {n} collections{}",
+                if miss > 0 { format!(", {miss} names did not resolve") } else { String::new() }
+            ),
+            Err(e) => eprintln!("ui lists   not loaded: {e}"),
         }
         app = web_app(Arc::new(web::WebState { state, ui_dir })).merge(app);
     }
