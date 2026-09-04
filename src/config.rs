@@ -740,9 +740,44 @@ impl RetroArchCfg {
     }
 }
 
+/// Which config file this process is using.
+///
+/// It used to be the literal `config.toml`, resolved against the working
+/// directory, in about twenty places. That is right for an app started by its
+/// icon and wrong for a service: systemd sets the working directory, and the
+/// library service reads a file named in `moose-service.toml`. The state was
+/// built from the named file while `config_fields`, `status` and every setting
+/// writer went on reading a different one -- so the Settings page reported an
+/// unconfigured app on a server that was correctly configured, and an edit
+/// would have been written to a file nothing reads.
+///
+/// A process-wide value rather than an argument because that is what it is:
+/// decided once at startup, true for everything afterwards. Several of the
+/// readers are `fn()` with no state to thread it through.
+static CONFIG_PATH: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
+
+/// Name the config file, once, before anything reads it.
+///
+/// Later calls are ignored rather than an error: the first caller is the one
+/// that started the process, and nothing else has standing to move it.
+pub fn set_path(path: PathBuf) {
+    let _ = CONFIG_PATH.set(path);
+}
+
+/// The config file, defaulting to `config.toml` beside the working directory --
+/// which is what a desktop launch wants and what every caller assumed.
+pub fn path() -> &'static Path {
+    CONFIG_PATH.get_or_init(|| PathBuf::from("config.toml")).as_path()
+}
+
+/// The same, as a `&str` for the writers that take one.
+pub fn path_str() -> &'static str {
+    path().to_str().unwrap_or("config.toml")
+}
+
 impl Config {
     pub fn load() -> Result<Self> {
-        Self::load_from(Path::new("config.toml"))
+        Self::load_from(path())
     }
 
     /// True when `load` fell back to defaults because no file was there.
@@ -1737,5 +1772,51 @@ mod bool_tests {
         let cfg: Config = toml::from_str(&raw).unwrap();
         assert_eq!(cfg.library.local_root, "/data/moose-rack");
         std::fs::remove_dir_all(&dir).ok();
+    }
+}
+
+#[cfg(test)]
+mod config_path_tests {
+    /// Every reader must go through `config::path()`.
+    ///
+    /// A correctly configured server reported `config_exists: false` and a
+    /// Settings page with nothing in it, because the state was built from the
+    /// file `moose-service.toml` named while `config_fields`, `status` and every
+    /// setting writer went on reading `config.toml` out of the working
+    /// directory. Twenty-odd call sites, each individually reasonable.
+    ///
+    /// The one allowed literal is the list of file names `neighbours` looks for
+    /// beside the binary, which is about names on disk and not about this file.
+    #[test]
+    fn nothing_names_the_config_file_itself() {
+        for (name, src) in [
+            ("commands.rs", include_str!("commands.rs")),
+            ("appicon.rs", include_str!("appicon.rs")),
+            ("app.rs", include_str!("app.rs")),
+        ] {
+            for (i, line) in src.lines().enumerate() {
+                if !line.contains("\"config.toml\"") {
+                    continue;
+                }
+                // A comment explaining the default is not a reader.
+                let code = line.trim_start();
+                if code.starts_with("//") || code.starts_with("///") {
+                    continue;
+                }
+                assert!(
+                    line.contains("cache.sqlite3"),
+                    "{name}:{} names the config file instead of asking config::path(): {line}",
+                    i + 1
+                );
+            }
+        }
+    }
+
+    /// The default is what a desktop launch has always used.
+    #[test]
+    fn the_default_is_the_working_directory() {
+        // Not `set_path` here: it is a OnceLock and a test that set it would
+        // decide the value for every other test in this binary.
+        assert_eq!(super::path().file_name().unwrap(), "config.toml");
     }
 }

@@ -137,7 +137,7 @@ impl AppState {
     }
 
     pub fn from_config() -> anyhow::Result<Self> {
-        Self::from_config_at(Path::new("config.toml"))
+        Self::from_config_at(crate::config::path())
     }
 
     /// The same, from a named file.
@@ -169,10 +169,8 @@ impl AppState {
     // on a fresh Retroid Pocket Mini V2.
     //
     // Only when nothing is there. An existing config is the user's.
-    if cfg!(target_os = "android")
-        && crate::config_files::seed_config(Path::new("config.toml"))
-    {
-        eprintln!("no config.toml — wrote the documented template");
+    if cfg!(target_os = "android") && crate::config_files::seed_config(path) {
+        eprintln!("no {} — wrote the documented template", path.display());
     }
 
     // On Android RetroArch is another app, so there is no path to search — it
