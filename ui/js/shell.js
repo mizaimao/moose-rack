@@ -143,7 +143,7 @@ export function enter({
   ...wants
 } = {}) {
   // A page with no list has nothing to search. History is three charts, and
-  // the top of RomM browse is five groups you can read at a glance — a box
+  // the top of Browse by is five groups you can read at a glance — a box
   // over either of them is a control that does nothing, which is worse than no
   // control.
   if (el.pageFilterBar) el.pageFilterBar.hidden = !filter;

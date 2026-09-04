@@ -321,6 +321,32 @@ impl Cache {
         Ok(items.len())
     }
 
+    /// Give the consoles their real names.
+    ///
+    /// A scan only knows the directory -- `snes`, `gbc` -- so it writes that as
+    /// the display name and the grid reads "snes snes 876 games". A server sync
+    /// used to paper over this by overwriting the row with a name it fetched;
+    /// with no server there is nothing to overwrite it, which is what a library
+    /// served from a local ES-DE tree now is.
+    ///
+    /// Only where a name is actually known, and never over one a sync supplied:
+    /// the table is the fallback, not the authority.
+    pub fn name_platforms(&mut self, names: &[(String, String)]) -> Result<usize> {
+        let tx = self.conn.transaction()?;
+        let mut n = 0;
+        {
+            let mut up = tx.prepare(
+                "UPDATE platforms SET display_name = ?2
+                 WHERE fs_slug = ?1 AND COALESCE(NULLIF(display_name, ''), fs_slug) = fs_slug",
+            )?;
+            for (slug, name) in names {
+                n += up.execute(params![slug, name])?;
+            }
+        }
+        tx.commit()?;
+        Ok(n)
+    }
+
     /// Collection groups present, with how many collections each holds.
     ///
     /// Counts only collections that still have at least one ROM we know about,

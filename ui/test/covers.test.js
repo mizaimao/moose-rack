@@ -21,6 +21,8 @@ import { fakeBackend } from "./backend.js";
 const uiDir = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 let dom, lib, state, observers;
+/// Every id `rom_covers` was asked for, so a test can assert on the batch.
+let coverIds = [];
 
 /// A stand-in that hands back the entries it was given, so a test can say
 /// "these cards just came into view" or "these just left".
@@ -79,7 +81,15 @@ before(async () => {
   globalThis.IntersectionObserver = Watcher;
 
   const backend = fakeBackend((cmd, args) => {
-    if (cmd === "rom_covers") return args.ids.map((id) => ({ id, cover: `/art/${id}.png` }));
+    if (cmd === "rom_covers") {
+      // As strict as serde is on `Vec<i64>`. A lenient stand-in is why a
+      // `null` in this array reached the live service before any test saw it:
+      // the real backend rejects the whole batch, so forty cards get nothing.
+      if (!args.ids.every(Number.isInteger))
+        throw new Error(`ids: invalid type: null, expected i64 (${JSON.stringify(args.ids)})`);
+      coverIds.push(...args.ids);
+      return args.ids.map((id) => ({ id, cover: `/art/${id}.png` }));
+    }
     if (cmd === "rom_detail")
       return { id: 1, name: "x", fs_name: "g.zip", platform: "arcade", platform_slug: "arcade",
                size_bytes: 1, downloaded: true, screenshots: [], genres: [], companies: [],
@@ -99,6 +109,7 @@ before(async () => {
 
 beforeEach(() => {
   observers.length = 0;
+  coverIds = [];
   state.view = "roms";
   state.platform = "arcade";
   state.layout = "grid";
@@ -123,6 +134,34 @@ const settle = async () => {
 
 const art = (id) => document.querySelector(`.gcard[data-id="${id}"] .art`);
 const hasImage = (id) => !!art(id)?.querySelector("img");
+
+describe("a folder card has no cover to fetch", () => {
+  /// One folder on screen meant no covers at all for the cards around it.
+  ///
+  /// A folder is a `.gcard` with `data-dir` and no `data-id`, and every
+  /// `.gcard` is observed. `Number(undefined)` is NaN, `JSON.stringify` writes
+  /// NaN as `null`, and `Vec<i64>` rejects the whole batch -- so the forty real
+  /// cards queued alongside it got nothing. Found by running the UI against the
+  /// live service, where SNES has an `Aftermarket/` directory in it.
+  test("its id is never queued, so the batch is not poisoned", async () => {
+    const folder = document.createElement("div");
+    folder.className = "gcard folder";
+    folder.dataset.dir = "Aftermarket";
+    document.querySelector("#list .gcards").prepend(folder);
+    lib.observeCovers();
+
+    near().fire(true);
+    await settle();
+
+    assert.ok(coverIds.length, "nothing was asked for at all");
+    assert.ok(
+      coverIds.every(Number.isInteger),
+      `a non-id was queued: ${JSON.stringify(coverIds)}`
+    );
+    assert.equal(hasImage(1), true, "the real cards around the folder got no cover");
+    folder.remove();
+  });
+});
 
 describe("covers near the viewport", () => {
   test("a card that comes into view gets its cover", async () => {

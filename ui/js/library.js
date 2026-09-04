@@ -1064,6 +1064,12 @@ export function observeCovers() {
         // has to be able to ask for it again. `loaded` is what stops the same
         // card being queued twice.
         if (e.target.dataset.loaded === "1") continue;
+        // A folder card is a .gcard with no data-id, and there are folders in
+        // any console whose ROMs are filed in subdirectories. Without this
+        // `Number(undefined)` is NaN, JSON.stringify writes it as null, and the
+        // backend rejects the whole batch on `ids` -- so one folder on screen
+        // meant not a single cover loaded for the forty cards around it.
+        if (!e.target.dataset.id) continue;
         e.target.dataset.loaded = "1";
         coverQueue.push(Number(e.target.dataset.id));
       }
