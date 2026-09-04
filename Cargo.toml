@@ -28,7 +28,7 @@ members = ["src-tauri", "src-sdl", "src-addon", "src-fastlaunch", "src-service"]
 # Do not reintroduce a literal version in either member manifest or in
 # tauri.conf.json — that is the drift this replaced.
 [workspace.package]
-version = "0.4.241"
+version = "0.4.242"
 
 # `md-5` is imported as `md5`, which the unused-dependency check reads as a
 # name that appears nowhere. It is used, in download.rs and savehash.rs.

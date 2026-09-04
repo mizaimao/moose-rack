@@ -123,6 +123,86 @@ the bytes it still holds, the server moved alone → download. Agreed on neither
 is a conflict too: there is no basis to choose. That per-device bookkeeping is
 the whole reason this is a service rather than a network share.
 
+## The app itself, in a browser
+
+`http://dev.lan:8001/` serves `ui/` — the same 12,552 lines the desktop window
+runs, unedited. The UI does not speak `/api/`; it speaks Tauri's IPC,
+`window.__TAURI__.core.invoke("roms", {...})`, which in a browser is undefined.
+Two pieces bridge that, both in `src-service/src/web.rs`:
+
+| route | what it is |
+| --- | --- |
+| `GET /` | `index.html` with `<script src="/__shim.js">` inserted after `<head>` |
+| `GET /settings.html` | the settings page, rewritten the same way |
+| `GET /__shim.js` | defines `window.__TAURI__.core` before the app's modules load |
+| `POST /invoke/{cmd}` | one IPC command; body is the argument object |
+| `GET /media?path=` | one artwork, video or manual, by absolute path |
+
+The desktop app is not a special case of this and this is not a port of it.
+Both call the same functions.
+
+### Where a command actually lives
+
+    ui/js/*.js          invoke("roms", {...})
+    src-tauri/src/lib.rs    #[tauri::command] fn roms(...) { moose_rack::commands::roms(...) }
+    src-service/src/web.rs  "roms" => j!(c::roms(state, p!("platform"), p!("list")))
+    src/commands.rs         pub fn roms(state: &AppState, ...)   <- the only implementation
+
+`src/commands.rs` holds 103 functions and `src/app.rs` holds `AppState`, neither
+of which mentions Tauri. `AppState::from_config()` is the constructor both
+frontends call, so starting the backend does not start a window.
+
+**Do not write a handler in `web.rs`.** A test reads the match arms and fails on
+any that does not call `c::`. If a command is missing from `moose_rack`, move it
+there and leave a one-line wrapper behind in `src-tauri` — that is what the other
+72 look like.
+
+### Adding a command to the web UI
+
+1. If it still lives in `src-tauri/src/lib.rs`, move the body to
+   `src/commands.rs`, change `state: State<'_, AppState>` to `state: &AppState`,
+   and replace the original with a wrapper that calls it.
+2. Add one arm. `j!` serialises a `CmdResult`, `v!` a plain return value, `p!`
+   reads an argument by name.
+3. Run the tests. `every_command_the_ui_invokes_has_an_arm` scans `ui/js` and
+   fails on anything that would answer "unknown command".
+
+### Traps in the bridge
+
+**JavaScript sends `localOnly`; Rust wants `local_only`.** The `#[command]`
+macro does that rename for the desktop build and nothing does it over HTTP, so
+`normalise()` does — on the top-level keys only. Values are left alone, because a
+`ListRef` has its own serde names.
+
+**`/media` must not serve by name alone.** Commands answer with absolute paths
+because a desktop webview can load a file directly. Over HTTP that same path is a
+request for any file on the server. `resolve_media` canonicalises the request
+*and* the roots before comparing, which a string prefix does not: with one,
+`<media>/../../secret` reads as starting inside the media directory. Roots are
+`media_dir`, `themes_dir`, `esde_media` and `theme_root`. Missing and forbidden
+answer the same 404, so the route cannot be used to test whether a path exists.
+
+**`ServeFile`, not `read`.** Videos are scrubbed, which is a Range request, and a
+200 to one makes the browser refetch the file.
+
+**Opening a window is the browser's job.** `open_settings` and `open_link` are
+answered inside the shim with `window.open`. Sent over the wire they would raise
+a window on the machine running the service, which is not the machine looking at
+the page.
+
+**There is no authentication.** Anyone who can reach the port can read the
+library and POST to `/invoke/`, which includes the settings writes. It is a LAN
+service on a home network and nothing more.
+
+### What the server refuses, and why
+
+Launching, RetroArch paths, the app's dock icon and the Android hand-off act on
+the machine somebody is sitting at. Library sync, BIOS sync, ROM downloads and
+scraping copy a library *from* a server *to* local storage, and this is the
+server — there is nowhere for them to put anything. All of them answer
+`"<cmd> is not available on the server"`, worded differently from
+`"unknown command <cmd>"` so a typo does not look like a design limit.
+
 ## Adding a route
 
 1. **Write the test first.** `src-service/src/main.rs` has `fn app()` precisely
