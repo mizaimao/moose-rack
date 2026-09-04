@@ -56,9 +56,37 @@ window.__TAURI__ = {
     // Artwork is served from the media tree; a local path becomes a URL.
     convertFileSrc: (p) => "/media?path=" + encodeURIComponent(p),
   },
-  // The desktop app pushes a few events. Nothing here emits them yet, so
-  // listeners are registered and never fire rather than throwing on startup.
-  event: { listen: async () => () => {}, emit: async () => {} },
+  // Tauri's cross-window events, over BroadcastChannel.
+  //
+  // Settings is a separate window on the desktop and a separate tab here, and
+  // the two talk: the shader backdrop's switch, its frame rate, the glass tint
+  // and strength, and the collection art all live in Settings while the thing
+  // they change is drawn by the library page. Stubbed out, every one of those
+  // silently did nothing -- you turn the backdrop on and the library goes on
+  // looking exactly as it did.
+  //
+  // BroadcastChannel is the same thing for same-origin documents, so `ui/` is
+  // unchanged. It does not deliver to the sender, where Tauri does; the one
+  // place that matters, `setBackdropWanted`, already acts on its own window
+  // directly, and not looping back is the safer of the two differences.
+  event: (() => {
+    const chan = "BroadcastChannel" in window ? new BroadcastChannel("moose-rack") : null;
+    const handlers = new Map();
+    chan?.addEventListener("message", (m) => {
+      const { event, payload } = m.data || {};
+      for (const fn of handlers.get(event) ?? []) {
+        try { fn({ event, payload }); } catch (e) { console.warn(event, e); }
+      }
+    });
+    return {
+      listen: async (event, fn) => {
+        if (!handlers.has(event)) handlers.set(event, new Set());
+        handlers.get(event).add(fn);
+        return () => handlers.get(event)?.delete(fn);
+      },
+      emit: async (event, payload) => chan?.postMessage({ event, payload }),
+    };
+  })(),
 };
 "#;
 
@@ -372,6 +400,9 @@ mod tests {
         assert!(SHIM.contains("invoke:"));
         assert!(SHIM.contains("convertFileSrc:"));
         assert!(SHIM.contains("event:"), "attract-screen.js calls event.listen at startup");
+        // Not a stub: Settings and the library page are two documents that have
+        // to talk, and `ui/test/shim.test.js` proves this one does.
+        assert!(SHIM.contains("BroadcastChannel"), "cross-window events are stubbed out");
     }
 
     /// Opening a window is done by the browser, not asked of the server.
