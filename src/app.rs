@@ -284,10 +284,12 @@ pub fn scan_into(
     // tree has no server to sync from.
     let names: Vec<(String, String)> = games
         .iter()
-        .map(|g| g.platform_slug.as_str())
+        .map(|g| (g.platform_slug.as_str(), g.system.as_str()))
         .collect::<std::collections::BTreeSet<_>>()
         .into_iter()
-        .filter_map(|slug| map.display_name(slug).map(|n| (slug.to_owned(), n.to_owned())))
+        .filter_map(|(slug, system)| {
+            map.name_for(system, slug).map(|n| (slug.to_owned(), n.to_owned()))
+        })
         .collect();
     store.name_platforms(&names)?;
     let folded = store.absorb_local_into_server()?;
