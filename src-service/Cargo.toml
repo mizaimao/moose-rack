@@ -22,6 +22,15 @@ serde_json = "1.0.151"
 tokio = { version = "1.53.1", features = ["rt-multi-thread", "macros", "net"] }
 tower-http = { version = "0.6", features = ["fs", "trace"] }
 tower = { version = "0.5", features = ["util"] }
+# Passwords and sessions. PBKDF2-HMAC-SHA256 rather than Argon2 because these
+# are already in the tree via other dependencies -- no new supply chain for a
+# home LAN service, and it is still a real KDF with a real cost factor.
+pbkdf2 = "0.13.0"
+sha2 = "0.11.0"
+hmac = "0.13.0"
+subtle = "2.6.1"
+base64 = "0.23.0"
+getrandom = "0.3"
 
 [dev-dependencies]
 tempdir = "0.3"

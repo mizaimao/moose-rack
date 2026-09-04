@@ -24,6 +24,7 @@
 //!     moose-service --root /home/frank/moose-library/ES-DE \
 //!                   --roms /home/frank/moose-library/ROMs
 
+mod auth;
 mod collections;
 mod web;
 mod saves;
@@ -54,6 +55,9 @@ struct FileConfig {
     library: LibraryPaths,
     #[serde(default)]
     server: ServerCfg,
+    /// Who may ask. Absent or empty leaves the service open -- see `auth`.
+    #[serde(default)]
+    auth: auth::AuthConfig,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -129,6 +133,10 @@ struct Args {
     /// to do that is a good way to bind to localhost by accident.
     #[arg(short, long, env = "MOOSE_SERVICE_PORT")]
     port: Option<u16>,
+    /// Hash a password for `[[auth.users]]`, print it, and exit. The plain
+    /// password is never stored anywhere; paste the printed line into the config.
+    #[arg(long, value_name = "PASSWORD")]
+    hash_password: Option<String>,
 }
 
 /// The scan, held for the process lifetime.
@@ -759,6 +767,182 @@ async fn rom_by_id(
         .ok_or(axum::http::StatusCode::NOT_FOUND)
 }
 
+/// What the whole service is protected by.
+#[derive(Default)]
+pub struct Guard {
+    pub cfg: auth::AuthConfig,
+    pub sessions: auth::Sessions,
+}
+
+/// Routes that answer before anybody has proved who they are.
+///
+/// `heartbeat` so "server down" and "wrong credentials" can be told apart --
+/// without it a bad token looks exactly like an unplugged machine. `login` for
+/// obvious reasons, and `__shim.js` because the login page is served by the
+/// same document machinery as the app and would otherwise fail to script.
+fn is_public(path: &str) -> bool {
+    matches!(path, "/api/heartbeat" | "/login" | "/logout" | "/__shim.js")
+}
+
+/// Identify the caller, or refuse.
+///
+/// The identity is put in the request's extensions so a handler can gate on it
+/// -- `/invoke/` is one route serving eighty commands and the split between
+/// them is not something a router can express.
+async fn require_auth(
+    State(guard): State<std::sync::Arc<Guard>>,
+    mut req: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> axum::response::Response {
+    if guard.cfg.open() || is_public(req.uri().path()) {
+        req.extensions_mut().insert(auth::Identity::Owner);
+        return next.run(req).await;
+    }
+    let header = req.headers().get(axum::http::header::AUTHORIZATION).and_then(|v| v.to_str().ok());
+    let cookie = req.headers().get(axum::http::header::COOKIE).and_then(|v| v.to_str().ok());
+    let who = auth::from_header(&guard.cfg, header).or_else(|| {
+        auth::session_from_cookies(cookie).and_then(|id| guard.sessions.get(id))
+    });
+    let Some(who) = who else {
+        // A browser gets the login page rather than the platform box: a `Basic`
+        // challenge cannot carry a token, which is how the owner signs in.
+        let wants_html = req
+            .headers()
+            .get(axum::http::header::ACCEPT)
+            .and_then(|v| v.to_str().ok())
+            .is_some_and(|a| a.contains("text/html"));
+        if wants_html && !req.uri().path().starts_with("/api/") {
+            return axum::response::Redirect::to("/login").into_response();
+        }
+        return (axum::http::StatusCode::UNAUTHORIZED, "who are you?").into_response();
+    };
+    // `/invoke/` is one route serving eighty commands, and the line between
+    // reading the library and changing it runs between the commands rather
+    // than between the routes. Decided here rather than in the handler: this
+    // runs before the router resolves anything, so the rule holds however the
+    // handler is later rewritten, and it can be tested against any router.
+    if !who.is_owner() {
+        if let Some(cmd) = req.uri().path().strip_prefix("/invoke/") {
+            if auth::owner_only(cmd) {
+                return (
+                    axum::http::StatusCode::FORBIDDEN,
+                    format!("{cmd} is the owner's to do"),
+                )
+                    .into_response();
+            }
+        }
+    }
+    req.extensions_mut().insert(who);
+    next.run(req).await
+}
+
+/// Swap a token or a username and password for a session cookie.
+async fn login(
+    State(guard): State<std::sync::Arc<Guard>>,
+    Json(body): Json<serde_json::Value>,
+) -> axum::response::Response {
+    let s = |k: &str| body.get(k).and_then(|v| v.as_str()).unwrap_or("").to_owned();
+    let (token, user, pass) = (s("token"), s("username"), s("password"));
+    let header = if !token.is_empty() {
+        format!("Bearer {token}")
+    } else {
+        format!(
+            "Basic {}",
+            base64::Engine::encode(
+                &base64::engine::general_purpose::STANDARD,
+                format!("{user}:{pass}")
+            )
+        )
+    };
+    let Some(who) = auth::from_header(&guard.cfg, Some(&header)) else {
+        // One message for a bad token and a bad password, so neither says
+        // which of the two exists.
+        return (axum::http::StatusCode::UNAUTHORIZED, "no").into_response();
+    };
+    let owner = who.is_owner();
+    let name = who.name().to_owned();
+    let id = guard.sessions.open(who);
+    // HttpOnly so a script on the page cannot read it; SameSite=Lax so it is
+    // not sent from another site. Not Secure: this is plain HTTP on a LAN, and
+    // a Secure cookie would simply never be stored.
+    let cookie = format!("{}={id}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000", auth::COOKIE);
+    (
+        [(axum::http::header::SET_COOKIE, cookie)],
+        Json(serde_json::json!({ "ok": true, "owner": owner, "name": name })),
+    )
+        .into_response()
+}
+
+async fn logout(
+    State(guard): State<std::sync::Arc<Guard>>,
+    headers: axum::http::HeaderMap,
+) -> axum::response::Response {
+    if let Some(id) =
+        auth::session_from_cookies(headers.get(axum::http::header::COOKIE).and_then(|v| v.to_str().ok()))
+    {
+        guard.sessions.close(id);
+    }
+    let cookie = format!("{}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0", auth::COOKIE);
+    ([(axum::http::header::SET_COOKIE, cookie)], axum::response::Redirect::to("/login"))
+        .into_response()
+}
+
+/// The sign-in page.
+///
+/// Deliberately not part of `ui/`: it has to render before anything is
+/// authorised, and the app's own modules all call `invoke` on the way up.
+const LOGIN_PAGE: &str = r#"<!doctype html>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Moose Rack</title>
+<style>
+ :root { color-scheme: dark }
+ body { margin:0; min-height:100vh; display:grid; place-items:center;
+        background:#14161a; color:#e8eaed;
+        font:14px/1.5 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif }
+ form { width:min(92vw,320px); display:grid; gap:10px }
+ h1 { font-size:17px; margin:0 0 6px; font-weight:600 }
+ p.hint { margin:0 0 10px; color:#9aa0a6; font-size:12px }
+ input { padding:9px 11px; border-radius:7px; border:1px solid #2a2e35;
+         background:#1b1e24; color:inherit; font:inherit; width:100% ; box-sizing:border-box }
+ input:focus { outline:2px solid #4c8dff; outline-offset:1px; border-color:transparent }
+ button { padding:9px 11px; border-radius:7px; border:0; background:#4c8dff; color:#fff;
+          font:inherit; font-weight:600; cursor:pointer }
+ button:disabled { opacity:.6; cursor:default }
+ .sep { display:flex; align-items:center; gap:10px; color:#666; font-size:11px;
+        text-transform:uppercase; letter-spacing:.08em }
+ .sep::before,.sep::after { content:""; flex:1; height:1px; background:#2a2e35 }
+ .err { color:#ff8a80; font-size:12px; min-height:1.4em }
+</style>
+<form id="f">
+  <h1>Moose Rack</h1>
+  <p class="hint">Sign in with your token, or with a username and password.</p>
+  <input name="token" type="password" placeholder="Token" autocomplete="off">
+  <div class="sep">or</div>
+  <input name="username" placeholder="Username" autocomplete="username">
+  <input name="password" type="password" placeholder="Password" autocomplete="current-password">
+  <button>Sign in</button>
+  <div class="err" id="e"></div>
+</form>
+<script>
+document.getElementById("f").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  const f = ev.target, b = f.querySelector("button"), e = document.getElementById("e");
+  b.disabled = true; e.textContent = "";
+  const body = Object.fromEntries(new FormData(f));
+  const r = await fetch("/login", {
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body),
+  });
+  if (r.ok) { location.href = "/"; return; }
+  b.disabled = false;
+  e.textContent = "Not recognised.";
+});
+</script>
+"#;
+
+async fn login_page() -> axum::response::Html<&'static str> {
+    axum::response::Html(LOGIN_PAGE)
+}
+
 /// The routes, as a function so tests can build one without a socket.
 /// The web UI, if a `ui/` directory was given.
 ///
@@ -828,6 +1012,12 @@ fn app(lib: Arc<Library>, media_dir: std::path::PathBuf, with_index: bool) -> Ro
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Args::parse();
+
+    // Before the library is even looked at: this is a calculator, not a server.
+    if let Some(plain) = args.hash_password.as_deref() {
+        println!("{}", auth::hash_password(plain));
+        return Ok(());
+    }
     let cfg = load_config(std::path::Path::new(&args.config))?;
     // A flag beats the file; the file beats nothing. `or` reads in that order.
     let pick = |flag: Option<String>, file: &Option<String>| flag.or_else(|| file.clone());
@@ -1002,6 +1192,26 @@ async fn main() -> Result<()> {
         app = web_app(Arc::new(web::WebState { state, ui_dir })).merge(app);
     }
 
+    // Everything above is routes; this is who may reach them. Applied to the
+    // merged router rather than to each half, so a route added to either is
+    // covered by construction rather than by remembering.
+    let guard = std::sync::Arc::new(Guard {
+        cfg: cfg.auth.clone(),
+        sessions: auth::Sessions::default(),
+    });
+    println!("auth       {}", guard.cfg.describe());
+    if guard.cfg.open() {
+        println!("           anyone who can reach the port has full access");
+    }
+    app = app
+        .merge(
+            Router::new()
+                .route("/login", get(login_page).post(login))
+                .route("/logout", get(logout).post(logout))
+                .with_state(guard.clone()),
+        )
+        .layer(axum::middleware::from_fn_with_state(guard.clone(), require_auth));
+
     let bind = cfg.server.bind.clone().unwrap_or(args.bind.clone());
     let mut addr: SocketAddr = bind
         .parse()
@@ -1083,6 +1293,230 @@ mod tests {
         let (lib, media) = fixture(d.path());
         let r = app(lib, media, true);
         (d, r)
+    }
+
+    /// The same router the binary builds, guard included.
+    ///
+    /// Built through the real middleware rather than by calling `from_header`
+    /// directly: the whole question is whether the routes are actually behind
+    /// it, and a unit test of the checker cannot answer that.
+    fn guarded(cfg: auth::AuthConfig) -> (tempdir::TempDir, Router) {
+        let d = tempdir::TempDir::new("svc-auth").unwrap();
+        let (lib, media) = fixture(d.path());
+        let guard = std::sync::Arc::new(Guard { cfg, sessions: auth::Sessions::default() });
+        let r = app(lib, media, true)
+            .merge(
+                Router::new()
+                    // Qualified: this module has its own `get` helper for
+                    // issuing requests, which shadows the router builder.
+                    .route("/login", axum::routing::get(login_page).post(login))
+                    .route("/logout", axum::routing::get(logout).post(logout))
+                    .with_state(guard.clone()),
+            )
+            .layer(axum::middleware::from_fn_with_state(guard, require_auth));
+        (d, r)
+    }
+
+    fn locked() -> auth::AuthConfig {
+        auth::AuthConfig {
+            token: Some("owner-secret".into()),
+            users: vec![auth::User {
+                name: "guest".into(),
+                password: auth::hash_password("hunter2"),
+            }],
+        }
+    }
+
+    /// Send a request with whatever headers a test wants.
+    async fn req(app: &Router, method: &str, path: &str, headers: &[(&str, &str)]) -> (StatusCode, String) {
+        let mut b = Request::builder().method(method).uri(path);
+        for (k, v) in headers {
+            b = b.header(*k, *v);
+        }
+        let r = app.clone().oneshot(b.body(Body::empty()).unwrap()).await.unwrap();
+        let status = r.status();
+        let bytes = axum::body::to_bytes(r.into_body(), usize::MAX).await.unwrap();
+        (status, String::from_utf8_lossy(&bytes).into_owned())
+    }
+
+    fn basic(user: &str, pass: &str) -> String {
+        use base64::Engine as _;
+        format!(
+            "Basic {}",
+            base64::engine::general_purpose::STANDARD.encode(format!("{user}:{pass}"))
+        )
+    }
+
+    /// With credentials configured, an anonymous request gets nothing.
+    ///
+    /// Every route, not a sample: the guard is a layer on the merged router
+    /// precisely so a route added later cannot miss it, and this is what proves
+    /// that held.
+    #[tokio::test]
+    async fn without_credentials_the_library_is_closed() {
+        let (_d, app) = guarded(locked());
+        for path in [
+            "/", "/api/roms", "/api/platforms", "/api/collections", "/api/firmware",
+            "/api/config", "/api/users/me", "/api/saves", "/api/roms/1",
+            "/api/roms/identifiers", "/media?path=/etc/passwd",
+        ] {
+            let (s, _) = req(&app, "GET", path, &[]).await;
+            assert_eq!(s, StatusCode::UNAUTHORIZED, "{path} answered without credentials");
+        }
+    }
+
+    /// Heartbeat stays open, or a bad token is indistinguishable from a machine
+    /// that is switched off.
+    #[tokio::test]
+    async fn the_heartbeat_answers_anyone() {
+        let (_d, app) = guarded(locked());
+        let (s, _) = req(&app, "GET", "/api/heartbeat", &[]).await;
+        assert_eq!(s, StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn the_token_opens_everything_and_a_wrong_one_opens_nothing() {
+        let (_d, app) = guarded(locked());
+        let ok = [("authorization", "Bearer owner-secret")];
+        let (s, _) = req(&app, "GET", "/api/roms", &ok).await;
+        assert_eq!(s, StatusCode::OK);
+        for bad in ["Bearer wrong", "Bearer ", "Bearer owner-secre", "owner-secret"] {
+            let (s, _) = req(&app, "GET", "/api/roms", &[("authorization", bad)]).await;
+            assert_eq!(s, StatusCode::UNAUTHORIZED, "{bad:?} got in");
+        }
+    }
+
+    #[tokio::test]
+    async fn a_username_and_password_open_the_library() {
+        let (_d, app) = guarded(locked());
+        let (s, _) = req(&app, "GET", "/api/roms", &[("authorization", &basic("guest", "hunter2"))]).await;
+        assert_eq!(s, StatusCode::OK);
+        for (u, pw) in [("guest", "wrong"), ("nobody", "hunter2"), ("", "")] {
+            let (s, _) = req(&app, "GET", "/api/roms", &[("authorization", &basic(u, pw))]).await;
+            assert_eq!(s, StatusCode::UNAUTHORIZED, "{u}:{pw} got in");
+        }
+    }
+
+    /// Configure nothing and nothing is checked -- so upgrading the binary does
+    /// not lock somebody out of their own library.
+    #[tokio::test]
+    async fn an_empty_auth_section_leaves_the_service_open() {
+        let (_d, app) = guarded(auth::AuthConfig::default());
+        let (s, _) = req(&app, "GET", "/api/roms", &[]).await;
+        assert_eq!(s, StatusCode::OK);
+    }
+
+    /// A browser cannot send a token in a header, so it trades one for a cookie.
+    #[tokio::test]
+    async fn login_returns_a_cookie_that_then_works() {
+        let (_d, app) = guarded(locked());
+        let r = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/login")
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"token":"owner-secret"}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(r.status(), StatusCode::OK);
+        let set = r.headers().get("set-cookie").unwrap().to_str().unwrap().to_owned();
+        assert!(set.contains("HttpOnly"), "a script must not be able to read it: {set}");
+        assert!(set.contains("SameSite=Lax"), "{set}");
+        let cookie = set.split(';').next().unwrap().to_owned();
+
+        let (s, _) = req(&app, "GET", "/api/roms", &[("cookie", &cookie)]).await;
+        assert_eq!(s, StatusCode::OK, "the cookie login did not carry");
+
+        // And a made-up one does not.
+        let (s, _) = req(&app, "GET", "/api/roms", &[("cookie", "moose_session=invented")]).await;
+        assert_eq!(s, StatusCode::UNAUTHORIZED);
+    }
+
+    #[tokio::test]
+    async fn a_bad_login_is_refused_without_saying_which_half_was_wrong() {
+        let (_d, app) = guarded(locked());
+        for body in [
+            r#"{"token":"nope"}"#,
+            r#"{"username":"guest","password":"nope"}"#,
+            r#"{"username":"nobody","password":"hunter2"}"#,
+            r#"{}"#,
+        ] {
+            let r = app
+                .clone()
+                .oneshot(
+                    Request::builder()
+                        .method("POST")
+                        .uri("/login")
+                        .header("content-type", "application/json")
+                        .body(Body::from(body))
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_eq!(r.status(), StatusCode::UNAUTHORIZED, "{body} was accepted");
+            assert!(r.headers().get("set-cookie").is_none(), "{body} got a session");
+        }
+    }
+
+    /// A browser asking for a page is sent to sign in; a client asking for JSON
+    /// gets a 401 it can report.
+    #[tokio::test]
+    async fn a_browser_is_redirected_and_a_client_is_told() {
+        let (_d, app) = guarded(locked());
+        let (s, _) = req(&app, "GET", "/", &[("accept", "text/html")]).await;
+        assert_eq!(s, StatusCode::SEE_OTHER, "a browser should land on the login page");
+        let (s, _) = req(&app, "GET", "/api/roms", &[("accept", "text/html")]).await;
+        assert_eq!(s, StatusCode::UNAUTHORIZED, "an API route must never redirect");
+    }
+
+    /// The login page renders before anyone has proved anything.
+    #[tokio::test]
+    async fn the_login_page_is_public() {
+        let (_d, app) = guarded(locked());
+        let (s, body) = req(&app, "GET", "/login", &[]).await;
+        assert_eq!(s, StatusCode::OK);
+        assert!(body.contains("Sign in"), "{body:.80}");
+    }
+
+    /// A guest may read the library through the UI's own IPC and may not
+    /// change it. One route, eighty commands, and the line runs between them.
+    #[tokio::test]
+    async fn a_guest_may_read_through_invoke_but_not_write() {
+        let (_d, app) = guarded(locked());
+        let post = |auth: String, cmd: &str| {
+            let app = app.clone();
+            let uri = format!("/invoke/{cmd}");
+            async move {
+                app.oneshot(
+                    Request::builder()
+                        .method("POST")
+                        .uri(uri)
+                        .header("authorization", auth)
+                        .header("content-type", "application/json")
+                        .body(Body::from("{}"))
+                        .unwrap(),
+                )
+                .await
+                .unwrap()
+                .status()
+            }
+        };
+        // The write is refused for the guest and reaches the backend for the
+        // owner. `set_list_art` with no argument is a 400 from the command
+        // itself -- which is the point: it got past the guard.
+        assert_eq!(post(basic("guest", "hunter2"), "set_list_art").await, StatusCode::FORBIDDEN);
+        assert_ne!(
+            post("Bearer owner-secret".into(), "set_list_art").await,
+            StatusCode::FORBIDDEN,
+            "the owner was refused their own settings"
+        );
+        // And an unknown command is owner-only, so a guest cannot probe for
+        // one that was added without being classified.
+        assert_eq!(post(basic("guest", "hunter2"), "brand_new").await, StatusCode::FORBIDDEN);
     }
 
     #[tokio::test]
