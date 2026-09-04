@@ -57,3 +57,35 @@ ui = "/home/frank/moose-rack-src/ui"
 # case: a different port on the same interface.
 bind = "0.0.0.0:8001"
 # port = 8001
+
+[auth]
+# Two ways in, because the client already speaks both. `src/api.rs` builds one
+# Authorization header at startup and sends it on every request: `Bearer <token>`
+# when a token is set, `Basic base64(user:pass)` otherwise. Nothing on a client
+# changes to turn this on -- give it the same credential and it keeps working.
+#
+# WITH NOTHING HERE, NOTHING IS CHECKED, and the service says so at startup.
+# That is deliberate: upgrading the binary should not lock somebody out of their
+# own library until they have read the release notes.
+
+# The owner. Full access: settings, artwork, downloads, everything.
+# token = "a long random string"
+
+# Everyone else. They can read the library and sync saves; they cannot change
+# settings, install artwork, or alter what the next person sees.
+#
+# Never a plain password. Generate the line with:
+#
+#     moose-service --hash-password 'their password'
+#
+# [[auth.users]]
+# name = "guest"
+# password = "pbkdf2-sha256$600000$...$..."
+
+# A browser can send neither header, so http://<host>:8001/login trades either
+# credential for a session cookie. Sessions are held in memory: a restart signs
+# everyone out, which costs one login and means there is no key to keep.
+#
+# This is plain HTTP on a LAN. A token on the wire is a token anyone on that
+# network can read; if that matters, put the whole thing behind WireGuard or
+# Tailscale and treat this as the second lock rather than the first.

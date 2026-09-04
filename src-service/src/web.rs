@@ -275,6 +275,9 @@ pub async fn invoke(
     axum::extract::Path(cmd): axum::extract::Path<String>,
     body: Option<Json<Value>>,
 ) -> axum::response::Response {
+    // Nothing about who is asking: `require_auth` refuses an owner-only command
+    // before the router ever reaches this, so a second check here would be a
+    // second rule to keep in step with the first.
     let args = body.map(|Json(v)| v).unwrap_or_else(|| json!({}));
     match dispatch(&st.state, &cmd, &args).await {
         Ok(v) => Json(v).into_response(),
@@ -473,6 +476,42 @@ mod tests {
         let have = arms();
         let missing: Vec<_> = called.difference(&have).collect();
         assert!(missing.is_empty(), "the UI calls these and dispatch does not answer: {missing:?}");
+    }
+
+    /// Every name a guest is allowed to call must be a command that exists.
+    ///
+    /// A typo in `READ_ONLY` grants nothing and is invisible: the command still
+    /// works for the owner, and the guest simply gets a 403 nobody traced.
+    #[test]
+    fn the_guest_allowlist_names_only_real_commands() {
+        let have = arms();
+        let unknown: Vec<_> =
+            crate::auth::READ_ONLY.iter().filter(|c| !have.contains(**c)).collect();
+        assert!(unknown.is_empty(), "READ_ONLY names commands that do not exist: {unknown:?}");
+    }
+
+    /// Nothing that writes may be on it.
+    ///
+    /// This is the dangerous direction. A read command left off the list costs
+    /// a guest a feature; a write command added to it hands a guest the
+    /// settings, and both are one careless line.
+    #[test]
+    fn nothing_that_writes_is_on_the_guest_allowlist() {
+        const WRITE_VERBS: &[&str] =
+            &["set_", "install_", "remove_", "fetch_", "delete_", "toggle_", "reset_",
+              "import_", "resolve_", "sync_", "download_", "scrape_", "cycle_", "clear_",
+              "sort_", "launch_", "android_"];
+        for cmd in crate::auth::READ_ONLY {
+            // `set_grid` computes a keyboard-navigation table from the geometry
+            // of what is on screen and stores nothing. It is the one exception,
+            // and it is named here rather than being quietly matched.
+            if *cmd == "set_grid" || *cmd == "sync_saves_plan" {
+                continue;
+            }
+            if let Some(v) = WRITE_VERBS.iter().find(|v| cmd.starts_with(**v)) {
+                panic!("{cmd:?} is on the guest allowlist and starts with {v:?}");
+            }
+        }
     }
 
     /// Tauri renames JS arguments; so must this, or `localOnly` arrives as a

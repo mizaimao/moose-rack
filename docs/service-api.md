@@ -225,9 +225,47 @@ answered inside the shim with `window.open`. Sent over the wire they would raise
 a window on the machine running the service, which is not the machine looking at
 the page.
 
-**There is no authentication.** Anyone who can reach the port can read the
-library and POST to `/invoke/`, which includes the settings writes. It is a LAN
-service on a home network and nothing more.
+**Authentication is two modes and one middleware.** See below.
+
+### Who may ask
+
+Two credentials, because `src/api.rs` already builds both: `Bearer <token>` when
+a token is configured, `Basic base64(user:pass)` otherwise. The server accepts
+whichever arrives.
+
+| | credential | may |
+| --- | --- | --- |
+| owner | `[auth] token` | everything |
+| user | `[[auth.users]]` name + password | read the library, sync saves |
+| browser | either, at `/login` | whatever that credential may |
+
+Passwords are PBKDF2-HMAC-SHA256, 600,000 rounds, per-password salt, stored as
+`pbkdf2-sha256$<rounds>$<salt>$<key>`. `moose-service --hash-password '...'`
+prints the line. A stored hash that does not parse **fails closed** -- a typo in
+the config must never be an open door, and there is a test for each malformed
+shape.
+
+**With no token and no users, nothing is checked**, and startup says so.
+Upgrading the binary should not lock somebody out of their own library.
+
+`/api/heartbeat` stays public, or a wrong credential is indistinguishable from a
+machine that is switched off. `/login` and `/logout` too, for obvious reasons.
+
+**The guest split is enforced in `require_auth`, not in the handler.** `/invoke/`
+is one route serving eighty commands and the line runs between the commands;
+deciding it in the middleware means it holds however the handler is rewritten,
+and it can be tested against a router that does not even have the route.
+`auth::READ_ONLY` names what a guest may call. Two tests defend it: every name
+on it must be a real dispatch arm, and nothing on it may start with a write verb
+-- because a read left off costs a guest a feature, while a write added to it
+hands a guest the settings.
+
+**Sessions are in memory.** A restart signs everyone out. No key to store, no
+token in a cookie, and the cost of being wrong is one login.
+
+**It is plain HTTP on a LAN.** A token on the wire is readable by anyone on that
+network. If that matters, WireGuard or Tailscale is the first lock and this is
+the second.
 
 ### What the server refuses, and why
 
