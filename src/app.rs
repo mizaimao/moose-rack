@@ -12,7 +12,7 @@
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
-use crate::{api, cache, config::Config, coremap::{self, CoreMap}, retroarch::RetroArch};
+use crate::{api, cache, config::Config, coremap::CoreMap, retroarch::RetroArch};
 use std::path::Path;
 
 /// Long-lived process state. The SQLite connection is not `Sync`, so it lives
