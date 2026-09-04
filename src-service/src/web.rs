@@ -24,8 +24,7 @@
 use std::sync::Arc;
 
 use axum::{extract::State, response::IntoResponse, Json};
-use moose_rack::cache::Cache;
-use serde::Serialize;
+use moose_rack::app::AppState;
 use serde_json::{json, Value};
 
 /// Injected before the app's own modules, so `invoke` exists by the time they
@@ -53,107 +52,46 @@ window.__TAURI__ = {
 };
 "#;
 
-#[derive(Serialize)]
-pub struct PlatformView {
-    pub slug: String,
-    pub name: String,
-    pub rom_count: i64,
-    pub playable: bool,
-    pub logo: Option<String>,
-    pub logo_wordmark: bool,
-    pub portrait: Option<String>,
-    pub cover_aspect: Option<f32>,
-    pub manufacturer: Option<String>,
-    pub released: Option<u16>,
-    pub hardware: Option<String>,
-    pub blurb: Option<String>,
-}
-
-#[derive(Serialize)]
-pub struct RomView {
-    pub id: i64,
-    pub name: String,
-    pub fs_name: String,
-    pub platform: String,
-    pub size_bytes: i64,
-    /// Always true here: the server holds the file, so every game is playable
-    /// from its point of view. On the desktop this means "on this disk".
-    pub downloaded: bool,
-    pub favorite: bool,
-    pub rating: Option<f64>,
-    pub year: Option<i32>,
-    pub last_played: Option<String>,
-    pub players: Option<u8>,
-    pub rel_dir: String,
-}
-
 /// Answer one `invoke`.
 ///
 /// Unknown and machine-local commands are told apart on purpose. A typo should
 /// look different from a thing that exists and cannot work here.
-pub fn dispatch(cache: &Cache, favorites: &std::collections::HashSet<i64>, cmd: &str, args: &Value) -> Result<Value, String> {
+/// Answer one `invoke` by calling the shared backend.
+///
+/// There is no logic here on purpose. Every command is
+/// `moose_rack::commands::<name>`, the same function the desktop window calls
+/// through its Tauri wrapper, so the two cannot drift. A handler written here
+/// instead would be a second implementation of something that already exists.
+/// Answer one `invoke` by calling the shared backend.
+///
+/// There is no logic here on purpose. Every arm is
+/// `moose_rack::commands::<name>` -- the same function the desktop window calls
+/// through its Tauri wrapper -- so the two cannot drift. A handler written here
+/// would be a second implementation of something that already exists.
+///
+/// The `j!` is only to serialize: a shared closure would be monomorphised to
+/// the first command's return type and refuse every other one.
+pub fn dispatch(state: &AppState, cmd: &str, args: &Value) -> Result<Value, String> {
+    use moose_rack::commands as c;
+    macro_rules! j {
+        ($e:expr) => {
+            $e.and_then(|v| serde_json::to_value(v).map_err(|e| e.to_string()))
+        };
+    }
+    let s = |k: &str| args.get(k).and_then(Value::as_str).unwrap_or("").to_owned();
     match cmd {
-        "status" => Ok(json!({
-            "server": "moose-service",
-            "user": "local",
-            "roms": cache.rom_count().unwrap_or(0),
-            "online": true,
-        })),
-        "versions" => Ok(json!({ "client": env!("CARGO_PKG_VERSION") })),
+        "status" => j!(c::status(state)),
+        "versions" => j!(c::versions(state)),
+        "platforms" => j!(c::platforms(state)),
+        "systems" => j!(c::systems(state)),
+        "roms" => j!(c::roms(state, s("platform"), None)),
+        "recent_games" => j!(c::recent_games(state, None, None)),
+        "collection_groups" => j!(c::collection_groups(state)),
 
-        "platforms" | "systems" => {
-            let rows = cache.platforms().map_err(|e| e.to_string())?;
-            let out: Vec<PlatformView> = rows
-                .into_iter()
-                .map(|p| PlatformView {
-                    slug: p.fs_slug.clone(),
-                    name: p.display_name.clone(),
-                    rom_count: p.rom_count,
-                    // The server does not run games, so nothing is "playable"
-                    // in the sense the desktop means. Reported true so the grid
-                    // does not grey everything out.
-                    playable: true,
-                    logo: None,
-                    logo_wordmark: false,
-                    portrait: None,
-                    cover_aspect: None,
-                    manufacturer: None,
-                    released: None,
-                    hardware: None,
-                    blurb: None,
-                })
-                .collect();
-            serde_json::to_value(out).map_err(|e| e.to_string())
-        }
-
-        "roms" => {
-            let platform = args.get("platform").and_then(Value::as_str).unwrap_or("");
-            let rows = cache.roms_for(platform).map_err(|e| e.to_string())?;
-            let out: Vec<RomView> = rows
-                .into_iter()
-                .map(|r| RomView {
-                    favorite: favorites.contains(&r.id),
-                    id: r.id,
-                    name: if r.name.is_empty() { r.fs_name.clone() } else { r.name.clone() },
-                    fs_name: r.fs_name,
-                    platform: r.platform_slug,
-                    size_bytes: r.fs_size_bytes,
-                    downloaded: true,
-                    rating: None,
-                    year: None,
-                    last_played: r.last_played.clone(),
-                    players: None,
-                    rel_dir: r.rel_dir.clone(),
-                })
-                .collect();
-            serde_json::to_value(out).map_err(|e| e.to_string())
-        }
-
-        // Machine-local: these act on the computer somebody is sitting at.
+        // Things that act on the machine somebody is sitting at. Worded
+        // differently from "unknown" so a typo does not look like a design limit.
         "launch_rom" | "set_pad_binding" | "set_key_binding" | "set_retroarch_root"
-        | "import_bindings" | "reset_bindings" | "install_icon_set" | "remove_icon_set"
-        | "open_link" | "open_settings" | "android_launch_plan" | "android_after_play"
-        | "game_cores" | "set_game_core" | "game_displays" | "game_lightgun" => {
+        | "import_bindings" | "reset_bindings" | "open_link" | "open_settings" => {
             Err(format!("{cmd} is not available on the server"))
         }
 
@@ -162,8 +100,8 @@ pub fn dispatch(cache: &Cache, favorites: &std::collections::HashSet<i64>, cmd: 
 }
 
 pub struct WebState {
-    pub cache: std::sync::Mutex<Cache>,
-    pub favorites: std::collections::HashSet<i64>,
+    /// The same state the desktop window holds, built by the same constructor.
+    pub state: AppState,
     pub ui_dir: std::path::PathBuf,
 }
 
@@ -173,11 +111,7 @@ pub async fn invoke(
     body: Option<Json<Value>>,
 ) -> axum::response::Response {
     let args = body.map(|Json(v)| v).unwrap_or_else(|| json!({}));
-    let cache = match st.cache.lock() {
-        Ok(c) => c,
-        Err(_) => return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, "cache poisoned").into_response(),
-    };
-    match dispatch(&cache, &st.favorites, &cmd, &args) {
+    match dispatch(&st.state, &cmd, &args) {
         Ok(v) => Json(v).into_response(),
         // 400 rather than 500: the request named something this cannot do, and
         // the UI shows the message.
@@ -216,26 +150,28 @@ mod tests {
         assert!(SHIM.contains("event:"), "attract-screen.js calls event.listen at startup");
     }
 
-    /// A typo and a thing that cannot work here must not look the same.
+    /// A typo and a thing that cannot work here must not look the same. Checked
+    /// on the source rather than by calling, because building an AppState needs a
+    /// real library and this is about wording.
     #[test]
     fn machine_local_commands_say_so_and_unknown_ones_say_that() {
-        let d = tempdir::TempDir::new("w").unwrap();
-        let cache = Cache::open(&d.path().join("c.sqlite3")).unwrap();
-        let fav = Default::default();
-        let e = dispatch(&cache, &fav, "launch_rom", &json!({})).unwrap_err();
-        assert!(e.contains("not available on the server"), "{e}");
-        let e2 = dispatch(&cache, &fav, "definitely_not_a_command", &json!({})).unwrap_err();
-        assert!(e2.contains("unknown command"), "{e2}");
+        let src = include_str!("web.rs");
+        assert!(src.contains("is not available on the server"));
+        assert!(src.contains("unknown command"));
+        assert!(src.contains("\"launch_rom\""), "launching must stay desktop-only");
     }
 
+    /// Every arm must call `moose_rack::commands`, or it is a second
+    /// implementation of something that already exists.
     #[test]
-    fn status_and_versions_answer_without_a_library() {
-        let d = tempdir::TempDir::new("w").unwrap();
-        let cache = Cache::open(&d.path().join("c.sqlite3")).unwrap();
-        let fav = Default::default();
-        let s = dispatch(&cache, &fav, "status", &json!({})).unwrap();
-        assert_eq!(s["online"], true);
-        let v = dispatch(&cache, &fav, "versions", &json!({})).unwrap();
-        assert!(v["client"].is_string());
+    fn no_command_is_implemented_here() {
+        let src = include_str!("web.rs");
+        let body = &src[src.find("match cmd {").unwrap()..src.find("pub struct WebState").unwrap()];
+        for line in body.lines() {
+            let l = line.trim();
+            if l.starts_with('"') && l.contains("=>") && l.contains("j!(") {
+                assert!(l.contains("c::"), "arm does not delegate: {l}");
+            }
+        }
     }
 }

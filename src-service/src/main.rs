@@ -953,17 +953,11 @@ async fn main() -> Result<()> {
     // types the address wants the app, not a summary of it.
     if let Some(ui) = ui_path.as_deref() {
         let ui_dir = std::path::PathBuf::from(ui);
-        let cache_path = std::path::Path::new(&root).join("web-cache.sqlite3");
-        let mut cache = moose_rack::cache::Cache::open(&cache_path)?;
-        let n = cache.replace_from_esde(&scan_games)?;
-        println!("ui         {} ({n} games cached at {})", ui_dir.display(), cache_path.display());
-        let favorites = fav_ids.clone();
-        app = web_app(Arc::new(web::WebState {
-            cache: std::sync::Mutex::new(cache),
-            favorites,
-            ui_dir,
-        }))
-        .merge(app);
+        // The same constructor the desktop app uses.
+        let state = moose_rack::app::AppState::from_config()
+            .context("building app state for the web UI")?;
+        println!("ui         {}", ui_dir.display());
+        app = web_app(Arc::new(web::WebState { state, ui_dir })).merge(app);
     }
 
     let bind = cfg.server.bind.clone().unwrap_or(args.bind.clone());
