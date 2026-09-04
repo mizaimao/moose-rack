@@ -145,3 +145,4 @@ assets/fonts/*
 /inventory.db-wal
 /inventory.db-shm
 /dats/
+/moose-service.toml
