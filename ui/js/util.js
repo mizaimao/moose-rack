@@ -22,7 +22,7 @@ export function row(label, value) {
   return `<dt>${label}</dt><dd>${escapeHtml(String(value))}</dd>`;
 }
 
-/// RomM stores ratings 0-100; show five stars plus the raw number.
+/// Ratings are stored 0-100; show five stars plus the raw number.
 /// Five stars filled to `rating` out of 100.
 ///
 /// Two rows of the same five characters, one over the other, the top one

@@ -120,8 +120,8 @@ export function credentialDialog({ title, note, fields, verify }) {
 /// The server box: URL, token, and a real connection check.
 export async function editServer(current) {
   const out = await credentialDialog({
-    title: "RomM server",
-    note: "A client token is preferred over a password. Create one in RomM with roms.read, platforms.read, collections.read, assets.read/write and devices.read/write.",
+    title: "Library server",
+    note: "A client token is preferred over a password. A moose-service library needs no credentials at all — leave both blank.",
     fields: [
       { field: "server_url", label: "Address", value: current.server_url, placeholder: "http://dev.lan" },
       { field: "server_token", label: "Token", secret: true, isSet: current.server_token_set },

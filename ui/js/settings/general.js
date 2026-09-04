@@ -52,7 +52,7 @@ export const html = `      <h4>RetroArch</h4>
 
       <h4>Server</h4>
       <div class="srow">
-        <label>RomM server</label>
+        <label>Library server</label>
         <div class="ctl">
           <button class="cred-open" data-cred="server">Edit…</button>
           <span class="cred-summary" data-cred-summary="server"></span>

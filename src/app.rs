@@ -273,6 +273,18 @@ pub fn scan_into(
 ) -> anyhow::Result<Scan> {
     let (games, skipped) = crate::esde::scan(layout, map)?;
     let written = store.replace_from_esde(&games)?;
+    // The scan knows a directory, not a console. Without this the grid reads
+    // "snes snes 876 games", because the only thing that ever filled the
+    // display name in was a server sync -- and a library served from an ES-DE
+    // tree has no server to sync from.
+    let names: Vec<(String, String)> = games
+        .iter()
+        .map(|g| g.platform_slug.as_str())
+        .collect::<std::collections::BTreeSet<_>>()
+        .into_iter()
+        .filter_map(|slug| map.display_name(slug).map(|n| (slug.to_owned(), n.to_owned())))
+        .collect();
+    store.name_platforms(&names)?;
     let folded = store.absorb_local_into_server()?;
     Ok(Scan { written, folded, games, skipped })
 }
@@ -297,10 +309,40 @@ mod scan_tests {
     fn map() -> CoreMap {
         serde_json::from_str(
             r#"{"default_core_by_server_platform": {"snes": "snes9x"},
-                "systems": {"snes": {"server_platforms": ["snes"],
+                "systems": {"snes": {"server_platforms": ["snes"], "fullname": "Super Nintendo",
                             "extensions": [".sfc"], "emulators": []}}}"#,
         )
         .unwrap()
+    }
+
+    /// The grid said "snes snes 876 games".
+    ///
+    /// A scan knows the directory and nothing else, so it wrote `snes` as the
+    /// display name too. On the desktop a server sync overwrote that with a
+    /// real name and hid it; on a library served from an ES-DE tree there is no
+    /// sync, and every console on the page was a lowercase directory.
+    #[test]
+    fn consoles_get_their_real_names_from_the_core_map() {
+        let (root, layout) = tree("names");
+        let mut store = cache::Cache::open(&root.join("cache.sqlite3")).unwrap();
+        scan_into(&mut store, &layout, &map()).unwrap();
+        let shown: Vec<String> =
+            store.platforms().unwrap().into_iter().map(|p| p.display_name).collect();
+        assert_eq!(shown, ["Super Nintendo"], "the console is still named after its folder");
+        std::fs::remove_dir_all(&root).ok();
+    }
+
+    /// A name a sync supplied is not replaced by the table's fallback.
+    #[test]
+    fn a_name_already_set_is_left_alone() {
+        let (root, layout) = tree("keepname");
+        let mut store = cache::Cache::open(&root.join("cache.sqlite3")).unwrap();
+        scan_into(&mut store, &layout, &map()).unwrap();
+        store.name_platforms(&[("snes".into(), "Something Else".into())]).unwrap();
+        let shown: Vec<String> =
+            store.platforms().unwrap().into_iter().map(|p| p.display_name).collect();
+        assert_eq!(shown, ["Super Nintendo"], "the fallback overwrote a name that was already set");
+        std::fs::remove_dir_all(&root).ok();
     }
 
     #[test]

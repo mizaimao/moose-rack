@@ -376,7 +376,7 @@ main {
      The row is a fixed 42px, so a wrapped label does not make it taller — it
      spills out of it, and every other item in the row loses its baseline. On a
      handheld at 832 CSS pixels that is not an edge case: "My collections",
-     "RomM browse", "Take offline" and "Platform info" all wrapped at once and
+     "Browse by", "Take offline" and "Platform info" all wrapped at once and
      the row stopped reading as a row. Narrow is handled by scrolling below. */
   white-space: nowrap;
   /* A flex item's floor is its content, which would push the row wider than
@@ -1948,7 +1948,7 @@ body.resizing-detail { user-select: none; cursor: col-resize; }
 }
 
 /* ---- Favorites ----------------------------------------------------------
-   RomM has no per-game favorite: a favorite there is a collection, either
+   There is no per-game favorite: a favorite is a collection, either
    one the server flags or one named with a star — which is what the
    "★ Best of …" collections on this library are. A game in one of those sorts
    to the top of its console page and is marked here.

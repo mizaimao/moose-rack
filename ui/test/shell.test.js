@@ -680,14 +680,14 @@ describe("the order of the tabs", () => {
   /// knows — and it sat second from the left, in front of History and level
   /// with the collections you made yourself. It is the one you reach for
   /// least, so it goes to the end.
-  test("RomM browse is last, and says whose collections it is", () => {
+  test("Browse by is last, and says what it groups on", () => {
     const ids = tabs.SECTIONS.map((s) => s.id);
     assert.equal(ids.at(-1), "browse", "Browse is not the last tab");
     assert.deepEqual(ids, ["library", "mine", "history", "browse"]);
     assert.equal(
       tabs.SECTIONS.find((s) => s.id === "browse").label,
-      "RomM browse",
-      "the tab still calls itself Browse, which every tab here does"
+      "Browse by",
+      "the tab calls itself Browse alone, which every tab here does"
     );
   });
 });
