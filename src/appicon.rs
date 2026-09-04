@@ -59,7 +59,7 @@ pub fn set(id: &str) -> Result<&'static AppIcon> {
     let Some(icon) = find(id) else {
         bail!("{id} is not an icon this build ships");
     };
-    crate::config::set_table_entry(crate::config::path_str(), "appearance", "app_icon", id)?;
+    crate::config::set_table_entry(&crate::config::path_str(), "appearance", "app_icon", id)?;
     Ok(icon)
 }
 

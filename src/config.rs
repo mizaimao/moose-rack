@@ -743,7 +743,7 @@ impl RetroArchCfg {
 /// Which config file this process is using.
 ///
 /// It used to be the literal `config.toml`, resolved against the working
-/// directory, in about twenty places. That is right for an app started by its
+/// directory, in twenty-six places. That is right for an app started by its
 /// icon and wrong for a service: systemd sets the working directory, and the
 /// library service reads a file named in `moose-service.toml`. The state was
 /// built from the named file while `config_fields`, `status` and every setting
@@ -751,33 +751,41 @@ impl RetroArchCfg {
 /// unconfigured app on a server that was correctly configured, and an edit
 /// would have been written to a file nothing reads.
 ///
-/// A process-wide value rather than an argument because that is what it is:
-/// decided once at startup, true for everything afterwards. Several of the
-/// readers are `fn()` with no state to thread it through.
-static CONFIG_PATH: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
-
-/// Name the config file, once, before anything reads it.
+/// Process-wide rather than an argument because that is what it is: decided
+/// once at startup, true for everything afterwards, and several of the readers
+/// are `fn()` with no state to thread it through.
 ///
-/// Later calls are ignored rather than an error: the first caller is the one
-/// that started the process, and nothing else has standing to move it.
+/// A lock rather than a `OnceLock`. With `get_or_init` the first *reader* fixes
+/// the value, so anything that happened to ask before startup finished would
+/// silently pin the default and make `set_path` a no-op -- a failure that looks
+/// exactly like the bug this exists to fix, and leaves no trace.
+static CONFIG_PATH: std::sync::RwLock<Option<PathBuf>> = std::sync::RwLock::new(None);
+
+/// Name the config file. Called by `AppState::from_config_at` before it reads.
 pub fn set_path(path: PathBuf) {
-    let _ = CONFIG_PATH.set(path);
+    if let Ok(mut w) = CONFIG_PATH.write() {
+        *w = Some(path);
+    }
 }
 
-/// The config file, defaulting to `config.toml` beside the working directory --
+/// The config file, defaulting to `config.toml` in the working directory --
 /// which is what a desktop launch wants and what every caller assumed.
-pub fn path() -> &'static Path {
-    CONFIG_PATH.get_or_init(|| PathBuf::from("config.toml")).as_path()
+pub fn path() -> PathBuf {
+    CONFIG_PATH
+        .read()
+        .ok()
+        .and_then(|g| g.clone())
+        .unwrap_or_else(|| PathBuf::from("config.toml"))
 }
 
-/// The same, as a `&str` for the writers that take one.
-pub fn path_str() -> &'static str {
-    path().to_str().unwrap_or("config.toml")
+/// The same, for the writers that take a `&str`.
+pub fn path_str() -> String {
+    path().to_string_lossy().into_owned()
 }
 
 impl Config {
     pub fn load() -> Result<Self> {
-        Self::load_from(path())
+        Self::load_from(&path())
     }
 
     /// True when `load` fell back to defaults because no file was there.
@@ -1794,6 +1802,9 @@ mod config_path_tests {
             ("appicon.rs", include_str!("appicon.rs")),
             ("app.rs", include_str!("app.rs")),
         ] {
+            // Production code only. A test that puts the default back is
+            // naming the default on purpose.
+            let src = src.split("#[cfg(test)]").next().unwrap_or(src);
             for (i, line) in src.lines().enumerate() {
                 if !line.contains("\"config.toml\"") {
                     continue;
@@ -1812,11 +1823,26 @@ mod config_path_tests {
         }
     }
 
-    /// The default is what a desktop launch has always used.
+    /// Setting it changes what every reader sees.
+    ///
+    /// The literal scan above cannot catch the actual failure, which was that
+    /// `set_path` was never called at all: no literal, no reader, nothing to
+    /// find, and a server that reported `config_exists: false` while holding a
+    /// perfectly good config.
     #[test]
-    fn the_default_is_the_working_directory() {
-        // Not `set_path` here: it is a OnceLock and a test that set it would
-        // decide the value for every other test in this binary.
+    fn naming_a_file_changes_what_is_read() {
+        let dir = std::env::temp_dir().join("moose-config-path-test");
+        std::fs::create_dir_all(&dir).unwrap();
+        let f = dir.join("elsewhere.toml");
+        std::fs::write(&f, "[media]\nlist_art = \"miximages\"\n").unwrap();
+
+        super::set_path(f.clone());
+        assert_eq!(super::path(), f);
+        assert!(super::Config::exists(&super::path_str()), "the named file is not seen");
+        assert_eq!(super::Config::load().unwrap().media.list_art, "miximages");
+
+        // Put it back, so the rest of this binary sees the default.
+        super::set_path(std::path::PathBuf::from("config.toml"));
         assert_eq!(super::path().file_name().unwrap(), "config.toml");
     }
 }
