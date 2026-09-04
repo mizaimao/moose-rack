@@ -1056,6 +1056,17 @@ export function observeCovers() {
   coverObserver?.disconnect();
   coverReleaser?.disconnect();
   coverQueue = [];
+  // A card marked `loaded` but holding no picture was queued by the observers
+  // being replaced, and that queue has just been thrown away. Leaving the mark
+  // on means the new observers skip it, so its cover is never asked for again
+  // and the card keeps its placeholder until something re-renders the list.
+  //
+  // Reachable whenever this runs twice inside the 80ms before a flush -- a
+  // resize right after a render, which is a window being restored or a handheld
+  // being turned. Cards that do hold a picture keep the mark: they have nothing
+  // left to fetch.
+  for (const c of el.list.querySelectorAll(".gcard[data-loaded]"))
+    if (!holdsPicture(c.querySelector(".art"))) delete c.dataset.loaded;
   coverObserver = new IntersectionObserver(
     (entries) => {
       for (const e of entries) {
