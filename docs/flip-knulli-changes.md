@@ -288,6 +288,31 @@ the correct `Landstalker (USA).zip`. See [library-sync.md](library-sync.md).
 
 Still behind: 56 merged games, the Home Alone fix, the two Oddworld discs.
 
+**Artwork from the SSD, 2026-09-04.** `tools/push-flip-media.py`. 2,006 images
+across — snes 1,215, nes 583, megadrive 176, gba 17, gb 6, gamegear 6, one each
+to fbneo, psx and dreamcast — with 2,005 `<image>` tags and 7 new entries
+written into the gamelists. Favourite counts unchanged on every system, which is
+checked before the file is sent: a rewrite that does not add up is refused.
+
+**PC Engine was showing box scans, not miximages.** All 288 of its images were
+the wrong picture — 89 at 580x680, 177 at 680x680, 22 full-size 1280x960 — where
+every other system holds the 640x480 miximage. Nothing could catch that: a file
+of the right name in the right folder passes every check there was. `--check-size`
+reads each image's PNG header on the device and treats anything that is not
+640x480 as wrong; all 288 were replaced from the SSD's miximages.
+
+That check then found the rest: about 40 more images are box art (640x640 and
+odd portrait sizes) on fbneo, snes, neogeo, gb, gba, gbc and psx, and about
+2,900 are the right picture at 1280x960, never downscaled on the way in —
+megadrive 907, nes 1,201, snes 757. Correct on screen, four times the pixels.
+
+**ES must be restarted with `killall -9`, not `killall`.** It holds every
+gamelist in memory and writes the whole file back on a clean exit, so a normal
+signal replaces the tags that were just written with its stale copy. The `-9`
+discards whatever ES held instead — play counts, and any favourite toggled since
+it started — which is the cheaper of the two losses. `S31emulationstation`
+brings it back in about ten seconds.
+
 ## Where it stands
 
     hotkeys          ON            hotkey-app       ON
