@@ -1,4 +1,4 @@
-// Browsing RomM's collections.
+// Browsing the server's collections.
 //
 // These are the server's groupings, not ours — genres, franchises, companies,
 // series and any hand-made lists, mirrored by `sync`. Three levels: groups →
@@ -51,7 +51,7 @@ function topBar(title, { filter = true } = {}) {
 
 export async function showCollectionGroups({ exclude = [] } = {}) {
   trail.length = 0;
-  topBar("RomM browse", { filter: false });
+  topBar("Browse by", { filter: false });
   resetGames("Pick a group on the left.");
 
   // `user` lives in its own tab now, so showing it here too would be the same
@@ -60,7 +60,7 @@ export async function showCollectionGroups({ exclude = [] } = {}) {
     (g) => !exclude.includes(g.group)
   );
   if (!groups.length) {
-    region("picker").innerHTML = `<div class="empty">No collections on the server. Run a sync, or make one in RomM.</div>`;
+    region("picker").innerHTML = `<div class="empty">No collections on the server. Add a list to its collections folder, or run a sync.</div>`;
     return;
   }
 

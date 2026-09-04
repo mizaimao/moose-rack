@@ -189,7 +189,7 @@ describe("where the box sits", () => {
 });
 
 describe("pages with nothing to search", () => {
-  /// History is three charts and the top of RomM browse is five groups you can
+  /// History is three charts and the top of Browse by is five groups you can
   /// read at a glance. A search box over either is a control that does
   /// nothing, which is worse than no control.
   let shell;

@@ -1,4 +1,4 @@
-// The top-level sections: Library, My collections, History, RomM browse.
+// The top-level sections: Library, My collections, History, Browse by.
 //
 // Three views that were previously reached through the same header button and a
 // drill-down, which meant "my six hand-made collections" and "one thousand and
@@ -16,7 +16,7 @@ import { showHistory } from "./history.js";
 import { shellMode } from "./shell.js";
 
 /// `user` and `smart` are collections someone made — by hand or as a saved
-/// filter. Everything else RomM generates from metadata: genre, franchise,
+/// filter. Everything else is derived from metadata: genre, franchise,
 /// company. Those are worth browsing but they are not *yours*, and the
 /// distinction is the whole reason for two tabs rather than one.
 export const SECTIONS = [
@@ -56,11 +56,11 @@ export const SECTIONS = [
       },
   {
     id: "browse",
-    // "Browse" said nothing — every tab here browses something. These are the
-    // server's own groupings: genres, franchises, companies, mirrored from
-    // RomM rather than made by anyone. Naming it after where it comes from is
-    // the difference between it and the tab above.
-    label: "RomM browse",
+    // "Browse" alone said nothing — every tab here browses something. These
+    // are groupings derived from metadata: companies, series, franchises. They
+    // are worth browsing but nobody made them, and naming what they group by is
+    // the difference between this and the tab above.
+    label: "Browse by",
     open: () => showCollectionGroups({ exclude: ["user"] }),
   },
 ];

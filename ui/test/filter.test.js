@@ -21,7 +21,7 @@ let dom, filter, library, state, el, backend, arrangeCurrentList;
 /// and redraw when it answers.
 const settle = () => new Promise((r) => setTimeout(r, 0));
 
-// `players` is the most a game supports, parsed from RomM's free text in Rust.
+// `players` is the most a game supports, parsed from free text in Rust.
 // Delta has none on purpose: two thirds of the real library has no player
 // count, and that case decides whether the filter is useful or noise.
 const ROWS = [
