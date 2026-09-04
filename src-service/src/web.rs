@@ -172,6 +172,12 @@ pub async fn dispatch(state: &AppState, cmd: &str, args: &Value) -> Result<Value
         "icon_sets" => j!(c::icon_sets(state).await),
         "set_icon_set" => j!(c::set_icon_set(state, p!("dir"))),
         "remove_icon_set" => j!(c::remove_icon_set(state, p!("dir"))),
+        // Fetching console pictures writes into the server's own media tree,
+        // which is a thing a server should do -- these were refused for a
+        // while only because they sat next to the dock-icon commands, which
+        // really are about the machine somebody is sitting at.
+        "install_icon_set" => j!(c::install_icon_set(state, p!("dir"), &|_| {}).await),
+        "fetch_icons" => j!(c::fetch_icons(state, &|_| {}).await),
         "bios_status" => j!(c::bios_status(state).await),
         "disk_usage" => j!(c::disk_usage(state).await),
         "check_update" => j!(c::check_update(state).await),
@@ -222,7 +228,6 @@ pub async fn dispatch(state: &AppState, cmd: &str, args: &Value) -> Result<Value
         "launch_rom" | "set_retroarch_root" | "open_link" | "open_settings"
         | "sync_library" | "sync_bios" | "download_rom" | "download_set"
         | "download_estimate" | "scrape_missing" | "app_icons" | "set_app_icon"
-        | "install_icon_set" | "fetch_icons"
         | "android_launch_plan" | "android_sync_before" | "android_after_play" => {
             Err(format!("{cmd} is not available on the server"))
         }
