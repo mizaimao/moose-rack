@@ -167,6 +167,32 @@ there and leave a one-line wrapper behind in `src-tauri` — that is what the ot
 3. Run the tests. `every_command_the_ui_invokes_has_an_arm` scans `ui/js` and
    fails on anything that would answer "unknown command".
 
+### The UI needs a library, and it is the one this service was given
+
+`AppState::from_config_at` builds the state the desktop app holds; the service
+then calls `point_at(&layout)` so `roms_dir` and `esde_media` are *this*
+service's, whatever `config.toml` said. One source of truth for where the
+library is. `media_dir` is left alone -- it is where the app writes art indexes
+and fetched icon sets, and an ES-DE tree need not be writable.
+
+`[library] app_config` names that `config.toml`, for the parts of the UI that
+are not the library: theme, per-game cores, achievements. Optional. Without it
+the defaults apply and the library still lists, because the library did not come
+from there.
+
+The UI reads a sqlite metadata cache, not the scan the API answers from, so the
+service rescans into it at startup -- `app::scan_into`, the same three calls
+`scan-esde` makes. The filesystem is the truth and the cache is derived, which
+is the rule the rest of this file already follows. A failure is printed and not
+fatal: the API half is unaffected, and a stale list beats a service that will
+not start.
+
+**Do not write those three calls out again.** `scan-esde` did, left out
+`absorb_local_into_server`, and the CLI's scan sat beside the rows a server sync
+had already stored -- 11,062 against 11,473 in a library of about 11,500, every
+shared game drawn twice. `both_callers_go_through_scan_into` fails on a direct
+`replace_from_esde`.
+
 ### Traps in the bridge
 
 **JavaScript sends `localOnly`; Rust wants `local_only`.** The `#[command]`
