@@ -41,6 +41,17 @@ inventory = "/home/frank/moose-library/inventory.db"
 # serves a plain status page instead.
 ui = "/home/frank/moose-rack-src/ui"
 
+# The app's own config.toml, read for the things that are not the library:
+# theme, per-game cores, achievements. Relative paths are resolved against the
+# working directory, which under systemd is whatever WorkingDirectory says --
+# name it absolutely.
+#
+# The library paths above are NOT repeated in it. Whatever it says about where
+# the games are is overridden by this file, so the two cannot disagree.
+#
+# Optional. Without it the UI runs on defaults and still lists the library.
+# app_config = "/home/frank/moose-library/config.toml"
+
 [server]
 # Interface and port. `port` overrides whatever `bind` says, which is the common
 # case: a different port on the same interface.
