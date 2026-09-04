@@ -137,7 +137,7 @@ impl AppState {
     }
 
     pub fn from_config() -> anyhow::Result<Self> {
-        Self::from_config_at(crate::config::path())
+        Self::from_config_at(&crate::config::path())
     }
 
     /// The same, from a named file.
@@ -147,6 +147,13 @@ impl AppState {
     /// working directory is whatever systemd set. The service passes the path
     /// it was given.
     pub fn from_config_at(path: &Path) -> anyhow::Result<Self> {
+    // Before anything reads it. `config_fields`, `status`, `config_findings`
+    // and every setting writer ask `config::path()`, and if that still points
+    // at the working directory the Settings page describes a different file
+    // from the one this state was built from -- which is how a correctly
+    // configured server came to report `config_exists: false`, and how an edit
+    // made in Settings would have been written somewhere nothing reads.
+    crate::config::set_path(path.to_path_buf());
     let cfg = Config::load_from(path).unwrap_or_default();
     let store = crate::cache::Cache::open(Path::new(crate::commands::CACHE_DB)).expect("opening metadata cache");
     // Archive verification depends on the server's exclusion lists; load the
@@ -311,6 +318,35 @@ mod scan_tests {
                             "extensions": [".sfc"], "emulators": []}}}"#,
         )
         .unwrap()
+    }
+
+    /// Building the state names the config file for everything that reads one.
+    ///
+    /// This is the assertion that was missing. The path plumbing was all in
+    /// place and `set_path` was simply never called, so Settings went on
+    /// reading `config.toml` in the working directory and reported an
+    /// unconfigured app on a server holding a perfectly good config. Nothing
+    /// scanning for literals can see a call that is not there.
+    #[test]
+    fn building_the_state_names_the_config_file() {
+        let (root, _layout) = tree("cfgpath");
+        let cfg = root.join("named.toml");
+        std::fs::write(&cfg, "[media]\nlist_art = \"3dboxes\"\n").unwrap();
+        // Built where the cache and any seeded files land inside the scratch
+        // tree rather than the repo.
+        let cwd = std::env::current_dir().unwrap();
+        std::env::set_current_dir(&root).unwrap();
+        let built = AppState::from_config_at(&cfg);
+        let seen = crate::config::path();
+        let fields = crate::commands::config_fields();
+        crate::config::set_path(PathBuf::from("config.toml"));
+        std::env::set_current_dir(cwd).unwrap();
+
+        assert!(built.is_ok(), "state did not build: {:?}", built.err());
+        assert_eq!(seen, cfg, "the config file was not named for other readers");
+        let fields = fields.expect("config_fields");
+        assert!(fields.config_exists, "Settings would say there is no config");
+        std::fs::remove_dir_all(&root).ok();
     }
 
     /// The grid said "snes snes 876 games".
