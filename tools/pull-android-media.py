@@ -21,6 +21,13 @@ the SSD is the copy that has been audited and the phone's is not.
 Transfers go through one `tar` stream per batch rather than one `adb pull` per
 file: several thousand small PNGs pulled individually spend all their time in
 round trips.
+
+Extraction leaves a ``._<name>`` sidecar beside every file: the SSD is exFAT,
+macOS spills extended attributes into those, and the device has none of them
+(0 there, 35,010 here). ``COPYFILE_DISABLE=1`` does not stop it -- measured, not
+assumed. So they are swept up afterwards rather than prevented:
+
+    tools/pull-android-media.py --clean-appledouble   delete them
 """
 
 import argparse
@@ -108,6 +115,38 @@ def remote_listing(root):
     return rel
 
 
+def clean_appledouble(dest, dry_run):
+    """Remove the `._<name>` files macOS wrote beside the real ones.
+
+    Only files whose name begins with `._` *and* which sit beside a real file of
+    the same name, so nothing that merely happens to be named that way is
+    touched. They hold extended attributes for a filesystem that has none.
+    """
+    doomed, bytes_ = [], 0
+    for p in dest.rglob("._*"):
+        if not p.is_file():
+            continue
+        # The sidecar's partner. Without this check a file legitimately named
+        # `._something` with no partner would be deleted too.
+        if not (p.parent / p.name[2:]).exists():
+            continue
+        doomed.append(p)
+        bytes_ += p.stat().st_size
+    print(f"  {len(doomed)} sidecars, {bytes_ / 1048576:.1f} MB under {dest}")
+    if dry_run:
+        for p in doomed[:5]:
+            print(f"    {p.relative_to(dest)}")
+        print("  dry run, nothing deleted")
+        return 0
+    for p in doomed:
+        try:
+            p.unlink()
+        except OSError as e:
+            print(f"    could not delete {p}: {e}")
+    print(f"  deleted {len(doomed)}")
+    return 0
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dry-run", action="store_true")
@@ -126,7 +165,17 @@ def main():
         help="poll until the device is authorized, then run. Arm this and walk away: "
         "the prompt needs a hand on the device, but nothing after it does.",
     )
+    ap.add_argument(
+        "--clean-appledouble",
+        action="store_true",
+        help="delete the ._ sidecars macOS left in the destination and stop. "
+        "They are extended-attribute spill onto a filesystem that cannot hold "
+        "them, they carry nothing, and they cost 137 MB here.",
+    )
     args = ap.parse_args()
+
+    if args.clean_appledouble:
+        return clean_appledouble(Path(args.dest), args.dry_run)
 
     ok, info = device_ready()
     if not ok and args.wait:
