@@ -1801,6 +1801,10 @@ mod config_path_tests {
             ("commands.rs", include_str!("commands.rs")),
             ("appicon.rs", include_str!("appicon.rs")),
             ("app.rs", include_str!("app.rs")),
+            // The desktop shell too: `fetch_icons` lived there and wrote the
+            // chosen icon set to a literal `config.toml`, which on a service is
+            // a file nothing reads.
+            ("src-tauri/lib.rs", include_str!("../src-tauri/src/lib.rs")),
         ] {
             // Production code only. A test that puts the default back is
             // naming the default on purpose.

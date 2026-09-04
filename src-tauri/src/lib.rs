@@ -24,7 +24,7 @@ use std::path::{Path, PathBuf};
 
 use tauri::{Emitter, Manager, State};
 
-use moose_rack::{cache, config::Config, coremap, download, media, savesync, shaders, theme, util};
+use moose_rack::{cache, config::Config, coremap, download, media, savesync, shaders};
 
 
 use moose_rack::app::AppState;
@@ -696,93 +696,19 @@ async fn install_icon_set(
     state: State<'_, AppState>,
     dir: String,
 ) -> CmdResult<String> {
-    fetch_icon_set(&app, &state, &dir).await
+    moose_rack::commands::install_icon_set(&state, dir, &progress(app)).await
 }
 
-async fn fetch_icon_set(
-    app: &tauri::AppHandle,
-    state: &State<'_, AppState>,
-    dir: &str,
-) -> CmdResult<String> {
-    let art = moose_rack::iconart::of(dir)
-        .ok_or_else(|| format!("no artwork recorded for {dir}"))?;
-    let slugs: Vec<String> = {
-        let cache = state.cache.lock().map_err(err)?;
-        cache.platforms().map_err(err)?.into_iter().map(|p| p.fs_slug).collect()
-    };
-    let http = state
-        .client
-        .as_ref()
-        .map(|c| c.http().clone())
-        .unwrap_or(util::http_client(None).map_err(err)?);
-
-    // Start from nothing. A set fetched under an older mapping has pictures in
-    // folders this one does not write, and leaving them means "Hardware" goes
-    // on showing whatever the previous table filed there.
-    let _ = theme::remove_set(&state.media_dir, dir);
-
-    let wanted = theme::esde_names_for(&state.map, &slugs);
-    let total: usize = art.looks.len() * wanted.len();
-    let mut done = 0usize;
-    let mut per_style: Vec<(String, usize)> = Vec::new();
-
-    for look in &art.looks {
-        let out = theme::set_dir(&state.media_dir, dir, &look.id);
-        std::fs::create_dir_all(&out).map_err(err)?;
-        let mut written = 0usize;
-        for (slug, names) in &wanted {
-            done += 1;
-            if done.is_multiple_of(8) {
-                let _ = app.emit("icons-progress", format!("{done} of {total}…"));
-            }
-            // A theme files a console under whichever ES-DE name it knows, so
-            // try each rather than assuming our slug is it.
-            for name in names {
-                let Some(url) = art.url(&look.id, name) else { continue };
-                let Ok(resp) = http.get(&url).send().await else { continue };
-                if !resp.status().is_success() {
-                    continue;
-                }
-                let Ok(bytes) = resp.bytes().await else { continue };
-                if std::fs::write(out.join(format!("{slug}.{}", look.ext)), &bytes).is_ok() {
-                    written += 1;
-                }
-                break;
-            }
-        }
-        if written == 0 {
-            // A style folder with nothing in it is one the Select button would
-            // land on and show an empty grid. Better it does not exist: the
-            // rotation offers what is there rather than being padded out.
-            let _ = std::fs::remove_dir_all(&out);
-        } else {
-            per_style.push((look.label.to_lowercase(), written));
-        }
+/// The window's part in a fetch: saying how far along it is.
+fn progress(app: tauri::AppHandle) -> impl Fn(&str) + Send + Sync {
+    move |line: &str| {
+        let _ = app.emit("icons-progress", line.to_owned());
     }
-
-    if per_style.is_empty() {
-        let _ = theme::remove_set(&state.media_dir, dir);
-        return Err(format!("{dir}: no console pictures could be fetched"));
-    }
-    // Stamp what this was fetched under, so a corrected table can tell.
-    let _ = theme::write_set_mapping(&state.media_dir, dir, &art.fingerprint());
-    Ok(per_style.iter().map(|(l, n)| format!("{n} {l}")).collect::<Vec<_>>().join(", "))
 }
 
 #[tauri::command]
 async fn fetch_icons(app: tauri::AppHandle, state: State<'_, AppState>) -> CmdResult<String> {
-    let chosen = state.icon_set.lock().map_err(err)?.clone();
-    let set = if chosen.is_empty() { moose_rack::iconart::DEFAULT_SET.to_owned() } else { chosen.clone() };
-    let summary = fetch_icon_set(&app, &state, &set).await?;
-
-    // Choosing it as well as fetching it. Pressing "Get console pictures" and
-    // seeing nothing change, because the grid was still on the shared pool, is
-    // the confusion this answers.
-    if chosen.is_empty() {
-        moose_rack::config::set_table_entry("config.toml", "icons", "set", &set).map_err(err)?;
-        *state.icon_set.lock().map_err(err)? = set.clone();
-    }
-    Ok(summary)
+    moose_rack::commands::fetch_icons(&state, &progress(app)).await
 }
 
 fn appicon_dir(app: &tauri::AppHandle, id: &str) -> Option<PathBuf> {
