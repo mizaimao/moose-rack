@@ -212,8 +212,8 @@ pub fn config_fields() -> CmdResult<ConfigFields> {
         window_decorations: cfg.retroarch.window_decorations,
         autofire: cfg.retroarch.autofire.clone(),
         save_state_on_exit: cfg.retroarch.save_state_on_exit,
-        config_path: abs(crate::config::path()),
-        config_exists: Config::exists(crate::config::path_str()),
+        config_path: abs(&crate::config::path()),
+        config_exists: Config::exists(&crate::config::path_str()),
     })
 }
 
@@ -257,7 +257,7 @@ pub fn set_config_field(field: String, value: String) -> CmdResult<String> {
     // and fails to deserialise into a number.
     if field == "autofire_hz" {
         let n: i64 = value.trim().parse().map_err(|_| format!("{value} is not a number"))?;
-        crate::config::set_table_number(crate::config::path_str(), table, key, n.clamp(1, 30))
+        crate::config::set_table_number(&crate::config::path_str(), table, key, n.clamp(1, 30))
             .map_err(err)?;
         return Ok(format!("{n} shots a second"));
     }
@@ -288,19 +288,19 @@ pub fn set_config_field(field: String, value: String) -> CmdResult<String> {
     );
 
     if value.trim().is_empty() && !boolean {
-        crate::config::clear_table_entry(crate::config::path_str(), table, key).map_err(err)?;
+        crate::config::clear_table_entry(&crate::config::path_str(), table, key).map_err(err)?;
         return Ok(format!("{key} cleared"));
     }
     if boolean {
         crate::config::set_table_bool(
-            crate::config::path_str(),
+            &crate::config::path_str(),
             table,
             key,
             value == "true" || value == "1",
         )
         .map_err(err)?;
     } else {
-        crate::config::set_table_entry(crate::config::path_str(), table, key, value.trim())
+        crate::config::set_table_entry(&crate::config::path_str(), table, key, value.trim())
             .map_err(err)?;
     }
     Ok(format!("{key} saved — restart to apply"))
@@ -1227,7 +1227,7 @@ pub fn set_list_art(state: &AppState, value: String) -> CmdResult<String> {
     if !media::LIST_ART_CHOICES.iter().any(|(k, _)| *k == value) {
         return Err(format!("unknown artwork type {value}"));
     }
-    crate::config::set_table_entry(crate::config::path_str(), "media", "list_art", &value)
+    crate::config::set_table_entry(&crate::config::path_str(), "media", "list_art", &value)
         .map_err(err)?;
     *state.list_art.lock().map_err(err)? = value.clone();
     Ok(format!("game lists now show {value}"))
@@ -1933,6 +1933,7 @@ pub fn config_findings() -> CmdResult<Vec<ConfigFinding>> {
 
 pub fn config_patch() -> CmdResult<String> {
     let path = crate::config::path();
+    let path = path.as_path();
     let text = std::fs::read_to_string(path).map_err(err)?;
     let (patched, applied) = crate::configpatch::patch(&text);
     if applied.is_empty() {
@@ -1972,7 +1973,7 @@ pub fn game_lightgun(state: &AppState, id: i64) -> CmdResult<Option<(String, Str
 }
 
 pub fn set_icon_set(state: &AppState, dir: String) -> CmdResult<String> {
-    crate::config::set_table_entry(crate::config::path_str(), "icons", "set", &dir).map_err(err)?;
+    crate::config::set_table_entry(&crate::config::path_str(), "icons", "set", &dir).map_err(err)?;
     *state.icon_set.lock().map_err(err)? = dir.clone();
     Ok(if dir.is_empty() {
         "Back to the shared pictures".to_owned()
@@ -1987,7 +1988,7 @@ pub fn remove_icon_set(state: &AppState, dir: String) -> CmdResult<String> {
     if *active == dir {
         active.clear();
         drop(active);
-        crate::config::set_table_entry(crate::config::path_str(), "icons", "set", "").map_err(err)?;
+        crate::config::set_table_entry(&crate::config::path_str(), "icons", "set", "").map_err(err)?;
     }
     Ok(format!("{dir} removed"))
 }
@@ -2268,7 +2269,7 @@ pub fn motion_options(state: &AppState) -> CmdResult<MotionView> {
 }
 
 pub fn set_motion_shader(state: &AppState, value: String) -> CmdResult<String> {
-    crate::config::set_table_entry(crate::config::path_str(), "shaders", "motion", &value)
+    crate::config::set_table_entry(&crate::config::path_str(), "shaders", "motion", &value)
         .map_err(err)?;
     let chosen = (value != "none" && !value.is_empty()).then_some(value);
     *state.motion_shader.lock().map_err(err)? = chosen.clone();
@@ -2290,7 +2291,7 @@ pub fn set_system_choice(
         "lightgun" => "lightgun.by_platform",
         other => return Err(format!("unknown field {other}")),
     };
-    crate::config::set_table_entry(crate::config::path_str(), table, &slug, &value).map_err(err)?;
+    crate::config::set_table_entry(&crate::config::path_str(), table, &slug, &value).map_err(err)?;
 
     // Reflect it in the live copy too, so the next launch uses it without a
     // restart. config.toml remains authoritative on startup.
@@ -2373,10 +2374,10 @@ pub fn set_game_core(state: &AppState, id: i64, core: String) -> CmdResult<Strin
 
     let key = crate::config::game_key(&row.platform_slug, &row.fs_name);
     if core.is_empty() {
-        crate::config::clear_table_entry(crate::config::path_str(), "cores.per_game", &key)
+        crate::config::clear_table_entry(&crate::config::path_str(), "cores.per_game", &key)
             .map_err(err)?;
     } else {
-        crate::config::set_table_entry(crate::config::path_str(), "cores.per_game", &key, &core)
+        crate::config::set_table_entry(&crate::config::path_str(), "cores.per_game", &key, &core)
             .map_err(err)?;
     }
 
@@ -2448,7 +2449,7 @@ pub fn status(state: &AppState) -> CmdResult<Status> {
             .map(|c| c.base().to_owned())
             .unwrap_or_default(),
         connected: state.client.is_some(),
-        configured: Config::exists(crate::config::path_str()),
+        configured: Config::exists(&crate::config::path_str()),
         retroarch: state
             .retroarch
             .as_ref()
@@ -2462,8 +2463,8 @@ pub fn status(state: &AppState) -> CmdResult<Status> {
         roms_dir: abs(&state.roms_dir),
         media_dir: abs(&state.media_dir),
         data_dir: abs(Path::new(".")),
-        config_path: abs(crate::config::path()),
-        crowded_folder: !Config::exists(crate::config::path_str()) && neighbours() > 2,
+        config_path: abs(&crate::config::path()),
+        crowded_folder: !Config::exists(&crate::config::path_str()) && neighbours() > 2,
         folder_entries: neighbours(),
     })
 }
@@ -2477,13 +2478,13 @@ pub fn set_retroarch_root(path: String) -> CmdResult<String> {
 
     if path.is_empty() {
         // Empty means "go back to probing the usual places".
-        crate::config::clear_table_entry(crate::config::path_str(), "retroarch", "root").map_err(err)?;
+        crate::config::clear_table_entry(&crate::config::path_str(), "retroarch", "root").map_err(err)?;
         return Ok("Cleared. The usual locations will be searched again after a restart.".into());
     }
 
     // Verify before writing, so a typo fails here rather than at the next launch.
     let found = RetroArch::locate(Some(&path)).map_err(|e| e.to_string())?;
-    crate::config::set_table_entry(crate::config::path_str(), "retroarch", "root", &path)
+    crate::config::set_table_entry(&crate::config::path_str(), "retroarch", "root", &path)
         .map_err(err)?;
 
     Ok(format!(
@@ -2575,7 +2576,7 @@ pub fn set_icon_style(state: &AppState, key: String) -> CmdResult<String> {
 
     *state.icon_look.lock().map_err(err)? = key.clone();
     // Persist it, or the grid silently reverts on next launch.
-    crate::config::set_table_entry(crate::config::path_str(), "icons", "style", &key).map_err(err)?;
+    crate::config::set_table_entry(&crate::config::path_str(), "icons", "style", &key).map_err(err)?;
     Ok(label)
 }
 
@@ -2770,7 +2771,7 @@ pub fn save_bindings(b: &crate::binds::Bindings) -> Result<(), String> {
         .iter()
         .map(|a| (a.id.to_owned(), b.keys.get(a.id).cloned()))
         .collect();
-    set_table_entries(crate::config::path_str(), "bindings.keys", &keys).map_err(err)?;
+    set_table_entries(&crate::config::path_str(), "bindings.keys", &keys).map_err(err)?;
 
     let pad: Vec<(String, Option<String>)> = crate::binds::PAD_BUTTONS
         .iter()
@@ -2780,7 +2781,7 @@ pub fn save_bindings(b: &crate::binds::Bindings) -> Result<(), String> {
             (index, held)
         })
         .collect();
-    set_table_entries(crate::config::path_str(), "bindings.pad", &pad).map_err(err)
+    set_table_entries(&crate::config::path_str(), "bindings.pad", &pad).map_err(err)
 }
 
 pub fn ui_bindings(state: &AppState) -> CmdResult<BindingsView> {
@@ -2961,7 +2962,7 @@ pub fn picker_controls(state: &AppState, kind: String) -> CmdResult<PickerArrang
 
 pub fn set_picker_order(state: &AppState, kind: String, order: String) -> CmdResult<()> {
     state.picker_order.lock().map_err(err)?.set(&kind, &order);
-    crate::config::set_table_entry(crate::config::path_str(), "picker_order", &kind, &order)
+    crate::config::set_table_entry(&crate::config::path_str(), "picker_order", &kind, &order)
         .map_err(err)
 }
 
