@@ -135,6 +135,40 @@ const settle = async () => {
 const art = (id) => document.querySelector(`.gcard[data-id="${id}"] .art`);
 const hasImage = (id) => !!art(id)?.querySelector("img");
 
+describe("re-observing while a batch is still queued", () => {
+  /// Two `observeCovers` calls inside the 80ms before a flush lost every cover.
+  ///
+  /// The second call throws the queue away, but the cards it held were already
+  /// marked `loaded`, so the new observers skip them: the covers are never
+  /// asked for again and the placeholders stay until something re-renders. A
+  /// resize right after a render is enough -- a window restored, a handheld
+  /// turned. Found because a stand-in that reported synchronously produced
+  /// exactly this, and it turned out not to be only the stand-in's problem.
+  test("a card queued but not delivered can be queued again", async () => {
+    near().fire(true);
+    // No settle: the batch is queued and the flush has not run.
+    lib.observeCovers();
+    near().fire(true);
+    await settle();
+
+    assert.ok(coverIds.includes(1), `card 1 was never asked for: ${JSON.stringify(coverIds)}`);
+    assert.equal(hasImage(1), true, "the card kept its placeholder for ever");
+  });
+
+  /// The other half: a card that already has its picture is not refetched.
+  test("a card that already holds a cover keeps its mark", async () => {
+    near().fire(true);
+    await settle();
+    assert.equal(hasImage(1), true, "setup: the cover should have arrived");
+
+    coverIds = [];
+    lib.observeCovers();
+    near().fire(true);
+    await settle();
+    assert.ok(!coverIds.includes(1), "a cover already on the page was fetched a second time");
+  });
+});
+
 describe("a folder card has no cover to fetch", () => {
   /// One folder on screen meant no covers at all for the cards around it.
   ///
