@@ -25,6 +25,7 @@
 //!                   --roms /home/frank/moose-library/ROMs
 
 mod collections;
+mod web;
 mod saves;
 
 use std::net::SocketAddr;
@@ -42,12 +43,59 @@ use moose_rack::{coremap::CoreMap, esde};
 use serde::{Deserialize, Serialize};
 use tower_http::services::ServeFile;
 
+/// The file form of the flags below.
+///
+/// Every field is optional and a flag of the same name wins over it, so a config
+/// can set the seven paths that never change and a flag can override one for a
+/// single run without editing anything.
+#[derive(Debug, Default, Deserialize)]
+struct FileConfig {
+    #[serde(default)]
+    library: LibraryPaths,
+    #[serde(default)]
+    server: ServerCfg,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct LibraryPaths {
+    root: Option<String>,
+    roms: Option<String>,
+    media: Option<String>,
+    collections: Option<String>,
+    firmware: Option<String>,
+    inventory: Option<String>,
+    saves: Option<String>,
+    ui: Option<String>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct ServerCfg {
+    bind: Option<String>,
+    port: Option<u16>,
+}
+
+/// Read a config, if there is one.
+///
+/// Missing is not an error: the flags alone are still a complete way to run
+/// this. A *malformed* one is, because silently falling back to defaults would
+/// serve the wrong library and look like it worked.
+fn load_config(path: &std::path::Path) -> Result<FileConfig> {
+    match std::fs::read_to_string(path) {
+        Ok(s) => toml::from_str(&s).with_context(|| format!("parsing {}", path.display())),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(FileConfig::default()),
+        Err(e) => Err(e).with_context(|| format!("reading {}", path.display())),
+    }
+}
+
 #[derive(Parser)]
 #[command(about = "Serve an ES-DE library over the API the app already speaks")]
 struct Args {
+    /// Config file. Flags below override whatever it sets.
+    #[arg(long, env = "MOOSE_SERVICE_CONFIG", default_value = "moose-service.toml")]
+    config: String,
     /// ES-DE data directory: the one holding gamelists/ and downloaded_media/
     #[arg(long)]
-    root: String,
+    root: Option<String>,
     /// ROMs directory, if it is not <root>/ROMs
     #[arg(long)]
     roms: Option<String>,
@@ -57,6 +105,9 @@ struct Args {
     /// Address to bind. Use this to restrict the interface as well as the port.
     #[arg(long, env = "MOOSE_SERVICE_BIND", default_value = "0.0.0.0:8001")]
     bind: String,
+    /// The app's `ui/` directory. Without it there is no web interface.
+    #[arg(long, env = "MOOSE_SERVICE_UI")]
+    ui: Option<String>,
     /// Collections directory of .txt lists. Defaults to <root>/collections.
     #[arg(long, env = "MOOSE_SERVICE_COLLECTIONS")]
     collections: Option<String>,
@@ -501,6 +552,21 @@ async fn rom_identifiers(State(lib): State<Arc<Library>>) -> Json<Vec<i64>> {
 ///
 /// Still empty rather than 404 when there is no directory: the client reads a
 /// missing endpoint as an error and an empty list as "none yet".
+/// RomM generated collections by genre, franchise and so on -- 1,931 of them
+/// against 27 hand-made ones. There is no equivalent here and there should not
+/// be: the point of the text files is that a list is something a person decided.
+///
+/// Empty rather than absent because the GUI asks for all three on every load and
+/// wraps each in `unwrap_or_default`. A 404 is survivable but logs an error
+/// forever; an empty list is the honest answer.
+async fn no_collections() -> Json<Vec<serde_json::Value>> {
+    Json(vec![])
+}
+
+async fn no_kinds() -> Json<Vec<String>> {
+    Json(vec![])
+}
+
 async fn serve_collections(State(lib): State<Arc<Library>>) -> axum::response::Response {
     Json(&lib.collections).into_response()
 }
@@ -690,9 +756,31 @@ async fn rom_by_id(
 }
 
 /// The routes, as a function so tests can build one without a socket.
-fn app(lib: Arc<Library>, media_dir: std::path::PathBuf) -> Router {
-        Router::new()
-            .route("/", get(index))
+/// The web UI, if a `ui/` directory was given.
+///
+/// A separate Router with its own state, merged in: the API answers `src/api.rs`
+/// and this answers the app's own IPC, and conflating them would make each
+/// harder to read.
+fn web_app(st: Arc<web::WebState>) -> Router {
+    let dir = st.ui_dir.clone();
+    Router::new()
+        .route("/", get(web::index))
+        .route("/__shim.js", get(web::shim))
+        .route("/invoke/{cmd}", axum::routing::post(web::invoke))
+        .nest_service("/js", tower_http::services::ServeDir::new(dir.join("js")))
+        .nest_service("/icons", tower_http::services::ServeDir::new(dir.join("icons")))
+        .route_service("/style.css", tower_http::services::ServeFile::new(dir.join("style.css")))
+        .route_service("/settings.css", tower_http::services::ServeFile::new(dir.join("settings.css")))
+        .route_service("/settings.html", tower_http::services::ServeFile::new(dir.join("settings.html")))
+        .with_state(st)
+}
+
+fn app(lib: Arc<Library>, media_dir: std::path::PathBuf, with_index: bool) -> Router {
+        let base = Router::new();
+        // The status page is a fallback. When a UI is served, `/` is the app --
+        // somebody typing the address wants the thing, not a summary of it.
+        let base = if with_index { base.route("/", get(index)) } else { base };
+        base
             .route("/api/heartbeat", get(heartbeat))
             .route("/api/config", get(config))
             .route("/api/users/me", get(users_me))
@@ -702,6 +790,9 @@ fn app(lib: Arc<Library>, media_dir: std::path::PathBuf) -> Router {
             .route("/api/roms/{id}", get(rom_by_id))
             .route("/api/roms/{id}/content/{*name}", get(rom_content))
             .route("/api/collections", get(serve_collections))
+            .route("/api/collections/smart", get(no_collections))
+            .route("/api/collections/virtual", get(no_collections))
+            .route("/api/collections/virtual/identifiers", get(no_kinds))
         .route("/api/firmware", get(firmware))
         .route("/api/firmware/{id}/content/{*name}", get(firmware_content))
         .route("/api/devices", axum::routing::post(register_device))
@@ -728,11 +819,22 @@ fn app(lib: Arc<Library>, media_dir: std::path::PathBuf) -> Router {
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Args::parse();
+    let cfg = load_config(std::path::Path::new(&args.config))?;
+    // A flag beats the file; the file beats nothing. `or` reads in that order.
+    let pick = |flag: Option<String>, file: &Option<String>| flag.or_else(|| file.clone());
+    let root = pick(args.root.clone(), &cfg.library.root).context(
+        "no --root and no [library] root in the config: nothing to serve",
+    )?;
+    let roms = pick(args.roms.clone(), &cfg.library.roms);
+    let media = pick(args.media.clone(), &cfg.library.media);
+    if std::path::Path::new(&args.config).exists() {
+        println!("config     {}", args.config);
+    }
     let layout = esde::Layout::new(
-        std::path::Path::new(&args.root),
-        args.roms.as_deref().map(std::path::Path::new),
+        std::path::Path::new(&root),
+        roms.as_deref().map(std::path::Path::new),
     )
-    .with_media(args.media.as_deref().map(std::path::Path::new));
+    .with_media(media.as_deref().map(std::path::Path::new));
 
     println!("roms       {}", layout.roms.display());
     println!("gamelists  {}", layout.gamelists.display());
@@ -750,8 +852,9 @@ async fn main() -> Result<()> {
         println!("skipped    {}", skipped.join(", "));
     }
 
+    let scan_games = games.clone();
     let media_dir = layout.media.clone();
-    let hashes = match args.inventory.as_deref() {
+    let hashes = match pick(args.inventory.clone(), &cfg.library.inventory).as_deref() {
         Some(p) => match load_hashes(p) {
             Ok(h) => {
                 println!("hashes     {} rows from {p}", h.len());
@@ -769,10 +872,9 @@ async fn main() -> Result<()> {
             Default::default()
         }
     };
-    let saves_root = args
-        .saves
+    let saves_root = pick(args.saves.clone(), &cfg.library.saves)
         .map(std::path::PathBuf::from)
-        .unwrap_or_else(|| std::path::Path::new(&args.root).join("saves"));
+        .unwrap_or_else(|| std::path::Path::new(&root).join("saves"));
     std::fs::create_dir_all(&saves_root)?;
     let state_path = saves_root.join("sync-state.json");
     let data: Persisted = std::fs::read(&state_path)
@@ -784,7 +886,7 @@ async fn main() -> Result<()> {
         saves_root.display(),
         data.devices.len()
     );
-    let firmware = match args.firmware.as_deref() {
+    let firmware = match pick(args.firmware.clone(), &cfg.library.firmware).as_deref() {
         Some(f) => {
             let list = scan_firmware(std::path::Path::new(f));
             println!("firmware   {} files from {f}", list.len());
@@ -807,11 +909,17 @@ async fn main() -> Result<()> {
         let stem = g.fs_name.rsplit_once('.').map(|(s, _)| s).unwrap_or(&g.fs_name);
         by_name.entry((p, stem.to_lowercase())).or_insert(id);
     }
-    let col_dir = args
-        .collections
+    let col_dir = pick(args.collections.clone(), &cfg.library.collections)
         .map(std::path::PathBuf::from)
-        .unwrap_or_else(|| std::path::Path::new(&args.root).join("collections"));
+        .unwrap_or_else(|| std::path::Path::new(&root).join("collections"));
     let (cols, unmatched) = collections::load(&col_dir, &by_name);
+    // Games in a starred list, so the grid can show them as favourites.
+    let fav_ids: std::collections::HashSet<i64> = cols
+        .iter()
+        .filter(|c| c.is_favorite)
+        .flat_map(|c| c.rom_ids.iter().copied())
+        .collect();
+
     println!(
         "collections {} lists, {} memberships from {}",
         cols.len(),
@@ -838,13 +946,32 @@ async fn main() -> Result<()> {
         }),
     });
 
-    let app = app(lib, media_dir);
+    let ui_path = pick(args.ui.clone(), &cfg.library.ui);
+    let mut app = app(lib, media_dir, ui_path.is_none());
 
-    let mut addr: SocketAddr = args
-        .bind
+    // The UI, when there is one. Its `/` replaces the status page: a person who
+    // types the address wants the app, not a summary of it.
+    if let Some(ui) = ui_path.as_deref() {
+        let ui_dir = std::path::PathBuf::from(ui);
+        let cache_path = std::path::Path::new(&root).join("web-cache.sqlite3");
+        let mut cache = moose_rack::cache::Cache::open(&cache_path)?;
+        let n = cache.replace_from_esde(&scan_games)?;
+        println!("ui         {} ({n} games cached at {})", ui_dir.display(), cache_path.display());
+        let favorites = fav_ids.clone();
+        app = web_app(Arc::new(web::WebState {
+            cache: std::sync::Mutex::new(cache),
+            favorites,
+            ui_dir,
+        }))
+        .merge(app);
+    }
+
+    let bind = cfg.server.bind.clone().unwrap_or(args.bind.clone());
+    let mut addr: SocketAddr = bind
         .parse()
-        .with_context(|| format!("--bind {:?} is not host:port", args.bind))?;
-    if let Some(p) = args.port {
+        .with_context(|| format!("bind {bind:?} is not host:port"))?;
+    // Flag, then file, then whatever `bind` already said.
+    if let Some(p) = args.port.or(cfg.server.port) {
         addr.set_port(p);
     }
     let listener = tokio::net::TcpListener::bind(addr).await?;
@@ -918,7 +1045,7 @@ mod tests {
     fn built() -> (tempdir::TempDir, Router) {
         let d = tempdir::TempDir::new("svc").unwrap();
         let (lib, media) = fixture(d.path());
-        let r = app(lib, media);
+        let r = app(lib, media, true);
         (d, r)
     }
 
@@ -969,7 +1096,7 @@ mod tests {
     async fn skip_hash_tracks_whether_an_inventory_was_loaded() {
         let d = tempdir::TempDir::new("svc").unwrap();
         let (lib, media) = fixture(d.path());
-        let (s, body) = get(&app(lib, media.clone()), "/api/config").await;
+        let (s, body) = get(&app(lib, media.clone(), true), "/api/config").await;
         assert_eq!(s, StatusCode::OK);
         assert_eq!(serde_json::from_str::<serde_json::Value>(&body).unwrap()
             ["SKIP_HASH_CALCULATION"], true, "no inventory -> true");
@@ -980,7 +1107,7 @@ mod tests {
             ("nes".into(), "Alpha (USA).zip".into()),
             (Some("abc".into()), None, None),
         );
-        let (_, body) = get(&app(lib2, media), "/api/config").await;
+        let (_, body) = get(&app(lib2, media, true), "/api/config").await;
         assert_eq!(serde_json::from_str::<serde_json::Value>(&body).unwrap()
             ["SKIP_HASH_CALCULATION"], false, "inventory loaded -> false");
     }
@@ -993,7 +1120,7 @@ mod tests {
             ("nes".into(), "Alpha (USA).zip".into()),
             (Some("deadbeef".into()), Some("cafe".into()), None),
         );
-        let (_, body) = get(&app(lib, media), "/api/roms").await;
+        let (_, body) = get(&app(lib, media, true), "/api/roms").await;
         let v: serde_json::Value = serde_json::from_str(&body).unwrap();
         let alpha = v["items"].as_array().unwrap().iter()
             .find(|i| i["fs_name"] == "Alpha (USA).zip").unwrap();
@@ -1217,5 +1344,66 @@ mod tests {
         assert!(body.contains("Moose Rack"), "should name itself");
         assert!(body.contains("/api/heartbeat"), "should point at the API");
         assert!(body.contains("nes"), "should list what it holds");
+    }
+
+    /// The GUI asks for all three on every load. A 404 is survivable -- each is
+    /// wrapped in `unwrap_or_default` -- but it logs an error forever, and the
+    /// honest answer is that there are none.
+    #[tokio::test]
+    async fn the_generated_collection_endpoints_answer_empty() {
+        let (_d, app) = built();
+        for uri in ["/api/collections/smart", "/api/collections/virtual?type=genre",
+                    "/api/collections/virtual/identifiers"] {
+            let (s, body) = get(&app, uri).await;
+            assert_eq!(s, StatusCode::OK, "{uri}");
+            assert_eq!(body, "[]", "{uri}");
+        }
+    }
+
+    /// A missing config is fine -- the flags alone are a complete way to run
+    /// this -- but a malformed one must not fall back to defaults and serve the
+    /// wrong library while looking like it worked.
+    #[test]
+    fn a_missing_config_is_defaults_and_a_broken_one_is_an_error() {
+        let d = tempdir::TempDir::new("cfg").unwrap();
+        let absent = d.path().join("nope.toml");
+        assert!(load_config(&absent).is_ok(), "missing is not an error");
+
+        let bad = d.path().join("bad.toml");
+        std::fs::write(&bad, "[library\nroot = ").unwrap();
+        let e = load_config(&bad).unwrap_err().to_string();
+        assert!(e.contains("parsing"), "{e}");
+    }
+
+    #[test]
+    fn the_config_supplies_paths_and_a_port() {
+        let d = tempdir::TempDir::new("cfg").unwrap();
+        let f = d.path().join("s.toml");
+        std::fs::write(&f, r#"
+[library]
+root = "/lib/ES-DE"
+roms = "/lib/ROMs"
+firmware = "/lib/bios"
+[server]
+port = 9999
+"#).unwrap();
+        let c = load_config(&f).unwrap();
+        assert_eq!(c.library.root.as_deref(), Some("/lib/ES-DE"));
+        assert_eq!(c.library.roms.as_deref(), Some("/lib/ROMs"));
+        assert_eq!(c.library.firmware.as_deref(), Some("/lib/bios"));
+        assert_eq!(c.server.port, Some(9999));
+        // Unset stays unset rather than becoming an empty string.
+        assert!(c.library.media.is_none());
+    }
+
+    /// The shipped example must parse, or it is documentation for something
+    /// that does not work.
+    #[test]
+    fn the_example_config_parses() {
+        let p = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent().unwrap().join("moose-service.example.toml");
+        if !p.exists() { return }
+        let c = load_config(&p).expect("the shipped example must parse");
+        assert!(c.library.root.is_some(), "the example should set a root");
     }
 }

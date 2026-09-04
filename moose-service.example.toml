@@ -1,0 +1,48 @@
+# moose-service configuration.
+#
+# Every value here has a command-line flag of the same name, and the flag wins.
+# So this file holds the paths that never change, and a flag overrides one for a
+# single run without editing anything.
+#
+# Missing file: fine, the flags alone are a complete way to run this.
+# Malformed file: an error, because falling back to defaults would serve the
+# wrong library and look like it had worked.
+#
+#     moose-service --config /etc/moose-service.toml
+
+[library]
+# The ES-DE data directory — the one holding gamelists/ and downloaded_media/.
+# The only required value.
+root = "/home/frank/moose-library/ES-DE"
+
+# Where the games are, if not <root>/ROMs. ES-DE keeps this separate and
+# configurable, so it usually is.
+roms = "/home/frank/moose-library/ROMs"
+
+# Artwork, if not <root>/downloaded_media. A *portable* ES-DE install keeps it
+# under support/ while gamelists stay in the data directory, and then no single
+# root derives both.
+# media = "/Volumes/Retro/ES-DE/support/downloaded_media"
+
+# The curated .txt lists. Defaults to <root>/collections.
+collections = "/home/frank/moose-library/collections"
+
+# BIOS tree. Without it /api/firmware is an empty list.
+firmware = "/home/frank/moose-library/bios"
+
+# inventory.db, for the hashes. Without it downloads are size-checked only and
+# the client says so out loud.
+inventory = "/home/frank/moose-library/inventory.db"
+
+# Where uploaded saves land. Defaults to <root>/saves.
+# saves = "/home/frank/moose-library/saves"
+
+# The app's own ui/ directory. Without it there is no web interface and `/`
+# serves a plain status page instead.
+ui = "/home/frank/moose-rack-src/ui"
+
+[server]
+# Interface and port. `port` overrides whatever `bind` says, which is the common
+# case: a different port on the same interface.
+bind = "0.0.0.0:8001"
+# port = 8001
