@@ -1259,19 +1259,13 @@ fn cmd_scan_esde(root: Option<&str>, roms: Option<&str>, media: Option<&str>) ->
 
     let map = CoreMap::load_or_embedded(Path::new(CORE_MAP));
     let started = std::time::Instant::now();
-    let (games, skipped) = moose_rack::esde::scan(&layout, &map)?;
+    let mut store = cache::Cache::open(Path::new(CACHE_DB))?;
+    // Shared with the service, fold included -- see `moose_rack::app::scan_into`.
+    let moose_rack::app::Scan { written: n, folded, games, skipped } =
+        moose_rack::app::scan_into(&mut store, &layout, &map)?;
     if games.is_empty() {
         bail!("found no games under {}", layout.roms.display());
     }
-
-    let mut store = cache::Cache::open(Path::new(CACHE_DB))?;
-    let n = store.replace_from_esde(&games)?;
-    // Fold the scan into whatever a server sync already found. Without this the
-    // two halves of the library sit side by side and every game the server also
-    // knows about appears twice -- 11,062 server rows and 11,473 local ones, in
-    // a library of about 11,500 games. The GUI has always done this after a
-    // scan; the CLI did not, so `scan-esde` on its own doubled the grid.
-    let folded = store.absorb_local_into_server()?;
 
     let mut by_platform: std::collections::BTreeMap<&str, usize> = Default::default();
     let mut with_art = 0;

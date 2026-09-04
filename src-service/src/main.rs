@@ -66,6 +66,10 @@ struct LibraryPaths {
     inventory: Option<String>,
     saves: Option<String>,
     ui: Option<String>,
+    /// The app's own `config.toml`, for the parts of the UI that are not the
+    /// library: theme, cores, achievements. Optional -- without it the defaults
+    /// apply and the library still comes from the paths above.
+    app_config: Option<String>,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -957,9 +961,31 @@ async fn main() -> Result<()> {
     if let Some(ui) = ui_path.as_deref() {
         let ui_dir = std::path::PathBuf::from(ui);
         // The same constructor the desktop app uses.
-        let state = moose_rack::app::AppState::from_config()
+        let app_cfg = cfg
+            .library
+            .app_config
+            .clone()
+            .unwrap_or_else(|| "config.toml".to_owned());
+        let mut state = moose_rack::app::AppState::from_config_at(std::path::Path::new(&app_cfg))
             .context("building app state for the web UI")?;
-        println!("ui         {}", ui_dir.display());
+        // One source of truth for where the library is: this service was told,
+        // and the state follows. Otherwise `config.toml` would have to repeat
+        // the paths, and the two would disagree the first time one was edited.
+        state.point_at(&layout);
+        println!("ui         {} (app config {app_cfg})", ui_dir.display());
+        // The filesystem is the truth and the cache is derived -- the same rule
+        // the API answers by. Scanning at startup costs a second on top of the
+        // scan that already happened and means the page can never show a
+        // library that is no longer there.
+        match state.rescan(&layout) {
+            Ok((n, folded)) => println!(
+                "ui cache   {n} games{}",
+                if folded > 0 { format!(", {folded} folded into synced rows") } else { String::new() }
+            ),
+            // Not fatal. The API half is unaffected, and a UI listing a stale
+            // cache beats a service that refuses to start.
+            Err(e) => eprintln!("ui cache   not rebuilt: {e}"),
+        }
         app = web_app(Arc::new(web::WebState { state, ui_dir })).merge(app);
     }
 

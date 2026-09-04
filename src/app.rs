@@ -106,8 +106,48 @@ impl AppState {
     /// This was inline in the Tauri builder, so starting the backend meant
     /// starting a GUI. As a plain constructor the HTTP service builds exactly
     /// the state the desktop app does rather than an approximation of it.
+    /// Rescan an ES-DE tree into the metadata cache the UI reads.
+    ///
+    /// Three calls, and the CLI's `scan-esde` is the same three -- the rest of
+    /// that command is printing. Shared because the fold at the end is easy to
+    /// leave out and expensive to leave out: without `absorb_local_into_server`
+    /// the scan sits beside whatever a server sync already found and every game
+    /// both know about appears twice. That is 11,062 rows against 11,473, in a
+    /// library of about 11,500.
+    ///
+    /// Returns the rows written and the rows folded.
+    pub fn rescan(&self, layout: &crate::esde::Layout) -> anyhow::Result<(usize, usize)> {
+        let mut store = self.cache.lock().map_err(|e| anyhow::anyhow!("{e}"))?;
+        let scan = scan_into(&mut store, layout, &self.map)?;
+        Ok((scan.written, scan.folded))
+    }
+
+    /// Point the state at a library somewhere other than the config's.
+    ///
+    /// The service already knows where the library is -- it was told on the
+    /// command line or in `moose-service.toml`, and it has scanned it. Without
+    /// this the web UI would need a second config file repeating those paths,
+    /// and the two would disagree the first time one was edited.
+    ///
+    /// `media_dir` is left alone: it is where the app *writes* -- art indexes,
+    /// fetched icon sets -- and the ES-DE tree is not necessarily writable.
+    pub fn point_at(&mut self, layout: &crate::esde::Layout) {
+        self.roms_dir = layout.roms.clone();
+        self.esde_media = Some(layout.media.clone());
+    }
+
     pub fn from_config() -> anyhow::Result<Self> {
-    let cfg = Config::load().unwrap_or_default();
+        Self::from_config_at(Path::new("config.toml"))
+    }
+
+    /// The same, from a named file.
+    ///
+    /// `Config::load` reads `config.toml` out of the working directory, which
+    /// is fine for an app launched by its icon and wrong for a service whose
+    /// working directory is whatever systemd set. The service passes the path
+    /// it was given.
+    pub fn from_config_at(path: &Path) -> anyhow::Result<Self> {
+    let cfg = Config::load_from(path).unwrap_or_default();
     let store = crate::cache::Cache::open(Path::new(crate::commands::CACHE_DB)).expect("opening metadata cache");
     // Archive verification depends on the server's exclusion lists; load the
     // cached copy before anything can download.
@@ -206,5 +246,103 @@ impl AppState {
         list_scope: Mutex::new(String::new()),
         page_names: Mutex::new((Vec::new(), Vec::new())),
         })
+    }
+}
+
+/// What a scan put into the cache, and what it found on the way.
+pub struct Scan {
+    pub written: usize,
+    pub folded: usize,
+    pub games: Vec<crate::esde::Game>,
+    /// Systems with no platform mapping, so nothing from them was stored.
+    pub skipped: Vec<String>,
+}
+
+/// Read an ES-DE tree into the metadata cache the UI reads.
+///
+/// The CLI's `scan-esde` is these three calls and a lot of printing; the
+/// service is these three calls and none. Shared because the fold at the end is
+/// easy to leave out and expensive to leave out: without
+/// `absorb_local_into_server` the scan sits beside whatever a server sync
+/// already found and every game both know about appears twice. That was 11,062
+/// rows against 11,473, in a library of about 11,500.
+pub fn scan_into(
+    store: &mut cache::Cache,
+    layout: &crate::esde::Layout,
+    map: &CoreMap,
+) -> anyhow::Result<Scan> {
+    let (games, skipped) = crate::esde::scan(layout, map)?;
+    let written = store.replace_from_esde(&games)?;
+    let folded = store.absorb_local_into_server()?;
+    Ok(Scan { written, folded, games, skipped })
+}
+
+#[cfg(test)]
+mod scan_tests {
+    use super::*;
+
+    fn tree(name: &str) -> (PathBuf, crate::esde::Layout) {
+        let root = std::env::temp_dir().join(format!("moose-rack-scan-{name}"));
+        std::fs::remove_dir_all(&root).ok();
+        let roms = root.join("ROMs");
+        for f in ["snes/Chrono Trigger (USA).sfc", "snes/Super Metroid (USA).sfc"] {
+            let p = roms.join(f);
+            std::fs::create_dir_all(p.parent().unwrap()).unwrap();
+            std::fs::write(&p, b"x").unwrap();
+        }
+        let layout = crate::esde::Layout::new(&root, Some(&roms));
+        (root, layout)
+    }
+
+    fn map() -> CoreMap {
+        serde_json::from_str(
+            r#"{"default_core_by_server_platform": {"snes": "snes9x"},
+                "systems": {"snes": {"server_platforms": ["snes"],
+                            "extensions": [".sfc"], "emulators": []}}}"#,
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn a_scan_lands_in_the_cache_the_ui_reads() {
+        let (root, layout) = tree("basic");
+        let mut store = cache::Cache::open(&root.join("cache.sqlite3")).unwrap();
+        let scan = scan_into(&mut store, &layout, &map()).unwrap();
+        assert_eq!(scan.written, 2, "both games should be stored");
+        assert_eq!(scan.games.len(), 2);
+        assert_eq!(store.rom_count().unwrap(), 2);
+        std::fs::remove_dir_all(&root).ok();
+    }
+
+    /// Twice is still two games. `replace_from_esde` replaces; a scan that
+    /// appended would double the grid on every service restart, which is where
+    /// this would show up now that the service rescans at startup.
+    #[test]
+    fn scanning_twice_does_not_double_the_library() {
+        let (root, layout) = tree("twice");
+        let mut store = cache::Cache::open(&root.join("cache.sqlite3")).unwrap();
+        scan_into(&mut store, &layout, &map()).unwrap();
+        scan_into(&mut store, &layout, &map()).unwrap();
+        assert_eq!(store.rom_count().unwrap(), 2);
+        std::fs::remove_dir_all(&root).ok();
+    }
+
+    /// Nobody may write the scan out longhand again.
+    ///
+    /// `scan-esde` did, and left out `absorb_local_into_server`, so the CLI's
+    /// scan sat beside the rows a server sync had already stored: 11,062 and
+    /// 11,473 in a library of about 11,500, every shared game drawn twice. The
+    /// fold is one line and its absence is invisible until you count the grid.
+    #[test]
+    fn both_callers_go_through_scan_into() {
+        for (name, src) in [
+            ("src/main.rs", include_str!("main.rs")),
+            ("src-service", include_str!("../src-service/src/main.rs")),
+        ] {
+            assert!(
+                !src.contains("replace_from_esde("),
+                "{name} scans by hand; it must call app::scan_into so the fold happens"
+            );
+        }
     }
 }
