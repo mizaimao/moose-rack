@@ -128,6 +128,66 @@ pub fn load(
     (out, missing)
 }
 
+/// Name -> id, from whatever rows are given.
+///
+/// Keyed on both the display name and the file stem, because ES-DE uses the
+/// gamelist `<name>` where a scraper filled one in and the stem where it did
+/// not. On one key alone this resolved 466 of 2,662 memberships; on the other,
+/// 103. The platform is part of the key because a name is not unique across a
+/// library holding arcade *Contra* and Famicom *Contra* -- un-prefixed,
+/// `Arcade Classics` resolved to the Famicom one and looked entirely plausible.
+pub fn name_table<'a>(
+    rows: impl IntoIterator<Item = (&'a str, &'a str, &'a str, i64)>,
+) -> std::collections::HashMap<(String, String), i64> {
+    let mut out = std::collections::HashMap::new();
+    for (platform, name, fs_name, id) in rows {
+        let p = platform.to_lowercase();
+        out.entry((p.clone(), name.to_lowercase())).or_insert(id);
+        let stem = fs_name.rsplit_once('.').map(|(s, _)| s).unwrap_or(fs_name);
+        out.entry((p, stem.to_lowercase())).or_insert(id);
+    }
+    out
+}
+
+/// Put the curated lists into the metadata cache the web UI reads.
+///
+/// `/api/collections` already serves these, but that answers the *client*,
+/// which keys its own cache by the ids it syncs. The UI running in this process
+/// reads the cache directly and knew nothing about them: a server holding all 27
+/// lists showed an empty Collections tab.
+///
+/// Resolved a second time rather than reusing the ids from the API scan. Those
+/// number the scan; the cache numbers its own rows, and they are not the same
+/// numbering. Same parser, different name table -- which is the whole reason
+/// membership is by name and not by id.
+pub fn into_cache(
+    store: &mut moose_rack::cache::Cache,
+    dir: &std::path::Path,
+) -> anyhow::Result<(usize, usize)> {
+    let rows = store.all_roms()?;
+    let table = name_table(
+        rows.iter().map(|r| (r.platform_slug.as_str(), r.name.as_str(), r.fs_name.as_str(), r.id)),
+    );
+    let (cols, unmatched) = load(dir, &table);
+    let items: Vec<moose_rack::api::Collection> = cols
+        .into_iter()
+        .map(|c| moose_rack::api::Collection {
+            id: c.id,
+            name: c.name,
+            description: c.description,
+            rom_count: c.rom_ids.len() as i64,
+            rom_ids: c.rom_ids,
+            is_favorite: c.is_favorite,
+            is_virtual: false,
+            is_smart: false,
+            kind: None,
+            path_covers_small: Vec::new(),
+        })
+        .collect();
+    let n = store.replace_collections(&items)?;
+    Ok((n, unmatched.len()))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -329,5 +389,63 @@ mod tests {
         let total: i64 = cols.iter().map(|c| c.rom_count).sum();
         assert_eq!(total, n, "every line became a membership");
         assert_eq!(cols.iter().filter(|c| c.is_favorite).count(), 9, "nine starred lists");
+    }
+}
+
+#[cfg(test)]
+mod cache_tests {
+    use super::*;
+
+    /// The lists reach the UI's own store, keyed to the ids that store uses.
+    ///
+    /// The tab was empty on a server holding all 27 lists: `/api/collections`
+    /// answers the client and the UI here does not go through the client. Two
+    /// stores, and only one of them was being filled.
+    #[test]
+    fn the_lists_land_in_the_cache_the_ui_reads() {
+        let dir = std::env::temp_dir().join("moose-col-cache-test");
+        std::fs::remove_dir_all(&dir).ok();
+        std::fs::create_dir_all(dir.join("lists")).unwrap();
+        std::fs::write(
+            dir.join("lists/best.txt"),
+            "# Best of NES\n# 2 games\nnes/Castlevania (USA)\nnes/Nothing Here\n",
+        )
+        .unwrap();
+
+        let mut store = moose_rack::cache::Cache::open(&dir.join("cache.sqlite3")).unwrap();
+        let games = vec![
+            moose_rack::esde::Game {
+                platform_slug: "nes".into(),
+                system: "nes".into(),
+                name: "Castlevania (USA)".into(),
+                fs_name: "Castlevania (USA).zip".into(),
+                ..Default::default()
+            },
+        ];
+        store.replace_from_esde(&games).unwrap();
+
+        let (n, missing) = into_cache(&mut store, &dir.join("lists")).unwrap();
+        assert_eq!(n, 1, "one list");
+        assert_eq!(missing, 1, "the line naming a game that is not here is reported, not dropped");
+
+        // The membership must point at the cache's own id, which is not the
+        // scan's numbering -- resolving once and reusing those ids is the bug
+        // this exists to prevent.
+        let id = store.all_roms().unwrap()[0].id;
+        let members = store.roms_in_collection("best").unwrap();
+        assert_eq!(members.len(), 1, "the list opens with its game in it");
+        assert_eq!(members[0].id, id);
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    /// Both resolvers key names the same way, because they resolve the same
+    /// files against different ids.
+    #[test]
+    fn the_name_table_keys_on_platform_name_and_stem() {
+        let t = name_table([("NES", "Contra", "Contra (USA).zip", 7i64)]);
+        assert_eq!(t.get(&("nes".into(), "contra".into())), Some(&7));
+        assert_eq!(t.get(&("nes".into(), "contra (usa)".into())), Some(&7));
+        // The platform is part of the key: arcade Contra is not this one.
+        assert_eq!(t.get(&("arcade".into(), "contra".into())), None);
     }
 }
