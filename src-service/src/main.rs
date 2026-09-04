@@ -771,7 +771,12 @@ fn web_app(st: Arc<web::WebState>) -> Router {
         .nest_service("/icons", tower_http::services::ServeDir::new(dir.join("icons")))
         .route_service("/style.css", tower_http::services::ServeFile::new(dir.join("style.css")))
         .route_service("/settings.css", tower_http::services::ServeFile::new(dir.join("settings.css")))
-        .route_service("/settings.html", tower_http::services::ServeFile::new(dir.join("settings.html")))
+        // Not `ServeFile`: the settings page loads the same modules and needs
+        // the shim too, so it goes out rewritten like `index.html`.
+        .route("/settings.html", get(web::settings))
+        // Artwork by absolute path, which is the shape `convertFileSrc` hands
+        // the page. Confined to the media roots -- see `resolve_media`.
+        .route("/media", get(web::media))
         .with_state(st)
 }
 
@@ -852,7 +857,6 @@ async fn main() -> Result<()> {
         println!("skipped    {}", skipped.join(", "));
     }
 
-    let scan_games = games.clone();
     let media_dir = layout.media.clone();
     let hashes = match pick(args.inventory.clone(), &cfg.library.inventory).as_deref() {
         Some(p) => match load_hashes(p) {
@@ -913,12 +917,11 @@ async fn main() -> Result<()> {
         .map(std::path::PathBuf::from)
         .unwrap_or_else(|| std::path::Path::new(&root).join("collections"));
     let (cols, unmatched) = collections::load(&col_dir, &by_name);
-    // Games in a starred list, so the grid can show them as favourites.
-    let fav_ids: std::collections::HashSet<i64> = cols
-        .iter()
-        .filter(|c| c.is_favorite)
-        .flat_map(|c| c.rom_ids.iter().copied())
-        .collect();
+    // No `fav_ids` here. Favourites reach the client as membership of a
+    // starred collection -- `/api/collections` carries `is_favorite` and
+    // `src/api.rs` has no per-rom flag to put one in. One was computed and
+    // dropped for several commits, which reads as a half-finished feature
+    // rather than as a thing that is already answered elsewhere.
 
     println!(
         "collections {} lists, {} memberships from {}",

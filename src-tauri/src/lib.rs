@@ -21,16 +21,10 @@
 //! by this — it still starts at `main` — but the shape is Android's.
 
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex};
 
-use serde::{Deserialize, Serialize};
 use tauri::{Emitter, Manager, State};
 
-
-use moose_rack::{
-    api, cache, config::Config, coremap::{self, CoreMap}, download, media, retroarch::RetroArch,
-    savesync, shaders, syncplan, theme, theme_remote, util,
-};
+use moose_rack::{cache, config::Config, coremap, download, media, savesync, shaders, theme, util};
 
 
 use moose_rack::app::AppState;
@@ -296,106 +290,12 @@ async fn rom_covers(
     ids: Vec<i64>,
     local_only: Option<bool>,
 ) -> CmdResult<Vec<CoverView>> {
-    const CONCURRENCY: usize = 8;
-
-    let rows = {
-        let cache = state.cache.lock().map_err(err)?;
-        ids.iter()
-            .filter_map(|id| cache.rom_by_id(*id).ok().flatten())
-            .collect::<Vec<_>>()
-    };
-
-    let list_art = state.list_art.lock().map_err(err)?.clone();
-    // The cached answer, with no request behind it. A caller that wants the
-    // grid filled *now* asks for this first: everything already on disk comes
-    // back in a few milliseconds, and the misses are fetched by a second call
-    // that can take as long as it likes because there is already something on
-    // screen.
-    if local_only.unwrap_or(false) {
-        return Ok(rows
-            .iter()
-            .map(|row| {
-                let stem = Path::new(&row.fs_name)
-                    .file_stem()
-                    .map(|s| s.to_string_lossy().to_string())
-                    .unwrap_or_else(|| row.fs_name.clone());
-                // Through `media_scope`, the same as `rom_detail`. This asked
-                // `state.media_dir` and `platform_slug` directly, which is this
-                // app's own download folder keyed by RomM's slug — and on a
-                // device whose library is an ES-DE folder the artwork is not
-                // there and is not keyed that way. Every cover came back null:
-                // measured, the four samples behind each collection in My
-                // Collections resolved to nothing, so every card in the tab drew
-                // the two-letter placeholder.
-                let (dir, key) = media_scope(&*state, row);
-                CoverView {
-                    id: row.id,
-                    cover: media::local_art(dir, key, &stem, &list_art)
-                        .map(|p| moose_rack::util::webview_path(&p)),
-                }
-            })
-            .collect());
-    }
-    let mut out = Vec::with_capacity(rows.len());
-    // A steady stream of `CONCURRENCY` requests, not lockstep batches.
-    //
-    // This walked `rows.chunks(8)` and waited for all eight before starting the
-    // next eight, so the cost was the sum of the slowest cover in each group
-    // rather than the time to fetch them all. One cover the server is slow
-    // about held seven finished ones and eight unstarted ones behind it. Over
-    // wifi on a handheld that is the difference between a grid that fills and
-    // one that arrives in visible steps — which is exactly what it looked like.
-    //
-    // A task is started the moment a slot frees, and each result is emitted as
-    // it lands, so the page keeps filling continuously.
-    let mut set = tokio::task::JoinSet::new();
-    let mut queue = rows.iter();
-    let mut pending = Vec::new();
-    loop {
-        // Fill every free slot.
-        while set.len() < CONCURRENCY {
-            let Some(row) = queue.next() else { break };
-            let client = state.client.clone();
-            // The same scope the fast pass above uses, so a cover found by one
-            // is the cover fetched by the other.
-            let (scope_dir, scope_key) = media_scope(&*state, row);
-            let media_root = scope_dir.to_path_buf();
-            let (id, platform, fs_name) =
-                (row.id, scope_key.to_owned(), row.fs_name.clone());
-            let art = list_art.clone();
-            set.spawn(async move {
-                let stem = Path::new(&fs_name)
-                    .file_stem()
-                    .map(|s| s.to_string_lossy().to_string())
-                    .unwrap_or(fs_name);
-                let cover =
-                    media::ensure_art(client.as_deref(), &media_root, &platform, &stem, &art)
-                        .await;
-                CoverView { id, cover: cover.map(|p| moose_rack::util::webview_path(&p)) }
-            });
-        }
-        let Some(res) = set.join_next().await else { break };
-        if let Ok(v) = res {
-            pending.push(v);
-        }
-        // Handed over in small groups as they land, rather than one event per
-        // cover: eighty events would be eighty separate repaints of the same
-        // grid. Flushed whenever the queue drains too, so the last few are not
-        // left waiting for a group that will never fill.
-        if pending.len() >= 4 || set.is_empty() {
-            if pending.iter().any(|c| c.cover.is_some()) {
-                let _ = app.emit("covers-ready", &pending);
-            }
-            out.append(&mut pending);
-        }
-    }
-    out.append(&mut pending);
-    // Keep what this batch learned, so scrolling back over the same cards — and
-    // the next launch — costs nothing.
-    for platform in rows.iter().map(|r| r.platform_slug.as_str()).collect::<std::collections::BTreeSet<_>>() {
-        media::save_art_index(&state.media_dir, platform);
-    }
-    Ok(out)
+    // The window's only part in this is the progress event; the fetching itself
+    // is shared with the server.
+    moose_rack::commands::rom_covers(&state, ids, local_only, &move |batch| {
+        let _ = app.emit("covers-ready", batch);
+    })
+    .await
 }
 
 #[tauri::command]
@@ -1447,7 +1347,7 @@ fn systems(state: State<'_, AppState>) -> CmdResult<Vec<SystemView>> {
 }
 
 #[tauri::command]
-async fn sync_saves_plan(state: State<'_, AppState>) -> CmdResult<syncplan::Review> {
+async fn sync_saves_plan(state: State<'_, AppState>) -> CmdResult<moose_rack::syncplan::Review> {
     moose_rack::commands::sync_saves_plan(&*state).await
 }
 
