@@ -82,6 +82,16 @@ bind = "0.0.0.0:8001"
 # name = "guest"
 # password = "pbkdf2-sha256$600000$...$..."
 
+# A shared account with no password, offered as "Continue as guest" under the
+# sign-in form. Everyone who uses it is the same reader as far as the library is
+# concerned: one set of saves, one set of states, shared between them. They can
+# browse and keep their progress; they cannot change settings, install artwork,
+# or delete anybody's save state.
+#
+# Off unless you say so, because switching it on means anyone who can reach the
+# port can read the library.
+# guest = true
+
 # A browser can send neither header, so http://<host>:8001/login trades either
 # credential for a session cookie. Sessions are held in memory: a restart signs
 # everyone out, which costs one login and means there is no key to keep.

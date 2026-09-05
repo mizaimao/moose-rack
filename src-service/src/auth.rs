@@ -41,6 +41,14 @@ pub struct AuthConfig {
     pub token: Option<String>,
     #[serde(default)]
     pub users: Vec<User>,
+    /// A shared account with no password, offered as a button under the sign-in
+    /// form. Everyone who uses it is the same person as far as the library is
+    /// concerned -- one set of saves, one set of states, shared.
+    ///
+    /// Off unless asked for. It means anyone who can reach the port can read
+    /// the library, which is the whole point and worth being deliberate about.
+    #[serde(default)]
+    pub guest: bool,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -53,15 +61,19 @@ pub struct User {
 impl AuthConfig {
     /// True when nothing is configured, so nothing is checked.
     pub fn open(&self) -> bool {
-        self.token.as_deref().unwrap_or("").is_empty() && self.users.is_empty()
+        self.token.as_deref().unwrap_or("").is_empty() && self.users.is_empty() && !self.guest
     }
+
+    /// The name the shared account signs in under.
+    pub const GUEST: &'static str = "guest";
 
     pub fn describe(&self) -> String {
         if self.open() {
             return "open -- no token and no users configured".into();
         }
         let t = if self.token.as_deref().unwrap_or("").is_empty() { "no token" } else { "token" };
-        format!("{t}, {} user(s)", self.users.len())
+        let g = if self.guest { ", shared guest account on" } else { "" };
+        format!("{t}, {} user(s){g}", self.users.len())
     }
 }
 
@@ -215,7 +227,11 @@ pub const READ_ONLY: &[&str] = &[
     "config_patch", "list_art_options", "motion_options", "icon_styles", "icon_sets",
     "bios_status", "disk_usage", "check_update", "verify_achievements", "ui_bindings",
     "list_controls", "arrange_list", "picker_controls", "page_filter", "grid_uniform",
-    "set_grid", "sync_saves_plan", "warm_media",
+    "set_grid", "warm_media",
+    // Saves and states are shared in the guest account -- that is what the
+    // account is for. A guest who plays a game and cannot keep the save has
+    // been given a library they can look at and not use.
+    "sync_saves_plan", "sync_saves", "resolve_save_conflict",
 ];
 
 /// True when this command changes something a non-owner has no business
@@ -233,6 +249,7 @@ mod tests {
         AuthConfig {
             token: Some("owner-secret".into()),
             users: vec![User { name: "guest".into(), password: hash_password("hunter2") }],
+            guest: false,
         }
     }
 
@@ -295,10 +312,10 @@ mod tests {
     /// on a config whose token is absent or empty.
     #[test]
     fn an_empty_token_is_never_a_match() {
-        let c = AuthConfig { token: None, users: vec![] };
+        let c = AuthConfig { token: None, users: vec![], guest: false };
         assert_eq!(from_header(&c, Some("Bearer ")), None);
         assert_eq!(from_header(&c, Some("Bearer  ")), None);
-        let c = AuthConfig { token: Some(String::new()), users: vec![] };
+        let c = AuthConfig { token: Some(String::new()), users: vec![], guest: false };
         assert_eq!(from_header(&c, Some("Bearer ")), None);
     }
 
@@ -346,12 +363,35 @@ mod tests {
         assert_eq!(session_from_cookies(None), None);
     }
 
+    /// The shared account is a real identity, not an absence of one: a guest is
+    /// still not the owner.
+    #[test]
+    fn the_guest_account_is_offered_only_when_asked_for() {
+        let mut c = AuthConfig::default();
+        assert!(c.open(), "no guest and no credentials is an open service");
+        c.guest = true;
+        assert!(!c.open(), "switching the guest on must switch the checking on");
+        assert!(c.describe().contains("guest"));
+    }
+
+    /// Saves and states are shared in that account, so a guest may sync them --
+    /// and still may not touch the settings.
+    #[test]
+    fn a_guest_may_sync_saves_but_not_change_settings() {
+        for allowed in ["sync_saves", "sync_saves_plan", "resolve_save_conflict", "game_states"] {
+            assert!(!owner_only(allowed), "{allowed} is shared and should be allowed");
+        }
+        for denied in ["set_config_field", "install_icon_set", "set_list_art", "delete_state"] {
+            assert!(owner_only(denied), "{denied} must stay the owner's");
+        }
+    }
+
     #[test]
     fn nothing_configured_means_nothing_checked() {
         assert!(AuthConfig::default().open());
-        assert!(AuthConfig { token: Some(String::new()), users: vec![] }.open());
+        assert!(AuthConfig { token: Some(String::new()), users: vec![], guest: false }.open());
         assert!(!cfg().open());
-        assert!(AuthConfig { token: None, users: cfg().users }.open() == false);
+        assert!(AuthConfig { token: None, users: cfg().users, guest: false }.open() == false);
     }
 
     /// A guest may look; a guest may not change what the next person sees.
@@ -360,9 +400,12 @@ mod tests {
         for r in ["roms", "platforms", "rom_covers", "rom_detail", "search", "status"] {
             assert!(!owner_only(r), "{r} should be readable by a guest");
         }
+        // `sync_saves` is deliberately absent: saves and states are shared in
+        // the guest account, which is what the account is for. `delete_state`
+        // is not -- deleting somebody else's freeze-frame is not sharing.
         for w in [
             "set_config_field", "set_icon_set", "set_list_art", "install_icon_set",
-            "fetch_icons", "toggle_favorite", "delete_state", "sync_saves",
+            "fetch_icons", "toggle_favorite", "delete_state",
             "set_retroarch_root", "import_bindings", "set_page_names",
         ] {
             assert!(owner_only(w), "{w} must be owner-only");
