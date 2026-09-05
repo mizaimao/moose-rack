@@ -185,6 +185,10 @@ struct Persisted {
 
 struct SyncState {
     store: saves::SaveStore,
+    /// Save *states* -- emulator freeze-frames. A separate store because they
+    /// sync by a different rule: `crate::statesync` decides what to send before
+    /// it sends, so there is no conflict to answer and nothing to merge.
+    states: saves::StateStore,
     path: std::path::PathBuf,
     data: Persisted,
 }
@@ -689,6 +693,74 @@ async fn save_content(
 }
 
 #[derive(Deserialize)]
+struct StatesQuery {
+    rom_id: Option<i64>,
+}
+
+async fn list_states(
+    State(lib): State<Arc<Library>>,
+    Query(q): Query<StatesQuery>,
+) -> Json<Vec<saves::ServerState>> {
+    Json(lib.sync.lock().unwrap().states.list(q.rom_id))
+}
+
+async fn state_content(
+    State(lib): State<Arc<Library>>,
+    AxPath(id): AxPath<i64>,
+) -> axum::response::Response {
+    match lib.sync.lock().unwrap().states.read(id) {
+        Some(b) => {
+            ([(axum::http::header::CONTENT_TYPE, "application/octet-stream")], b).into_response()
+        }
+        None => axum::http::StatusCode::NOT_FOUND.into_response(),
+    }
+}
+
+#[derive(Deserialize)]
+struct StateUploadQuery {
+    rom_id: i64,
+    #[serde(default)]
+    emulator: Option<String>,
+}
+
+/// Take the state we are given.
+///
+/// No overwrite flag and no 409, unlike `/api/saves`: `src/api.rs` says so in
+/// as many words, and the reason is that a freeze-frame belongs to one emulator
+/// build and cannot be merged with another. The decision not to send is made
+/// before the call.
+async fn upload_state(
+    State(lib): State<Arc<Library>>,
+    Query(q): Query<StateUploadQuery>,
+    mut form: axum::extract::Multipart,
+) -> axum::response::Response {
+    let mut file_name = String::new();
+    let mut bytes: Vec<u8> = Vec::new();
+    while let Ok(Some(field)) = form.next_field().await {
+        // `stateFile`, the name `upload_state` sends. Anything else is ignored
+        // rather than guessed at.
+        if field.name() == Some("stateFile") {
+            file_name = field.file_name().unwrap_or_default().to_owned();
+            bytes = field.bytes().await.unwrap_or_default().to_vec();
+        }
+    }
+    // A path separator in the name would write outside the store.
+    let safe = std::path::Path::new(&file_name)
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or_default()
+        .to_owned();
+    if safe.is_empty() || safe.starts_with('.') {
+        return (axum::http::StatusCode::BAD_REQUEST, "no usable stateFile").into_response();
+    }
+    let store = lib.sync.lock().unwrap();
+    match store.states.write(q.rom_id, &safe, q.emulator.as_deref(), &bytes) {
+        Ok(st) => Json(st).into_response(),
+        Err(e) => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+    }
+}
+
+#[derive(Deserialize)]
 struct UploadQuery {
     rom_id: i64,
     device_id: String,
@@ -843,6 +915,23 @@ async fn login(
 ) -> axum::response::Response {
     let s = |k: &str| body.get(k).and_then(|v| v.as_str()).unwrap_or("").to_owned();
     let (token, user, pass) = (s("token"), s("username"), s("password"));
+    // The shared account, when the owner has switched it on. No password to
+    // check because there is none: the button is the credential, and the whole
+    // point is that everyone using it is the same reader.
+    if body.get("guest").and_then(|v| v.as_bool()) == Some(true) {
+        if !guard.cfg.guest {
+            return (axum::http::StatusCode::UNAUTHORIZED, "no").into_response();
+        }
+        let who = auth::Identity::User(auth::AuthConfig::GUEST.to_owned());
+        let id = guard.sessions.open(who);
+        let cookie =
+            format!("{}={id}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000", auth::COOKIE);
+        return (
+            [(axum::http::header::SET_COOKIE, cookie)],
+            Json(serde_json::json!({ "ok": true, "owner": false, "name": auth::AuthConfig::GUEST })),
+        )
+            .into_response();
+    }
     let header = if !token.is_empty() {
         format!("Bearer {token}")
     } else {
@@ -908,6 +997,8 @@ const LOGIN_PAGE: &str = r#"<!doctype html>
  button { padding:9px 11px; border-radius:7px; border:0; background:#4c8dff; color:#fff;
           font:inherit; font-weight:600; cursor:pointer }
  button:disabled { opacity:.6; cursor:default }
+ button.ghost { background:transparent; border:1px solid #2a2e35; color:#c8ccd2; font-weight:500 }
+ button.ghost:hover { border-color:#3a4049; color:#e8eaed }
  .sep { display:flex; align-items:center; gap:10px; color:#666; font-size:11px;
         text-transform:uppercase; letter-spacing:.08em }
  .sep::before,.sep::after { content:""; flex:1; height:1px; background:#2a2e35 }
@@ -921,6 +1012,7 @@ const LOGIN_PAGE: &str = r#"<!doctype html>
   <input name="username" placeholder="Username" autocomplete="username">
   <input name="password" type="password" placeholder="Password" autocomplete="current-password">
   <button>Sign in</button>
+  <!--GUEST-->
   <div class="err" id="e"></div>
 </form>
 <script>
@@ -936,11 +1028,31 @@ document.getElementById("f").addEventListener("submit", async (ev) => {
   b.disabled = false;
   e.textContent = "Not recognised.";
 });
+const g = document.getElementById("g");
+if (g) g.addEventListener("click", async () => {
+  g.disabled = true;
+  const r = await fetch("/login", {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ guest: true }),
+  });
+  if (r.ok) { location.href = "/"; return; }
+  g.disabled = false;
+  document.getElementById("e").textContent = "Guest access is off.";
+});
 </script>
 "#;
 
-async fn login_page() -> axum::response::Html<&'static str> {
-    axum::response::Html(LOGIN_PAGE)
+async fn login_page(State(guard): State<std::sync::Arc<Guard>>) -> axum::response::Html<String> {
+    // Drawn only when it will work. A button that answers 401 is worse than no
+    // button: it reads as the service being broken rather than as a door that
+    // was never opened.
+    let guest = if guard.cfg.guest {
+        r#"<div class="sep">or</div>
+  <button type="button" id="g" class="ghost">Continue as guest</button>"#
+    } else {
+        ""
+    };
+    axum::response::Html(LOGIN_PAGE.replace("<!--GUEST-->", guest))
 }
 
 /// The routes, as a function so tests can build one without a socket.
@@ -991,6 +1103,8 @@ fn app(lib: Arc<Library>, media_dir: std::path::PathBuf, with_index: bool) -> Ro
         .route("/api/devices", axum::routing::post(register_device))
         .route("/api/saves", get(list_saves).post(upload_save))
         .route("/api/saves/{id}/content", get(save_content))
+        .route("/api/states", get(list_states).post(upload_state))
+        .route("/api/states/{id}/content", get(state_content))
         .route("/api/sync/negotiate", axum::routing::post(negotiate))
         .route("/api/sync/sessions/{id}/complete", axum::routing::post(complete_session))
             // Artwork straight off the tree. ES-DE and Skraper already scraped it;
@@ -1135,6 +1249,7 @@ async fn main() -> Result<()> {
         firmware,
         sync: std::sync::Mutex::new(SyncState {
             store: saves::SaveStore::new(&saves_root),
+            states: saves::StateStore::new(saves_root.join("_states")),
             path: state_path,
             data,
         }),
@@ -1270,6 +1385,7 @@ mod tests {
             firmware: scan_firmware(&dir.join("bios")),
             sync: std::sync::Mutex::new(SyncState {
                 store: saves::SaveStore::new(&saves_root),
+                states: saves::StateStore::new(saves_root.join("_states")),
                 path: saves_root.join("sync-state.json"),
                 data: Default::default(),
             }),
@@ -1324,6 +1440,7 @@ mod tests {
                 name: "guest".into(),
                 password: auth::hash_password("hunter2"),
             }],
+            guest: false,
         }
     }
 
@@ -1517,6 +1634,164 @@ mod tests {
         // And an unknown command is owner-only, so a guest cannot probe for
         // one that was added without being classified.
         assert_eq!(post(basic("guest", "hunter2"), "brand_new").await, StatusCode::FORBIDDEN);
+    }
+
+    /// The gap a last audit before decommissioning found.
+    ///
+    /// `src/api.rs` calls `/api/states` and `/api/states/{id}/content`, and
+    /// `statesync::run` is reached from every save sync -- so save states were
+    /// silently unsynced while saves worked. Nothing reported it because the
+    /// client asks for states after saves and a 404 there is not fatal.
+    #[tokio::test]
+    async fn save_states_upload_list_and_download() {
+        let (_d, app) = built();
+        let body = concat!(
+            "--X\r\n",
+            "Content-Disposition: form-data; name=\"stateFile\"; filename=\"Game.state1\"\r\n\r\n",
+            "frozen\r\n",
+            "--X--\r\n"
+        );
+        let r = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/states?rom_id=1&emulator=snes9x")
+                    .header("content-type", "multipart/form-data; boundary=X")
+                    .body(Body::from(body))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(r.status(), StatusCode::OK);
+        let up: serde_json::Value =
+            serde_json::from_slice(&axum::body::to_bytes(r.into_body(), usize::MAX).await.unwrap())
+                .unwrap();
+        assert_eq!(up["rom_id"], 1);
+        assert_eq!(up["file_name"], "Game.state1");
+        assert_eq!(up["emulator"], "snes9x");
+        let id = up["id"].as_i64().unwrap();
+
+        let (s, body) = get(&app, "/api/states?rom_id=1").await;
+        assert_eq!(s, StatusCode::OK);
+        let list: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(list.as_array().unwrap().len(), 1);
+        assert_eq!(list[0]["id"], id);
+
+        let (s, bytes) = get(&app, &format!("/api/states/{id}/content")).await;
+        assert_eq!(s, StatusCode::OK);
+        assert_eq!(bytes, "frozen");
+
+        // Another game's states are not this game's.
+        let (_, other) = get(&app, "/api/states?rom_id=2").await;
+        assert_eq!(other, "[]");
+    }
+
+    /// A filename with a path in it must not write outside the store.
+    #[tokio::test]
+    async fn an_uploaded_state_cannot_escape_its_directory() {
+        let (_d, app) = built();
+        for name in ["../../escape.state", "/etc/passwd", ".hidden"] {
+            let body = format!(
+                "--X\r\nContent-Disposition: form-data; name=\"stateFile\"; filename=\"{name}\"\r\n\r\nx\r\n--X--\r\n"
+            );
+            let r = app
+                .clone()
+                .oneshot(
+                    Request::builder()
+                        .method("POST")
+                        .uri("/api/states?rom_id=1")
+                        .header("content-type", "multipart/form-data; boundary=X")
+                        .body(Body::from(body))
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            // Either refused outright, or reduced to a bare name inside the
+            // store -- never a path.
+            if r.status() == StatusCode::OK {
+                let v: serde_json::Value = serde_json::from_slice(
+                    &axum::body::to_bytes(r.into_body(), usize::MAX).await.unwrap(),
+                )
+                .unwrap();
+                let got = v["file_name"].as_str().unwrap();
+                assert!(!got.contains('/'), "{name} was stored as {got}");
+                assert!(!got.starts_with('.'), "{name} was stored as {got}");
+            }
+        }
+    }
+
+    fn with_guest() -> auth::AuthConfig {
+        let mut c = locked();
+        c.guest = true;
+        c
+    }
+
+    /// A POST whose response cookie a test needs. Named apart from the
+    /// existing `post_json`, which takes a `Value` and returns no headers.
+    async fn post_login(app: &Router, uri: &str, body: &str) -> (StatusCode, Option<String>, String) {
+        let r = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(uri)
+                    .header("content-type", "application/json")
+                    .body(Body::from(body.to_owned()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let status = r.status();
+        let cookie = r
+            .headers()
+            .get("set-cookie")
+            .and_then(|v| v.to_str().ok())
+            .map(|c| c.split(';').next().unwrap().to_owned());
+        let bytes = axum::body::to_bytes(r.into_body(), usize::MAX).await.unwrap();
+        (status, cookie, String::from_utf8_lossy(&bytes).into_owned())
+    }
+
+    /// The shared account: one button, no password, and it reads the library.
+    #[tokio::test]
+    async fn a_guest_can_sign_in_with_the_button() {
+        let (_d, app) = guarded(with_guest());
+        let (s, cookie, body) = post_login(&app, "/login", r#"{"guest":true}"#).await;
+        assert_eq!(s, StatusCode::OK);
+        assert!(body.contains(r#""owner":false"#), "{body}");
+        let cookie = cookie.expect("no session cookie");
+        let (s, _) = req(&app, "GET", "/api/roms", &[("cookie", &cookie)]).await;
+        assert_eq!(s, StatusCode::OK, "a guest could not read the library");
+    }
+
+    /// And is still not the owner.
+    #[tokio::test]
+    async fn a_guest_may_sync_saves_and_may_not_change_settings() {
+        let (_d, app) = guarded(with_guest());
+        let (_, cookie, _) = post_login(&app, "/login", r#"{"guest":true}"#).await;
+        let cookie = cookie.unwrap();
+        let (s, _) = req(&app, "POST", "/invoke/sync_saves", &[("cookie", &cookie)]).await;
+        assert_ne!(s, StatusCode::FORBIDDEN, "saves are shared in that account");
+        let (s, _) = req(&app, "POST", "/invoke/set_list_art", &[("cookie", &cookie)]).await;
+        assert_eq!(s, StatusCode::FORBIDDEN);
+    }
+
+    /// Off unless asked for. The button is not drawn and the door does not open.
+    #[tokio::test]
+    async fn guest_access_is_refused_when_it_is_not_switched_on() {
+        let (_d, app) = guarded(locked());
+        let (s, cookie, _) = post_login(&app, "/login", r#"{"guest":true}"#).await;
+        assert_eq!(s, StatusCode::UNAUTHORIZED);
+        assert!(cookie.is_none(), "a session was opened for a guest that is off");
+        let (_, page) = req(&app, "GET", "/login", &[]).await;
+        assert!(!page.contains("Continue as guest"), "the button is drawn but does nothing");
+    }
+
+    #[tokio::test]
+    async fn the_guest_button_appears_only_when_it_works() {
+        let (_d, app) = guarded(with_guest());
+        let (_, page) = req(&app, "GET", "/login", &[]).await;
+        assert!(page.contains("Continue as guest"), "the button was not drawn");
     }
 
     #[tokio::test]

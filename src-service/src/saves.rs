@@ -509,3 +509,200 @@ mod tests {
         assert_eq!(actions(&p), ["no_op"]);
     }
 }
+
+// --- Save states ------------------------------------------------------------
+//
+// A save *state* is a freeze-frame of the emulator; a save is the cartridge's
+// own battery-backed memory. They sync differently and `crate::statesync`
+// handles them separately for a reason -- a state belongs to one emulator and
+// often to one version of it, so there is no merging to be done and no conflict
+// to resolve. The server takes what it is given.
+//
+// Same store, a different root, because the shapes are the same: files under a
+// directory named for the rom id, ids derived from the name so they survive a
+// rescan. `emulator` is the one field saves do not carry, and it is remembered
+// in the file name rather than beside it -- see `state_file_name`.
+
+/// One state as the client reads it.
+#[derive(Debug, Clone, Serialize, PartialEq)]
+pub struct ServerState {
+    pub id: i64,
+    pub rom_id: i64,
+    pub file_name: String,
+    pub file_size_bytes: i64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub emulator: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub updated_at: Option<String>,
+}
+
+/// States live beside saves, under their own directory.
+pub struct StateStore {
+    root: std::path::PathBuf,
+}
+
+impl StateStore {
+    pub fn new(root: impl Into<std::path::PathBuf>) -> Self {
+        Self { root: root.into() }
+    }
+
+    fn dir(&self, rom_id: i64) -> std::path::PathBuf {
+        self.root.join(rom_id.to_string())
+    }
+
+    /// Where the emulator is recorded.
+    ///
+    /// In a sibling file rather than in the name, because the name is what the
+    /// client matches on when it decides whether it already has this state --
+    /// decorating it would make every state look new to a client that had it.
+    fn emu_path(&self, rom_id: i64, file_name: &str) -> std::path::PathBuf {
+        self.dir(rom_id).join(format!(".{file_name}.emulator"))
+    }
+
+    pub fn list(&self, rom_id: Option<i64>) -> Vec<ServerState> {
+        let mut out = Vec::new();
+        let dirs: Vec<std::path::PathBuf> = match rom_id {
+            Some(id) => vec![self.dir(id)],
+            None => std::fs::read_dir(&self.root)
+                .map(|rd| rd.flatten().map(|e| e.path()).filter(|p| p.is_dir()).collect())
+                .unwrap_or_default(),
+        };
+        for d in dirs {
+            let Some(rid) =
+                d.file_name().and_then(|n| n.to_str()).and_then(|n| n.parse::<i64>().ok())
+            else {
+                continue;
+            };
+            let Ok(rd) = std::fs::read_dir(&d) else { continue };
+            for e in rd.flatten() {
+                let p = e.path();
+                if !p.is_file() {
+                    continue;
+                }
+                let Some(name) = p.file_name().and_then(|n| n.to_str()) else { continue };
+                // The sidecars are bookkeeping, not states.
+                if name.starts_with('.') && name.ends_with(".emulator") {
+                    continue;
+                }
+                let Ok(meta) = std::fs::metadata(&p) else { continue };
+                let updated = meta
+                    .modified()
+                    .ok()
+                    .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+                    .map(|d| d.as_secs());
+                out.push(ServerState {
+                    id: save_id(rid, name),
+                    rom_id: rid,
+                    file_name: name.to_owned(),
+                    file_size_bytes: meta.len() as i64,
+                    emulator: std::fs::read_to_string(self.emu_path(rid, name))
+                        .ok()
+                        .map(|s| s.trim().to_owned())
+                        .filter(|s| !s.is_empty()),
+                    updated_at: updated.map(|s| format!("{s}")),
+                });
+            }
+        }
+        out.sort_by(|a, b| (a.rom_id, &a.file_name).cmp(&(b.rom_id, &b.file_name)));
+        out
+    }
+
+    /// Take what we are given. No conflict answer: `statesync` decides whether
+    /// to send before it calls, because a freeze-frame cannot be merged.
+    pub fn write(
+        &self,
+        rom_id: i64,
+        file_name: &str,
+        emulator: Option<&str>,
+        bytes: &[u8],
+    ) -> std::io::Result<ServerState> {
+        let d = self.dir(rom_id);
+        std::fs::create_dir_all(&d)?;
+        std::fs::write(d.join(file_name), bytes)?;
+        match emulator {
+            Some(e) if !e.is_empty() => std::fs::write(self.emu_path(rom_id, file_name), e)?,
+            // An upload with no emulator clears a stale one rather than leaving
+            // the previous uploader's name on somebody else's state.
+            _ => {
+                let _ = std::fs::remove_file(self.emu_path(rom_id, file_name));
+            }
+        }
+        self.list(Some(rom_id))
+            .into_iter()
+            .find(|s| s.file_name == file_name)
+            .ok_or_else(|| std::io::Error::other("state vanished after writing"))
+    }
+
+    pub fn read(&self, id: i64) -> Option<Vec<u8>> {
+        self.list(None)
+            .into_iter()
+            .find(|s| s.id == id)
+            .and_then(|s| std::fs::read(self.dir(s.rom_id).join(&s.file_name)).ok())
+    }
+}
+
+#[cfg(test)]
+mod state_tests {
+    use super::*;
+
+    fn store(name: &str) -> (tempdir::TempDir, StateStore) {
+        let d = tempdir::TempDir::new(name).unwrap();
+        let s = StateStore::new(d.path().join("states"));
+        (d, s)
+    }
+
+    #[test]
+    fn a_state_round_trips_with_its_emulator() {
+        let (_d, s) = store("st");
+        let w = s.write(7, "Game.state1", Some("snes9x"), b"frozen").unwrap();
+        assert_eq!(w.rom_id, 7);
+        assert_eq!(w.file_name, "Game.state1");
+        assert_eq!(w.file_size_bytes, 6);
+        assert_eq!(w.emulator.as_deref(), Some("snes9x"));
+        assert_eq!(s.read(w.id).as_deref(), Some(&b"frozen"[..]));
+        assert_eq!(s.list(Some(7)), vec![w.clone()]);
+        assert_eq!(s.list(None), vec![w]);
+        assert_eq!(s.list(Some(8)), vec![]);
+    }
+
+    /// The sidecar must never be listed as a state of its own, or every state
+    /// appears twice and the second one is four bytes of emulator name.
+    #[test]
+    fn the_emulator_sidecar_is_not_a_state() {
+        let (_d, s) = store("st-side");
+        s.write(1, "A.state", Some("mesen"), b"x").unwrap();
+        let names: Vec<_> = s.list(None).into_iter().map(|x| x.file_name).collect();
+        assert_eq!(names, ["A.state"]);
+    }
+
+    /// Ids are derived, so deleting the index and rebuilding it gives the same
+    /// numbers -- the rule the whole service is built on.
+    #[test]
+    fn ids_survive_a_rebuild() {
+        let (_d, s) = store("st-id");
+        let a = s.write(3, "X.state", None, b"one").unwrap();
+        let again = s.list(None)[0].clone();
+        assert_eq!(a.id, again.id);
+        assert_eq!(a.id, save_id(3, "X.state"));
+    }
+
+    /// Re-uploading replaces, and an upload with no emulator does not inherit
+    /// the last one's.
+    #[test]
+    fn uploading_again_replaces_and_clears_a_stale_emulator() {
+        let (_d, s) = store("st-re");
+        let first = s.write(2, "S.state", Some("mupen"), b"aa").unwrap();
+        let second = s.write(2, "S.state", None, b"bbbb").unwrap();
+        assert_eq!(first.id, second.id, "the same file is the same state");
+        assert_eq!(second.file_size_bytes, 4);
+        assert_eq!(second.emulator, None, "the previous emulator stuck to a new state");
+        assert_eq!(s.list(None).len(), 1);
+    }
+
+    #[test]
+    fn an_unknown_id_reads_nothing() {
+        let (_d, s) = store("st-none");
+        s.write(1, "A.state", None, b"x").unwrap();
+        assert_eq!(s.read(999), None);
+    }
+}
