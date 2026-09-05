@@ -77,6 +77,9 @@ The client reads a missing endpoint as an error and an empty list as "none yet".
 | `GET /api/saves` | optional `rom_id` |
 | `POST /api/saves` | multipart `saveFile`, **409 on conflict** |
 | `GET /api/saves/{id}/content` | one save's bytes |
+| `GET /api/states` | save states, optional `rom_id` |
+| `POST /api/states` | multipart `stateFile`, `rom_id` and optional `emulator`. **No 409** |
+| `GET /api/states/{id}/content` | one state's bytes |
 | `POST /api/sync/negotiate` | the plan |
 | `POST /api/sync/sessions/{id}/complete` | closes a session |
 
@@ -238,6 +241,13 @@ whichever arrives.
 | owner | `[auth] token` | everything |
 | user | `[[auth.users]]` name + password | read the library, sync saves |
 | browser | either, at `/login` | whatever that credential may |
+| guest | the button, when `[auth] guest = true` | read the library, sync saves and states |
+
+The guest account is shared on purpose: one identity, one set of saves, one set
+of states, however many people use it. `delete_state` stays the owner's --
+deleting somebody else's freeze-frame is not sharing. The button is drawn only
+when it will work, because a button that answers 401 reads as a broken service
+rather than as a door nobody opened.
 
 Passwords are PBKDF2-HMAC-SHA256, 600,000 rounds, per-password salt, stored as
 `pbkdf2-sha256$<rounds>$<salt>$<key>`. `moose-service --hash-password '...'`
@@ -275,6 +285,32 @@ scraping copy a library *from* a server *to* local storage, and this is the
 server — there is nowhere for them to put anything. All of them answer
 `"<cmd> is not available on the server"`, worded differently from
 `"unknown command <cmd>"` so a typo does not look like a design limit.
+
+### The audit before RomM was switched off
+
+2026-09-05, asked for as a last check that the service is a drop-in replacement
+for what the client actually uses. Method: every `"/api/..."` string in
+`src/api.rs`, normalised, diffed against every `.route()` in
+`src-service/src/main.rs`, then each one probed against the live server.
+
+Two did not exist. One mattered.
+
+**`/api/states` and `/api/states/{id}/content` — real, now built.**
+`src/statesync.rs` reaches them from `savesync::run`, so **every** save sync was
+silently failing to sync save states while saves themselves worked. It went
+unnoticed because states are fetched after saves and a 404 there is not fatal:
+the sync reports success and the freeze-frames stay on one machine.
+
+**`/api/search/roms` — not a gap.** `Client::search_roms` has no callers
+anywhere in the workspace. Dead code in the client, left alone.
+
+Everything else the client calls answered: heartbeat, config, users/me,
+platforms, roms and its paging, identifiers, one rom with and without
+`with_files`, rom content, all four collection shapes, firmware and its content,
+saves in every query form, devices, negotiate, complete.
+
+**If you add a client call, add it to this diff.** The check is two greps and it
+found a feature that had never worked.
 
 ## Adding a route
 

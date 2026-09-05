@@ -502,10 +502,18 @@ mod tests {
               "import_", "resolve_", "sync_", "download_", "scrape_", "cycle_", "clear_",
               "sort_", "launch_", "android_"];
         for cmd in crate::auth::READ_ONLY {
-            // `set_grid` computes a keyboard-navigation table from the geometry
-            // of what is on screen and stores nothing. It is the one exception,
-            // and it is named here rather than being quietly matched.
-            if *cmd == "set_grid" || *cmd == "sync_saves_plan" {
+            // The exceptions, each named with its reason rather than quietly
+            // matched. Adding one has to be a visible act.
+            //
+            //   set_grid              computes a keyboard-navigation table from
+            //                         the geometry on screen; stores nothing.
+            //   sync_saves_plan       reads both sides and proposes; writes nothing.
+            //   sync_saves            saves and states are shared in the guest
+            //   resolve_save_conflict account -- that is what the account is for,
+            //                         and a reader who cannot keep a save has
+            //                         been given a library they cannot use.
+            if matches!(*cmd, "set_grid" | "sync_saves_plan" | "sync_saves" | "resolve_save_conflict")
+            {
                 continue;
             }
             if let Some(v) = WRITE_VERBS.iter().find(|v| cmd.starts_with(**v)) {
