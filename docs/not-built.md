@@ -16,6 +16,10 @@ what remains:
   rebuilding it: "designed, not built" would invite exactly the attempt that
   already failed.
 
+Playing in the browser is scoped separately, in
+[browser-emulation.md](browser-emulation.md) — it is a bigger thing than
+anything here and became urgent once the web UI shipped.
+
 Was `attract-mode.md`, `cartridge-shelf.md` and `features-wanted.md`.
 
 
