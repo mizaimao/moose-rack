@@ -13,9 +13,21 @@ side and be compared.
                   --firmware   /home/frank/moose-library/bios \
                   --inventory  /home/frank/moose-library/inventory.db
 
-Running on `dev.lan:8001` as a systemd **user** unit with linger on. Port comes
+Running on `dev.lan` (port 80) as a systemd **user** unit with linger on. Port comes
 from `MOOSE_SERVICE_PORT` in the unit's `Environment=`, so changing it is one
 line and a restart.
+
+Port 80 needs the unprivileged floor lowered, once. A systemd *user* unit cannot
+give itself `CAP_NET_BIND_SERVICE` -- `AmbientCapabilities` is system-unit-only
+-- and `setcap` on the binary is wiped by the next `cargo build`, which would
+break a deploy silently some weeks later:
+
+    echo net.ipv4.ip_unprivileged_port_start=80 | sudo tee /etc/sysctl.d/50-moose.conf
+    sudo sysctl --system
+
+**The unit's `Environment=MOOSE_SERVICE_PORT` beats the config file.** Both have
+to change together; setting only `bind` leaves the old port running and looks
+like the file was ignored.
 
 ## The rules
 
@@ -128,7 +140,7 @@ the whole reason this is a service rather than a network share.
 
 ## The app itself, in a browser
 
-`http://dev.lan:8001/` serves `ui/` — the same 12,552 lines the desktop window
+`http://dev.lan/` serves `ui/` — the same 12,552 lines the desktop window
 runs, unedited. The UI does not speak `/api/`; it speaks Tauri's IPC,
 `window.__TAURI__.core.invoke("roms", {...})`, which in a browser is undefined.
 Two pieces bridge that, both in `src-service/src/web.rs`:
