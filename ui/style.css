@@ -3480,3 +3480,49 @@ body.mobile #detail .sub {
   opacity: 0.75;
 }
 .folders .gcard .art { background: color-mix(in srgb, currentColor 8%, transparent); }
+
+/* --- Playing in the page -------------------------------------------------
+   The emulator takes the whole screen. Not a panel: a game at 320x240 scaled
+   into a card is unplayable, and the surrounding chrome is a set of controls
+   that all act on a library you are no longer looking at. */
+#ejs-stage {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  background: #000;
+}
+#ejs-stage .ejs-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 10px;
+  background: var(--panel);
+  border-bottom: 1px solid color-mix(in srgb, var(--glass) 26%, transparent);
+  /* Above the emulator's own canvas, which sets its own stacking context. */
+  position: relative;
+  z-index: 1;
+}
+#ejs-stage .ejs-title {
+  font-size: 13px;
+  color: var(--dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#ejs-stage .ejs-close {
+  padding: 5px 12px;
+  border-radius: 7px;
+  border: 1px solid color-mix(in srgb, var(--glass) 40%, transparent);
+  background: var(--panel-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+#ejs-stage .ejs-close:hover { border-color: var(--accent); }
+/* The frame is what EmulatorJS measures itself against, so it needs a real
+   height rather than one that depends on the content it is about to create. */
+#ejs-stage .ejs-frame { flex: 1; min-height: 0; position: relative; }
+#ejs-stage #ejs-player { width: 100%; height: 100%; }

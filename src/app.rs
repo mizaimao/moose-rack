@@ -22,6 +22,13 @@ pub struct AppState {
     pub map: CoreMap,
     pub client: Option<Arc<api::Client>>,
     pub retroarch: Option<RetroArch>,
+    /// Whether this process can start a game on a screen its user is looking at.
+    ///
+    /// True for the desktop app and the handheld, false for the library
+    /// service: the service has RetroArch on it and would happily spawn a game
+    /// onto a monitor in another room. Set by whoever builds the state, because
+    /// nothing about the machine itself distinguishes the two.
+    pub can_launch: bool,
     pub roms_dir: PathBuf,
     pub media_dir: PathBuf,
     /// Artwork of a locally scanned ES-DE library. Keyed by ES-DE *system*
@@ -131,6 +138,14 @@ impl AppState {
     ///
     /// `media_dir` is left alone: it is where the app *writes* -- art indexes,
     /// fetched icon sets -- and the ES-DE tree is not necessarily writable.
+    /// This process serves a library and does not play it.
+    ///
+    /// Separate from `point_at` because they answer different questions and a
+    /// frontend could want one without the other.
+    pub fn serve_only(&mut self) {
+        self.can_launch = false;
+    }
+
     pub fn point_at(&mut self, layout: &crate::esde::Layout) {
         self.roms_dir = layout.roms.clone();
         self.esde_media = Some(layout.media.clone());
@@ -218,6 +233,9 @@ impl AppState {
         map,
         client,
         retroarch,
+        // Default true: an app started by its icon is being looked at. The
+        // service turns it off in `serve_only`.
+        can_launch: true,
         roms_dir,
         media_dir,
         esde_media: cfg.esde.media_dir(),
@@ -300,6 +318,21 @@ pub fn scan_into(
 mod scan_tests {
     use super::*;
 
+    /// `set_current_dir` is process-wide and these tests run in parallel.
+    ///
+    /// Two of them build an `AppState`, which opens `cache.sqlite3` by a
+    /// relative path, so each has to stand in its own directory -- and the
+    /// first one to finish was deleting the tree the second was standing in.
+    /// The failure looked like a missing file, which is exactly what it was,
+    /// and nothing about it pointed at the other test.
+    static CWD: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    /// Held for the duration, and unpoisoned: a test that panics while holding
+    /// it should not fail every other test with it.
+    fn cwd_lock() -> std::sync::MutexGuard<'static, ()> {
+        CWD.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
     fn tree(name: &str) -> (PathBuf, crate::esde::Layout) {
         let root = std::env::temp_dir().join(format!("moose-rack-scan-{name}"));
         std::fs::remove_dir_all(&root).ok();
@@ -336,6 +369,7 @@ mod scan_tests {
         std::fs::write(&cfg, "[media]\nlist_art = \"3dboxes\"\n").unwrap();
         // Built where the cache and any seeded files land inside the scratch
         // tree rather than the repo.
+        let _guard = cwd_lock();
         let cwd = std::env::current_dir().unwrap();
         std::env::set_current_dir(&root).unwrap();
         let built = AppState::from_config_at(&cfg);
@@ -348,6 +382,38 @@ mod scan_tests {
         assert_eq!(seen, cfg, "the config file was not named for other readers");
         let fields = fields.expect("config_fields");
         assert!(fields.config_exists, "Settings would say there is no config");
+        std::fs::remove_dir_all(&root).ok();
+    }
+
+    /// A library service must say it cannot launch, or the web UI tries to
+    /// spawn RetroArch onto a monitor in another room and reports success.
+    ///
+    /// The default is the other way round -- an app started by its icon is
+    /// being looked at -- so the service has to turn it off, and this is the
+    /// assertion that it does.
+    #[test]
+    fn serving_a_library_is_not_the_same_as_playing_it() {
+        let (root, layout) = tree("serveonly");
+        let cfg = root.join("c.toml");
+        std::fs::write(&cfg, "").unwrap();
+        let _guard = cwd_lock();
+        let cwd = std::env::current_dir().unwrap();
+        std::env::set_current_dir(&root).unwrap();
+        let built = AppState::from_config_at(&cfg);
+        let out = built.map(|mut st| {
+            let before = st.can_launch;
+            st.point_at(&layout);
+            st.serve_only();
+            (before, st.can_launch, crate::commands::status(&st).map(|s| s.can_launch))
+        });
+        crate::config::set_path(PathBuf::from("config.toml"));
+        std::env::set_current_dir(cwd).unwrap();
+
+        let (before, after, reported) = out.expect("state did not build");
+        assert!(before, "an app launched by its icon should be able to launch");
+        assert!(!after, "serve_only did not take");
+        // And it reaches the wire, which is what the UI reads.
+        assert_eq!(reported.expect("status"), false);
         std::fs::remove_dir_all(&root).ok();
     }
 
