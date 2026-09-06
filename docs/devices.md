@@ -70,6 +70,18 @@ are under plain `gamegear`.
 
 ## Artwork and gamelists
 
+**Scraping happens on the Thor, and only on the Thor.** ES-DE's macOS build
+does not scrape with Frank's ScreenScraper account — only the Android build
+does. So "just scrape it on the Mac" is not a plan, however reasonable it looks
+from the settings file, which holds the same credentials on both. New art is
+scraped on the Android device and comes back with
+`tools/pull-android-media.py`; the SSD stays canonical.
+
+Nothing here uses the ScreenScraper API directly: that needs a developer id
+issued to the software, on top of the user's account, and moose-rack has none.
+The request for one is drafted in [outbox.md](outbox.md) and has not been sent.
+ES-DE's own devid is ES-DE's, and is not ours to borrow.
+
 The three ES-DE machines find media by convention, from the ROM's base name.
 The Flip does not — its gamelist names the file outright.
 
