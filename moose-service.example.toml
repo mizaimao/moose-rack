@@ -55,8 +55,18 @@ ui = "/home/frank/moose-rack-src/ui"
 [server]
 # Interface and port. `port` overrides whatever `bind` says, which is the common
 # case: a different port on the same interface.
-bind = "0.0.0.0:8001"
-# port = 8001
+bind = "0.0.0.0:80"
+# port = 80
+#
+# Below 1024 needs one thing a systemd *user* unit cannot give itself:
+# AmbientCapabilities is system-unit-only, and `setcap` on the binary is wiped
+# by the next rebuild. Lower the floor instead, once:
+#
+#     echo net.ipv4.ip_unprivileged_port_start=80 | sudo tee /etc/sysctl.d/50-moose.conf
+#     sudo sysctl --system
+#
+# A flag or MOOSE_SERVICE_PORT in the unit's Environment overrides this line --
+# which is how the port stayed 8001 after this file already said otherwise.
 
 [auth]
 # Two ways in, because the client already speaks both. `src/api.rs` builds one
@@ -92,7 +102,7 @@ bind = "0.0.0.0:8001"
 # port can read the library.
 # guest = true
 
-# A browser can send neither header, so http://<host>:8001/login trades either
+# A browser can send neither header, so http://<host>/login trades either
 # credential for a session cookie. Sessions are held in memory: a restart signs
 # everyone out, which costs one login and means there is no key to keep.
 #
