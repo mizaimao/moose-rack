@@ -1080,6 +1080,8 @@ fn web_app(st: Arc<web::WebState>) -> Router {
         // Artwork by absolute path, which is the shape `convertFileSrc` hands
         // the page. Confined to the media roots -- see `resolve_media`.
         .route("/media", get(web::media))
+        // See `rom_bytes`: the UI holds cache ids, /api/ holds scan ids.
+        .route("/rom", get(web::rom_bytes))
         // EmulatorJS, vendored by scripts/fetch-emulatorjs.sh. Served from here
         // rather than referenced on a CDN: this is a LAN library and it has to
         // play with the internet down. Absent when nobody has run the script,
