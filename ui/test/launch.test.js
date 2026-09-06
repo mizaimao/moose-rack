@@ -83,16 +83,33 @@ beforeEach(() => {
 describe("launching says what it is doing", () => {
   test("the phases the backend reports reach the screen", async () => {
     await mod.launch(7);
-    // Two: the gun question, then the launch. A console with a light gun gets
-    // a one-time notice before the game starts, so the launch path asks first.
+    // Three: the gun question, then which backend can launch, then the launch.
+    // A console with a light gun gets a one-time notice before the game starts,
+    // so the launch path asks first; `status` decides between launching a
+    // process and playing in the page, because on the library service there is
+    // nobody in front of the screen a process would open on.
     assert.deepEqual(
       invoked.map((i) => i.cmd),
-      ["game_lightgun", "launch_rom"],
+      ["game_lightgun", "status", "launch_rom"],
     );
     assert.match(
       dom.window.document.getElementById("toast").textContent,
       /played for 3 minutes/,
       "the result should be the last thing shown"
+    );
+  });
+
+  /// Asked once, not before every game. It cannot change while the page is
+  /// open, and a round trip on the way into each launch is a round trip in
+  /// front of the thing you pressed.
+  test("which backend can launch is asked once, not per launch", async () => {
+    await mod.launch(7);
+    invoked.length = 0;
+    await mod.launch(7);
+    assert.equal(
+      invoked.filter((i) => i.cmd === "status").length,
+      0,
+      "status was asked again on the second launch",
     );
   });
 

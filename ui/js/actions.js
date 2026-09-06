@@ -46,6 +46,38 @@ function measureRefresh(frames = 24) {
 /// True from the moment a launch starts until the emulator has exited and the
 /// pad has settled.
 ///
+/// Whether this backend can put a game on the screen in front of you.
+///
+/// Asked once and remembered: it cannot change while the page is open, and
+/// `status` is a scan of the library on the other side.
+let nativeLaunch = null;
+async function canLaunchNatively() {
+  if (nativeLaunch === null) {
+    try {
+      // Absent means yes. Only the library service sets this false, and it
+      // always sets it; a backend that does not mention the field is an older
+      // desktop build, where launching natively is exactly right. Treating
+      // absence as "no" would send the desktop to the in-page emulator.
+      nativeLaunch = (await invoke("status")).can_launch !== false;
+    } catch {
+      // A backend that will not answer is not one that can launch. Falling
+      // back to true would spawn nothing and report success.
+      nativeLaunch = false;
+    }
+  }
+  return nativeLaunch;
+}
+
+/// Play in the page. Imported lazily so a desktop launch never loads the
+/// emulator's module graph.
+async function playHere(id) {
+  const [{ playInBrowser }, detail] = await Promise.all([
+    import("./player.js"),
+    invoke("rom_detail", { id }),
+  ]);
+  return playInBrowser(detail);
+}
+
 /// `launch_rom` does not return until the game quits, so a second press in the
 /// meantime used to start a second copy — two RetroArch windows over each
 /// other, both holding the same save. A held A repeats slowly enough that it
@@ -185,8 +217,17 @@ export async function launch(
     // Android goes another way entirely: no process to spawn and nothing to
     // wait on. Everything above this line still applies — the guard, the pad,
     // the toast — because they are about this window, not about the emulator.
+    // Three ways to start a game now, and the backend decides between the
+    // last two. `can_launch` is false on the library service: it has RetroArch
+    // on it and would spawn the game onto a screen in another room, so the
+    // page plays it instead. Everything wrapped around this -- the pad guard,
+    // the conflict dialog, the BIOS and offline prompts -- is about this
+    // window rather than about the emulator, which is why Android could reuse
+    // it and why the browser can too.
     const result = MOBILE
       ? await launchAndroid(id, skipSync)
+      : !(await canLaunchNatively())
+      ? await playHere(id)
       : await invoke("launch_rom", {
           id,
           pad: state.gamepad,

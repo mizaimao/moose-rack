@@ -74,6 +74,9 @@ struct LibraryPaths {
     /// library: theme, cores, achievements. Optional -- without it the defaults
     /// apply and the library still comes from the paths above.
     app_config: Option<String>,
+    /// Where EmulatorJS was unpacked. Defaults to `assets/emulatorjs` beside
+    /// the `ui` directory, which is where the fetch script puts it.
+    emulatorjs: Option<String>,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -1077,6 +1080,14 @@ fn web_app(st: Arc<web::WebState>) -> Router {
         // Artwork by absolute path, which is the shape `convertFileSrc` hands
         // the page. Confined to the media roots -- see `resolve_media`.
         .route("/media", get(web::media))
+        // EmulatorJS, vendored by scripts/fetch-emulatorjs.sh. Served from here
+        // rather than referenced on a CDN: this is a LAN library and it has to
+        // play with the internet down. Absent when nobody has run the script,
+        // and the page says so rather than failing blankly.
+        .nest_service(
+            "/emulatorjs",
+            tower_http::services::ServeDir::new(st.emulatorjs.clone()),
+        )
         .with_state(st)
 }
 
@@ -1274,6 +1285,9 @@ async fn main() -> Result<()> {
         // and the state follows. Otherwise `config.toml` would have to repeat
         // the paths, and the two would disagree the first time one was edited.
         state.point_at(&layout);
+        // This process has RetroArch on it and no one in front of it. Saying so
+        // is what lets the web UI offer to play in the page instead.
+        state.serve_only();
         println!("ui         {} (app config {app_cfg})", ui_dir.display());
         // The filesystem is the truth and the cache is derived -- the same rule
         // the API answers by. Scanning at startup costs a second on top of the
@@ -1304,7 +1318,28 @@ async fn main() -> Result<()> {
             ),
             Err(e) => eprintln!("ui lists   not loaded: {e}"),
         }
-        app = web_app(Arc::new(web::WebState { state, ui_dir })).merge(app);
+        let emulatorjs = cfg
+            .library
+            .emulatorjs
+            .clone()
+            .map(std::path::PathBuf::from)
+            .unwrap_or_else(|| {
+                // `<repo>/ui` -> `<repo>/assets/emulatorjs`.
+                ui_dir
+                    .parent()
+                    .map(|r| r.join("assets/emulatorjs"))
+                    .unwrap_or_else(|| std::path::PathBuf::from("assets/emulatorjs"))
+            });
+        match std::fs::read_dir(emulatorjs.join("data/cores")) {
+            Ok(rd) => println!("emulatorjs {} ({} cores)", emulatorjs.display(), rd.count()),
+            // Not fatal, and named: the Play button in a browser is the only
+            // thing that needs it, and it says so itself when pressed.
+            Err(_) => println!(
+                "emulatorjs not installed at {} -- run scripts/fetch-emulatorjs.sh",
+                emulatorjs.display()
+            ),
+        }
+        app = web_app(Arc::new(web::WebState { state, ui_dir, emulatorjs })).merge(app);
     }
 
     // Everything above is routes; this is who may reach them. Applied to the

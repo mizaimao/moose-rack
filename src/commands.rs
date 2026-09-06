@@ -2524,6 +2524,14 @@ pub struct Status {
     /// server that will not answer, and worth saying so in the UI.
     pub configured: bool,
     pub retroarch: Option<String>,
+    /// Whether this backend can start a game on the screen you are looking at.
+    ///
+    /// Not "is RetroArch installed": a library service has RetroArch on it and
+    /// still cannot play anything *for you*, because the screen is in another
+    /// room. The UI needs the second question to decide between launching
+    /// natively and playing in the page, and only the backend can answer it --
+    /// the browser cannot see whether a process could be spawned.
+    pub can_launch: bool,
     pub cores_installed: usize,
     pub roms_cached: i64,
     /// Absolute paths, shown in the UI so downloaded data is never a mystery.
@@ -2557,6 +2565,8 @@ pub fn status(state: &AppState) -> CmdResult<Status> {
             .retroarch
             .as_ref()
             .map(|r| r.root.display().to_string()),
+        // Both halves: something to launch with, and somebody here to watch it.
+        can_launch: state.can_launch && state.retroarch.is_some(),
         cores_installed: state
             .retroarch
             .as_ref()
