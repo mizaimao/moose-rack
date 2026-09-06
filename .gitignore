@@ -146,3 +146,7 @@ assets/fonts/*
 /inventory.db-shm
 /dats/
 /moose-service.toml
+
+# Fetched by scripts/fetch-emulatorjs.sh, 283 MB of vendored WebAssembly.
+assets/emulatorjs/data/
+assets/emulatorjs/LICENSE

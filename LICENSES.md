@@ -34,3 +34,35 @@ rather than drawing empty boxes.
 ## Icons — ISC
 
 Lucide, vendored into `ui/icons/`. See `ui/icons/README.md`.
+
+## EmulatorJS — GPL-3.0
+
+[EmulatorJS](https://github.com/EmulatorJS/EmulatorJS) v4.2.3, which plays a
+game in the web UI when the backend cannot start one for you. The libretro
+cores it carries are compiled to WebAssembly and each keeps its own licence.
+
+Fetched at build time rather than committed, the same way as the fonts: pinned
+by URL and verified by SHA-256 in `assets/emulatorjs/MANIFEST.tsv`, downloaded
+by `scripts/fetch-emulatorjs.sh`. 290 MB compressed is not something to keep in
+a repository, and a hash in a text file gets everyone the same bytes.
+
+Fetched from the release rather than referenced on a CDN, deliberately. This is
+a library service on a home network that has to work with the internet down,
+and a CDN `<script src>` would be the only call in the app that leaves the
+house while somebody is playing.
+
+**What the license asks.** GPL-3.0 is a copyleft license, and the obligations
+attach to *distribution*. Running it on your own server for your own house is
+use, not distribution, and asks nothing.
+
+If this app is ever distributed with EmulatorJS inside it, three things follow:
+
+* the GPL-3.0 text travels with it — `assets/emulatorjs/LICENSE` is extracted
+  from the archive by the fetch script for exactly this reason;
+* recipients are offered the corresponding source, which for an unmodified
+  vendored copy is satisfied by the pinned URL in the manifest;
+* the combined work's own terms have to be compatible with GPL-3.0.
+
+The third is the one to think about before shipping a binary rather than after.
+Today nothing ships it: the script fetches it onto a machine that already has
+the app, and the archive is gitignored.

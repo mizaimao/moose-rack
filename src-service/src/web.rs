@@ -268,6 +268,8 @@ pub struct WebState {
     /// The same state the desktop window holds, built by the same constructor.
     pub state: AppState,
     pub ui_dir: std::path::PathBuf,
+    /// Where `scripts/fetch-emulatorjs.sh` unpacked the cores.
+    pub emulatorjs: std::path::PathBuf,
 }
 
 pub async fn invoke(

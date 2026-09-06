@@ -1,0 +1,17 @@
+# EmulatorJS, fetched at build time and never committed.
+#
+# One archive holding the loader and every core: 290 MB compressed, 283 MB of
+# cores once unpacked. Pinned by URL and verified by SHA-256, exactly like
+# assets/fonts — a repository is a poor place for a third of a gigabyte of
+# somebody else's WebAssembly, and a hash in a text file gets everyone the same
+# bytes just as well.
+#
+# GPL-3.0. See LICENSES.md; the licence file travels in the archive and is
+# extracted with it.
+#
+# Fetched from the release, not from a CDN. This is a LAN service that has to
+# work with the internet down, and a CDN reference would be the only thing in
+# the app that phones out while somebody is playing.
+#
+# url	sha256	name
+https://github.com/EmulatorJS/EmulatorJS/releases/download/v4.2.3/4.2.3.7z	07d451bc06fa3ad04ab30d9b94eb63ac34ad0babee52d60357b002bde8f3850b	4.2.3.7z
