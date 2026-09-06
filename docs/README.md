@@ -31,6 +31,7 @@ these look like to-do lists and are not.
 | [fast-launch.md](fast-launch.md) | **Measurement + work in progress.** Why a game took 4.26 s to start, and the launcher written to fix it |
 | [service-api.md](service-api.md) | **Current, built and running.** The service that replaces RomM — its routes, the rules for adding one, and the traps that each cost something |
 | [library-service.md](library-service.md) | **Design, now largely built —** see service-api.md. Replacing RomM — why it is the wrong shape for this library, and the 24 method/path pairs a drop-in has to answer |
+| [browser-emulation.md](browser-emulation.md) | **Planned, not built.** Playing a game in the web UI with EmulatorJS — which 10,700 of the 11,867 games are viable, where it hooks into the existing launch path, and why the saves must go through the sync that already exists |
 | [not-built.md](not-built.md) | **Designed, not built.** The arcade screensaver, the cartridge shelf, and the features a retro frontend normally has and this one does not. A menu, not a queue |
 
 ## The library
