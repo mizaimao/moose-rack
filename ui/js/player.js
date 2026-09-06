@@ -99,9 +99,11 @@ export async function playInBrowser(rom) {
   }
   if (!confirmHeavy(rom)) return "Cancelled";
 
-  // Streamed by the service with Range support, so a browser can start reading
-  // before the whole file has arrived and can resume a dropped connection.
-  const url = `/api/roms/${rom.id}/content/${encodeURIComponent(rom.fs_name)}`;
+  // `/rom`, not `/api/roms/{id}/content/`. Two id spaces live in that process:
+  // /api/ numbers the scan it serves to clients, and the UI works in cache ids,
+  // which are negative for anything found on this machine. Building an /api/
+  // URL from a cache id 404s on every game, which is what it did.
+  const url = `/rom?id=${encodeURIComponent(rom.id)}`;
 
   const stage = openStage(rom.name);
   stage.querySelector(".ejs-close").addEventListener("click", stopPlaying);

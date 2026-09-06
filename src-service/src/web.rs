@@ -342,6 +342,53 @@ pub async fn media(
     }
 }
 
+/// One game's bytes, by the id the web UI actually holds.
+///
+/// Not `/api/roms/{id}/content/`, and the difference is the whole reason this
+/// route exists. There are two id spaces in this process: `/api/` numbers the
+/// scan it serves to clients, one-based and positive, while the UI works in
+/// cache ids, which are negative for rows found on this machine. The player
+/// built an `/api/` URL out of a cache id and got a 404 for every game --
+/// correctly, because that row does not exist in that numbering.
+///
+/// Resolved through `commands::row_path`, which is what the desktop uses to
+/// find the same file, so a game the app can launch is a game this can serve.
+pub async fn rom_bytes(
+    State(st): State<Arc<WebState>>,
+    axum::extract::Query(q): axum::extract::Query<std::collections::HashMap<String, String>>,
+    req: axum::http::Request<axum::body::Body>,
+) -> axum::response::Response {
+    let Some(id) = q.get("id").and_then(|v| v.parse::<i64>().ok()) else {
+        return (axum::http::StatusCode::BAD_REQUEST, "no id").into_response();
+    };
+    let row = {
+        let Ok(cache) = st.state.cache.lock() else {
+            return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        };
+        cache.rom_by_id(id).ok().flatten()
+    };
+    let Some(row) = row else {
+        return (axum::http::StatusCode::NOT_FOUND, "no such game").into_response();
+    };
+    let Some(path) = moose_rack::commands::row_path(&st.state, &row) else {
+        return (axum::http::StatusCode::NOT_FOUND, "not on this machine").into_response();
+    };
+    // A folder ROM -- a multi-disc game, a shelf -- is not one file and there
+    // is nothing to hand a browser. Said plainly rather than as a 500.
+    if !path.is_file() {
+        return (axum::http::StatusCode::CONFLICT, "this game is a folder, not a file")
+            .into_response();
+    }
+    // Through `ServeFile` for Range: the emulator asks for the head of a zip
+    // before it asks for the rest, and a 200 to a range request makes it start
+    // the whole download again.
+    use tower::ServiceExt as _;
+    match tower_http::services::ServeFile::new(path).oneshot(req).await {
+        Ok(r) => r.into_response(),
+        Err(e) => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+    }
+}
+
 /// `index.html` with the shim injected ahead of the app's own scripts.
 ///
 /// Rewritten on the way out rather than edited on disk, so the desktop build
@@ -522,6 +569,37 @@ mod tests {
                 panic!("{cmd:?} is on the guest allowlist and starts with {v:?}");
             }
         }
+    }
+
+    /// The player must not build an `/api/` URL out of a cache id.
+    ///
+    /// Two id spaces share this process: `/api/roms/{id}` numbers the scan it
+    /// serves to clients (one-based, positive) and the UI works in cache ids,
+    /// which are negative for rows found on this machine. The first version
+    /// built `/api/roms/-10793/content/...` and got a 404 for every game --
+    /// correctly, since no such row exists in that numbering. Caught by asking
+    /// the live server for the URL rather than by reading the code.
+    #[test]
+    fn the_player_fetches_by_cache_id_not_by_api_id() {
+        let player = include_str!("../../ui/js/player.js");
+        assert!(
+            player.contains("/rom?id="),
+            "the player should fetch through /rom, which speaks cache ids"
+        );
+        // Code, not comments -- the comment above the fix names the URL it
+        // replaced, which is the point of it.
+        let code: String = player
+            .lines()
+            .filter(|l| !l.trim_start().starts_with("//"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(
+            !code.contains("/api/roms/"),
+            "the player is building an /api/ URL again; those ids are not the UI's"
+        );
+        // And the route exists to answer it.
+        let main = include_str!("main.rs");
+        assert!(main.contains(r#".route("/rom", get(web::rom_bytes))"#), "no /rom route");
     }
 
     /// Tauri renames JS arguments; so must this, or `localOnly` arrives as a
