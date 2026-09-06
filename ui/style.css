@@ -246,6 +246,9 @@ header h1 {
 #status[data-state="on"]::before { background: #43c76a; }
 #status[data-state="off"]::before { background: #d8823c; }
 #status[data-state="unset"]::before { background: #d84c4c; }
+/* Blue, and its own state: this backend has no server to be online *with*, so
+   green would be a lie and orange reads as a fault. It is serving, to you. */
+#status[data-state="serving"]::before { background: #4c8dff; }
 
 #status-card {
   position: fixed;
