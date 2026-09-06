@@ -1,5 +1,6 @@
 // Entry point: wire the header controls and load the first view.
 
+import { statusTag, viewerIsRemote, bareUrl } from "./status-tag.js";
 import { el, state, trail, invoke, listen, MOBILE } from "./state.js";
 import { askDownload } from "./bulk.js";
 import { askConfigPatch } from "./conflicts.js";
@@ -218,11 +219,6 @@ function formatEta(seconds) {
 
 /// The server without the parts nobody reads. `https://` in front of a LAN
 /// address is six characters saying nothing, and the trailing slash is noise.
-function bareUrl(url) {
-  return String(url ?? "")
-    .replace(/^https?:\/\//, "")
-    .replace(/\/+$/, "");
-}
 
 /// What the tag says when you point at it.
 ///
@@ -298,13 +294,9 @@ function statusCard(s) {
     // read more than once a week. The one that matters — which server this is
     // talking to, or that it is not — is a word or two, and the rest is a
     // pointer away.
-    const server = !s.configured
-      ? "no config.toml"
-      : s.connected
-        ? bareUrl(s.server)
-        : "offline";
-    el.status.textContent = server;
-    el.status.dataset.state = !s.configured ? "unset" : s.connected ? "on" : "off";
+    const tag = statusTag(s);
+    el.status.textContent = tag.text;
+    el.status.dataset.state = tag.state;
     // Both of these are only otherwise discovered by pressing play and having
     // it fail, which is a poor way to learn the app was never configured.
     if (s.crowded_folder) {
@@ -312,7 +304,7 @@ function statusCard(s) {
       // library folder, a cache and a config beside itself, and doing that in
       // someone's Downloads is how a launcher earns a reputation for mess.
       showFolderWarning(s);
-    } else if (!s.configured) {
+    } else if (!s.configured && !viewerIsRemote()) {
       // Naming the exact path it looked at: "it cannot find my config" is
       // otherwise unanswerable, and the answer is rarely the directory the
       // user expected.
