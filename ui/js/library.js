@@ -470,6 +470,14 @@ export function delegateGames(container) {
   container.addEventListener("click", (ev) => {
     const dir = ev.target.closest?.("[data-dir]");
     if (dir && container.contains(dir)) return openFolder(dir.dataset.dir);
+    // The second click of a double-click is not a selection.
+    //
+    // `detail` is the click count, so this is the browser telling us a
+    // double-click is in progress. Without it a double-click ran `selectRom`
+    // twice and then `pressPlay` ran it a third time, three view transitions
+    // deep, each replacing the detail pane -- including the Play button the
+    // third one was about to press. One click, one selection.
+    if (ev.detail > 1) return;
     const id = idOf(ev);
     if (id !== null) selectRom(id);
   });
@@ -491,7 +499,11 @@ export function delegateGames(container) {
 /// One game's click, double-click and right-click, for a node that is not
 /// inside a delegated container.
 export function wireGame(node, id, { resume = false } = {}) {
-  node.addEventListener("click", () => selectRom(id));
+  node.addEventListener("click", (ev) => {
+    // As above: the second click of a double-click is not a selection.
+    if (ev.detail > 1) return;
+    selectRom(id);
+  });
   // Double-click is the shortcut for "just play it".
   node.addEventListener("dblclick", async (ev) => {
     ev.preventDefault();

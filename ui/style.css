@@ -3555,3 +3555,22 @@ body.mobile #detail .sub {
 }
 #ejs-stage .ejs-note[data-bad="1"] { color: #ff8a80; }
 #ejs-stage #ejs-player { position: relative; z-index: 1; }
+/* The shader picker in the play bar. Pushed to the right so Stop stays where
+   the hand already goes. */
+#ejs-stage .ejs-shader {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--dim);
+}
+#ejs-stage .ejs-shader select {
+  padding: 3px 6px;
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--glass) 40%, transparent);
+  background: var(--panel-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+}

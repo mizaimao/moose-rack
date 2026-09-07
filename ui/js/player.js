@@ -17,6 +17,7 @@
 // rather than becoming a second sync.
 
 import { browserPlay, shouldWarn } from "./ejs-systems.js";
+import { PRESETS, chosenShader, rememberShader } from "./ejs-shaders.js";
 import { toast } from "./util.js";
 
 const EJS_PATH = "/emulatorjs/";
@@ -83,16 +84,42 @@ function loadLoader() {
 /// the order things entered it, so the newest is on top.
 ///
 /// jsdom implements neither, which is why every harness run said this worked.
-function openStage(title) {
+function openStage(title, shader) {
   const stage = document.createElement("dialog");
   stage.id = "ejs-stage";
   stage.innerHTML = `
     <div class="ejs-bar">
       <button class="ejs-close" aria-label="Stop">Stop</button>
       <span class="ejs-title"></span>
+      <label class="ejs-shader">Shader
+        <select></select>
+      </label>
     </div>
     <div class="ejs-frame"><div id="ejs-player"></div><div class="ejs-note"></div></div>`;
   stage.querySelector(".ejs-title").textContent = title;
+  const sel = stage.querySelector(".ejs-shader select");
+  for (const p of PRESETS) {
+    const o = document.createElement("option");
+    o.value = p.id;
+    o.textContent = p.label;
+    if (p.note) o.title = p.note;
+    sel.appendChild(o);
+  }
+  sel.value = shader;
+  // Applied live where EmulatorJS lets us, and remembered either way. Its
+  // `setShader` is not part of a documented API, so a reload is the fallback
+  // rather than the first choice -- changing a shader should not cost the game
+  // you are in the middle of.
+  sel.addEventListener("change", () => {
+    rememberShader(sel.value);
+    const emu = globalThis.EJS_emulator;
+    try {
+      emu?.setShader?.(sel.value || "none");
+    } catch {
+      // Left to the next launch. Saying so beats a silent no-op.
+      note(stage, "Shader set — it applies next time this game starts");
+    }
+  });
   document.body.appendChild(stage);
   // `showModal` where it exists; an open dialog is still a visible one where it
   // does not, and a game running is better than a correct stacking context.
@@ -194,7 +221,9 @@ export async function playInBrowser(rom) {
   // finish; where the API is missing this costs nothing.
   await settled();
 
-  const stage = openStage(rom.name);
+  // The viewer's own choice, else whatever this console is configured for.
+  const shader = chosenShader(rom.shader);
+  const stage = openStage(rom.name, shader);
   stage.querySelector(".ejs-close").addEventListener("click", stopPlaying);
 
   const w = globalThis;
@@ -215,6 +244,9 @@ export async function playInBrowser(rom) {
   w.EJS_alignStartButton = "center";
   // Its own bios/save directories would collide across games otherwise.
   w.EJS_gameID = rom.id;
+  // EmulatorJS reads its start-up options from here. An empty string is a real
+  // value meaning "none", so it is set either way rather than left undefined.
+  w.EJS_defaultOptions = { ...(w.EJS_defaultOptions ?? {}), shader: shader || "none" };
 
   // Told by EmulatorJS itself rather than guessed at.
   w.EJS_ready = () => note(stage, "Core loaded — press start");
