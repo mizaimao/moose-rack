@@ -3574,3 +3574,17 @@ body.mobile #detail .sub {
   font: inherit;
   font-size: 12px;
 }
+/* "Sign in", beside the status tag. Only drawn for a guest on a service that
+   has an owner to sign in as — see main.js. */
+#signin {
+  margin-left: 8px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--glass) 30%, transparent);
+  background: transparent;
+  color: var(--dim);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+#signin:hover { border-color: var(--accent); color: var(--text); }

@@ -450,8 +450,13 @@ const WIRED = new WeakSet();
 /// half-done with its first click, and then the button is pressed. Whatever the
 /// button does, this does, for ever, including anything added to it later.
 async function pressPlay(id) {
+  // A breadcrumb, kept. "Double-click does nothing" cost a day, and the first
+  // question -- did the handler run at all -- had no answer from outside. One
+  // line in the console is the difference between a bug report and a guess.
+  console.info("moose: play", id);
   await selectRom(id);
   const btn = document.getElementById("play");
+  console.info("moose: play button", btn ? "found" : "MISSING");
   if (btn) return btn.click();
   // The pane did not draw -- a game that vanished mid-click. Fall back rather
   // than doing nothing at all.

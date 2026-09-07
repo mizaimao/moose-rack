@@ -23,11 +23,13 @@ const code = src
 describe("double-click and the Play button", () => {
   test("a double-click presses the button rather than launching on its own", () => {
     assert.match(code, /pressPlay/, "the shared path is gone");
-    assert.match(
-      code,
-      /getElementById\("play"\)[\s\S]{0,40}\.click\(\)/,
-      "pressPlay no longer presses the button",
-    );
+    // The two halves separately: a line between them is fine, and a window of
+    // n characters is a test that breaks on a comment.
+    const body = code.slice(code.indexOf("async function pressPlay"));
+    const end = body.indexOf("\n}");
+    const fn = body.slice(0, end);
+    assert.match(fn, /getElementById\("play"\)/, "pressPlay no longer finds the button");
+    assert.match(fn, /\.click\(\)/, "pressPlay no longer presses it");
   });
 
   /// The specific regression: a second launch path that fetches its own detail

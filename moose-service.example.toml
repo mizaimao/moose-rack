@@ -100,6 +100,13 @@ bind = "0.0.0.0:80"
 #
 # Off unless you say so, because switching it on means anyone who can reach the
 # port can read the library.
+#
+# With it on, a browser asking for a page is signed in as the guest rather than
+# shown a page with one button on it -- the account exists so reading needs no
+# ceremony. `/login` stays for the owner, and the app shows a "Sign in" button
+# beside the status tag while you are the guest.
+#
+# API clients are never let in this way: no `Accept: text/html`, no free pass.
 # guest = true
 
 # A browser can send neither header, so http://<host>/login trades either

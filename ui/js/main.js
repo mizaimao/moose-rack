@@ -44,6 +44,31 @@ function stepBack() {
 
 el.back.addEventListener("click", stepBack);
 
+// A way to stop being the guest.
+//
+// The shared account lets anyone on the network read the library without
+// ceremony, which is the point of it -- so the service signs a browser in as
+// the guest rather than showing a page with one button on it. The owner still
+// needs a door, and this is it: shown only when there is something to sign in
+// *to*, so a service with no credentials configured does not offer an
+// invitation to a door that is already open.
+(async () => {
+  try {
+    const r = await fetch("/whoami");
+    if (!r.ok) return;
+    const me = await r.json();
+    if (!me.auth || me.owner) return;
+    const btn = document.createElement("button");
+    btn.id = "signin";
+    btn.textContent = "Sign in";
+    btn.title = `Signed in as ${me.name}. Sign in as the owner to change settings.`;
+    btn.addEventListener("click", () => (window.location.href = "/login"));
+    el.status?.after(btn);
+  } catch {
+    // The desktop app has no such endpoint and does not need one.
+  }
+})();
+
 // And the browser's arrow. In a browser this app is one document, so without
 // this Back leaves it and lands on the login page — which reads as being
 // logged out rather than as having left.
