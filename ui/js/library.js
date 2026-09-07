@@ -12,6 +12,7 @@ import { deleteState } from "./states.js";
 import { human, escapeHtml, toast } from "./util.js";
 import { setPageFilterLabel, refreshPageFilter } from "./pagefilter.js";
 import { followSections } from "./sections.js";
+import { doubleClickTarget } from "./dblclick-target.js";
 import { play, restoreSidebar, selectRom, showPlatformInfo, withTransition } from "./detail.js";
 import { download, launch } from "./actions.js";
 import { installTilt } from "./tilt.js";
@@ -488,7 +489,17 @@ export function delegateGames(container) {
   });
   // Double-click is the shortcut for "just play it".
   container.addEventListener("dblclick", async (ev) => {
-    const id = idOf(ev);
+    // `ev.target` is not the card. A `dblclick` is dispatched on the nearest
+    // common ancestor of its two clicks, and the first click redraws the card
+    // it landed on -- the selection class, the star, the cover arriving -- so
+    // the second lands on a different node and the common ancestor is the grid.
+    // The grid has no `data-id`, so `idOf` answered null and this returned
+    // without a word: no launch, no error, nothing in the console. That is the
+    // whole of "double-click does nothing", and it cost a day.
+    //
+    // The selection is the better answer anyway: a double-click means "play the
+    // thing I just clicked", and the click before it is what selected it.
+    const id = doubleClickTarget(idOf(ev), state.selected);
     if (id === null) return;
     ev.preventDefault();
     await pressPlay(id);
