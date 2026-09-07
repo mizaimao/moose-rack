@@ -71,3 +71,29 @@ describe("what actually gets drawn", () => {
     assert.equal(chosenShader("crt/crt-geom"), "crt-geom.glslp");
   });
 });
+
+describe("applying it to a running game", () => {
+  /// `setShader` does not exist. The first version called it, the picker moved,
+  /// nothing changed, and nothing said why -- an optional-call `?.()` on a
+  /// missing method is a silent no-op.
+  test("the player calls the method EmulatorJS actually has", async () => {
+    const { readFileSync } = await import("node:fs");
+    const src = readFileSync(new URL("../js/player.js", import.meta.url), "utf8");
+    const code = src.split("\n").filter((l) => !l.trim().startsWith("//")).join("\n");
+    assert.match(code, /changeSettingOption\("shader"/, "the live shader change is gone");
+    assert.ok(!/setShader/.test(code), "setShader is not a method EmulatorJS has");
+  });
+
+  /// And the build we pin really does have it, so this cannot rot silently
+  /// when the pin moves.
+  test("the pinned EmulatorJS has changeSettingOption and the four presets", async () => {
+    const { readFileSync, existsSync } = await import("node:fs");
+    const url = new URL("../../assets/emulatorjs/data/emulator.min.js", import.meta.url);
+    if (!existsSync(url)) return; // not fetched in this checkout
+    const js = readFileSync(url, "utf8");
+    assert.ok(js.includes("changeSettingOption"), "the pinned build has no changeSettingOption");
+    for (const p of PRESETS.map((p) => p.id).filter(Boolean)) {
+      assert.ok(js.includes(p), `the pinned build does not ship ${p}`);
+    }
+  });
+});
