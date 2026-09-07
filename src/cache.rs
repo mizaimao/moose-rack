@@ -524,7 +524,10 @@ impl Cache {
                     "genres": g.genres,
                     "player_count": g.players,
                     "average_rating": g.rating,
-                    "first_release_date": g.release_year,
+                    // `release_year`, not `first_release_date`: the latter is RomM's key
+                    // and means epoch milliseconds. Writing a year under it made
+                    // every scanned game report 1970 -- see `year_from_meta`.
+                    "release_year": g.release_year,
                 });
                 ins.execute(params![
                     id,

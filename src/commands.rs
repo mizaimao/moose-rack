@@ -356,6 +356,32 @@ pub async fn bios_status(state: &AppState) -> CmdResult<(usize, usize, u64)> {
     crate::bios::status(&client, &library_root).await.map_err(err)
 }
 
+/// The year a game came out, from whichever of the two shapes is present.
+///
+/// Two writers, two units, one key. A server sync stores RomM's
+/// `first_release_date`, which is epoch **milliseconds**; the ES-DE scan stored
+/// the **year** under the same name. Read as milliseconds, 1991 is 1,991 ms
+/// after the epoch -- so every locally scanned game reported 1970, which is
+/// what the sidebar showed for the whole library.
+///
+/// `release_year` is the scan's key now, and unambiguous. `first_release_date`
+/// is still read for rows a server put there, and only as milliseconds, which
+/// is the only thing it ever meant.
+pub fn year_from_meta(meta: &Option<serde_json::Value>) -> Option<i32> {
+    let m = meta.as_ref()?;
+    if let Some(y) = m.get("release_year").and_then(|v| v.as_i64()) {
+        return Some(y as i32);
+    }
+    let ms = m.get("first_release_date").and_then(|v| v.as_f64())?;
+    // A plain year under the old key, written by a scan before this existed.
+    // Four digits cannot be a millisecond count anybody means: it is 1970 to
+    // the second either way.
+    if (1000.0..10_000.0).contains(&ms) {
+        return Some(ms as i32);
+    }
+    Some(1970 + (ms / 1000.0 / 31_556_952.0) as i32)
+}
+
 pub fn meta_strings(meta: &Option<serde_json::Value>, key: &str) -> Vec<String> {
     meta.as_ref()
         .and_then(|m| m.get(key))
@@ -775,12 +801,7 @@ pub fn to_views(
                     .as_ref()
                     .and_then(|m| m.get("average_rating"))
                     .and_then(|v| v.as_f64()),
-                // RomM stores the release date as epoch milliseconds.
-                year: meta
-                    .as_ref()
-                    .and_then(|m| m.get("first_release_date"))
-                    .and_then(|v| v.as_f64())
-                    .map(|ms| 1970 + (ms / 1000.0 / 31_556_952.0) as i32),
+                year: year_from_meta(&meta),
                 players: meta
                     .as_ref()
                     .and_then(|m| m.get("player_count"))
@@ -1005,12 +1026,7 @@ pub async fn rom_detail(state: &AppState, id: i64) -> CmdResult<RomDetail> {
             .and_then(|v| serde_json::from_str::<Vec<String>>(v).ok())
             .unwrap_or_default()
     };
-    // RomM stores the release date as epoch milliseconds.
-    let release_year = meta
-        .as_ref()
-        .and_then(|m| m.get("first_release_date"))
-        .and_then(|v| v.as_f64())
-        .map(|ms| 1970 + (ms / 1000.0 / 31_556_952.0) as i32);
+    let release_year = year_from_meta(&meta);
 
     Ok(RomDetail {
         cover: as_url(cover),
@@ -3116,4 +3132,36 @@ pub fn set_grid(cards: Vec<[f64; 3]>) -> crate::gridnav::Moves {
         .map(|[top, left, width]| crate::gridnav::Card { top, left, width })
         .collect();
     crate::gridnav::moves(&cards)
+}
+#[cfg(test)]
+mod year_tests {
+    /// Every locally scanned game said 1970.
+    ///
+    /// Two writers put two different units under one key: a server sync stores
+    /// RomM's epoch milliseconds, and the ES-DE scan stored the year. Read as
+    /// milliseconds, 1991 is 1,991 ms after the epoch -- so the sidebar
+    /// reported 1970 for the entire library, and had since the scan replaced
+    /// the server as where games come from.
+    #[test]
+    fn a_year_is_read_as_a_year_and_a_timestamp_as_a_timestamp() {
+        let year = |v: serde_json::Value| super::year_from_meta(&Some(v));
+        // What the scan writes now.
+        assert_eq!(year(serde_json::json!({ "release_year": 1991 })), Some(1991));
+        // What a server sync writes: 1991-11-02 as epoch milliseconds.
+        assert_eq!(
+            year(serde_json::json!({ "first_release_date": 689_040_000_000.0f64 })),
+            Some(1991)
+        );
+        // A cache written before this fix reads correctly rather than saying
+        // 1970 until somebody happens to rescan.
+        assert_eq!(year(serde_json::json!({ "first_release_date": 1991 })), Some(1991));
+        // The unambiguous key wins where both are present.
+        assert_eq!(
+            year(serde_json::json!({ "release_year": 1991, "first_release_date": 0.0f64 })),
+            Some(1991)
+        );
+        // And nothing is invented.
+        assert_eq!(year(serde_json::json!({})), None);
+        assert_eq!(super::year_from_meta(&None), None);
+    }
 }
