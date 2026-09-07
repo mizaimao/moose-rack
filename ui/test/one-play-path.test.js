@@ -44,6 +44,13 @@ describe("double-click and the Play button", () => {
     }
   });
 
+  /// A double-click sends two clicks first, and each used to re-render the
+  /// detail pane -- replacing the very button the double-click was about to
+  /// press, three view transitions deep.
+  test("the second click of a double-click is not a selection", () => {
+    assert.match(code, /ev\.detail > 1/, "the click handler still selects twice");
+  });
+
   /// Continue playing is the one deliberate exception: it resumes from a save
   /// state rather than starting over, and the button cannot express that.
   test("Continue playing still resumes rather than restarting", () => {
