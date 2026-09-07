@@ -1058,6 +1058,88 @@ async fn login_page(State(guard): State<std::sync::Arc<Guard>>) -> axum::respons
     axum::response::Html(LOGIN_PAGE.replace("<!--GUEST-->", guest))
 }
 
+/// EmulatorJS on its own, with none of the app around it.
+///
+/// A bisect, not a feature. When "press Play and nothing happens" arrives there
+/// are two suspects -- the integration in `ui/js/player.js`, and EmulatorJS in
+/// this browser on this machine -- and no way to tell them apart from inside
+/// the app. This page is the second one alone: no modules, no shim, no router,
+/// one core and one game.
+///
+///     http://<host>/play-test?id=<rom id>
+const PLAY_TEST: &str = r##"<!doctype html>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EmulatorJS test</title>
+<style>
+ :root { color-scheme: dark }
+ body { margin:0; background:#111; color:#ddd;
+        font:13px/1.5 ui-sans-serif,system-ui,sans-serif }
+ #bar { padding:8px 12px; background:#1b1e24; border-bottom:1px solid #2a2e35 }
+ #log { padding:8px 12px; white-space:pre-wrap; font-family:ui-monospace,monospace;
+        font-size:12px; color:#9aa0a6; max-height:35vh; overflow:auto }
+ #log b { color:#ff8a80; font-weight:400 }
+ #game { height:60vh }
+</style>
+<div id="bar">EmulatorJS, on its own. <span id="what"></span></div>
+<div id="game"></div>
+<div id="log"></div>
+<script>
+const log = (m, bad) => {
+  const d = document.getElementById("log");
+  d.insertAdjacentHTML("beforeend", (bad ? "<b>" : "") + new Date().toLocaleTimeString() + "  " +
+    String(m).replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" })[c]) + (bad ? "</b>" : "") + "\n");
+  d.scrollTop = d.scrollHeight;
+};
+addEventListener("error", (e) => log("window error: " + (e.message || e.error), true));
+addEventListener("unhandledrejection", (e) => log("unhandled: " + (e.reason?.message ?? e.reason), true));
+
+const id = new URLSearchParams(location.search).get("id");
+(async () => {
+  if (!id) return log("add ?id=<rom id> to the address", true);
+  log("asking the server about rom " + id);
+  const r = await fetch("/invoke/rom_detail", {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ id: Number(id) }),
+  });
+  if (!r.ok) return log("rom_detail: " + r.status + " " + (await r.text()), true);
+  const rom = await r.json();
+  document.getElementById("what").textContent = rom.name + " (" + rom.platform_slug + ")";
+  log("game: " + rom.name + ", " + rom.platform_slug + ", " + rom.size_bytes + " bytes");
+
+  const core = { snes: "snes", sfc: "snes", nes: "nes", famicom: "nes", gb: "gb",
+                 gbc: "gb", gba: "gba", genesis: "segaMD", megadrive: "segaMD" }[rom.platform_slug];
+  if (!core) return log("no core mapped for " + rom.platform_slug + " in this test page", true);
+
+  const url = "/rom?id=" + encodeURIComponent(rom.id);
+  log("checking " + url);
+  const head = await fetch(url, { headers: { Range: "bytes=0-15" } });
+  log("  -> " + head.status + " " + (head.headers.get("content-range") || ""), !head.ok);
+  if (!head.ok) return;
+
+  window.EJS_player = "#game";
+  window.EJS_core = core;
+  window.EJS_gameUrl = url;
+  window.EJS_gameName = rom.name;
+  window.EJS_pathtodata = "/emulatorjs/data/";
+  window.EJS_startOnLoaded = true;
+  window.EJS_AdUrl = "";
+  window.EJS_ready = () => log("EmulatorJS says: ready");
+  window.EJS_onGameStart = () => log("EmulatorJS says: started");
+
+  log("loading /emulatorjs/data/loader.js (core is " + core + ")");
+  const s = document.createElement("script");
+  s.src = "/emulatorjs/data/loader.js";
+  s.onload = () => log("loader.js loaded; it now fetches emulator.min.js and the core");
+  s.onerror = () => log("loader.js FAILED to load", true);
+  document.body.appendChild(s);
+})();
+</script>
+"##;
+
+async fn play_test() -> axum::response::Html<&'static str> {
+    axum::response::Html(PLAY_TEST)
+}
+
 /// The routes, as a function so tests can build one without a socket.
 /// The web UI, if a `ui/` directory was given.
 ///
@@ -1082,6 +1164,8 @@ fn web_app(st: Arc<web::WebState>) -> Router {
         .route("/media", get(web::media))
         // See `rom_bytes`: the UI holds cache ids, /api/ holds scan ids.
         .route("/rom", get(web::rom_bytes))
+        // A bisect for "press Play and nothing happens" -- see `PLAY_TEST`.
+        .route("/play-test", get(play_test))
         // EmulatorJS, vendored by scripts/fetch-emulatorjs.sh. Served from here
         // rather than referenced on a CDN: this is a LAN library and it has to
         // play with the internet down. Absent when nobody has run the script,

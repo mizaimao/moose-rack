@@ -74,10 +74,39 @@ function openStage(title) {
       <button class="ejs-close" aria-label="Stop">Stop</button>
       <span class="ejs-title"></span>
     </div>
-    <div class="ejs-frame"><div id="ejs-player"></div></div>`;
+    <div class="ejs-frame"><div id="ejs-player"></div><div class="ejs-note"></div></div>`;
   stage.querySelector(".ejs-title").textContent = title;
   document.body.appendChild(stage);
   return stage;
+}
+
+/// Say what is happening inside the stage.
+///
+/// A blank black rectangle is the worst possible failure: it looks the same
+/// whether the core is still downloading, the page is missing a file, or
+/// something threw. Every step writes here, so whatever goes wrong the box
+/// itself says what it got to.
+function note(stage, text, bad = false) {
+  const n = stage?.querySelector(".ejs-note");
+  if (!n) return;
+  n.textContent = text;
+  n.dataset.bad = bad ? "1" : "";
+}
+
+/// Report anything thrown while the game is starting.
+///
+/// EmulatorJS loads its own scripts from inside an async function of its own,
+/// so a failure in there never reaches the promise this module awaits — it
+/// surfaces as an unhandled rejection on the window and nothing else. Without
+/// this the stage sits blank and the console is the only witness.
+function watchForErrors(stage) {
+  const onErr = (e) => note(stage, `Failed: ${e?.message ?? e?.reason?.message ?? e?.reason ?? e}`, true);
+  globalThis.addEventListener("error", onErr);
+  globalThis.addEventListener("unhandledrejection", onErr);
+  return () => {
+    globalThis.removeEventListener("error", onErr);
+    globalThis.removeEventListener("unhandledrejection", onErr);
+  };
 }
 
 /// Take the game down and put the page back.
@@ -120,17 +149,29 @@ export async function playInBrowser(rom) {
   // No phoning out. This is a LAN service and the whole reason the cores are
   // vendored; an ad frame would also be the only network call in the app that
   // is not to your own machine.
-  w.EJS_adUrl = "";
+  // Capital A and U: that is what `loader.js` reads. `EJS_adUrl` is quietly
+  // ignored, which is a fine way to keep an ad frame you thought you removed.
+  w.EJS_AdUrl = "";
   w.EJS_alignStartButton = "center";
   // Its own bios/save directories would collide across games otherwise.
   w.EJS_gameID = rom.id;
 
+  // Told by EmulatorJS itself rather than guessed at.
+  w.EJS_ready = () => note(stage, "Core loaded — press start");
+  w.EJS_onGameStart = () => note(stage, "");
+
+  const unwatch = watchForErrors(stage);
+  note(stage, "Loading EmulatorJS…");
   try {
     await loadLoader();
   } catch (e) {
+    unwatch();
     stage.remove();
     toast(String(e.message ?? e), 8000);
     return "Could not start";
   }
+  note(stage, `Starting ${verdict.core}…`);
+  // Left watching on purpose: the interesting failures happen after the loader
+  // script has loaded, while it is fetching the core and the game.
   return `Playing ${rom.name}`;
 }
