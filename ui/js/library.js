@@ -439,6 +439,25 @@ export async function runSearch(term) {
 /// and nothing else.
 const WIRED = new WeakSet();
 
+/// Play a game the way the Play button plays it: by pressing it.
+///
+/// Not "call the same function it calls". That is what this did -- both went
+/// through `play(d)` -- and the two behaved differently anyway, for reasons
+/// that took far too long to find. Two callers of one function is still two
+/// paths: different `d`, different timing, a detail pane in a different state.
+///
+/// One path. The pane is opened for this game, which a double-click has already
+/// half-done with its first click, and then the button is pressed. Whatever the
+/// button does, this does, for ever, including anything added to it later.
+async function pressPlay(id) {
+  await selectRom(id);
+  const btn = document.getElementById("play");
+  if (btn) return btn.click();
+  // The pane did not draw -- a game that vanished mid-click. Fall back rather
+  // than doing nothing at all.
+  return play(await invoke("rom_detail", { id }));
+}
+
 export function delegateGames(container) {
   if (!container || WIRED.has(container)) return;
   WIRED.add(container);
@@ -459,7 +478,7 @@ export function delegateGames(container) {
     const id = idOf(ev);
     if (id === null) return;
     ev.preventDefault();
-    play(await invoke("rom_detail", { id }));
+    await pressPlay(id);
   });
   container.addEventListener("contextmenu", (ev) => {
     const id = idOf(ev);
@@ -480,7 +499,7 @@ export function wireGame(node, id, { resume = false } = {}) {
     // a double-click means "play this", and a game you opened deliberately
     // from its console list is as likely to be a fresh run.
     if (resume) return launch(id, { resume: true });
-    play(await invoke("rom_detail", { id }));
+    await pressPlay(id);
   });
   node.addEventListener("contextmenu", (ev) => {
     ev.preventDefault();
