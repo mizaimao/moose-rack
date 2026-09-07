@@ -106,18 +106,20 @@ function openStage(title, shader) {
     sel.appendChild(o);
   }
   sel.value = shader;
-  // Applied live where EmulatorJS lets us, and remembered either way. Its
-  // `setShader` is not part of a documented API, so a reload is the fallback
-  // rather than the first choice -- changing a shader should not cost the game
-  // you are in the middle of.
+  // `changeSettingOption`, which is what the emulator's own settings menu
+  // calls: it routes "shader" through `handleSpecialOptions` to `enableShader`.
+  // My first attempt guessed `setShader`, which does not exist -- so the picker
+  // changed, nothing else did, and no error said why. Read out of the pinned
+  // build rather than guessed at this time.
   sel.addEventListener("change", () => {
     rememberShader(sel.value);
     const emu = globalThis.EJS_emulator;
     try {
-      emu?.setShader?.(sel.value || "none");
-    } catch {
-      // Left to the next launch. Saying so beats a silent no-op.
-      note(stage, "Shader set — it applies next time this game starts");
+      emu.changeSettingOption("shader", sel.value || "none");
+      note(stage, "");
+    } catch (e) {
+      // Say so rather than leaving a control that appears to do nothing.
+      note(stage, `Shader will apply next time this game starts (${e?.message ?? e})`);
     }
   });
   document.body.appendChild(stage);

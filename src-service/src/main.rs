@@ -856,7 +856,7 @@ pub struct Guard {
 /// obvious reasons, and `__shim.js` because the login page is served by the
 /// same document machinery as the app and would otherwise fail to script.
 fn is_public(path: &str) -> bool {
-    matches!(path, "/api/heartbeat" | "/login" | "/logout" | "/__shim.js")
+    matches!(path, "/api/heartbeat" | "/login" | "/logout" | "/whoami" | "/__shim.js")
 }
 
 /// Identify the caller, or refuse.
@@ -878,18 +878,38 @@ async fn require_auth(
     let who = auth::from_header(&guard.cfg, header).or_else(|| {
         auth::session_from_cookies(cookie).and_then(|id| guard.sessions.get(id))
     });
-    let Some(who) = who else {
-        // A browser gets the login page rather than the platform box: a `Basic`
-        // challenge cannot carry a token, which is how the owner signs in.
-        let wants_html = req
-            .headers()
-            .get(axum::http::header::ACCEPT)
-            .and_then(|v| v.to_str().ok())
-            .is_some_and(|a| a.contains("text/html"));
-        if wants_html && !req.uri().path().starts_with("/api/") {
-            return axum::response::Redirect::to("/login").into_response();
+    let wants_html = req
+        .headers()
+        .get(axum::http::header::ACCEPT)
+        .and_then(|v| v.to_str().ok())
+        .is_some_and(|a| a.contains("text/html"));
+    let is_page = wants_html && !req.uri().path().starts_with("/api/");
+
+    let mut set_cookie = None;
+    let who = match who {
+        Some(w) => w,
+        // The shared account is open, and somebody is asking for a page. Let
+        // them in rather than asking them to press a button that has only one
+        // answer -- the account exists precisely so that reading the library
+        // needs no ceremony. `/login` is still there for the owner.
+        None if is_page && guard.cfg.guest => {
+            let w = auth::Identity::User(auth::AuthConfig::GUEST.to_owned());
+            let id = guard.sessions.open(w.clone());
+            set_cookie = Some(format!(
+                "{}={id}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000",
+                auth::COOKIE
+            ));
+            w
         }
-        return (axum::http::StatusCode::UNAUTHORIZED, "who are you?").into_response();
+        None => {
+            // A browser gets the login page rather than the platform box: a
+            // `Basic` challenge cannot carry a token, which is how the owner
+            // signs in.
+            if is_page {
+                return axum::response::Redirect::to("/login").into_response();
+            }
+            return (axum::http::StatusCode::UNAUTHORIZED, "who are you?").into_response();
+        }
     };
     // `/invoke/` is one route serving eighty commands, and the line between
     // reading the library and changing it runs between the commands rather
@@ -908,7 +928,34 @@ async fn require_auth(
         }
     }
     req.extensions_mut().insert(who);
-    next.run(req).await
+    let mut res = next.run(req).await;
+    // The session the guest was just given, so the next request is not a second
+    // new one -- otherwise every page load mints another and the store grows
+    // for as long as somebody is browsing.
+    if let Some(c) = set_cookie
+        && let Ok(v) = axum::http::HeaderValue::from_str(&c)
+    {
+        res.headers_mut().append(axum::http::header::SET_COOKIE, v);
+    }
+    res
+}
+
+/// Who the caller is, for a page that wants to offer a way to be somebody else.
+async fn whoami(
+    who: Option<axum::extract::Extension<auth::Identity>>,
+    State(guard): State<std::sync::Arc<Guard>>,
+) -> Json<serde_json::Value> {
+    let (name, owner) = match who {
+        Some(axum::extract::Extension(w)) => (w.name().to_owned(), w.is_owner()),
+        None => ("owner".to_owned(), true),
+    };
+    Json(serde_json::json!({
+        "name": name,
+        "owner": owner,
+        // With nothing configured everybody is the owner and a sign-in link
+        // would be an invitation to a door that is already open.
+        "auth": !guard.cfg.open(),
+    }))
 }
 
 /// Swap a token or a username and password for a session cookie.
@@ -1506,6 +1553,7 @@ async fn main() -> Result<()> {
             Router::new()
                 .route("/login", get(login_page).post(login))
                 .route("/logout", get(logout).post(logout))
+                .route("/whoami", get(whoami))
                 .with_state(guard.clone()),
         )
         .layer(axum::middleware::from_fn_with_state(guard.clone(), require_auth));
@@ -1610,6 +1658,7 @@ mod tests {
                     // issuing requests, which shadows the router builder.
                     .route("/login", axum::routing::get(login_page).post(login))
                     .route("/logout", axum::routing::get(logout).post(logout))
+                .route("/whoami", axum::routing::get(whoami))
                     .with_state(guard.clone()),
             )
             .layer(axum::middleware::from_fn_with_state(guard, require_auth));
@@ -1933,6 +1982,64 @@ mod tests {
             .map(|c| c.split(';').next().unwrap().to_owned());
         let bytes = axum::body::to_bytes(r.into_body(), usize::MAX).await.unwrap();
         (status, cookie, String::from_utf8_lossy(&bytes).into_owned())
+    }
+
+    /// A browser is let straight in when the shared account is open.
+    ///
+    /// The account exists so reading the library needs no ceremony, and a page
+    /// with one button on it is ceremony. `/login` stays for the owner.
+    #[tokio::test]
+    async fn a_page_is_served_to_a_guest_without_asking() {
+        let (_d, app) = guarded(with_guest());
+        let (s, cookie, _) = {
+            let r = app
+                .clone()
+                .oneshot(
+                    Request::builder()
+                        .uri("/")
+                        .header("accept", "text/html")
+                        .body(Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            let c = r.headers().get("set-cookie").and_then(|v| v.to_str().ok()).map(str::to_owned);
+            (r.status(), c, ())
+        };
+        assert_eq!(s, StatusCode::OK, "a guest was sent to the login page");
+        assert!(cookie.is_some(), "no session was given, so every load mints another");
+    }
+
+    /// But only where it was switched on, and never for the API.
+    #[tokio::test]
+    async fn without_the_guest_account_a_page_still_asks() {
+        let (_d, app) = guarded(locked());
+        let (s, _) = req(&app, "GET", "/", &[("accept", "text/html")]).await;
+        assert_eq!(s, StatusCode::SEE_OTHER);
+    }
+
+    #[tokio::test]
+    async fn a_client_is_never_let_in_as_a_guest() {
+        let (_d, app) = guarded(with_guest());
+        // No `accept: text/html`: this is a sync client, not somebody reading.
+        let (s, _) = req(&app, "GET", "/api/roms", &[]).await;
+        assert_eq!(s, StatusCode::UNAUTHORIZED, "the API let an anonymous caller in");
+    }
+
+    /// The app asks who it is so it can offer a way to be somebody else.
+    #[tokio::test]
+    async fn whoami_says_who_and_whether_signing_in_is_a_thing() {
+        let (_d, app) = guarded(with_guest());
+        let (s, body) = req(&app, "GET", "/whoami", &[("authorization", "Bearer owner-secret")]).await;
+        assert_eq!(s, StatusCode::OK);
+        assert!(body.contains(r#""owner":true"#), "{body}");
+        assert!(body.contains(r#""auth":true"#), "{body}");
+
+        // With nothing configured everybody is the owner, and a sign-in link
+        // would invite people through a door that is already open.
+        let (_d2, open) = guarded(auth::AuthConfig::default());
+        let (_, body) = req(&open, "GET", "/whoami", &[]).await;
+        assert!(body.contains(r#""auth":false"#), "{body}");
     }
 
     /// The shared account: one button, no password, and it reads the library.
