@@ -86,6 +86,33 @@ built and takes an emulator name. **Do not invent a second sync.**
 The trap is that a browser tab closes without warning. A save written only on
 exit is a save lost to a closed laptop lid.
 
+## Check it in a browser, not in jsdom
+
+`node tools/browser-check.mjs http://dev.lan` drives a real Chrome: loads the
+app, opens a console, double-clicks a game with real mouse events at real
+coordinates, and reports whether the stage opened, the canvas exists and the
+shader picker does anything. `--shot out.png` saves what it looked like.
+
+**Not having this cost a day.** The jsdom suites run the app's own modules and
+prove the code executes; they have no layout, no top layer, no view transitions
+and no hit-testing, and every one of those turned out to matter. Six fixes
+looked right in jsdom, shipped, and did nothing, and the only witness was
+somebody at a keyboard being asked to try again.
+
+What it found in one run, after a day of guessing:
+
+    click    target=CANVAS  card=-10793  detail=1
+    click    target=HTML    card=NONE    detail=2
+    dblclick target=HTML    card=NONE    detail=2
+
+The first click opens the detail pane, the grid reflows, and the card moves out
+from under the pointer. The second click and the `dblclick` land on `<html>` --
+outside the list entirely -- so the delegated handler never ran. No error, no
+log, nothing to see from the server.
+
+It runs muted. Headless is not silent: the first run played ActRaiser's title
+theme out of the speakers of somebody who had not asked for it.
+
 ## What will bite
 
 **Input.** `binds.rs` and `padpoll.rs` own the gamepad, and EmulatorJS has its

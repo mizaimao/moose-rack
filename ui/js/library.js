@@ -487,8 +487,17 @@ export function delegateGames(container) {
     const id = idOf(ev);
     if (id !== null) selectRom(id);
   });
-  // Double-click is the shortcut for "just play it".
-  container.addEventListener("dblclick", async (ev) => {
+  // On the document, not on the list.
+  //
+  // Measured in a real browser: the first click opens the detail pane, the grid
+  // reflows, and the card moves out from under the pointer. The second click
+  // and the `dblclick` then land on `<html>` -- outside this container
+  // entirely, so a listener here never ran at all. No launch, no error, nothing
+  // in the console, which is exactly what it looked like.
+  //
+  // `state.selected` is what the first click chose, and that is what a
+  // double-click meant however far the grid has moved since.
+  document.addEventListener("dblclick", async (ev) => {
     // `ev.target` is not the card. A `dblclick` is dispatched on the nearest
     // common ancestor of its two clicks, and the first click redraws the card
     // it landed on -- the selection class, the star, the cover arriving -- so
@@ -499,6 +508,14 @@ export function delegateGames(container) {
     //
     // The selection is the better answer anyway: a double-click means "play the
     // thing I just clicked", and the click before it is what selected it.
+    // Scoped, because this now hears every double-click on the page: only in a
+    // list of games, and never on something you are double-clicking *at* -- a
+    // button, a text field, the detail pane's own controls.
+    // The views whose cards are games. `platforms` shows consoles and
+    // `collections` shows lists, and in both `state.selected` may still hold a
+    // game from earlier -- which would launch something you cannot even see.
+    if (!["roms", "search", "history"].includes(state.view)) return;
+    if (ev.target.closest?.("button, input, select, textarea, a, #detail")) return;
     const id = doubleClickTarget(idOf(ev), state.selected);
     if (id === null) return;
     ev.preventDefault();
