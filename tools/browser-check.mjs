@@ -15,7 +15,14 @@
 // and the delegated handler never ran at all. No error, no log, nothing to see
 // from the server side.
 //
-// Needs Chrome. Headless, its own profile, torn down on exit.
+// Needs Chrome. Headless, its own profile, muted, torn down on exit.
+//
+// Firefox was checked the same way once, over WebDriver BiDi -- it is the
+// browser this was reported from, and the failure was hit-testing after a
+// reflow, which is not an engine's opinion. Both agree. That check is not kept
+// here because two protocols is twice the harness for the same answer; if you
+// need it again, Firefox listens for BiDi on `--remote-debugging-port` and
+// `input.performActions` sends a real double-click.
 
 import { spawn } from "node:child_process";
 import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
