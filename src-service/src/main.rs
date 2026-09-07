@@ -1080,7 +1080,8 @@ const PLAY_TEST: &str = r##"<!doctype html>
  #log b { color:#ff8a80; font-weight:400 }
  #game { height:60vh }
 </style>
-<div id="bar">EmulatorJS, on its own. <span id="what"></span></div>
+<div id="bar">EmulatorJS, on its own. <span id="what"></span>
+  <button id="viaplayer" style="margin-left:12px">Run the app's player.js instead</button></div>
 <div id="game"></div>
 <div id="log"></div>
 <script>
@@ -1125,6 +1126,29 @@ const id = new URLSearchParams(location.search).get("id");
   window.EJS_AdUrl = "";
   window.EJS_ready = () => log("EmulatorJS says: ready");
   window.EJS_onGameStart = () => log("EmulatorJS says: started");
+
+  // The second suspect: the app's own module, on this same bare page. If the
+  // plain path below works and this does not, the fault is in player.js; if
+  // both work, it is in `actions.js` or the app around it.
+  document.getElementById("viaplayer").addEventListener("click", async () => {
+    try {
+      log("loading the shim (player.js -> util.js -> state.js reads it at import)");
+      await new Promise((res, rej) => {
+        const sh = document.createElement("script");
+        sh.src = "/__shim.js";
+        sh.onload = res; sh.onerror = rej;
+        document.head.appendChild(sh);
+      });
+      log("importing /js/player.js");
+      const mod = await import("/js/player.js");
+      log("imported; calling playInBrowser");
+      const out = await mod.playInBrowser(rom);
+      log("playInBrowser returned: " + out);
+      log("stage in the document: " + (document.getElementById("ejs-stage") ? "yes" : "NO"));
+    } catch (e) {
+      log("player.js path threw: " + (e?.message ?? e), true);
+    }
+  });
 
   log("loading /emulatorjs/data/loader.js (core is " + core + ")");
   const s = document.createElement("script");
