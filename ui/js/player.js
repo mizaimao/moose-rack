@@ -21,6 +21,13 @@ import { toast } from "./util.js";
 
 const EJS_PATH = "/emulatorjs/";
 
+/// Two frames, so an in-flight view transition is over before the DOM changes.
+function settled() {
+  return new Promise((r) =>
+    requestAnimationFrame(() => requestAnimationFrame(() => r()))
+  );
+}
+
 /// Bytes, rendered the way the rest of the app renders them.
 function mb(n) {
   return `${Math.round(Number(n) / 1e6)} MB`;
@@ -116,23 +123,58 @@ function watchForErrors(stage) {
 /// remove them. Trying to unpick that by hand is how a second launch comes up
 /// silent or with the pad captured by a game that is no longer on screen.
 export function stopPlaying() {
+  starting = false;
   location.reload();
 }
 
+/// Test seam: forget that a game was started.
+export function resetPlayer() {
+  starting = false;
+  document.getElementById("ejs-stage")?.remove();
+}
+
+/// True from the moment a start is accepted until the stage is gone.
+///
+/// Not `document.getElementById("ejs-stage")`: the stage is not built until
+/// after the first await, so two calls in the same tick would both find no
+/// stage and both go on to make one. A flag set before anything is awaited is
+/// the only thing a second synchronous call can see.
+let starting = false;
+
 /// Play one game in the page. `rom` is a `rom_detail`.
 export async function playInBrowser(rom) {
+  // One at a time. A double-click is two `click` events and a `dblclick`, and
+  // anything that got two launches through would build two stages, two
+  // EmulatorJS instances, two audio contexts and two sets of key handlers on
+  // one page. That does not half-work; it looks like nothing working.
+  if (starting || document.getElementById("ejs-stage")) {
+    return "Already playing";
+  }
+  starting = true;
+
   const verdict = browserPlay(rom.platform_slug ?? rom.platform);
   if (verdict.refuse) {
+    starting = false;
     toast(verdict.refuse, 6000);
     return "Not playable in a browser";
   }
-  if (!confirmHeavy(rom)) return "Cancelled";
+  if (!confirmHeavy(rom)) {
+    starting = false;
+    return "Cancelled";
+  }
 
   // `/rom`, not `/api/roms/{id}/content/`. Two id spaces live in that process:
   // /api/ numbers the scan it serves to clients, and the UI works in cache ids,
   // which are negative for anything found on this machine. Building an /api/
   // URL from a cache id 404s on every game, which is what it did.
   const url = `/rom?id=${encodeURIComponent(rom.id)}`;
+
+  // Let the page settle first. The clicks that got here start view transitions,
+  // and a transition puts a snapshot of the page in the top layer above
+  // everything -- including a canvas created while it is running, which is how
+  // an emulator ends up started and invisible. Two frames is enough for one to
+  // finish; where the API is missing this costs nothing.
+  await settled();
 
   const stage = openStage(rom.name);
   stage.querySelector(".ejs-close").addEventListener("click", stopPlaying);
@@ -167,6 +209,7 @@ export async function playInBrowser(rom) {
   } catch (e) {
     unwatch();
     stage.remove();
+    starting = false;
     toast(String(e.message ?? e), 8000);
     return "Could not start";
   }

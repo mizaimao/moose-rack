@@ -1,6 +1,7 @@
 // Entry point: wire the header controls and load the first view.
 
 import { statusTag, viewerIsRemote, bareUrl } from "./status-tag.js";
+import { installHistoryNav } from "./history-nav.js";
 import { el, state, trail, invoke, listen, MOBILE } from "./state.js";
 import { askDownload } from "./bulk.js";
 import { askConfigPatch } from "./conflicts.js";
@@ -27,7 +28,10 @@ import {
   setBackdropFps,
 } from "./backdrop.js";
 
-el.back.addEventListener("click", () => {
+/// One level back, whatever asked for it -- the header button, the pad, or the
+/// browser's own arrow. Named so all three can share it rather than each
+/// keeping its own copy of the same three lines.
+function stepBack() {
   el.search.value = "";
   // Collections are three levels deep, so step back through them rather than
   // dropping straight to the platform grid.
@@ -36,6 +40,18 @@ el.back.addEventListener("click", () => {
   // Back at the top of a section returns to that section, not always to the
   // library — the tab bar says where you are and it should stay true.
   resetSection();
+}
+
+el.back.addEventListener("click", stepBack);
+
+// And the browser's arrow. In a browser this app is one document, so without
+// this Back leaves it and lands on the login page — which reads as being
+// logged out rather than as having left.
+installHistoryNav({
+  back: stepBack,
+  // At the top there is nothing to step back to, and Back should mean leave
+  // rather than do nothing at all.
+  isTop: () => trail.length === 0 && state.view === "platforms",
 });
 
 // Settings runs in its own document and cannot touch this one, so the artwork
