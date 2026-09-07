@@ -88,6 +88,11 @@ pub struct RomDetail {
     pub name: String,
     pub fs_name: String,
     pub platform: String,
+    /// The video shader this console is configured to use, as
+    /// `[shaders.by_platform]` names it. The desktop resolves this against
+    /// RetroArch's own presets; the in-page emulator has four of its own and
+    /// maps what it can. Null when shaders are off or none is set.
+    pub shader: Option<String>,
     /// The slug as well as the display name. The row of recent games holds
     /// games from several consoles, so anything acting on "this game's
     /// console" cannot read it off the page it is on.
@@ -1028,7 +1033,23 @@ pub async fn rom_detail(state: &AppState, id: i64) -> CmdResult<RomDetail> {
     };
     let release_year = year_from_meta(&meta);
 
+    // What this console is configured to draw with. Only read here: resolving
+    // it against RetroArch's presets is the desktop launch path's job, and the
+    // browser has its own four to map onto.
+    let shader = state
+        .shaders_enabled
+        .then(|| {
+            state
+                .shader_overrides
+                .lock()
+                .ok()
+                .and_then(|m| m.get(&row.platform_slug).cloned())
+        })
+        .flatten()
+        .filter(|s| !s.is_empty() && s != "none");
+
     Ok(RomDetail {
+        shader,
         cover: as_url(cover),
         video: as_url(video),
         has_video,
