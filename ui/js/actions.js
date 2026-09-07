@@ -71,6 +71,10 @@ async function canLaunchNatively() {
 /// Play in the page. Imported lazily so a desktop launch never loads the
 /// emulator's module graph.
 async function playHere(id) {
+  // Said out loud. "Press Play and nothing happens" has two shapes -- this
+  // branch was never reached, or it was reached and failed -- and they need
+  // completely different fixes. Without a word here they look identical.
+  toast("Starting in the browser…");
   const [{ playInBrowser }, detail] = await Promise.all([
     import("./player.js"),
     invoke("rom_detail", { id }),
