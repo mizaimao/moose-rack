@@ -195,6 +195,46 @@ assumptions — recorded honestly below.
   the earlier Q4 call** — KNULLI likely has GOOD standby, unlike ROCKNIX where
   mainline deep-sleep was *deferred*. (Actual drain still to be measured; the
   device dropped off WiFi by auto-suspending, which is corroborating.)
+- **Charging is the RK817 PMIC's own charger**, not the SoC and not a separate
+  fast-charge chip: `rk817-charger` and `rk817-battery` on i2c-0 at 0x20, board
+  `rockchip,rk3566-miyoo-355-v10-linux`. The device tree caps it —
+  `max_chrg_current` 1800 mA, `max_input_current` 1800 mA, `max_chrg_voltage`
+  4300 mV, `min_input_voltage` 4500 mV, against a 3000 mAh cell
+  (`design_qmax` 3300). **1.8 A is the ceiling**, about 7 W at the cell and
+  something near 1 h 50 m for a full charge. There is no PD and no QC to
+  unlock: the RK817 takes plain 5 V and has nothing to negotiate with.
+  Measured 2026-09-06 while charging: 1.52 A at 3.65 V, 85% of the ceiling.
+  `min_input_voltage` is why — it backs the current off when the 5 V rail sags,
+  which is what a long thin cable does.
+
+## Charging needs an A-to-C cable, and that is a hardware fault
+
+The USB-C receptacle has no 5.1 kΩ Rd on CC1/CC2. A C-to-C source looks for
+that resistor to decide something is plugged in, does not find it, and never
+enables VBUS — so the device does not charge at all from a modern cable. An
+A-to-C cable works because the **cable** carries the 56 kΩ Rp and the A side
+puts 5 V on VBUS unconditionally, with nothing to detect. An adapter that adds
+the 5.1 kΩ is the other way round it, and is what Frank uses.
+
+The second-order trap, which looks identical and is not: the RK817 sizes what
+it *draws* from BC1.2 on D+/D−, not from CC. A dumb charger shorts D+/D− and it
+takes the full ceiling; anything that reads as a data port is clamped to
+500 mA — charging, and taking all night. So an adapter that fixes CC but leaves
+D+/D− open charges at a crawl while looking correct.
+
+Which one you are on, without a meter:
+
+    /sys/class/power_supply/battery/{capacity,voltage_now,current_now,status}
+    /sys/class/power_supply/{ac,usb}/online
+
+`current_now` and `voltage_now` are both **at the cell**, so the wattage they
+give is not input wattage — 1.52 A is flowing at 3.65 V, never at 5 V, and the
+input side is that over the converter's efficiency, about 1.2 A at 5 V. Around
+1.5 A means a charging port was detected; around 0.5 A means it was not.
+`ac/online=1` with `usb/online=0` says the same thing — "ac" here is BC1.2
+calling it a dedicated charger, not a barrel jack. `time_to_full_now` is the
+one number on the device that lies; it said 43 minutes for a charge that takes
+nearer two hours.
 
 ## Storage model (immutable OS + persistent /userdata)
 - OS = read-only squashfs `/dev/loop0` → `/overlay/base` (1.9 G).
