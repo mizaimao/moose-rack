@@ -53,18 +53,20 @@ describe("the browser's back arrow", () => {
     assert.equal(pushes.length, 3);
   });
 
-  /// At the top there is nothing to go back to, and refusing would trap the
-  /// tab: Back has to mean leave.
-  test("at the top of the app it does not intervene", () => {
+  /// At the top there is nothing to step back to, so Back does nothing -- but
+  /// it must still hold the page. The only entry behind this app is the login
+  /// screen, and being returned to a login you are already through reads as
+  /// having been logged out, which is the complaint this exists to answer.
+  test("at the top it does nothing, and still does not leave", () => {
     let backs = 0;
     const { pushes, fire } = install({ back: () => backs++, isTop: () => true });
     fire("popstate");
     assert.equal(backs, 0, "it stepped back from the top");
-    assert.equal(pushes.length, 1, "it put an entry back and trapped the tab");
+    assert.equal(pushes.length, 2, "it let the page go and landed on login");
   });
 
-  /// The app can be somewhere on the way in and at the top on the way out.
-  test("it stops intervening once the app reaches the top", () => {
+  /// Walking all the way out and then pressing again.
+  test("it keeps holding the page after the app reaches the top", () => {
     let depth = 2;
     const { pushes, fire } = install({ back: () => depth--, isTop: () => depth === 0 });
     fire("popstate");
@@ -72,7 +74,7 @@ describe("the browser's back arrow", () => {
     assert.equal(depth, 0);
     const before = pushes.length;
     fire("popstate");
-    assert.equal(pushes.length, before, "it kept the tab after reaching the top");
+    assert.equal(pushes.length, before + 1, "it stopped holding the page");
   });
 
   test("no history at all is survivable", () => {
