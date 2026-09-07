@@ -73,8 +73,18 @@ function loadLoader() {
 }
 
 /// The overlay the game runs in.
+///
+/// A `<dialog>`, opened with `showModal`, rather than a positioned div. The
+/// clicks that get here start view transitions, and a running transition paints
+/// a snapshot of the page in the **top layer** -- above any z-index, including
+/// this one. A plain overlay created underneath it is invisible for the length
+/// of the animation and, if a second transition skips the first, can stay that
+/// way. `showModal` puts this in the top layer too, and the top layer stacks in
+/// the order things entered it, so the newest is on top.
+///
+/// jsdom implements neither, which is why every harness run said this worked.
 function openStage(title) {
-  const stage = document.createElement("div");
+  const stage = document.createElement("dialog");
   stage.id = "ejs-stage";
   stage.innerHTML = `
     <div class="ejs-bar">
@@ -84,6 +94,14 @@ function openStage(title) {
     <div class="ejs-frame"><div id="ejs-player"></div><div class="ejs-note"></div></div>`;
   stage.querySelector(".ejs-title").textContent = title;
   document.body.appendChild(stage);
+  // `showModal` where it exists; an open dialog is still a visible one where it
+  // does not, and a game running is better than a correct stacking context.
+  try {
+    stage.showModal?.();
+  } catch {
+    stage.setAttribute("open", "");
+  }
+  if (!stage.hasAttribute("open")) stage.setAttribute("open", "");
   return stage;
 }
 
