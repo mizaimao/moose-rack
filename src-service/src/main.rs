@@ -1165,6 +1165,38 @@ async fn play_test() -> axum::response::Html<&'static str> {
 }
 
 /// The routes, as a function so tests can build one without a socket.
+/// Tell the browser when it may keep what it has.
+///
+/// The app's own files went out with no `Cache-Control`, no `ETag`, and -- for
+/// `/`, which is rendered rather than served from disk -- no `Last-Modified`
+/// either. With no expiry and no validator a browser is entitled to invent a
+/// lifetime for them, and it does. Deploy after deploy landed on a machine that
+/// went on running the previous one, and the only symptom was "I didn't see any
+/// changes at all", which reads as the deploy having failed.
+///
+/// `no-cache` is not "do not store": it stores, and revalidates every time. A
+/// 304 on an unchanged file costs one round trip on a LAN and the answer is
+/// always the truth.
+///
+/// EmulatorJS is the exception. It is 296 MB pinned to a version in
+/// `assets/emulatorjs/MANIFEST.tsv`, so the bytes at a given path never change
+/// and re-checking them is pure waste.
+async fn cache_headers(
+    req: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> axum::response::Response {
+    let immutable = req.uri().path().starts_with("/emulatorjs/");
+    let mut res = next.run(req).await;
+    let v = if immutable {
+        "public, max-age=31536000, immutable"
+    } else {
+        "no-cache"
+    };
+    res.headers_mut()
+        .insert(axum::http::header::CACHE_CONTROL, axum::http::HeaderValue::from_static(v));
+    res
+}
+
 /// The web UI, if a `ui/` directory was given.
 ///
 /// A separate Router with its own state, merged in: the API answers `src/api.rs`
@@ -1190,6 +1222,7 @@ fn web_app(st: Arc<web::WebState>) -> Router {
         .route("/rom", get(web::rom_bytes))
         // A bisect for "press Play and nothing happens" -- see `PLAY_TEST`.
         .route("/play-test", get(play_test))
+
         // EmulatorJS, vendored by scripts/fetch-emulatorjs.sh. Served from here
         // rather than referenced on a CDN: this is a LAN library and it has to
         // play with the internet down. Absent when nobody has run the script,
@@ -1199,6 +1232,11 @@ fn web_app(st: Arc<web::WebState>) -> Router {
             tower_http::services::ServeDir::new(st.emulatorjs.clone()),
         )
         .with_state(st)
+        // Last, and it has to be last: `layer` wraps the routes already in the
+        // router and nothing added after it. Placed mid-chain it covered
+        // everything except `/emulatorjs`, which was the one route below it --
+        // with a comment claiming the opposite.
+        .layer(axum::middleware::from_fn(cache_headers))
 }
 
 fn app(lib: Arc<Library>, media_dir: std::path::PathBuf, with_index: bool) -> Router {
@@ -1937,6 +1975,68 @@ mod tests {
         let (_d, app) = guarded(with_guest());
         let (_, page) = req(&app, "GET", "/login", &[]).await;
         assert!(page.contains("Continue as guest"), "the button was not drawn");
+    }
+
+    /// The app's own files must never be cached without revalidating.
+    ///
+    /// They went out with no `Cache-Control`, no `ETag`, and for `/` no
+    /// `Last-Modified` either -- so a browser was free to invent a lifetime and
+    /// did. Several deploys landed on a machine that kept running the previous
+    /// one, and the only symptom was "I didn't see any changes at all", which
+    /// reads as the deploy having failed rather than as the browser being right
+    /// to keep what it had.
+    #[tokio::test]
+    async fn the_app_is_revalidated_and_the_emulator_is_not() {
+        let d = tempdir::TempDir::new("svc-cache").unwrap();
+        let (lib, media) = fixture(d.path());
+        // Only the router shape matters here, so a bare `web_app` is enough --
+        // it carries the layer, which is the thing under test.
+        let ui = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap().join("ui");
+        let guard = std::sync::Arc::new(Guard::default());
+        let app = app(lib, media, false).merge(
+            Router::new()
+                .route("/login", axum::routing::get(login_page))
+                .with_state(guard),
+        );
+        // `/api/` is not in the web router; check the header the layer sets by
+        // asking the web router itself.
+        let _ = app;
+        let hdr = |res: &axum::response::Response| {
+            res.headers()
+                .get("cache-control")
+                .and_then(|v| v.to_str().ok())
+                .unwrap_or("")
+                .to_owned()
+        };
+        let web = web_app(std::sync::Arc::new(web::WebState {
+            state: moose_rack::app::AppState::from_config_at(&d.path().join("none.toml"))
+                .expect("state"),
+            ui_dir: ui.clone(),
+            emulatorjs: ui.parent().unwrap().join("assets/emulatorjs"),
+        }));
+        for path in ["/js/main.js", "/style.css", "/__shim.js"] {
+            let r = web
+                .clone()
+                .oneshot(Request::builder().uri(path).body(Body::empty()).unwrap())
+                .await
+                .unwrap();
+            assert_eq!(hdr(&r), "no-cache", "{path} may be kept without asking");
+        }
+        let r = web
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/emulatorjs/data/loader.js")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert!(
+            hdr(&r).contains("immutable"),
+            "296 MB pinned to a version is re-checked on every load: {}",
+            hdr(&r)
+        );
     }
 
     #[tokio::test]
