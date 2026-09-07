@@ -3,6 +3,7 @@
 
 import { state, invoke, listen, MOBILE } from "./state.js";
 import { toast } from "./util.js";
+import { askAboutLightGun } from "./lightgun-gate.js";
 import { askConflicts, conflictsFrom, askOffline, offlineFrom, askBios, biosFrom, noteLightGun } from "./conflicts.js";
 import { suspendPad, resumePad } from "./gamepad.js";
 
@@ -181,7 +182,15 @@ export async function launch(
   // planner, which this platform does not use. It was a modal in front of every
   // Mega Drive, Master System, NES and PlayStation launch on the handheld,
   // asking about hardware that is not there.
-  if (!resolving && !skipSync && !MOBILE) {
+  // Not on Android, and not in a browser, for the same reason: every word of
+  // it is about the desktop launch planner. It explains that the mouse aims a
+  // Super Scope and that the gun takes the second controller port -- settings
+  // applied by `launch_rom`, which neither of those platforms calls.
+  //
+  // And it is a *modal*: `launch` awaits it. On a console with a gun -- which
+  // is every SNES game, because the Super Scope exists -- an unanswered dialog
+  // is a launch that never happens. Nothing after this line ran.
+  if (askAboutLightGun({ resolving, skipSync, mobile: MOBILE, native: await canLaunchNatively() })) {
     try {
       // Shape-checked, not just truthy. `[]` is truthy in JavaScript, so a
       // backend — or a stub — answering with an empty array opened a dialog

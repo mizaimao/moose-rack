@@ -12,8 +12,14 @@
 // sources of truth that must agree is how drift starts -- this keeps exactly
 // one spare entry in front of the app and spends it on each press.
 //
-// At the top of the app there is nothing to go back to, and Back means what it
-// says: leave. That is the one case where the login page is the right answer.
+// It never leaves. The only entry behind this app is the login page, and being
+// returned to a login you are already through reads as having been logged out.
+// There is nothing useful on the other side of Back, so Back stays here; at the
+// top of the library it simply does nothing, which is what the header button
+// does there too.
+//
+// The tab is not trapped by that: closing it and typing an address both still
+// work, and neither is what somebody reaching for Back is trying to do.
 
 let atTop = () => false;
 let goBack = null;
@@ -36,11 +42,10 @@ export function handlePop() {
     restoring = false;
     return;
   }
-  // Nothing left to go back to inside the app: let it go. Pressing Back at the
-  // top of the library should leave, and refusing would trap the tab.
-  if (atTop()) return;
-
-  goBack?.();
+  // At the top there is nothing to step back to, so this is a no-op -- but the
+  // entry is still put back below, because letting it go would land on the
+  // login page.
+  if (!atTop()) goBack?.();
   // Spend one, put one back, so the next press has something to consume.
   restoring = true;
   history.pushState({ moose: 1 }, "");

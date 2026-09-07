@@ -83,14 +83,14 @@ beforeEach(() => {
 describe("launching says what it is doing", () => {
   test("the phases the backend reports reach the screen", async () => {
     await mod.launch(7);
-    // Three: the gun question, then which backend can launch, then the launch.
-    // A console with a light gun gets a one-time notice before the game starts,
-    // so the launch path asks first; `status` decides between launching a
-    // process and playing in the page, because on the library service there is
-    // nobody in front of the screen a process would open on.
+    // Three, in this order. `status` says whether this backend can put a game
+    // on the screen in front of you, and that has to be settled *before* the
+    // light-gun question: the notice describes the desktop launch planner, so
+    // asking it on a backend that cannot launch puts a modal in front of a
+    // browser -- which `launch` then waits on for ever, and did.
     assert.deepEqual(
       invoked.map((i) => i.cmd),
-      ["game_lightgun", "status", "launch_rom"],
+      ["status", "game_lightgun", "launch_rom"],
     );
     assert.match(
       dom.window.document.getElementById("toast").textContent,
@@ -102,6 +102,20 @@ describe("launching says what it is doing", () => {
   /// Asked once, not before every game. It cannot change while the page is
   /// open, and a round trip on the way into each launch is a round trip in
   /// front of the thing you pressed.
+  test("which backend can launch is asked once, not per launch", async () => {
+    await mod.launch(7);
+    invoked.length = 0;
+    await mod.launch(7);
+    assert.equal(
+      invoked.filter((i) => i.cmd === "status").length,
+      0,
+      "status was asked again on the second launch",
+    );
+  });
+
+  /// Asked once, not before every game. It cannot change while the page is open,
+  /// and a round trip in front of each launch is a round trip in front of the
+  /// thing you just pressed.
   test("which backend can launch is asked once, not per launch", async () => {
     await mod.launch(7);
     invoked.length = 0;
