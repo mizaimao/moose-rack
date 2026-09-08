@@ -19,6 +19,33 @@ export const PRESETS = [
   { id: "crt-mattias.glslp", label: "CRT — mattias", note: "Softer, heavier bloom" },
 ];
 
+/// Consoles that were never on a CRT.
+///
+/// A Game Boy is a reflective LCD held a foot from your face: it has no
+/// scanlines, no aperture grille and no curved glass, and every one of the four
+/// presets above is a picture of a television. Offering them on a handheld is
+/// not a matter of taste but of drawing an artefact that never existed.
+///
+/// EmulatorJS ships no LCD shader, so the honest answer for these is none --
+/// the pixels as they are, which is what the screen actually looked like.
+const HANDHELD = new Set([
+  "gb", "gbc", "gba", "gamegear", "ngp", "neo-geo-pocket",
+  "wonderswan", "wonderswancolor", "nds", "lynx",
+]);
+
+export function isHandheld(platformSlug) {
+  return HANDHELD.has(String(platformSlug ?? "").toLowerCase());
+}
+
+/// What the picker should offer for this console.
+///
+/// Handhelds get "None" and nothing else, with the reason on it rather than an
+/// empty list that reads as a bug.
+export function presetsFor(platformSlug) {
+  if (!isHandheld(platformSlug)) return PRESETS;
+  return [{ id: "", label: "None", note: "This console had an LCD — a CRT mask would be an artefact it never had" }];
+}
+
 const KNOWN = new Set(PRESETS.map((p) => p.id).filter(Boolean));
 
 /// Turn whatever the library configured into one of the four, or nothing.
@@ -43,7 +70,11 @@ export function toBrowserShader(configured) {
 /// over each other's scanlines, and there is nothing to sync.
 const KEY = "ejsShader";
 
-export function chosenShader(configuredForPlatform) {
+export function chosenShader(configuredForPlatform, platformSlug) {
+  // A handheld never gets one, whatever is remembered or configured. The
+  // preference is stored per browser rather than per console, so without this
+  // choosing a CRT for the SNES would put scanlines on the Game Boy too.
+  if (isHandheld(platformSlug)) return "";
   try {
     const saved = localStorage.getItem(KEY);
     // "" is a real choice — it means the viewer turned shaders off.

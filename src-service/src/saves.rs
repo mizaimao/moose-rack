@@ -202,6 +202,18 @@ pub struct SaveStore {
 /// which is rule one, and would otherwise renumber every save and invalidate
 /// every device's bookkeeping. Positive because the client stores it as an i64
 /// and a negative id reads as an error elsewhere in this codebase.
+///
+/// And no wider than 2^53 - 1, because one of the clients is a browser.
+/// JavaScript has one number type and it is a double: an id above that is
+/// parsed to the nearest representable value and sent back as a different
+/// number. Measured -- `4585479350140525600` came back as a 404, because the
+/// id the browser quoted was not the id the server had issued.
+///
+/// Safe to change: these are derived on every scan and the only thing stored
+/// against a save is the `seen` bookkeeping, which is keyed by device, rom and
+/// file name rather than by this.
+const JS_SAFE: i64 = (1i64 << 53) - 1;
+
 pub fn save_id(rom_id: i64, file_name: &str) -> i64 {
     use md5::{Digest, Md5};
     let mut h = Md5::new();
@@ -211,7 +223,7 @@ pub fn save_id(rom_id: i64, file_name: &str) -> i64 {
     let d = h.finalize();
     let mut b = [0u8; 8];
     b.copy_from_slice(&d[..8]);
-    (i64::from_le_bytes(b) & i64::MAX).max(1)
+    (i64::from_le_bytes(b) & JS_SAFE).max(1)
 }
 
 fn md5_hex(bytes: &[u8]) -> String {
@@ -638,6 +650,39 @@ impl StateStore {
             .into_iter()
             .find(|s| s.id == id)
             .and_then(|s| std::fs::read(self.dir(s.rom_id).join(&s.file_name)).ok())
+    }
+}
+
+#[cfg(test)]
+mod id_tests {
+    use super::*;
+
+    /// One of the clients is a browser, and JavaScript has one number type.
+    ///
+    /// An id above 2^53 - 1 is parsed to the nearest double and quoted back as
+    /// a different number, so the download 404s: the browser asks for a save
+    /// the server never issued. Found by running the sync in a real browser --
+    /// `4585479350140525600` went out and something else came back.
+    #[test]
+    fn every_id_survives_a_round_trip_through_javascript() {
+        const MAX: i64 = (1i64 << 53) - 1;
+        for rom in [-10793i64, -1, 1, 7, 999_999] {
+            for name in ["a.srm", "ActRaiser (USA).srm", "", "x".repeat(200).as_str()] {
+                let id = save_id(rom, name);
+                assert!(id > 0, "{rom}/{name}: ids must stay positive");
+                assert!(id <= MAX, "{rom}/{name}: {id} cannot be represented in a browser");
+                // What `JSON.parse` would make of it, which is what comes back.
+                assert_eq!(id as f64 as i64, id, "{rom}/{name}: {id} changes value as a double");
+            }
+        }
+    }
+
+    /// Still derived, so deleting the index and rebuilding gives the same ids.
+    #[test]
+    fn the_same_save_gets_the_same_id() {
+        assert_eq!(save_id(-10793, "ActRaiser (USA).srm"), save_id(-10793, "ActRaiser (USA).srm"));
+        assert_ne!(save_id(-10793, "a.srm"), save_id(-10793, "b.srm"));
+        assert_ne!(save_id(1, "a.srm"), save_id(2, "a.srm"));
     }
 }
 

@@ -2,7 +2,7 @@
 
 import { test, describe, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { toBrowserShader, chosenShader, rememberShader, PRESETS } from "../js/ejs-shaders.js";
+import { toBrowserShader, chosenShader, rememberShader, PRESETS, presetsFor, isHandheld } from "../js/ejs-shaders.js";
 
 /// A localStorage that behaves, and one that throws the way a private window's
 /// does.
@@ -52,23 +52,23 @@ describe("mapping the library's shader to the browser's", () => {
 
 describe("what actually gets drawn", () => {
   test("the library's choice applies when the viewer has not made one", () => {
-    assert.equal(chosenShader("crt/crt-easymode"), "crt-easymode.glslp");
-    assert.equal(chosenShader("handheld/lcd-grid"), "", "an unmappable one draws none");
-    assert.equal(chosenShader(null), "");
+    assert.equal(chosenShader("crt/crt-easymode", "snes"), "crt-easymode.glslp");
+    assert.equal(chosenShader("handheld/lcd-grid", "snes"), "", "an unmappable one draws none");
+    assert.equal(chosenShader(null, "snes"), "");
   });
 
   test("the viewer's own choice wins, including turning it off", () => {
     rememberShader("crt-geom.glslp");
-    assert.equal(chosenShader("crt/crt-easymode"), "crt-geom.glslp");
+    assert.equal(chosenShader("crt/crt-easymode", "snes"), "crt-geom.glslp");
     rememberShader("");
-    assert.equal(chosenShader("crt/crt-easymode"), "", "off did not stick");
+    assert.equal(chosenShader("crt/crt-easymode", "snes"), "", "off did not stick");
   });
 
   /// Private windows throw on both. Neither is a reason to refuse to draw.
   test("storage that throws is survivable", () => {
     storage({ getItem: () => { throw new Error("no"); }, setItem: () => { throw new Error("no"); } });
     assert.doesNotThrow(() => rememberShader("crt-geom.glslp"));
-    assert.equal(chosenShader("crt/crt-geom"), "crt-geom.glslp");
+    assert.equal(chosenShader("crt/crt-geom", "snes"), "crt-geom.glslp");
   });
 });
 
@@ -95,5 +95,36 @@ describe("applying it to a running game", () => {
     for (const p of PRESETS.map((p) => p.id).filter(Boolean)) {
       assert.ok(js.includes(p), `the pinned build does not ship ${p}`);
     }
+  });
+});
+
+describe("consoles that were never on a CRT", () => {
+  /// A Game Boy is a reflective LCD held a foot from your face. Scanlines, an
+  /// aperture grille and curved glass are all pictures of a television, and
+  /// drawing one on a handheld is an artefact it never had rather than a taste.
+  test("handhelds are offered no CRT mask at all", () => {
+    for (const p of ["gb", "gbc", "gba", "gamegear", "ngp", "wonderswan", "wonderswancolor", "nds"]) {
+      assert.ok(isHandheld(p), p);
+      const offered = presetsFor(p);
+      assert.equal(offered.length, 1, `${p} is offered ${offered.length} shaders`);
+      assert.equal(offered[0].id, "");
+      assert.match(offered[0].note ?? "", /LCD/, "the reason should be on it");
+    }
+  });
+
+  test("televisions still get all four", () => {
+    for (const p of ["snes", "sfc", "nes", "famicom", "megadrive", "psx", "n64", "arcade"]) {
+      assert.equal(isHandheld(p), false, p);
+      assert.equal(presetsFor(p).length, 5, p);
+    }
+  });
+
+  /// The preference is per browser, not per console: without this, choosing a
+  /// CRT for the SNES would put scanlines on the Game Boy too.
+  test("a remembered CRT does not follow you onto a handheld", () => {
+    rememberShader("crt-geom.glslp");
+    assert.equal(chosenShader("crt/crt-geom", "snes"), "crt-geom.glslp");
+    assert.equal(chosenShader("crt/crt-geom", "gb"), "", "the Game Boy got scanlines");
+    assert.equal(chosenShader("crt/crt-geom", "gba"), "");
   });
 });
