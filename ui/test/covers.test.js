@@ -17,6 +17,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { JSDOM } from "jsdom";
 import { fakeBackend } from "./backend.js";
+import { OVERSCAN } from "../js/visible.js";
 
 const uiDir = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -268,11 +269,22 @@ describe("covers well away from it", () => {
     assert.equal(hasImage(1), true, "the cover never came back");
   });
 
-  /// The two margins are different distances on purpose: a card one flick of
-  /// the wheel off the top of the screen is about to be looked at again, and
-  /// dropping its cover there would mean decoding it twice for nothing.
+  /// Release has to be further out than load, and further out than the band
+  /// `visible.js` keeps drawn.
+  ///
+  /// The gap used to be large because load was small: covers were asked for
+  /// 0.4 screens ahead and thrown away at 1.0. That emptied the grid while
+  /// scrolling -- 18% of the cards on screen were holding a picture, measured
+  /// on SNES -- so loading now happens at the edge of the drawn band and
+  /// releasing beyond it, which in a windowed list means the window frees the
+  /// card first. The two are closer together on purpose; what matters is the
+  /// order, not the ratio.
   test("the release margin is further out than the load margin", () => {
-    assert.ok(px(far()) > px(near()) * 2, `${far().margin} is not far enough past ${near().margin}`);
+    assert.ok(px(far()) > px(near()), `${far().margin} is not past ${near().margin}`);
+    assert.ok(
+      px(near()) >= 200 * OVERSCAN,
+      `covers are asked for at ${near().margin}, inside the ${OVERSCAN}-screen band that is drawn`
+    );
   });
 
   /// The bug this replaced: a flat 1,600px release margin was two screens on

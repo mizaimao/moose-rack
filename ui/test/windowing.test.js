@@ -173,6 +173,46 @@ describe("a two-thousand-row console", () => {
   });
 });
 
+describe("the band keeps the cards that are still in it", () => {
+  // A band is a contiguous run of indices with one card per index, in order,
+  // so a scroll of two rows is two rows off one end and two onto the other.
+  // Rebuilding the lot threw every card's artwork away on every row boundary:
+  // measured in the desktop window on SNES, 18% of the cards on screen were
+  // holding a picture during a scroll, and every one had to be fetched and
+  // decoded again.
+  const byIndex = () =>
+    new Map([...document.querySelectorAll("#list .gcard")].map((c) => [c.dataset.at, c]));
+
+  test("scrolling by a row reuses the rest of the cards", () => {
+    scrollTo(4000);
+    const before = byIndex();
+    assert.ok(before.size > 10, `setup: only ${before.size} cards drawn`);
+
+    scrollTo(4000 + CARD_HEIGHT);
+    let reused = 0;
+    let fresh = 0;
+    for (const [at, node] of byIndex()) {
+      if (before.get(at) === node) reused += 1;
+      else fresh += 1;
+    }
+    assert.ok(reused > 0, "every card was replaced: the band was rebuilt whole");
+    assert.ok(
+      reused > fresh * 2,
+      `only ${reused} of ${reused + fresh} cards survived a one-row scroll`
+    );
+  });
+
+  test("and the same going back up", () => {
+    scrollTo(4000);
+    const before = byIndex();
+    scrollTo(4000 - CARD_HEIGHT);
+    const reused = [...byIndex()].filter(([at, node]) => before.get(at) === node).length;
+    assert.ok(reused > before.size / 2, `only ${reused} cards survived scrolling up a row`);
+  });
+
+
+});
+
 describe("the cursor, through rows that are not drawn", () => {
   /// The whole reason navigation stopped measuring the page: most of the cards
   /// have no position, because they do not exist.

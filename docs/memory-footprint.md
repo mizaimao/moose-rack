@@ -853,3 +853,52 @@ Twenty-six read commands are `async fn` now. Only reads: they cannot reorder
 against each other in a way that changes anything, and they are where the time
 was. The setters stay as they are, and so does anything that touches the window,
 the menu or the app icon, which belong on the thread that owns them.
+
+## The grid emptying while you scroll, 2026-09-08
+
+Reported as "images flickering like unload and reload". Measured on SNES:
+**18% of the cards on screen were holding a picture during a scroll**, and
+scrolling back over ground already loaded re-requested 128 covers to manage 30%.
+Three faults, each hiding the next.
+
+**The window measured itself once.** `visible.js` reads the column count and the
+row height off the page, and only ever re-read them on a window `resize`. The
+container changes width without the window doing anything -- opening the detail
+pane is the ordinary case -- and with the pane open it held *four* columns of
+217px rows while still believing eight columns of 274px. Every number
+downstream is arithmetic on those two: which rows the band is, how tall the
+spacers are, where the cursor thinks a row is. The band ended up sitting from
++0.25 to +4.9 screens *below* the viewport, with no overscan above it at all,
+which is why scrolling up was so much worse than scrolling down. A
+`ResizeObserver` on the container, reacting to width only, fixes it.
+
+**The band was rebuilt whole on every row boundary.** It is a contiguous run of
+indices with one card per index, so a scroll of two rows is two rows off one end
+and two onto the other -- but `paint` removed everything between the spacers and
+re-inserted the lot. Every card was a new element with a placeholder, and every
+cover had to be fetched and decoded again. It splices now.
+
+The first attempt at that did nothing at all, and looked like it: `html` returns
+markup beginning on a new line, so the band is cards with whitespace text nodes
+between them, and walking `nextSibling` counted twice as many as there were
+cards. The length check that guards the splice never held and it rebuilt every
+time.
+
+**The covers were let go while still on the page.** Load was 0.4 screens and
+release 1.0, both well inside the 1.5-screen band `visible.js` keeps drawn. Now
+loading happens at the band's edge and releasing beyond it, so in a windowed
+list the window frees the card before the observer would. The memory that bought
+the old numbers is mostly gone anyway: they were set when a cover was an `<img>`
+holding the file's own decode, 4.9 MB for a 1280x960 miximage, and it is a
+canvas the size of the tile now, about 0.26 MB.
+
+Scrolling SNES, before and after:
+
+| | before | after |
+| --- | --- | --- |
+| slow scroll | — | 100% |
+| medium | — | 99%, worst 94% |
+| fast | — | 98%, worst 75% |
+| down, overall | 18%, worst 0% | — |
+| back up | 33%, worst 0% | 94%, worst 69% |
+| covers re-requested going back | 798 | 107 |
