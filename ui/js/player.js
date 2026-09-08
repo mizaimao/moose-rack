@@ -17,7 +17,7 @@
 // here worth anything rather than a convenience.
 
 import { browserPlay, shouldWarn } from "./ejs-systems.js";
-import { PRESETS, chosenShader, rememberShader } from "./ejs-shaders.js";
+import { presetsFor, chosenShader, rememberShader } from "./ejs-shaders.js";
 import { syncOne } from "./browser-saves.js";
 import { toast } from "./util.js";
 
@@ -85,7 +85,7 @@ function loadLoader() {
 /// the order things entered it, so the newest is on top.
 ///
 /// jsdom implements neither, which is why every harness run said this worked.
-function openStage(title, shader) {
+function openStage(title, shader, platformSlug) {
   const stage = document.createElement("dialog");
   stage.id = "ejs-stage";
   stage.innerHTML = `
@@ -99,7 +99,7 @@ function openStage(title, shader) {
     <div class="ejs-frame"><div id="ejs-player"></div><div class="ejs-note"></div></div>`;
   stage.querySelector(".ejs-title").textContent = title;
   const sel = stage.querySelector(".ejs-shader select");
-  for (const p of PRESETS) {
+  for (const p of presetsFor(platformSlug)) {
     const o = document.createElement("option");
     o.value = p.id;
     o.textContent = p.label;
@@ -286,8 +286,8 @@ export async function playInBrowser(rom) {
   await settled();
 
   // The viewer's own choice, else whatever this console is configured for.
-  const shader = chosenShader(rom.shader);
-  const stage = openStage(rom.name, shader);
+  const shader = chosenShader(rom.shader, rom.platform_slug ?? rom.platform);
+  const stage = openStage(rom.name, shader, rom.platform_slug ?? rom.platform);
   stage.querySelector(".ejs-close").addEventListener("click", stopPlaying);
 
   const w = globalThis;
