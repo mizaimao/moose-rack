@@ -25,6 +25,12 @@ before(async () => {
   // its own async loader, which never reach the promise it awaits.
   for (const k of ["addEventListener", "removeEventListener"])
     Object.defineProperty(globalThis, k, { value: dom.window[k].bind(dom.window), configurable: true });
+  // This suite is the web build -- it is served from dev.lan in the fixture --
+  // and `ejs-base.js` reads this to decide where EmulatorJS comes from. The
+  // service's shim sets it on `window`, which in a browser is `globalThis`;
+  // here the two are separate objects, so it goes on both.
+  globalThis.__MOOSE_WEB = true;
+  dom.window.__MOOSE_WEB = true;
   // state.js reads this at import time.
   dom.window.__TAURI__ = {
     core: { invoke: async () => ({}), convertFileSrc: (p) => p },

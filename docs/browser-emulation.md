@@ -226,3 +226,74 @@ ships, not after.
 - **Replacing the native path.** RetroArch is better where it is available, and
   the shaders, the rewind and the achievements all live there.
 - **Netplay.**
+
+## The desktop window plays too
+
+Added 2026-09-08. RetroArch may have no core for a system, or not be installed
+at all, and the window should still be able to run a cartridge. It is the same
+player, and almost none of it needed changing -- what differs is where the files
+come from and where the save goes.
+
+**A URI scheme, not the asset protocol.** There is no HTTP server behind the
+desktop window, and the 296 MB of vendored cores must not be embedded in the
+binary; they are not even in git. So the window reads them off disk through
+`moose://localhost/data/...`, with the ROM at `moose://localhost/rom/<id>`.
+Not through the asset protocol that serves artwork: EmulatorJS builds its own
+URLs by appending to `EJS_pathtodata`, and that protocol's percent-encoded
+whole-path form cannot be appended to. Windows has no custom schemes in
+WebView2, where Tauri maps the same thing onto `http://moose.localhost/`, so the
+page asks `browser_play_base` rather than working it out -- and `null` from that
+is a real answer meaning EmulatorJS was never fetched.
+
+Three things the scheme has to get right, all of them tested in
+`moose_rack::ejs`: `Range` (EmulatorJS asks for the tail of a zip before the
+rest, and `bytes=-4` means the last four bytes, not the first four),
+`Content-Type` (a `.wasm` served as `application/octet-stream` will not
+instantiate), and `Access-Control-Expose-Headers` -- the page is
+`tauri://localhost` and this is a different origin, so without it the ranges are
+right and `Content-Range` reads back as `null`.
+
+**The save is this machine's save file.** A browser on another machine is a
+different device and negotiates through `/api/sync/negotiate`. The desktop
+window is not: it is another emulator on the machine that holds the library, so
+what it writes has to *be* the file RetroArch reads and the file `sync_saves`
+sends. `local_save` and `put_local_save` read and write the local tree at the
+path `savesync::download_path` gives, and the device's existing sync carries it
+to the server unchanged. Negotiating here would make one machine two devices and
+give one game two saves on one disk.
+
+**Save states are not carried across.** SRAM is the cartridge's battery and any
+core can read it. A state is a snapshot of one WebAssembly build's memory, and
+RetroArch's snes9x cannot load one written by EmulatorJS's. The stage's state
+buttons are not drawn on the desktop rather than wired to something that would
+half-work.
+
+**When it is offered.** Only when `launch::plan` says "no installed core for
+platform", and then only if the system is one the browser player supports.
+RetroArch is better where it is available. The dialog says what is different
+about the window before anything starts.
+
+### Measuring this, and one trap in it
+
+Everything above was verified in the real desktop window through the
+`MOOSE_MEASURE` hook, which runs a script in the page and prints what it says.
+The trap cost most of a day: **a window macOS is not rendering gets no
+`requestAnimationFrame`, and the page then looks like it has crashed.** Off the
+side of the display -- which is where the hook puts a window by default, because
+weighing the app should not throw a window at anyone -- EmulatorJS appeared to
+kill the content process partway through unpacking a core, twice over, in every
+configuration tried. It was doing nothing of the kind. `MOOSE_MEASURE_POS` puts
+the window on the display and focuses it, and the same run decompresses the
+core, starts, sizes its canvas and plays.
+
+One real bug fell out of that: `settled()` waited on two animation frames with
+nothing racing it, so pressing Play in a backgrounded tab or a minimised window
+hung the launch for ever. It has a 250ms timer beside it now.
+
+**Nothing leaves the machine.** EmulatorJS checks its own version against
+`cdn.emulatorjs.org` on every game start. `scripts/fetch-emulatorjs.sh` points
+that at a page-relative name so it 404s locally, and the script fails loudly if
+the string it patches is not where it expects it -- a vendored file that
+silently stopped matching would quietly put the call back. Checked by hooking
+`fetch` for a whole launch: the only requests are `moose://`, `blob:` and
+`tauri://`.

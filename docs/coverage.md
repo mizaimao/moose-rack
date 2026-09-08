@@ -1,5 +1,27 @@
 # Coverage — what of the set actually runs
 
+## Decided 2026-09-08: the SSD is the truth, and nothing is scraped
+
+> "No need to scrap. If they are not there on SSD then the game won't have the
+> media."
+
+1,675 games have no artwork. That number is the same on the SSD and on the
+server, measured the same day, so nothing was lost in the move off RomM -- the
+art has never existed. Filling those gaps would mean scraping, and scraping is
+now out of scope for good rather than pending.
+
+**What follows from it.** A game with no picture draws its two-letter
+placeholder and that is the finished behaviour, not a defect to be logged.
+`src/scrape.rs` scrapes *through a server's* ScreenScraper account, which was
+RomM's and is gone; nothing replaces it and nothing should. The developer
+credentials request in `outbox.md` is not going to be sent.
+
+The artwork that does exist gets to the server by being on the SSD first. So the
+thing to protect is the SSD's media tree, which is what
+`tools/pull-android-media.py` feeds and what `scripts/seed-server-library.sh`
+copies from -- not a scraper.
+
+
 **Measurement.** Arcade measured against the DATs, and the firmware underneath it.
 
 Three measurements of the same question: given the files we hold, what

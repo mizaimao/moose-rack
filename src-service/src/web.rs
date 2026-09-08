@@ -37,6 +37,10 @@ use serde_json::{json, Value};
 /// is the same act on the right machine, so the adapter does it. That is not a
 /// second implementation: there is nothing of the library in either.
 pub const SHIM: &str = r#"
+// Which build this is. The desktop reads EmulatorJS and ROMs off disk through
+// a URI scheme of its own; here both come from this service over HTTP, and
+// `ejs-base.js` needs to know which without guessing from the user agent.
+window.__MOOSE_WEB = true;
 // Tauri's IPC, over HTTP. See src-service/src/web.rs.
 window.__TAURI__ = {
   core: {
@@ -253,6 +257,21 @@ pub async fn dispatch(state: &AppState, cmd: &str, args: &Value) -> Result<Value
         // The downloads and syncs are here for a second reason: they copy a
         // library *from* a server *to* local storage, and this is the server.
         // There is nowhere for them to put anything.
+        // Playing in the page, on the machine somebody is sitting at.
+        //
+        // `browser_play_base` is where the desktop's own URI scheme lives, and
+        // this process has none: the page here gets EmulatorJS from `/emulatorjs`
+        // and the game from `/rom`, which `ejs-base.js` picks by `__MOOSE_WEB`
+        // without ever asking. Null is the truthful answer rather than a stub.
+        "browser_play_base" => Ok(serde_json::Value::Null),
+        // The save tree these two read and write is *this machine's*. A browser
+        // is a different device and goes through `/api/sync/negotiate` like the
+        // Flip does; letting it write straight into the server's saves would be
+        // exactly the unnegotiated overwrite that sync exists to prevent.
+        "local_save" | "put_local_save" => {
+            Err(format!("{cmd} is for the machine the game runs on"))
+        }
+
         "launch_rom" | "set_retroarch_root" | "open_link" | "open_settings"
         | "sync_library" | "sync_bios" | "download_rom" | "download_set"
         | "download_estimate" | "scrape_missing" | "app_icons" | "set_app_icon"
@@ -451,6 +470,8 @@ mod tests {
         assert!(SHIM.contains("window.__TAURI__"));
         assert!(SHIM.contains("invoke:"));
         assert!(SHIM.contains("convertFileSrc:"));
+        // `ejs-base.js` picks its URLs off this and nothing else.
+        assert!(SHIM.contains("__MOOSE_WEB = true"));
         assert!(SHIM.contains("event:"), "attract-screen.js calls event.listen at startup");
         // Not a stub: Settings and the library page are two documents that have
         // to talk, and `ui/test/shim.test.js` proves this one does.
@@ -581,14 +602,17 @@ mod tests {
     /// the live server for the URL rather than by reading the code.
     #[test]
     fn the_player_fetches_by_cache_id_not_by_api_id() {
-        let player = include_str!("../../ui/js/player.js");
+        // The URL moved to `ejs-base.js` when the desktop got its own way of
+        // reaching a ROM; it is the same rule on both sides.
+        let base = include_str!("../../ui/js/ejs-base.js");
         assert!(
-            player.contains("/rom?id="),
-            "the player should fetch through /rom, which speaks cache ids"
+            base.contains("/rom?id="),
+            "the web build should fetch through /rom, which speaks cache ids"
         );
         // Code, not comments -- the comment above the fix names the URL it
         // replaced, which is the point of it.
-        let code: String = player
+        let code: String = [include_str!("../../ui/js/player.js"), base]
+            .concat()
             .lines()
             .filter(|l| !l.trim_start().starts_with("//"))
             .collect::<Vec<_>>()

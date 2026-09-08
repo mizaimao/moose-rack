@@ -133,6 +133,11 @@ documented route is broken.
 
 ## ScreenScraper developer credentials — request draft
 
+**Not being sent, decided 2026-09-08.** Scraping is out of scope: the SSD is the
+truth, and a game whose art is not there does not get any. Kept because the
+letter is written and the reasoning in it is still correct if that ever changes
+-- see `coverage.md`.
+
 *Was `screenscraper-devid-request.md`.*
 
 Post in the **WebAPI** section of the ScreenScraper forum:

@@ -225,3 +225,51 @@ export async function pullState(gm, stateId) {
   gm.loadState(bytes);
   return bytes.length;
 }
+
+
+// --- The desktop window ------------------------------------------------------
+//
+// A browser on another machine is a different device and negotiates. The
+// desktop window is not: it is another emulator on the machine that holds the
+// library, so its save has to *be* the file RetroArch reads and the file
+// `sync_saves` sends. Anything else would give one game two saves on one disk,
+// and the sync would then have to pick between them.
+//
+// So there is no negotiation here at all -- read the local save on the way in,
+// write it back on the way out -- and the device's existing sync carries it to
+// the server unchanged, the same as a game played in RetroArch.
+
+/// Base64 for bytes, in chunks: `String.fromCharCode(...bytes)` on a megabyte
+/// of save data is an argument list long enough to blow the stack.
+export function toBase64(bytes) {
+  let out = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    out += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  }
+  return btoa(out);
+}
+
+export function fromBase64(text) {
+  const bin = atob(text);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i += 1) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+/// Put this machine's save into the running core, if it has one.
+export async function localSaveIn(gm, romId, invoke) {
+  const held = await invoke("local_save", { id: romId });
+  if (!held?.data) return { action: "no_op", why: "no save on this machine" };
+  const bytes = fromBase64(held.data);
+  if (!bytes.length) return { action: "no_op", why: "empty save" };
+  writeSave(gm, bytes);
+  return { action: "download", bytes: bytes.length, fileName: held.file_name };
+}
+
+/// Write what the core is holding back to this machine's save file.
+export async function localSaveOut(gm, romId, invoke) {
+  const here = readSave(gm);
+  if (!here) return { action: "no_op", why: "nothing in the cartridge yet" };
+  await invoke("put_local_save", { id: romId, data: toBase64(here.bytes) });
+  return { action: "upload", bytes: here.bytes.length };
+}

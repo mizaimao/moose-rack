@@ -867,6 +867,142 @@ fn measure_note(text: String) {
     }
 }
 
+// ---------------------------------------------------------------------------
+// EmulatorJS in the desktop window.
+//
+// The web UI plays a game in the page when the machine holding the library is
+// not the machine in front of you. The desktop has the same need for a
+// different reason: RetroArch may have no core for this system, or not be
+// installed at all, and the window should still be able to run a cartridge.
+//
+// The web build gets EmulatorJS over HTTP from the service. There is no HTTP
+// server behind the desktop window, and the 296 MB of vendored cores must not
+// be embedded in the binary -- they are not even in git. So the window reads
+// them off disk through a URI scheme of its own: `moose://localhost/data/...`
+// for EmulatorJS, `moose://localhost/rom/<id>` for the game.
+//
+// A scheme, rather than the asset protocol that serves artwork, because
+// EmulatorJS builds its own URLs by appending to `EJS_pathtodata`, and the
+// asset protocol's percent-encoded whole-path form cannot be appended to.
+// ---------------------------------------------------------------------------
+
+/// Where EmulatorJS is, decided once. `None` means it was never fetched, which
+/// is a normal state for a fresh clone -- see `scripts/fetch-emulatorjs.sh`.
+fn ejs_dir() -> Option<&'static std::path::Path> {
+    static DIR: std::sync::OnceLock<Option<std::path::PathBuf>> = std::sync::OnceLock::new();
+    DIR.get_or_init(|| {
+        let exe = std::env::current_exe().ok();
+        let cwd = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
+        let config = moose_rack::config::path();
+        let candidates =
+            moose_rack::ejs::desktop_candidates(exe.as_deref(), &cwd, Some(config.as_path()));
+        moose_rack::ejs::locate(candidates.iter().map(std::path::PathBuf::as_path))
+    })
+    .as_deref()
+}
+
+/// The base the page should build EmulatorJS URLs from, or `None` when playing
+/// in the window is not available on this install.
+///
+/// Windows has no custom schemes in WebView2 and Tauri maps them onto
+/// `http://<scheme>.localhost`; everywhere else it is a real scheme. The rule
+/// lives here rather than in the page because it is a fact about the host.
+#[tauri::command]
+fn local_save(state: State<'_, AppState>, id: i64) -> CmdResult<Option<moose_rack::commands::LocalSave>> {
+    moose_rack::commands::local_save(&state, id)
+}
+
+#[tauri::command]
+fn put_local_save(state: State<'_, AppState>, id: i64, data: String) -> CmdResult<String> {
+    moose_rack::commands::put_local_save(&state, id, data)
+}
+
+#[tauri::command]
+fn browser_play_base() -> Option<String> {
+    ejs_dir()?;
+    Some(if cfg!(windows) {
+        "http://moose.localhost/".to_string()
+    } else {
+        "moose://localhost/".to_string()
+    })
+}
+
+/// A response with the headers every reply from this scheme needs.
+///
+/// `Access-Control-Allow-Origin` because the page is `tauri://localhost` and
+/// this is a different origin: without it EmulatorJS's core fetches are blocked
+/// and the emulator hangs on "Downloading core" with nothing in the console.
+fn ejs_reply(
+    status: u16,
+    content_type: &str,
+    extra: Vec<(&'static str, String)>,
+    body: Vec<u8>,
+) -> tauri::http::Response<Vec<u8>> {
+    let mut b = tauri::http::Response::builder()
+        .status(status)
+        .header("Access-Control-Allow-Origin", "*")
+        .header("Cross-Origin-Resource-Policy", "cross-origin")
+        // Without this the page can read the body of a 206 but not the header
+        // saying which bytes it got: `Content-Range` is not CORS-safelisted, so
+        // a cross-origin fetch hides it. Verified in the window -- the ranges
+        // were right and `content-range` read back as null.
+        .header("Access-Control-Expose-Headers", "Content-Range, Content-Length, Accept-Ranges")
+        .header("Content-Type", content_type);
+    for (k, v) in extra {
+        b = b.header(k, v);
+    }
+    b.body(body).unwrap_or_else(|_| tauri::http::Response::new(Vec::new()))
+}
+
+fn ejs_error(status: u16, why: &str) -> tauri::http::Response<Vec<u8>> {
+    ejs_reply(status, "text/plain", Vec::new(), why.as_bytes().to_vec())
+}
+
+/// One file, through the tested reader in `moose_rack::ejs`.
+fn ejs_file(path: &std::path::Path, range: Option<&str>) -> tauri::http::Response<Vec<u8>> {
+    let r = moose_rack::ejs::read_range(path, range);
+    ejs_reply(r.status, r.content_type, r.headers, r.body)
+}
+
+/// Serve `moose://localhost/...` to the window.
+fn ejs_serve(app: &tauri::AppHandle, req: tauri::http::Request<Vec<u8>>) -> tauri::http::Response<Vec<u8>> {
+    let range = req
+        .headers()
+        .get("range")
+        .and_then(|v| v.to_str().ok())
+        .map(str::to_owned);
+    let path = req.uri().path().to_string();
+    let Some(root) = ejs_dir() else {
+        return ejs_error(503, "EmulatorJS is not installed -- run scripts/fetch-emulatorjs.sh");
+    };
+    if let Some(rest) = path.strip_prefix("/rom/") {
+        let Ok(id) = rest.parse::<i64>() else {
+            return ejs_error(400, "no id");
+        };
+        use tauri::Manager as _;
+        let state = app.state::<AppState>();
+        let row = state
+            .cache
+            .lock()
+            .ok()
+            .and_then(|c| c.rom_by_id(id).ok().flatten());
+        let Some(row) = row else {
+            return ejs_error(404, "no such game");
+        };
+        let Some(file) = moose_rack::commands::row_path(&state, &row) else {
+            return ejs_error(404, "not on this machine");
+        };
+        if !file.is_file() {
+            return ejs_error(409, "this game is a folder, not a file");
+        }
+        return ejs_file(&file, range.as_deref());
+    }
+    match moose_rack::ejs::resolve(root, &path) {
+        Some(file) => ejs_file(&file, range.as_deref()),
+        None => ejs_error(404, "not found"),
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     install_panic_log();
@@ -877,8 +1013,13 @@ pub fn run() {
     let state = AppState::from_config().expect("building app state");
     tauri::Builder::default()
         .manage(state)
+        // EmulatorJS and the ROM it plays, read off disk. See `ejs_serve`.
+        .register_uri_scheme_protocol("moose", |ctx, req| ejs_serve(ctx.app_handle(), req))
         .invoke_handler(tauri::generate_handler![
             measure_note,
+            browser_play_base,
+            local_save,
+            put_local_save,
             bios_status,
             download_set,
             recent_games,
@@ -1011,7 +1152,27 @@ pub fn run() {
                     })
                     .unwrap_or((1460.0, 1046.0));
                 let _ = win.set_size(tauri::LogicalSize::new(w, h));
-                let _ = win.set_position(tauri::LogicalPosition::new(-4000.0, 200.0));
+                // Off the side by default. `MOOSE_MEASURE_POS=x,y` puts it back
+                // on the display, which the emulator needs: a window that is
+                // not rendered gets no `requestAnimationFrame`, and EmulatorJS
+                // draws every frame from one. Weighing the app wants it out of
+                // sight; watching a game actually run needs it in sight.
+                let (px, py) = std::env::var("MOOSE_MEASURE_POS")
+                    .ok()
+                    .and_then(|s| {
+                        let (x, y) = s.split_once(',')?;
+                        Some((x.trim().parse().ok()?, y.trim().parse().ok()?))
+                    })
+                    .unwrap_or((-4000.0, 200.0));
+                let _ = win.set_position(tauri::LogicalPosition::new(px, py));
+                // And in front, when it was asked for on the display. WebKit
+                // gives a window it does not consider visible no animation
+                // frames at all, so a frame-timing measurement taken behind the
+                // terminal that started it reads zero frames rather than slow
+                // ones.
+                if std::env::var_os("MOOSE_MEASURE_POS").is_some() {
+                    let _ = win.set_focus();
+                }
                 match std::fs::read_to_string(&path) {
                     Ok(script) => {
                         // A switch the script can read, so an A/B needs one

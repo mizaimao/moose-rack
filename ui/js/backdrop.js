@@ -1192,9 +1192,10 @@ function build() {
   // anything in it changes, which is four times the GPU for no difference —
   // and this thing is on screen the entire time the app is open.
   //
-  // The rate is a setting now; 30 is only the desktop's default. Read every
-  // frame rather than captured, so changing it in Settings takes effect on the
-  // next one rather than on the next restart.
+  // The rate is a setting now; 30 is only the desktop's default. Asked for on
+  // every frame rather than captured, so changing it in Settings takes effect
+  // on the next one rather than on the next restart -- `backdropFps` holds it
+  // in memory, so that costs a property read and not a storage call.
   //
   // Zero means a still picture: the shader is drawn once, at its opening state,
   // and then never again. The frame callback keeps being scheduled — an empty
@@ -1393,11 +1394,33 @@ function defaultFps() {
   return /\bAndroid\b/.test(navigator.userAgent) ? 10 : 30;
 }
 
+/// Held in memory, because the draw loop asks for it on every animation frame.
+///
+/// `localStorage.getItem` is a synchronous call into the browser's storage
+/// process, and this one sat inside `requestAnimationFrame`: sixty blocking
+/// reads a second on the same main thread that runs every CSS animation, every
+/// scroll and every view transition. That is why the app felt heavy while the
+/// backdrop was on, and why turning the rate *down* did not help -- the read
+/// happened before the rate was even looked at. A setting for how often a
+/// gradient redraws should not be able to touch anything else.
+///
+/// Cannot go stale: nothing else writes `FPS_KEY`, and both the setting being
+/// changed here and the setting being changed in the Settings window arrive at
+/// `setBackdropFps` (see the `backdrop-fps` listener in `main.js`).
+let fpsCache = null;
+
 export function backdropFps() {
+  if (fpsCache !== null) return fpsCache;
   const raw = localStorage.getItem(FPS_KEY);
-  if (raw === null) return defaultFps();
+  if (raw === null) return (fpsCache = defaultFps());
   const n = Number(raw);
-  return BACKDROP_FPS_STEPS.includes(n) ? n : defaultFps();
+  return (fpsCache = BACKDROP_FPS_STEPS.includes(n) ? n : defaultFps());
+}
+
+/// Test seam: for a test that writes the key itself rather than going through
+/// `setBackdropFps`.
+export function forgetBackdropFps() {
+  fpsCache = null;
 }
 
 /// Set the rate, snapping to the nearest step.
@@ -1407,6 +1430,7 @@ export function setBackdropFps(fps, { announce = true } = {}) {
     ? n
     : BACKDROP_FPS_STEPS.reduce((a, b) => (Math.abs(b - n) < Math.abs(a - n) ? b : a));
   localStorage.setItem(FPS_KEY, String(value));
+  fpsCache = value;
   if (announce) window.__TAURI__?.event?.emit?.("backdrop-fps", value);
   return value;
 }

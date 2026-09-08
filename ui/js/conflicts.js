@@ -173,6 +173,18 @@ export function offlineFrom(err) {
   return at === -1 ? null : text.slice(at + "SAVE_OFFLINE:".length).trim() || "unknown reason";
 }
 
+/// The platform out of a launch refused because RetroArch has no core for it.
+///
+/// Matched on `launch::plan`'s wording, which is the one place that decides a
+/// core is missing. Deliberately not on "core" alone: a core that crashed, a
+/// core that needs a BIOS and a core that is not installed are three different
+/// problems and only the last one has another emulator to fall back on.
+export function noCoreFrom(err) {
+  const text = typeof err === "string" ? err : String(err?.message ?? err ?? "");
+  const m = text.match(/no installed core for platform "?([\w-]+)"?/);
+  return m ? m[1] : null;
+}
+
 /// "Saves can't sync — play anyway?"
 ///
 /// Asked rather than decided either way. Starting silently risks an hour on top
@@ -396,6 +408,66 @@ export function askBios(detail) {
             <span class="when">may show a black screen</span></button>
           <button class="side" data-go="no"><span class="who">Cancel</span>
             <span class="when">do not launch</span></button>
+        </div>
+      </div>`;
+
+    let settled = false;
+    const finish = (ok) => {
+      if (settled) return;
+      settled = true;
+      overlay.remove();
+      document.removeEventListener("keydown", onKey, true);
+      resolve(ok);
+    };
+    const sides = () => [...overlay.querySelectorAll("[data-go]")];
+    let at = 0;
+    const paint = () => sides().forEach((b, i) => b.classList.toggle("sel", i === at));
+    const onKey = (ev) => {
+      if (ev.key === "Escape") return finish(false);
+      if (ev.key === "ArrowLeft" || ev.key === "ArrowRight") {
+        at = at === 0 ? 1 : 0;
+        paint();
+        ev.preventDefault();
+      }
+      if (ev.key === "Enter") finish(sides()[at]?.dataset.go === "yes");
+    };
+    overlay.addEventListener("click", (ev) => {
+      const b = ev.target.closest("[data-go]");
+      if (b) finish(b.dataset.go === "yes");
+    });
+    document.addEventListener("keydown", onKey, true);
+    document.body.appendChild(overlay);
+    paint();
+  });
+}
+
+/// "RetroArch has no core for this — play it in the window instead?"
+///
+/// The one launch failure with somewhere else to go. Asked rather than done,
+/// because playing in a page is a different thing from playing in RetroArch --
+/// no shaders beyond the four the emulator has, no save states carried across,
+/// no gamepad profile -- and swapping one for the other silently would be a
+/// surprise every time RetroArch was mid-update.
+///
+/// Same shape as `askBios`, and Cancel is not focused first here: the fallback
+/// is the whole reason this dialog exists, and it is not the dangerous answer.
+export function askNoCore(platform, core) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.id = "conflict-overlay";
+    overlay.innerHTML = `<div class="conflict-box">
+        <header><span class="icon icon-info-on"></span><h2>RetroArch has no core for this</h2></header>
+        <p class="lead">Nothing installed can run
+          <b>${escape(platform)}</b> games.</p>
+        <p class="note">This window has its own emulator and can play it here
+          with <b>${escape(core)}</b>. The save goes to the same file RetroArch
+          would use, so installing the core later picks up where you left off.
+          Save states are not carried across.</p>
+        <div class="sides">
+          <button class="side" data-go="yes"><span class="who">Play in the window</span>
+            <span class="when">no save states</span></button>
+          <button class="side" data-go="no"><span class="who">Cancel</span>
+            <span class="when">install a core instead</span></button>
         </div>
       </div>`;
 

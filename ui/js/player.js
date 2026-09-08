@@ -18,16 +18,36 @@
 
 import { browserPlay, shouldWarn } from "./ejs-systems.js";
 import { presetsFor, chosenShader, rememberShader } from "./ejs-shaders.js";
-import { syncOne, serverStates, pushState, pullState } from "./browser-saves.js";
+import {
+  syncOne,
+  serverStates,
+  pushState,
+  pullState,
+  localSaveIn,
+  localSaveOut,
+} from "./browser-saves.js";
+import { ejsUrls } from "./ejs-base.js";
+import { invoke } from "./state.js";
 import { toast } from "./util.js";
 
-const EJS_PATH = "/emulatorjs/";
+/// Where EmulatorJS and the ROM come from. Two answers -- this service over
+/// HTTP, or the desktop's own URI scheme -- so it is resolved per play rather
+/// than being a constant. See `ejs-base.js`.
+let urls = null;
 
 /// Two frames, so an in-flight view transition is over before the DOM changes.
+///
+/// Raced against a timer, because `requestAnimationFrame` does not fire in a
+/// window that is not being rendered -- a backgrounded tab, a minimised window,
+/// or the offscreen window the desktop's own probe runs in, where this waited
+/// for ever and the game never started. Two frames is 33ms when they come;
+/// 250ms is late enough that a transition has finished anyway and early enough
+/// that nobody waits.
 function settled() {
-  return new Promise((r) =>
-    requestAnimationFrame(() => requestAnimationFrame(() => r()))
-  );
+  return Promise.race([
+    new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r()))),
+    new Promise((r) => setTimeout(r, 250)),
+  ]);
 }
 
 /// Bytes, rendered the way the rest of the app renders them.
@@ -60,13 +80,13 @@ async function confirmHeavy(rom) {
 /// Its loader reads a set of `EJS_*` globals rather than taking arguments, and
 /// it appends the emulator to the element named by `EJS_player`. So the globals
 /// have to be set before the script is added, every time.
-function loadLoader() {
+function loadLoader(dataBase) {
   return new Promise((resolve, reject) => {
     const existing = document.getElementById("ejs-loader");
     if (existing) return resolve();
     const s = document.createElement("script");
     s.id = "ejs-loader";
-    s.src = `${EJS_PATH}data/loader.js`;
+    s.src = `${dataBase}loader.js`;
     s.onload = () => resolve();
     s.onerror = () =>
       reject(
@@ -131,7 +151,18 @@ function openStage(title, shader, platformSlug, romId, core) {
       note(stage, `Shader will apply next time this game starts (${e?.message ?? e})`);
     }
   });
-  wireStates(stage, romId, core);
+  // Save states are the server's, and on the desktop there is no server behind
+  // this window. They are also not portable in the way a save is: SRAM is the
+  // cartridge's battery and any core can read it, while a state is a snapshot
+  // of one WebAssembly build's memory and RetroArch's snes9x cannot load one
+  // written by EmulatorJS's. So the buttons come off rather than being wired to
+  // something that would fail, or worse, half-work.
+  if (urls?.desktop) {
+    stage.querySelector(".ejs-save-state")?.remove();
+    stage.querySelector(".ejs-states")?.remove();
+  } else {
+    wireStates(stage, romId, core);
+  }
   document.body.appendChild(stage);
   // `showModal` where it exists; an open dialog is still a visible one where it
   // does not, and a game running is better than a correct stacking context.
@@ -290,6 +321,19 @@ async function flush(stage, romId, why) {
   if (!gm || syncing) return;
   syncing = true;
   try {
+    // On the desktop the save belongs to this machine and there is nothing to
+    // negotiate with: it goes straight into the file RetroArch reads, and the
+    // app's own `sync_saves` carries it to the server exactly as it does for a
+    // game played in RetroArch. Negotiating here would make one machine two
+    // devices and give one game two saves on one disk.
+    if (urls?.desktop) {
+      const out = await localSaveOut(gm, romId, invoke);
+      if (out.action === "upload") {
+        note(stage, `Save written (${out.bytes} bytes, ${why})`);
+        setTimeout(() => note(stage, ""), 4000);
+      }
+      return;
+    }
     const out = await syncOne(gm, romId, {
       // Never resolved silently. A save is hours of somebody's life and the
       // wrong pick is unrecoverable, so this asks and takes no answer as no.
@@ -314,7 +358,19 @@ async function flush(stage, romId, why) {
 
 /// Pull the server's copy in, then keep pushing ours back.
 function startSaveSync(stage, romId) {
-  flush(stage, romId, "start");
+  if (urls?.desktop) {
+    // In, not out: on the way in there is nothing in the core worth keeping,
+    // and the file on disk is whatever RetroArch last wrote.
+    localSaveIn(stage && globalThis.EJS_emulator?.gameManager, romId, invoke)
+      .then((out) => {
+        if (out?.action !== "download") return;
+        note(stage, `Save loaded from this machine (${out.bytes} bytes)`);
+        setTimeout(() => note(stage, ""), 4000);
+      })
+      .catch((e) => note(stage, `Save not loaded: ${e?.message ?? e}`, true));
+  } else {
+    flush(stage, romId, "start");
+  }
   clearInterval(flushTimer);
   flushTimer = setInterval(() => flush(stage, romId, "autosave"), FLUSH_EVERY);
   // The two events that actually fire when somebody walks away. `pagehide` is
@@ -368,6 +424,19 @@ export async function playInBrowser(rom) {
   }
   starting = true;
 
+  // Before the refusal check, so "EmulatorJS was never fetched" is not reported
+  // as "this console cannot be played here" -- two different answers, and only
+  // one of them has anything the user can do about it.
+  urls = await ejsUrls(invoke);
+  if (!urls.available) {
+    starting = false;
+    toast(
+      "Playing in the window needs EmulatorJS — run scripts/fetch-emulatorjs.sh",
+      8000
+    );
+    return "EmulatorJS is not installed";
+  }
+
   const verdict = browserPlay(rom.platform_slug ?? rom.platform);
   if (verdict.refuse) {
     starting = false;
@@ -383,7 +452,7 @@ export async function playInBrowser(rom) {
   // /api/ numbers the scan it serves to clients, and the UI works in cache ids,
   // which are negative for anything found on this machine. Building an /api/
   // URL from a cache id 404s on every game, which is what it did.
-  const url = `/rom?id=${encodeURIComponent(rom.id)}`;
+  const url = urls.rom(rom.id);
 
   // Let the page settle first. The clicks that got here start view transitions,
   // and a transition puts a snapshot of the page in the top layer above
@@ -404,7 +473,7 @@ export async function playInBrowser(rom) {
   w.EJS_gameName = rom.name;
   // Vendored, and the trailing slash matters: the loader concatenates rather
   // than resolving, so without it every core is fetched from one directory up.
-  w.EJS_pathtodata = EJS_PATH + "data/";
+  w.EJS_pathtodata = urls.data;
   w.EJS_startOnLoaded = true;
   // No phoning out. This is a LAN service and the whole reason the cores are
   // vendored; an ad frame would also be the only network call in the app that
@@ -434,7 +503,7 @@ export async function playInBrowser(rom) {
   const unwatch = watchForErrors(stage);
   note(stage, "Loading EmulatorJS…");
   try {
-    await loadLoader();
+    await loadLoader(urls.data);
   } catch (e) {
     unwatch();
     stage.remove();
