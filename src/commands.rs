@@ -669,7 +669,10 @@ pub async fn download_estimate(
 
     let rows = rows_for_choice(&state, &choice.platforms, &choice.collection, &choice.collections)?;
     let want = choice.want();
-    let mut est = bulk::estimate(&rows, want, |r| row_path(&state, r).is_some());
+    // One listing per directory rather than a `stat` per game: a download
+    // estimate for a whole console asks about every row of it.
+    let mut here = Listings::default();
+    let mut est = bulk::estimate(&rows, want, |r| here.holds(&state, r));
     // Asked of the server rather than averaged, because unlike artwork there is
     // a fixed set of these and it already knows which are here.
     let mut summary = est.describe();
@@ -782,6 +785,74 @@ pub fn platforms(state: &AppState) -> CmdResult<Vec<PlatformView>> {
     Ok(order.into_iter().filter_map(|i| views[i].take()).collect())
 }
 
+/// "Is this game's file on this machine", for a whole list at once.
+///
+/// `row_path` answers it for one row with up to four `stat` calls -- `is_file`
+/// then `is_dir`, for the recorded path and then for the derived one. A console
+/// list asks it once per row, and measured on the SSD on 2026-09-08 that was
+/// 85ms of the 90ms `commands::roms` took for SNES's 876 games: the SQL query
+/// was 4ms and serialising the answer was 0.2ms.
+///
+/// One `read_dir` per directory replaces all of it. Every row of a console
+/// shares a directory, so 876 rows cost one listing.
+///
+/// A miss falls back to the `stat` it replaced rather than answering "no". APFS
+/// is case-insensitive by default, so a row whose `fs_name` differs in case from
+/// the file on disk is found by `is_file` and not by an exact name lookup --
+/// and answering "not downloaded" for a game that is right there would take the
+/// Play button away from it.
+#[derive(Default)]
+struct Listings {
+    dirs: std::collections::HashMap<PathBuf, Dir>,
+}
+
+enum Dir {
+    /// How many rows have asked about this directory so far.
+    Asked(u8),
+    Names(std::collections::HashSet<std::ffi::OsString>),
+}
+
+/// When a directory is worth reading rather than stat-ing into.
+///
+/// Not on the first ask. `recent_games` is twenty-one games spread across a
+/// dozen consoles, and reading a dozen directories of several hundred entries
+/// each to answer one question per directory is slower than the stats it
+/// replaces. A console list asks about one directory hundreds of times, which
+/// is the case this exists for, and it reaches the threshold on its third row.
+const LIST_AFTER: u8 = 2;
+
+impl Listings {
+    fn has(&mut self, path: &Path) -> bool {
+        let (Some(parent), Some(name)) = (path.parent(), path.file_name()) else {
+            return false;
+        };
+        let slot = self.dirs.entry(parent.to_path_buf()).or_insert(Dir::Asked(0));
+        if let Dir::Asked(n) = slot {
+            if *n < LIST_AFTER {
+                *n += 1;
+                return path.is_file() || path.is_dir();
+            }
+            *slot = Dir::Names(
+                std::fs::read_dir(parent)
+                    .map(|rd| rd.filter_map(|e| e.ok()).map(|e| e.file_name()).collect())
+                    .unwrap_or_default(),
+            );
+        }
+        let Dir::Names(listing) = slot else { unreachable!() };
+        listing.contains(name) || path.is_file() || path.is_dir()
+    }
+
+    /// The same question `row_path(..).is_some()` answers, without its cost.
+    fn holds(&mut self, state: &AppState, row: &cache::RomRow) -> bool {
+        if let Some(p) = row.local_path.as_deref()
+            && self.has(Path::new(p))
+        {
+            return true;
+        }
+        self.has(&state.roms_dir.join(&row.platform_slug).join(&row.fs_name))
+    }
+}
+
 pub fn to_views(
     state: &AppState,
     rows: Vec<cache::RomRow>,
@@ -794,6 +865,7 @@ pub fn to_views(
         .ok()
         .and_then(|c| c.favorite_ids().ok())
         .unwrap_or_default();
+    let mut here = Listings::default();
     let views: Vec<RomView> = rows
         .into_iter()
         .map(|r| {
@@ -801,7 +873,7 @@ pub fn to_views(
                 r.meta_json.as_deref().and_then(|m| serde_json::from_str(m).ok());
             RomView {
                 favorite: favorites.contains(&r.id),
-                downloaded: row_path(state, &r).is_some(),
+                downloaded: here.holds(state, &r),
                 rating: meta
                     .as_ref()
                     .and_then(|m| m.get("average_rating"))
@@ -904,6 +976,10 @@ pub fn collection_groups(state: &AppState) -> CmdResult<Vec<GroupView>> {
 
 pub fn collections_in(state: &AppState, group: String) -> CmdResult<Vec<CollectionView>> {
     let cache = state.cache.lock().map_err(err)?;
+    // Shared across every collection in the group: they draw from the same few
+    // console directories, so the second collection pays nothing for the
+    // directories the first already read. See `Listings`.
+    let mut here = Listings::default();
     Ok(cache
         .collections_in(&group)
         .map_err(err)?
@@ -911,7 +987,7 @@ pub fn collections_in(state: &AppState, group: String) -> CmdResult<Vec<Collecti
         .map(|c| CollectionView {
             local_count: cache
                 .roms_in_collection(&c.id)
-                .map(|rows| rows.iter().filter(|r| row_path(&state, r).is_some()).count() as i64)
+                .map(|rows| rows.iter().filter(|r| here.holds(&state, r)).count() as i64)
                 .unwrap_or(0),
             sample_ids: c.sample_ids,
             id: c.id,
@@ -1487,10 +1563,8 @@ pub fn android_launch_plan(
 pub async fn warm_media(state: &AppState, platform: String) -> CmdResult<()> {
     let (dir, key) = {
         let cache = state.cache.lock().map_err(err)?;
-        let row = cache
-            .roms_for(&platform)
-            .ok()
-            .and_then(|mut v| v.pop());
+        // One row, not the whole console. See `Cache::any_rom_for`.
+        let row = cache.any_rom_for(&platform).ok().flatten();
         match row {
             // Through the same scope a real lookup uses, or the wrong tree is warmed.
             Some(row) => {
@@ -3291,5 +3365,76 @@ mod year_tests {
         // And nothing is invented.
         assert_eq!(year(serde_json::json!({})), None);
         assert_eq!(super::year_from_meta(&None), None);
+    }
+}
+
+#[cfg(test)]
+mod listing_tests {
+
+    /// One listing answers for a whole directory, and a name that is not in it
+    /// still gets the `stat` it would have had.
+    ///
+    /// The fallback is the whole point on macOS: APFS is case-insensitive by
+    /// default, so `ACTRAISER.SFC` on disk satisfies a row that says
+    /// `ActRaiser.sfc`. An exact-name lookup alone would call that game missing
+    /// and take its Play button away.
+    #[test]
+    fn a_listing_answers_for_the_whole_directory() {
+        let dir = std::env::temp_dir().join("moose-rack-listings");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("ActRaiser (USA).sfc"), b"rom").unwrap();
+        std::fs::create_dir_all(dir.join("Multi Disc Game")).unwrap();
+
+        let mut here = super::Listings::default();
+        assert!(here.has(&dir.join("ActRaiser (USA).sfc")));
+        // A folder ROM is an entry too.
+        assert!(here.has(&dir.join("Multi Disc Game")));
+        assert!(!here.has(&dir.join("Nothing At All.sfc")));
+        // A directory that does not exist is not an error, it is "no".
+        assert!(!here.has(&dir.join("no-such-folder").join("x.sfc")));
+        // One entry per directory touched, however many rows asked.
+        assert_eq!(here.dirs.len(), 2);
+    }
+
+    /// A directory asked about once is stat-ed, not read.
+    ///
+    /// `recent_games` is a handful of games across a dozen consoles. Reading a
+    /// dozen several-hundred-entry directories to answer one question each is
+    /// slower than the stats it would replace, so the listing only happens once
+    /// a directory has proved it is being asked about repeatedly.
+    #[test]
+    fn one_ask_does_not_read_the_directory() {
+        let dir = std::env::temp_dir().join("moose-rack-listings-once");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("a.sfc"), b"rom").unwrap();
+
+        let mut here = super::Listings::default();
+        assert!(here.has(&dir.join("a.sfc")));
+        assert!(matches!(here.dirs.get(&dir), Some(super::Dir::Asked(1))));
+        assert!(here.has(&dir.join("a.sfc")));
+        assert!(matches!(here.dirs.get(&dir), Some(super::Dir::Asked(2))));
+        // The third crosses it, and the answers do not change.
+        assert!(here.has(&dir.join("a.sfc")));
+        assert!(matches!(here.dirs.get(&dir), Some(super::Dir::Names(_))));
+        assert!(here.has(&dir.join("a.sfc")));
+        assert!(!here.has(&dir.join("nope.sfc")));
+    }
+
+    #[test]
+    fn a_name_the_listing_misses_falls_back_to_the_filesystem() {
+        // Written through a path the listing will not match exactly, so the
+        // only way to a `true` is the `stat`. On a case-insensitive volume this
+        // finds it; on a case-sensitive one it correctly does not, which is the
+        // same answer `is_file` gave before.
+        let dir = std::env::temp_dir().join("moose-rack-listings-case");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("ActRaiser (USA).sfc"), b"rom").unwrap();
+
+        let mut here = super::Listings::default();
+        let shouty = dir.join("ACTRAISER (USA).SFC");
+        assert_eq!(here.has(&shouty), shouty.is_file());
     }
 }

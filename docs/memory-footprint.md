@@ -801,3 +801,39 @@ disadvantage of shipping a webview to Android rather than a native view.
 The fallback Frank named is also what the field does: ES-DE's list view, and
 most others' default, show one piece of artwork for the selected game and
 nothing for the rest. One picture on screen is one picture in memory.
+
+## Where the time went, 2026-09-08
+
+The same measurement discipline as the memory work above, applied to frames
+instead of megabytes. Driven in the real desktop window through `MOOSE_MEASURE`
+(with `MOOSE_MEASURE_POS`, or nothing renders and every reading is zero), on a
+release build, opening SNES's 876 games.
+
+**Artwork decoded on the main thread: 2,184ms.** Forty-nine covers, plus 1,834ms
+of fetching, on the thread that runs the grid, the transitions and every
+animation. The first second after opening a console drew between one and four
+frames per hundred milliseconds. `decoder.js` does the fetch, the decode and the
+downscale in a worker and transfers the finished `ImageBitmap` back; drawing
+that into the page's canvas measures 0.00ms. Same second, six frames per hundred
+milliseconds from 300ms onward. `no-worker` in `__MOOSE_FLAGS` turns it off for
+an A/B.
+
+**A `stat` per game: 85ms of the 90ms `commands::roms` took.** The SQL query was
+4ms and serialising 200 KB of answer was 0.2ms; the rest was `row_path` asking
+the filesystem, up to four times per row, whether each of 876 games is on this
+machine. One `read_dir` answers for a whole directory. 90ms to 11ms, same count.
+
+Not on the first ask, though: `recent_games` is twenty-one games across a dozen
+consoles, and reading a dozen several-hundred-entry directories to answer one
+question each is slower than the stats. The listing starts on a directory's
+third ask. A name the listing misses still gets its `stat` -- APFS is
+case-insensitive, so a row whose `fs_name` differs in case from the file on disk
+is found by `is_file` and not by an exact lookup, and answering "not downloaded"
+for a game that is right there would take its Play button away.
+
+**Backend work inside a frozen transition.** `showRoms` awaited `roms` and
+`arrange_list` inside the view-transition callback, which holds the old screen
+on the display for as long as it runs. `prefetchRoms` does it first.
+
+Opening SNES, before and after: 14 frames with a p50 of 56ms and nine gaps over
+33ms, to 34 frames with a p50 of 17ms and one.
