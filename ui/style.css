@@ -3622,3 +3622,33 @@ body.mobile #detail .sub {
 /* The shader picker no longer needs to push itself right — the state button
    does it now, and two `margin-left: auto` in one row splits it in half. */
 #ejs-stage .ejs-shader { margin-left: 0; }
+/* A question asked inside the stage. Not `confirm()`: a native dialog blocks
+   the page's main thread, and here that thread is running a game. */
+#ejs-stage .ejs-ask, body > .ejs-ask {
+  position: absolute;
+  inset: auto 0 0 0;
+  z-index: 3;
+  margin: 0 auto 24px;
+  width: min(92vw, 460px);
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: var(--panel);
+  border: 1px solid color-mix(in srgb, var(--glass) 34%, transparent);
+  box-shadow: 0 14px 44px rgba(0, 0, 0, 0.5);
+  color: var(--text);
+  font-size: 13px;
+}
+body > .ejs-ask { position: fixed; z-index: 300; bottom: 24px; left: 0; right: 0; }
+#ejs-stage .ejs-ask p, body > .ejs-ask p { margin: 0 0 10px; }
+.ejs-ask-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.ejs-ask-row button {
+  padding: 5px 12px;
+  border-radius: 7px;
+  border: 1px solid color-mix(in srgb, var(--glass) 40%, transparent);
+  background: var(--panel-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.ejs-ask-row button:first-child { background: var(--accent); border-color: var(--accent); color: #fff; }

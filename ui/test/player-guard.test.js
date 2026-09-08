@@ -30,7 +30,13 @@ before(async () => {
     core: { invoke: async () => ({}), convertFileSrc: (p) => p },
     event: { listen: async () => () => {}, emit: async () => {} },
   };
+  // `confirmHeavy` asks in the page now rather than through `confirm()`, which
+  // blocks the thread a game is running on. Answer it by pressing the button.
   Object.defineProperty(globalThis, "confirm", { value: () => true, configurable: true });
+  const obs = new dom.window.MutationObserver(() => {
+    dom.window.document.querySelector(".ejs-ask-row button")?.click();
+  });
+  obs.observe(dom.window.document.body, { childList: true, subtree: true });
   // jsdom does not fetch an external script, so neither `onload` nor `onerror`
   // ever fires and the promise `loadLoader` returns never settles. Answer for
   // it: this suite is about what the page does around the emulator, not about
