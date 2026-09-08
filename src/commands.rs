@@ -2267,6 +2267,113 @@ pub fn saves_root(state: &AppState) -> PathBuf {
         })
 }
 
+
+// --- The save the window's own emulator uses ---------------------------------
+//
+// The desktop can play a cartridge in the page when RetroArch has no core for
+// it (see `ejs_serve` in `src-tauri`). That emulator is another emulator on
+// *this* machine, not another device: what it writes has to be the file
+// RetroArch would read and the file `sync_saves` would send, or an evening
+// played in the window is invisible to both. So there is no negotiation here
+// and no second device id -- a read and a write of the local save tree, and
+// the device's existing sync carries it to the server unchanged.
+//
+// The browser build does not use these. It is genuinely a different device and
+// goes through `/api/sync/negotiate` like the Flip does.
+
+#[derive(Serialize)]
+pub struct LocalSave {
+    pub file_name: String,
+    /// Base64. The alternative, a `Vec<u8>` through Tauri's IPC, is a JSON
+    /// array of 131,072 numbers for one SNES save.
+    pub data: String,
+}
+
+/// The game save this machine holds for `id`, if there is one.
+///
+/// Game saves only. A save state is a deliberate act with its own buttons, and
+/// restoring one silently on the way into a game is not what anybody asked for.
+pub fn local_save(state: &AppState, id: i64) -> CmdResult<Option<LocalSave>> {
+    use base64::Engine as _;
+    let row = {
+        let cache = state.cache.lock().map_err(err)?;
+        cache.rom_by_id(id).map_err(err)?
+    }
+    .ok_or_else(|| format!("no rom with id {id}"))?;
+    let root = saves_root(state);
+    let found = {
+        let cache = state.cache.lock().map_err(err)?;
+        crate::savesync::scan_for_rom(&cache, &state.map, &root, &row.fs_name).map_err(err)?
+    };
+    let Some(c) = found
+        .into_iter()
+        .filter(|c| c.canonical)
+        .find(|c| !crate::saves::is_state_name(&file_name_of(&c.path)))
+    else {
+        return Ok(None);
+    };
+    let bytes = std::fs::read(&c.path).map_err(err)?;
+    Ok(Some(LocalSave {
+        file_name: file_name_of(&c.path),
+        data: base64::engine::general_purpose::STANDARD.encode(bytes),
+    }))
+}
+
+/// Put a save made in the window into the local save tree.
+///
+/// Over the existing file when there is one, so the next launch of RetroArch
+/// picks it up; otherwise at the path this device's layout says, which is the
+/// path `savesync::scan` reads back.
+pub fn put_local_save(state: &AppState, id: i64, data: String) -> CmdResult<String> {
+    use base64::Engine as _;
+    let bytes = base64::engine::general_purpose::STANDARD
+        .decode(data.as_bytes())
+        .map_err(err)?;
+    if bytes.is_empty() {
+        return Err("nothing to save".into());
+    }
+    let row = {
+        let cache = state.cache.lock().map_err(err)?;
+        cache.rom_by_id(id).map_err(err)?
+    }
+    .ok_or_else(|| format!("no rom with id {id}"))?;
+    let root = saves_root(state);
+    let existing = {
+        let cache = state.cache.lock().map_err(err)?;
+        crate::savesync::scan_for_rom(&cache, &state.map, &root, &row.fs_name).map_err(err)?
+    }
+    .into_iter()
+    .filter(|c| c.canonical)
+    .find(|c| !crate::saves::is_state_name(&file_name_of(&c.path)))
+    .map(|c| c.path);
+
+    let path = match existing {
+        Some(p) => p,
+        None => {
+            let stem = std::path::Path::new(&row.fs_name)
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or(&row.fs_name);
+            let core = resolve_core_for(state, &row.platform_slug, Some(&row.fs_name));
+            crate::savesync::download_path(
+                &root,
+                &format!("{stem}.srm"),
+                crate::savesync::destination(core.as_deref(), Some(&row.platform_slug)),
+            )
+        }
+    };
+    if let Some(dir) = path.parent() {
+        std::fs::create_dir_all(dir).map_err(err)?;
+    }
+    let n = bytes.len();
+    std::fs::write(&path, bytes).map_err(err)?;
+    Ok(format!("saved {n} bytes to {}", path.display()))
+}
+
+fn file_name_of(p: &std::path::Path) -> String {
+    p.file_name().and_then(|s| s.to_str()).unwrap_or_default().to_owned()
+}
+
 pub async fn sync_saves_plan(state: &AppState) -> CmdResult<crate::syncplan::Review> {
     let client = state.client.clone().ok_or("not connected to a server")?;
     let root = saves_root(&state);

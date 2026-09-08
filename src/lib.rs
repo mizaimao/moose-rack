@@ -24,6 +24,7 @@ pub mod cores;
 pub mod datadir;
 pub mod diskspace;
 pub mod download;
+pub mod ejs;
 pub mod esde;
 pub mod favorites;
 pub mod gamefilter;
