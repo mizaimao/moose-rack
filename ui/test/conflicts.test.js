@@ -226,3 +226,61 @@ describe("the offline warning", () => {
     assert.equal(document.querySelector("#conflict-overlay"), null);
   });
 });
+
+describe("RetroArch has no core for this system", () => {
+  beforeEach(() => {
+    document.querySelector("#conflict-overlay")?.remove();
+  });
+
+  test("the platform is read out of what launch::plan actually says", () => {
+    const said =
+      'no installed core for platform "snes".\n' +
+      "Install one, set [cores.overrides] in config.toml, or pass --core.";
+    assert.equal(mod.noCoreFrom(said), "snes");
+    assert.equal(mod.noCoreFrom(new Error(said)), "snes");
+  });
+
+  test("other launch failures are not read as a missing core", () => {
+    // A core that crashed, a core that wants a BIOS and a core that is not
+    // installed are three problems, and only the last one has anywhere to fall
+    // back to. Matching loosely would send the other two to the wrong dialog.
+    for (const other of [
+      "BIOS_MISSING: scph5501.bin",
+      "the core exited with status 1",
+      "SAVE_OFFLINE: connection refused",
+      "",
+    ]) {
+      assert.equal(mod.noCoreFrom(other), null, other);
+    }
+  });
+
+  test("it offers the window, and says what is different about it", () => {
+    mod.askNoCore("snes", "snes9x");
+    const box = document.querySelector("#conflict-overlay");
+    assert.ok(box);
+    assert.match(box.textContent, /snes/);
+    assert.match(box.textContent, /snes9x/);
+    // The two things somebody would otherwise find out the hard way.
+    assert.match(box.textContent, /same file RetroArch/);
+    assert.match(box.textContent, /Save states are not carried across/);
+  });
+
+  test("cancel resolves false and Escape means cancel", async () => {
+    let done = mod.askNoCore("gba", "mgba");
+    document.querySelector('[data-go="no"]').click();
+    assert.equal(await done, false);
+
+    done = mod.askNoCore("gba", "mgba");
+    document.dispatchEvent(
+      new window.KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+    );
+    assert.equal(await done, false);
+    assert.equal(document.querySelector("#conflict-overlay"), null);
+  });
+
+  test("playing in the window resolves true", async () => {
+    const done = mod.askNoCore("gba", "mgba");
+    document.querySelector('[data-go="yes"]').click();
+    assert.equal(await done, true);
+  });
+});

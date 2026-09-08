@@ -4,7 +4,7 @@
 import { state, invoke, listen, MOBILE } from "./state.js";
 import { toast } from "./util.js";
 import { askAboutLightGun } from "./lightgun-gate.js";
-import { askConflicts, conflictsFrom, askOffline, offlineFrom, askBios, biosFrom, noteLightGun } from "./conflicts.js";
+import { askConflicts, conflictsFrom, askOffline, offlineFrom, askBios, biosFrom, noCoreFrom, askNoCore, noteLightGun } from "./conflicts.js";
 import { suspendPad, resumePad } from "./gamepad.js";
 
 /// Display refresh in Hz, measured rather than asked for: no web API reports
@@ -271,6 +271,21 @@ export async function launch(
     // `entrySlot` is carried through: it is which save state the launch was
     // resuming from, and dropping it would restart the game from the
     // beginning after the user said "play anyway".
+    // RetroArch is here and has no core for this system. The window has 187 of
+    // them, so this is the one launch failure with somewhere else to go --
+    // asked rather than done, because playing in a page is a different thing
+    // from playing in RetroArch and swapping one for the other silently would
+    // be a surprise.
+    const missing = noCoreFrom(e);
+    if (missing) {
+      const { browserPlay } = await import("./ejs-systems.js");
+      const verdict = browserPlay(missing);
+      if (!verdict.refuse) {
+        const go = await askNoCore(missing, verdict.core);
+        if (!go) return toast(`No installed core for ${missing}`, 8000);
+        return toast(await playHere(id));
+      }
+    }
     const bios = biosFrom(e);
     if (bios && !skipSync) {
       const go = await askBios(bios);

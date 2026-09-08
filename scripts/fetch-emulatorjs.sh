@@ -55,4 +55,19 @@ rm -rf "$DIR/data" "$DIR/LICENSE"
 mv "$tmp/x/data" "$DIR/data"
 # The licence travels with the code, which is what GPL-3 asks.
 mv "$tmp/x/LICENSE" "$DIR/LICENSE"
+# EmulatorJS checks its own version against a CDN on every game start. That is
+# one `fetch` to cdn.emulatorjs.org, and it only writes a line to the console --
+# but this is a LAN library that has to work with the internet down, and the
+# manifest above says in as many words that a CDN reference would be the only
+# thing in the app phoning out while somebody is playing. Pointed at a
+# page-relative name instead: it 404s, `t.ok` is false, and the check gives up
+# without leaving the machine.
+#
+# Checked, not assumed. A vendored file that silently stopped matching would
+# quietly put the call back.
+before=$(grep -c 'cdn\.emulatorjs\.org/stable/data/version\.json' "$DIR/data/emulator.min.js" || true)
+[ "$before" = "1" ] || { echo "  version check not where expected ($before matches) -- not patched" >&2; exit 1; }
+sed -i.bak 's|https://cdn\.emulatorjs\.org/stable/data/version\.json|version.json|' "$DIR/data/emulator.min.js"
+rm -f "$DIR/data/emulator.min.js.bak"
+
 echo "  emulatorjs ready ($(ls "$DIR/data/cores"/*.data | wc -l | tr -d ' ') cores)"

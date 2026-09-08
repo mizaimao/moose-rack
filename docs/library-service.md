@@ -270,4 +270,6 @@ served the Flip and the Thor for a couple of weeks without anyone noticing.
 
 The library still needs artwork for 3,400 games that have never been scraped
 anywhere, and no amount of re-architecting finds a cover that does not exist.
-That is a scraping job, and it is unrelated to this.
+That was a scraping job, and it is not being done: see `coverage.md`. The count
+is 1,675 as measured on 2026-09-08, and a game without a picture draws its
+placeholder. That is the finished behaviour.
