@@ -10,14 +10,15 @@
 // `scripts/fetch-emulatorjs.sh`. The service serves it from `/emulatorjs/`, so
 // this works with the internet down, which is the point of a LAN library.
 //
-// Saves are NOT wired up yet. EmulatorJS keeps its own IndexedDB filesystem and
-// putting that through `/api/saves` is the next piece; until then this is for
-// playing, and progress made here stays here. `docs/browser-emulation.md` says
-// how it should go, and it must go through the negotiate that already exists
-// rather than becoming a second sync.
+// Saves go through `browser-saves.js`, which goes through the same negotiate
+// every other device uses. Measured first, in a real browser: EmulatorJS's own
+// IndexedDB copy did not survive a reload -- 32 of 8192 bytes -- so the browser
+// is not somewhere a save can be left, and syncing it is what makes playing
+// here worth anything rather than a convenience.
 
 import { browserPlay, shouldWarn } from "./ejs-systems.js";
 import { PRESETS, chosenShader, rememberShader } from "./ejs-shaders.js";
+import { syncOne } from "./browser-saves.js";
 import { toast } from "./util.js";
 
 const EJS_PATH = "/emulatorjs/";
@@ -163,13 +164,74 @@ function watchForErrors(stage) {
   };
 }
 
+/// How often a running game's save is pushed up.
+///
+/// Not only on the way out. A tab closes without warning -- a lid, a crash, a
+/// phone deciding the page is old -- and a save written only on exit is a save
+/// lost to any of those. Two minutes is short enough that the most anyone can
+/// lose is two minutes.
+const FLUSH_EVERY = 120_000;
+
+let flushTimer = null;
+let syncing = false;
+
+/// Sync now, and never twice at once: a second pass while the first is still
+/// negotiating would compare against a server the first is about to change.
+async function flush(stage, romId, why) {
+  const gm = globalThis.EJS_emulator?.gameManager;
+  if (!gm || syncing) return;
+  syncing = true;
+  try {
+    const out = await syncOne(gm, romId, {
+      // Never resolved silently. A save is hours of somebody's life and the
+      // wrong pick is unrecoverable, so this asks and takes no answer as no.
+      onConflict: async (op) =>
+        globalThis.confirm(
+          `This game's save changed here and on the server.\n\n${op.reason}\n\n` +
+            `OK keeps the copy from this browser. Cancel keeps the server's.`
+        )
+          ? "mine"
+          : "theirs",
+    });
+    if (out.action === "upload") note(stage, `Save sent to the server (${why})`, false);
+    if (out.action === "download") note(stage, "Save restored from the server");
+    if (out.action === "conflict" && !out.resolved) note(stage, "Save conflict — left alone", true);
+    if (out.action !== "no_op") setTimeout(() => note(stage, ""), 4000);
+  } catch (e) {
+    // A sync that cannot happen must not stop somebody playing.
+    note(stage, `Save not synced: ${e?.message ?? e}`, true);
+  } finally {
+    syncing = false;
+  }
+}
+
+/// Pull the server's copy in, then keep pushing ours back.
+function startSaveSync(stage, romId) {
+  flush(stage, romId, "start");
+  clearInterval(flushTimer);
+  flushTimer = setInterval(() => flush(stage, romId, "autosave"), FLUSH_EVERY);
+  // The two events that actually fire when somebody walks away. `pagehide` is
+  // the one that survives a phone discarding the tab, where `beforeunload` is
+  // not guaranteed to run at all.
+  const onGone = () => flush(stage, romId, "leaving");
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") onGone();
+  });
+  globalThis.addEventListener("pagehide", onGone);
+}
+
 /// Take the game down and put the page back.
 ///
 /// A reload rather than a teardown: EmulatorJS installs global state, an audio
 /// context and its own key and gamepad handlers, and has no supported way to
 /// remove them. Trying to unpick that by hand is how a second launch comes up
 /// silent or with the pad captured by a game that is no longer on screen.
-export function stopPlaying() {
+export async function stopPlaying() {
+  clearInterval(flushTimer);
+  // The last thing before the page goes: a reload throws the emulator away, and
+  // with it any save that has not been sent.
+  const romId = globalThis.__moosePlayingId;
+  if (romId != null) await flush(null, romId, "stopping");
   starting = false;
   location.reload();
 }
@@ -246,13 +308,21 @@ export async function playInBrowser(rom) {
   w.EJS_alignStartButton = "center";
   // Its own bios/save directories would collide across games otherwise.
   w.EJS_gameID = rom.id;
+  // For `stopPlaying`, which runs after the stage is gone.
+  w.__moosePlayingId = rom.id;
   // EmulatorJS reads its start-up options from here. An empty string is a real
   // value meaning "none", so it is set either way rather than left undefined.
   w.EJS_defaultOptions = { ...(w.EJS_defaultOptions ?? {}), shader: shader || "none" };
 
   // Told by EmulatorJS itself rather than guessed at.
   w.EJS_ready = () => note(stage, "Core loaded — press start");
-  w.EJS_onGameStart = () => note(stage, "");
+  w.EJS_onGameStart = () => {
+    note(stage, "");
+    // On `start`, deliberately after the emulator's own restore rather than
+    // racing it. Strictly later cannot lose, and this was measured before it
+    // was written: writing here reaches the running core, all 8192 bytes.
+    startSaveSync(stage, rom.id);
+  };
 
   const unwatch = watchForErrors(stage);
   note(stage, "Loading EmulatorJS…");
