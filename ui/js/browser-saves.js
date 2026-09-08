@@ -178,3 +178,50 @@ export async function syncOne(gm, romId, { onConflict } = {}) {
 
   return { action: op.action ?? "no_op" };
 }
+
+
+// --- Save states -------------------------------------------------------------
+//
+// A different thing from a save, and synced differently on purpose. A save is
+// the cartridge's battery memory and it changes continuously, so it is flushed
+// on a timer. A state is a freeze-frame somebody made deliberately, at a moment
+// they chose, and there is nothing to merge: `/api/states` takes what it is
+// given and answers no conflict, because a freeze-frame from one emulator build
+// cannot be reconciled with another.
+//
+// So states are not automatic. Making one and restoring one are both acts, and
+// the play bar has a button for each.
+
+/// Every state the server holds for this game.
+export async function serverStates(romId) {
+  const r = await fetch(`/api/states?rom_id=${encodeURIComponent(romId)}`);
+  if (!r.ok) return [];
+  return r.json();
+}
+
+/// Freeze the running game and send it up.
+///
+/// The emulator name travels with it: a state belongs to the core that made it,
+/// and restoring a snes9x state into a different SNES core is a crash rather
+/// than a wrong picture.
+export async function pushState(gm, romId, { core, name } = {}) {
+  const bytes = gm.getState();
+  if (!bytes || !bytes.length) throw new Error("the core produced no state");
+  const form = new FormData();
+  const fileName = name ?? `${new Date().toISOString().replace(/[:.]/g, "-")}.state`;
+  form.append("stateFile", new Blob([bytes]), fileName);
+  const q = new URLSearchParams({ rom_id: String(romId) });
+  if (core) q.set("emulator", core);
+  const r = await fetch(`/api/states?${q}`, { method: "POST", body: form });
+  if (!r.ok) throw new Error(`saving the state: ${r.status}`);
+  return r.json();
+}
+
+/// Bring one back into the running game.
+export async function pullState(gm, stateId) {
+  const r = await fetch(`/api/states/${encodeURIComponent(stateId)}/content`);
+  if (!r.ok) throw new Error(`loading the state: ${r.status}`);
+  const bytes = new Uint8Array(await r.arrayBuffer());
+  gm.loadState(bytes);
+  return bytes.length;
+}
