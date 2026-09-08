@@ -17,6 +17,8 @@
 // full-size views open. This changes what is held in memory, not what is
 // stored.
 
+import { decodeFitted } from "./decoder.js";
+
 /// Never enlarge. A 224x256 titlescreen in a 400px box should stay 224x256 and
 /// let the box letterbox it, the way `object-fit: contain` does — blowing it up
 /// would cost four times the memory to show exactly the same detail.
@@ -33,6 +35,30 @@ export async function fitted(url, boxW, boxH, dpr = window.devicePixelRatio || 1
   // The measuring switch, so an A/B of this change needs one build and turns
   // one thing off. Never set in normal use.
   if (globalThis.__MOOSE_FLAGS?.includes("no-canvas")) return null;
+
+  // Off the main thread first. Everything below is the same work in the same
+  // order; it runs here only when a worker could not. `no-worker` is the switch
+  // for measuring the difference. See `decoder.js`.
+  if (!globalThis.__MOOSE_FLAGS?.includes("no-worker")) {
+    const made = await decodeFitted(url, boxW, boxH, dpr);
+    if (made) {
+      const canvas = document.createElement("canvas");
+      canvas.width = made.w;
+      canvas.height = made.h;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        // Already the right size and already downscaled: this is a blit,
+        // measured at 0.00ms.
+        ctx.drawImage(made.bitmap, 0, 0);
+        made.bitmap.close?.();
+        canvas.style.width = `${made.w / dpr}px`;
+        canvas.style.height = `${made.h / dpr}px`;
+        return canvas;
+      }
+      made.bitmap.close?.();
+    }
+  }
+
   let bitmap = null;
   try {
     const response = await fetch(url);
