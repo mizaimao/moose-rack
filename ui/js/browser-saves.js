@@ -100,6 +100,13 @@ export function readSave(gm) {
   try {
     const bytes = gm?.getSaveFile?.();
     if (!bytes || !bytes.length) return null;
+    // A core that has never loaded a save still has SRAM, and it is all zeros.
+    // Reporting that as a save makes the very first sync of a game you played
+    // on the handheld a *conflict*: both sides have something, they differ, and
+    // this device has agreed to nothing yet. Which is safe -- nothing is
+    // overwritten -- and wrong, because there is nothing here to weigh against
+    // an actual save. An empty cartridge is not a save.
+    if (bytes.every((b) => b === 0)) return null;
     // Emscripten's virtual filesystem, not the host's. It is POSIX on every
     // platform -- `/data/saves/Snes9x/ActRaiser (USA).srm` on Windows too --
     // because the core is a WebAssembly build with its own MEMFS. So this
