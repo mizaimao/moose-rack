@@ -18,7 +18,7 @@
 
 import { browserPlay, shouldWarn } from "./ejs-systems.js";
 import { presetsFor, chosenShader, rememberShader } from "./ejs-shaders.js";
-import { syncOne } from "./browser-saves.js";
+import { syncOne, serverStates, pushState, pullState } from "./browser-saves.js";
 import { toast } from "./util.js";
 
 const EJS_PATH = "/emulatorjs/";
@@ -85,13 +85,17 @@ function loadLoader() {
 /// the order things entered it, so the newest is on top.
 ///
 /// jsdom implements neither, which is why every harness run said this worked.
-function openStage(title, shader, platformSlug) {
+function openStage(title, shader, platformSlug, romId, core) {
   const stage = document.createElement("dialog");
   stage.id = "ejs-stage";
   stage.innerHTML = `
     <div class="ejs-bar">
       <button class="ejs-close" aria-label="Stop">Stop</button>
       <span class="ejs-title"></span>
+      <button class="ejs-save-state" title="Freeze the game and keep it on the server">Save state</button>
+      <label class="ejs-states">Load
+        <select><option value="">…</option></select>
+      </label>
       <label class="ejs-shader">Shader
         <select></select>
       </label>
@@ -123,6 +127,7 @@ function openStage(title, shader, platformSlug) {
       note(stage, `Shader will apply next time this game starts (${e?.message ?? e})`);
     }
   });
+  wireStates(stage, romId, core);
   document.body.appendChild(stage);
   // `showModal` where it exists; an open dialog is still a visible one where it
   // does not, and a game running is better than a correct stacking context.
@@ -162,6 +167,71 @@ function watchForErrors(stage) {
     globalThis.removeEventListener("error", onErr);
     globalThis.removeEventListener("unhandledrejection", onErr);
   };
+}
+
+/// The two state controls: make one, and bring one back.
+///
+/// Buttons rather than a timer, unlike the save. A state is a moment somebody
+/// chose; taking one every two minutes would fill the shelf with moments
+/// nobody picked, and `/api/states` answers no conflict because a freeze-frame
+/// cannot be merged with another.
+function wireStates(stage, romId, core) {
+  const make = stage.querySelector(".ejs-save-state");
+  const pick = stage.querySelector(".ejs-states select");
+
+  const refresh = async () => {
+    let states = [];
+    try {
+      states = await serverStates(romId);
+    } catch {
+      // A list that cannot be fetched is not a reason to stop playing.
+    }
+    pick.innerHTML = "";
+    const first = document.createElement("option");
+    first.value = "";
+    first.textContent = states.length ? `${states.length} saved` : "none yet";
+    pick.appendChild(first);
+    for (const st of states) {
+      const o = document.createElement("option");
+      o.value = String(st.id);
+      // The name is what it was saved as, which is a timestamp unless somebody
+      // renamed it on disk. Shown as-is rather than reformatted: the file on
+      // the server is the thing, and inventing a prettier label hides which.
+      o.textContent = st.file_name.replace(/\.state$/, "");
+      if (st.emulator) o.title = `made with ${st.emulator}`;
+      pick.appendChild(o);
+    }
+  };
+
+  make.addEventListener("click", async () => {
+    const gm = globalThis.EJS_emulator?.gameManager;
+    if (!gm) return;
+    make.disabled = true;
+    try {
+      const st = await pushState(gm, romId, { core });
+      note(stage, `State saved — ${st.file_name}`);
+      await refresh();
+    } catch (e) {
+      note(stage, `State not saved: ${e?.message ?? e}`, true);
+    } finally {
+      make.disabled = false;
+      setTimeout(() => note(stage, ""), 4000);
+    }
+  });
+
+  pick.addEventListener("change", async () => {
+    const gm = globalThis.EJS_emulator?.gameManager;
+    if (!gm || !pick.value) return;
+    try {
+      const n = await pullState(gm, pick.value);
+      note(stage, `State loaded (${n} bytes)`);
+    } catch (e) {
+      note(stage, `State not loaded: ${e?.message ?? e}`, true);
+    }
+    setTimeout(() => note(stage, ""), 4000);
+  });
+
+  refresh();
 }
 
 /// How often a running game's save is pushed up.
@@ -287,7 +357,7 @@ export async function playInBrowser(rom) {
 
   // The viewer's own choice, else whatever this console is configured for.
   const shader = chosenShader(rom.shader, rom.platform_slug ?? rom.platform);
-  const stage = openStage(rom.name, shader, rom.platform_slug ?? rom.platform);
+  const stage = openStage(rom.name, shader, rom.platform_slug ?? rom.platform, rom.id, verdict.core);
   stage.querySelector(".ejs-close").addEventListener("click", stopPlaying);
 
   const w = globalThis;

@@ -3588,3 +3588,37 @@ body.mobile #detail .sub {
   cursor: pointer;
 }
 #signin:hover { border-color: var(--accent); color: var(--text); }
+/* Save-state controls, between the title and the shader picker. */
+#ejs-stage .ejs-save-state {
+  margin-left: auto;
+  padding: 3px 10px;
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--glass) 40%, transparent);
+  background: var(--panel-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+#ejs-stage .ejs-save-state:hover { border-color: var(--accent); }
+#ejs-stage .ejs-save-state:disabled { opacity: .5; cursor: default; }
+#ejs-stage .ejs-states {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--dim);
+}
+#ejs-stage .ejs-states select {
+  padding: 3px 6px;
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--glass) 40%, transparent);
+  background: var(--panel-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  max-width: 180px;
+}
+/* The shader picker no longer needs to push itself right — the state button
+   does it now, and two `margin-left: auto` in one row splits it in half. */
+#ejs-stage .ejs-shader { margin-left: 0; }
