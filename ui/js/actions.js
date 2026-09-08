@@ -237,8 +237,13 @@ export async function launch(
     // the conflict dialog, the BIOS and offline prompts -- is about this
     // window rather than about the emulator, which is why Android could reuse
     // it and why the browser can too.
+    const { playHereWanted } = await import("./ejs-systems.js");
     const result = MOBILE
       ? await launchAndroid(id, skipSync)
+      // Asked for, on this game, in the Core dropdown. Ahead of everything
+      // below because it is a deliberate choice rather than a fallback.
+      : playHereWanted(id)
+      ? await playHere(id)
       : !(await canLaunchNatively())
       ? await playHere(id)
       : await invoke("launch_rom", {

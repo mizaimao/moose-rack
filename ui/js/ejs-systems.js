@@ -78,3 +78,48 @@ export function shouldWarn(platformSlug, sizeBytes) {
   const n = Number(sizeBytes) || HEAVY[String(platformSlug ?? "").toLowerCase()] || 0;
   return n >= ASK_ABOVE;
 }
+
+/// Games told to run in this window rather than in RetroArch.
+///
+/// Remembered per game, in this browser, and deliberately *not* through
+/// `set_game_core`: that writes a libretro core name into `config.toml` and
+/// every launch resolves against it, so a pseudo-core in there would be a lie
+/// the whole app has to keep reading. This is a choice about which emulator
+/// runs the game, not about which core RetroArch should use.
+///
+/// The automatic fallback -- RetroArch has no core for this system, so the
+/// window offers to -- is separate and needs none of this. This is for choosing
+/// it when RetroArch *would* have worked.
+const PLAY_HERE = "playHere";
+
+function playHereSet() {
+  try {
+    const raw = localStorage.getItem(PLAY_HERE);
+    return new Set(raw ? JSON.parse(raw) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+export function playHereWanted(id) {
+  return playHereSet().has(Number(id));
+}
+
+export function setPlayHere(id, on) {
+  const set = playHereSet();
+  if (on) set.add(Number(id));
+  else set.delete(Number(id));
+  try {
+    localStorage.setItem(PLAY_HERE, JSON.stringify([...set]));
+  } catch {
+    // A private window forgets the choice at the end of the session. The launch
+    // still does what was asked for this time, which is the part that matters.
+  }
+  return on;
+}
+
+/// The value that stands for "this window" in the core dropdown.
+///
+/// Not a core name: no core is called this, and `game_cores` never returns it,
+/// so it cannot collide with a real one.
+export const BROWSER_CHOICE = "__this_window__";

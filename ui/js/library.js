@@ -18,7 +18,26 @@ import { download, launch } from "./actions.js";
 import { installTilt } from "./tilt.js";
 import { windowRows, stopWindowing, worthWindowing, windowedList } from "./visible.js";
 
-export async function showPlatforms() {
+/// Everything the console screen needs from the backend, fetched up front.
+///
+/// The point is *where* this runs. A view transition freezes the page on the
+/// old snapshot for as long as its callback takes, and `showPlatforms` used to
+/// do two `invoke` round trips inside that callback -- the console list and the
+/// Continue-playing strip. Measured in the window on 2026-09-08: 74ms with the
+/// page showing nothing, before the name had begun to move. That is the hitch
+/// at the start of Back.
+///
+/// Failures are swallowed to `null` and the callback falls back to asking for
+/// itself: a warm-up that throws must not be the reason a screen does not draw.
+export async function prefetchPlatforms() {
+  const [items, recent] = await Promise.all([
+    invoke("platforms").catch(() => null),
+    MOBILE ? Promise.resolve(null) : invoke("recent_games", { limit: RECENT_IN_STRIP + 1 }).catch(() => null),
+  ]);
+  return { items, recent };
+}
+
+export async function showPlatforms(prefetched = null) {
   state.view = "platforms";
   applyLayoutForView("platforms");
   trail.length = 0;
@@ -52,7 +71,7 @@ export async function showPlatforms() {
   });
   coverObserver?.disconnect();
 
-  const items = await invoke("platforms");
+  const items = prefetched?.items ?? (await invoke("platforms"));
   for (const p of items) if (p.cover_aspect) state.aspects[p.slug] = p.cover_aspect;
   // Kept so switching layout can redraw without asking the backend again.
   state.platforms = items;
@@ -82,7 +101,7 @@ export async function showPlatforms() {
   // Not on Android: it has a tab of its own there, and the library page is for
   // consoles. The strip costs most of a screen on a 469-point display, which is
   // the height that decides whether the console grid reads as a grid at all.
-  if (!MOBILE) await showRecent();
+  if (!MOBILE) await showRecent(prefetched?.recent ?? null);
 
   restorePlatformCursor();
   fitConsoleArt();
@@ -113,14 +132,16 @@ export async function showPlatforms() {
 /// nobody would reach the end of.
 const RECENT_IN_STRIP = 20;
 
-async function showRecent() {
-  let rows = [];
-  try {
-    // One more than fits, so the strip can tell whether there is a "more" to
-    // show without a second call.
-    rows = await invoke("recent_games", { limit: RECENT_IN_STRIP + 1 });
-  } catch {
-    return;
+async function showRecent(prefetched = null) {
+  let rows = prefetched ?? [];
+  if (!prefetched) {
+    try {
+      // One more than fits, so the strip can tell whether there is a "more" to
+      // show without a second call.
+      rows = await invoke("recent_games", { limit: RECENT_IN_STRIP + 1 });
+    } catch {
+      return;
+    }
   }
   if (!rows.length) return;
 
@@ -267,12 +288,12 @@ export async function openPlatform(slug, card) {
   const label = card?.querySelector(".name, .nm");
   if (label) label.style.viewTransitionName = "heading";
   try {
-    await withTransition(async () => {
+    await whileMovingScreens(() => withTransition(async () => {
       await showRoms(slug);
       // Tagged inside the callback: the new snapshot is taken after this runs,
       // and the title only holds the console's name by then.
       el.title.style.viewTransitionName = "heading";
-    });
+    }));
   } finally {
     el.title.style.viewTransitionName = "";
     if (label) label.style.viewTransitionName = "";
@@ -284,17 +305,19 @@ export async function openPlatform(slug, card) {
 /// Worth the symmetry: a transition that plays going in and not coming out
 /// reads as a glitch rather than as a deliberate direction.
 export async function backToPlatforms() {
+  // Before the transition, never inside it. See `prefetchPlatforms`.
+  const prefetched = await prefetchPlatforms();
   el.title.style.viewTransitionName = "heading";
   let label = null;
   try {
-    await withTransition(async () => {
-      await showPlatforms();
+    await whileMovingScreens(() => withTransition(async () => {
+      await showPlatforms(prefetched);
       label = el.list.querySelector(
         `[data-slug="${CSS.escape(state.lastPlatform ?? "")}"] .name, ` +
           `[data-slug="${CSS.escape(state.lastPlatform ?? "")}"] .nm`
       );
       if (label) label.style.viewTransitionName = "heading";
-    });
+    }));
   } finally {
     el.title.style.viewTransitionName = "";
     if (label) label.style.viewTransitionName = "";
@@ -1203,7 +1226,29 @@ export function coversInFlight() {
   return inFlight;
 }
 
+/// True while the screen is moving between the consoles and a console.
+///
+/// Covers wait for it. Fetching one is cheap; *drawing* one is a decode and a
+/// canvas fill, and forty of those landing while a view transition is playing
+/// halved its frame rate -- measured in the window on 2026-09-08, entering SNES:
+/// 32ms a frame with covers loading against 17ms with them held. The pictures
+/// are 300ms later and nobody can tell; the move is the thing being looked at.
+let movingScreens = false;
+
+/// Run `fn` with covers held, and let them go when it is over.
+export async function whileMovingScreens(fn) {
+  movingScreens = true;
+  try {
+    return await fn();
+  } finally {
+    movingScreens = false;
+    flushCovers();
+    pumpCovers();
+  }
+}
+
 function pumpCovers() {
+  if (movingScreens) return;
   while (inFlight < AT_ONCE && waiting.length) {
     const { art, url, star } = waiting.shift();
     if (!art.isConnected) continue;
@@ -1283,6 +1328,12 @@ export function forgetPendingCovers() {
 }
 
 async function flushCovers() {
+  // Not while the screen is moving. Holding only the *drawing* was not enough:
+  // measured entering SNES, the batch request alone still halved the frame rate
+  // -- forty ids across the IPC boundary, forty paths resolved against the SSD,
+  // and the answer parsed on the thread the animation is running on. Held, the
+  // move stays at 60fps and the covers arrive a third of a second later.
+  if (movingScreens) return;
   const ids = coverQueue.splice(0, 40);
   if (!ids.length) return;
   // A measuring switch, never set in normal use: with no artwork at all, what
