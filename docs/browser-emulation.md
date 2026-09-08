@@ -107,6 +107,32 @@ Flushed every two minutes and on `visibilitychange` and `pagehide`, not only on
 Stop. A tab closes without warning and a save written only on exit is a save
 lost to a closed lid.
 
+### Save states
+
+Buttons, not a timer. A save is battery memory that changes continuously; a
+state is a freeze-frame somebody made at a moment they chose, and
+`/api/states` answers no conflict because one cannot be merged with another.
+Taking one every two minutes would fill the shelf with moments nobody picked.
+
+Verified end to end: pressing Save state put an 823 KB state on the server with
+`emulator=snes9x`, and loading it back wiped a change made in the meantime --
+which is how you can tell a restore happened rather than a no-op.
+
+The emulator name is the core that *made* it, read from `EJS_emulator.coreName`
+rather than the system name we asked for. EmulatorJS resolves `snes` to
+`snes9x`, and a state belongs to the build that wrote it: restoring one into
+another SNES core is a crash rather than a wrong picture.
+
+### Never `confirm()`
+
+It blocks the page's main thread, and here that thread is running a game. In
+headless Chrome it blocks for ever, because nothing answers it -- which is how
+the save sync froze the whole page the first time it met a conflict, and how
+`browser-check.mjs` went from passing to hanging with no error anywhere.
+
+`ask()` puts the question in the stage and resolves to whichever button was
+pressed. The same applies to the disc-size warning.
+
 ### Shaders
 
 Four CRT presets ship with EmulatorJS and `[shaders.by_platform]` names
