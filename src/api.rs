@@ -232,6 +232,15 @@ pub struct Heartbeat {
 pub struct HeartbeatSystem {
     #[serde(rename = "VERSION", default)]
     pub version: String,
+    /// Set only by `moose-service`, and set to its own crate version.
+    ///
+    /// Without it there is no way to tell our server from RomM, and the client
+    /// compared whatever came back against the RomM release it was verified
+    /// against -- so pointing it at our own service printed "UNVERIFIED" for
+    /// ever, about a compatibility question that does not exist between two
+    /// halves of the same repository.
+    #[serde(rename = "MOOSE", default)]
+    pub moose: Option<String>,
 }
 
 pub struct Client {
