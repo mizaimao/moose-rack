@@ -147,6 +147,42 @@ foot from your face: it has no scanlines, no aperture grille and no curved
 glass. The preference is stored per browser, so without an explicit rule a CRT
 chosen for the SNES would follow you onto the Game Boy.
 
+## Check it in a browser, not in jsdom
+
+`node tools/browser-check.mjs http://dev.lan` drives a real Chrome: loads the
+app, double-clicks a game with real mouse events at real coordinates, and
+reports whether the stage opened, the canvas exists and the shader picker does
+anything. `--shot out.png` saves what it looked like. Firefox can be driven the
+same way over WebDriver BiDi on `--remote-debugging-port`, with
+`input.performActions` for the click.
+
+**Not having this cost a day.** The jsdom suites run the app's own modules and
+prove the code executes; they have no layout, no top layer, no view transitions
+and no hit-testing, and every one of those turned out to matter. Six fixes
+looked right in jsdom, shipped, and did nothing.
+
+What it found in one run:
+
+    click    target=CANVAS  card=-10793  detail=1
+    click    target=HTML    card=NONE    detail=2
+    dblclick target=HTML    card=NONE    detail=2
+
+The first click opens the detail pane, the grid reflows, and the card moves out
+from under the pointer. The second click and the `dblclick` land on `<html>` --
+outside the list entirely -- so the delegated handler never ran. No error, no
+log, nothing to see from the server.
+
+It also found the `confirm()` freeze above, by hanging on it.
+
+**It runs muted.** Headless is not silent: the first run played ActRaiser's
+title theme out of the speakers of somebody who had not asked for it and could
+not see where it was coming from.
+
+There was a `/play-test` route for a while, added to bisect "press Play and
+nothing happens" from inside the browser. It is gone: this answers the same
+question and more, and a route that exists only for debugging is a route that
+stays for ever.
+
 ## What will bite
 
 **Input.** `binds.rs` and `padpoll.rs` own the gamepad, and EmulatorJS has its
