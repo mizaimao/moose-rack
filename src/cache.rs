@@ -906,6 +906,30 @@ impl Cache {
             .ok()
     }
 
+    /// One row from a platform, for anything that needs the *shape* of a
+    /// platform's entries rather than its contents.
+    ///
+    /// `warm_media` wanted a single row to work out which media folder to read,
+    /// and was calling `roms_for` to get it: 861 rows built and filtered, with
+    /// the cache lock held, to look at one. Measured in the desktop window on
+    /// 2026-09-08, that was the reason opening SNES took 140ms before anything
+    /// moved -- `roms` and `arrange_list` were queued behind it on the mutex.
+    ///
+    /// Same `WHERE` as `roms_for`, so it picks from the same set. No ordering:
+    /// any row of the platform answers the question, and sorting several
+    /// hundred to take the first is the cost being removed.
+    pub fn any_rom_for(&self, platform_slug: &str) -> Result<Option<RomRow>> {
+        let sql = format!(
+            "SELECT {ROM_COLUMNS} FROM roms WHERE platform_slug = ?1 AND {NOT_A_WALKED_SHELF} LIMIT 1"
+        );
+        let mut stmt = self.conn.prepare(&sql)?;
+        let mut rows = stmt.query_map([platform_slug], rom_from_row)?;
+        Ok(match rows.next() {
+            Some(r) => Some(r?),
+            None => None,
+        })
+    }
+
     pub fn rom_by_id(&self, id: i64) -> Result<Option<RomRow>> {
         let sql = format!("SELECT {ROM_COLUMNS} FROM roms WHERE id = ?1");
         let mut stmt = self.conn.prepare(&sql)?;
@@ -1898,6 +1922,41 @@ mod hiding {
     /// The scan stopped picking these up, but a cache filled before that still
     /// holds them and a synced cache can hold anything — so the rule lives
     /// where every list passes through, and both front ends get it from one
+    /// One row, from the same set `roms_for` lists.
+    ///
+    /// The point of it is what it does *not* do -- build and sort every row of
+    /// a console to look at one -- and that cannot be asserted directly. What
+    /// can be is that it answers from the same set, so warming picks a real
+    /// entry's media folder and not a hidden one's.
+    #[test]
+    fn any_rom_for_answers_from_the_listed_set() {
+        let dir = std::env::temp_dir().join("moose-rack-any-rom");
+        std::fs::remove_dir_all(&dir).ok();
+        std::fs::create_dir_all(&dir).unwrap();
+        let mut cache = Cache::open(&dir.join("cache.sqlite3")).unwrap();
+        let game = |id: i64, fs_name: &str| crate::esde::Game {
+            platform_slug: "snes".into(),
+            system: "snes".into(),
+            fs_name: fs_name.into(),
+            name: fs_name.trim_end_matches(".sfc").into(),
+            path: std::path::PathBuf::from(format!("/userdata/roms/snes/{fs_name}")),
+            size_bytes: 1000 + id,
+            ..Default::default()
+        };
+        cache
+            .replace_from_esde(&[game(1, "ActRaiser (USA).sfc"), game(2, "Chrono Trigger (USA).sfc")])
+            .unwrap();
+
+        let one = cache.any_rom_for("snes").unwrap().expect("a row");
+        let listed = cache.roms_for("snes").unwrap();
+        assert!(
+            listed.iter().any(|r| r.id == one.id),
+            "any_rom_for returned a row roms_for does not list"
+        );
+        assert_eq!(one.platform_slug, "snes");
+        assert_eq!(cache.any_rom_for("nothing-here").unwrap().map(|r| r.id), None);
+    }
+
     /// place rather than each carrying its own version.
     #[test]
     fn hidden_rows_are_not_listed() {

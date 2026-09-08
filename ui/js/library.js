@@ -5,7 +5,7 @@ import { fitted, boxSize } from "./fitpicture.js";
 import { resetNav, primeNav } from "./keys.js";
 import { currentOrder, defaultOrder, refreshSortButton, sorted } from "./sort.js";
 import { filtered, refreshFilterButton, activeFilters, clearFilters } from "./filter.js";
-import { arrangeCurrentList, listRef } from "./arrange.js";
+import { arrangeCurrentList, applyArrangement, listRef } from "./arrange.js";
 import { enter, region, showZoom, shellMode } from "./shell.js";
 import { showMenu } from "./menu.js";
 import { deleteState } from "./states.js";
@@ -285,11 +285,13 @@ function renderPlatforms(items) {
 /// the user has asked for less motion — `withTransition` handles both — so the
 /// tags are cleaned up in a `finally` and never left on an element.
 export async function openPlatform(slug, card) {
+  // Before the transition, never inside it. See `prefetchRoms`.
+  const prefetched = await prefetchRoms(slug);
   const label = card?.querySelector(".name, .nm");
   if (label) label.style.viewTransitionName = "heading";
   try {
     await whileMovingScreens(() => withTransition(async () => {
-      await showRoms(slug);
+      await showRoms(slug, prefetched);
       // Tagged inside the callback: the new snapshot is taken after this runs,
       // and the title only holds the console's name by then.
       el.title.style.viewTransitionName = "heading";
@@ -381,7 +383,25 @@ function restorePlatformCursor() {
   }
 }
 
-export async function showRoms(slug) {
+/// The two answers a console screen needs, fetched before anything is frozen.
+///
+/// Same reason as `prefetchPlatforms`, and the same measurement: `roms` alone
+/// was 125ms inside the transition callback, with the page showing the console
+/// grid and nothing moving. The list reference is built by hand rather than
+/// read from `state`, because state still describes the screen being left.
+export async function prefetchRoms(slug) {
+  const list = { view: "roms", platform: slug, collection: null };
+  // Started here rather than in `showRoms`: it is fire-and-forget either way,
+  // and a head start is free.
+  invoke("warm_media", { platform: slug }).catch(() => {});
+  const [rows, arrangement] = await Promise.all([
+    invoke("roms", { platform: slug, list }).catch(() => null),
+    invoke("arrange_list", { list }).catch(() => null),
+  ]);
+  return { rows, arrangement };
+}
+
+export async function showRoms(slug, prefetched = null) {
   state.view = "roms";
   applyLayoutForView("roms");
   // Read this system's artwork folders while the list is being drawn.
@@ -394,7 +414,7 @@ export async function showRoms(slug) {
   //
   // Not awaited, and the backend spawns rather than blocking, so this costs the
   // list nothing.
-  invoke("warm_media", { platform: slug }).catch(() => {});
+  if (!prefetched) invoke("warm_media", { platform: slug }).catch(() => {});
   restoreSidebar();
   // The console list is a column of its own here and stays where it is; only
   // the middle changes. In one pane it has already been replaced by the time
@@ -408,8 +428,9 @@ export async function showRoms(slug) {
   localStorage.setItem("lastPlatform", slug);
   state.folder = "";
   el.search.value = "";
-  state.rows = await invoke("roms", { platform: slug, list: listRef() });
-  await arrangeCurrentList();
+  state.rows = prefetched?.rows ?? (await invoke("roms", { platform: slug, list: listRef() }));
+  if (prefetched?.arrangement) applyArrangement(prefetched.arrangement);
+  else await arrangeCurrentList();
   enter({
     title: `${slug} — ${state.rows.length} games`,
     back: true,

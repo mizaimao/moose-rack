@@ -96,7 +96,10 @@ impl Estimate {
 }
 
 /// Estimate a run over `rows`. `present` says whether a game's ROM is here.
-pub fn estimate(rows: &[RomRow], want: Want, present: impl Fn(&RomRow) -> bool) -> Estimate {
+/// `present` is `FnMut` so a caller can carry state across the rows -- the app
+/// passes one that answers "is this file here" from a directory listing it
+/// builds as it goes, rather than a `stat` per game.
+pub fn estimate(rows: &[RomRow], want: Want, mut present: impl FnMut(&RomRow) -> bool) -> Estimate {
     let mut e = Estimate { games: rows.len(), ..Default::default() };
     for row in rows {
         if want.roms {
