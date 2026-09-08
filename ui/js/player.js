@@ -42,12 +42,16 @@ function mb(n) {
 /// surprise on a phone. Resolved by `confirm` rather than a custom dialog
 /// because this is the one question and the app has no modal of its own that
 /// fits here.
-function confirmHeavy(rom) {
+async function confirmHeavy(rom) {
   const size = rom.size_bytes ?? 0;
   if (!shouldWarn(rom.platform_slug ?? rom.platform, size)) return true;
-  return globalThis.confirm(
-    `${rom.name} is ${mb(size)}. Playing it here downloads all of that into ` +
-      `this tab before the first frame. Continue?`
+  return (
+    (await ask(
+      null,
+      `${rom.name} is ${mb(size)}. Playing it here downloads all of that into ` +
+        `this tab before the first frame.`,
+      [["yes", "Play it"], ["", "Cancel"]]
+    )) === "yes"
   );
 }
 
@@ -138,6 +142,34 @@ function openStage(title, shader, platformSlug, romId, core) {
   }
   if (!stage.hasAttribute("open")) stage.setAttribute("open", "");
   return stage;
+}
+
+/// Ask a question inside the stage, without freezing the game.
+///
+/// Not `confirm()`. A native dialog blocks the page's main thread, which here
+/// means blocking a running emulator -- and in headless Chrome it blocks
+/// forever, because nothing ever answers it. That is how the save sync came to
+/// freeze the whole page the first time it met a conflict.
+///
+/// Resolves to the value of whichever button was pressed.
+function ask(stage, message, choices) {
+  return new Promise((resolve) => {
+    const box = document.createElement("div");
+    box.className = "ejs-ask";
+    box.innerHTML = `<p></p><div class="ejs-ask-row"></div>`;
+    box.querySelector("p").textContent = message;
+    const row = box.querySelector(".ejs-ask-row");
+    for (const [value, label] of choices) {
+      const b = document.createElement("button");
+      b.textContent = label;
+      b.addEventListener("click", () => {
+        box.remove();
+        resolve(value);
+      });
+      row.appendChild(b);
+    }
+    (stage ?? document.body).appendChild(box);
+  });
 }
 
 /// Say what is happening inside the stage.
@@ -256,12 +288,11 @@ async function flush(stage, romId, why) {
       // Never resolved silently. A save is hours of somebody's life and the
       // wrong pick is unrecoverable, so this asks and takes no answer as no.
       onConflict: async (op) =>
-        globalThis.confirm(
-          `This game's save changed here and on the server.\n\n${op.reason}\n\n` +
-            `OK keeps the copy from this browser. Cancel keeps the server's.`
-        )
-          ? "mine"
-          : "theirs",
+        ask(stage, `This game's save changed here and on the server. ${op.reason}`, [
+          ["mine", "Keep this browser's"],
+          ["theirs", "Keep the server's"],
+          ["", "Leave both alone"],
+        ]),
     });
     if (out.action === "upload") note(stage, `Save sent to the server (${why})`, false);
     if (out.action === "download") note(stage, "Save restored from the server");
@@ -337,7 +368,7 @@ export async function playInBrowser(rom) {
     toast(verdict.refuse, 6000);
     return "Not playable in a browser";
   }
-  if (!confirmHeavy(rom)) {
+  if (!(await confirmHeavy(rom))) {
     starting = false;
     return "Cancelled";
   }
