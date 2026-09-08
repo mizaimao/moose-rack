@@ -10,6 +10,7 @@ import { shellMode } from "./shell.js";
 import { deleteState } from "./states.js";
 import { launch, download } from "./actions.js";
 import { askDownload } from "./bulk.js";
+import { browserPlay, playHereWanted, setPlayHere, BROWSER_CHOICE } from "./ejs-systems.js";
 
 /// A video source the webview will actually play.
 ///
@@ -550,12 +551,24 @@ function stateMenu(d, btn, x, y) {
 /// Per-game rather than per-platform because arcade romsets are mixed: the
 /// platform default is a best guess, and individual games need to escape it.
 function corePicker(cores, d) {
-  if (!cores.length) {
+  // "This window" is offered even when RetroArch has nothing: a system with no
+  // installed core is exactly the case the in-page emulator is for, and the
+  // sentence "none installed" with no way out of it is not much help.
+  const here = browserPlay(d.platform_slug ?? d.platform);
+  const canPlayHere = !here.refuse;
+  const wanted = canPlayHere && playHereWanted(d.id);
+  if (!cores.length && !canPlayHere) {
     return d.core_label ? escapeHtml(d.core_label) : "<em>none installed</em>";
   }
   const pinned = cores.some((c) => c.pinned);
-  return `<select id="core-pick" title="Core used to launch this game">
-      <option value=""${pinned ? "" : " selected"}>Platform default</option>
+  const browserOption = canPlayHere
+    ? `<option value="${BROWSER_CHOICE}"${wanted ? " selected" : ""}
+         title="EmulatorJS, in this window. No RetroArch, no shaders beyond its own four, and save states are not shared — the save file is.">
+         This window (${escapeHtml(here.core)})</option>`
+    : "";
+  return `<select id="core-pick" title="What runs this game">
+      <option value=""${pinned || wanted ? "" : " selected"}>Platform default</option>
+      ${browserOption}
       ${cores
         .map(
           (c) => `<option value="${escapeHtml(c.core)}"${c.pinned ? " selected" : ""}>
@@ -571,6 +584,13 @@ function wireCorePicker(id) {
   const pick = document.getElementById("core-pick");
   if (!pick) return;
   pick.addEventListener("change", async () => {
+    // "This window" is not a core and must never reach `set_game_core`, which
+    // writes what it is given into `config.toml` for every future launch.
+    if (pick.value === BROWSER_CHOICE) {
+      setPlayHere(id, true);
+      return toast("This game will play in the window. Pick a core to undo it.");
+    }
+    if (playHereWanted(id)) setPlayHere(id, false);
     try {
       const msg = await invoke("set_game_core", { id, core: pick.value });
       toast(msg);
