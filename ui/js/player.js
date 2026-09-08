@@ -240,7 +240,13 @@ function wireStates(stage, romId, core) {
     if (!gm) return;
     make.disabled = true;
     try {
-      const st = await pushState(gm, romId, { core });
+      // The core that actually made it, not the system name we asked for.
+      // EmulatorJS resolves `snes` to `snes9x`, and a state belongs to the
+      // build that wrote it -- restoring a snes9x state into another SNES core
+      // is a crash rather than a wrong picture. Falls back to the system name
+      // when the emulator does not say.
+      const made = globalThis.EJS_emulator?.coreName || core;
+      const st = await pushState(gm, romId, { core: made });
       note(stage, `State saved — ${st.file_name}`);
       await refresh();
     } catch (e) {
