@@ -9,6 +9,7 @@ pub mod eslist;
 pub mod favmap;
 pub mod favrun;
 pub mod favsync;
+pub mod knulli;
 pub mod model;
 pub mod patch;
 pub mod profile;

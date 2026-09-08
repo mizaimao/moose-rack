@@ -18,7 +18,7 @@ use moose_patch::model::{App, Kind, Overlay, Tab};
 use moose_patch::patch::{Patch, Paths, State};
 use moose_patch::sync::Stage;
 use moose_patch::worker;
-use moose_patch::{catalogue, profile, rows, ui};
+use moose_patch::{catalogue, knulli, profile, rows, ui};
 use moose_sdl::gfx::Gfx;
 use moose_sdl::input;
 use moose_sdl::text;
@@ -169,7 +169,7 @@ fn main() -> Result<()> {
         }
         Some(other) if other.starts_with("--") => {
             eprintln!(
-                "moose-patch [--status | --apply <id>=<option> | --plan | --sync \
+                "moose-patch [--status | --apply <id>=<option> [--anyway] | --plan | --sync \
                  | --refresh | --pull-all | --stars | --stars-apply | --restore | --save]"
             );
             std::process::exit(2);
@@ -255,6 +255,11 @@ fn apply_cli(patches: &[Patch], arg: Option<String>) -> Result<()> {
     let Some(arg) = arg else {
         anyhow::bail!("--apply needs <id>=<option>, e.g. --apply charge-awake=ON");
     };
+    let anyway = std::env::args().any(|a| a == "--anyway");
+    let verdict = knulli::check(&Paths::default());
+    if !verdict.safe_to_apply() && !anyway {
+        anyhow::bail!(verdict.refusal());
+    }
     let (id, wanted) = arg
         .split_once('=')
         .ok_or_else(|| anyhow::anyhow!("--apply needs <id>=<option>, not {arg:?}"))?;
@@ -416,6 +421,10 @@ fn status(patches: &[Patch]) -> Result<()> {
         };
         println!("{:<16} {} ({auth})", "server", cfg.server.url);
     }
+    // Which OS these patches are sitting on. A patch reporting itself ON
+    // against an image it was never read against is the failure this catches,
+    // and it is invisible in the list below.
+    println!("{:<16} {}", "knulli", knulli::check(&Paths::default()).line());
     println!();
     for patch in patches {
         let at = match patch.state() {
@@ -428,6 +437,10 @@ fn status(patches: &[Patch]) -> Result<()> {
 }
 
 fn restore(paths: &Paths, patches: &[Patch]) -> Result<()> {
+    let verdict = knulli::check(paths);
+    if !verdict.safe_to_apply() && !std::env::args().any(|a| a == "--anyway") {
+        anyhow::bail!(verdict.refusal());
+    }
     let done = profile::restore(paths, patches)?;
     for line in &done.applied {
         println!("applied  {line}");
@@ -520,7 +533,7 @@ fn window(paths: &Paths, patches: &[Patch]) -> Result<()> {
         stars,
         star_plan: None,
         conflicts: Vec::new(),
-        patches: rows::patches(patches),
+        patches: rows::patches(patches, &knulli::check(&Paths::default()).line()),
         overlay: Overlay::None,
         should_quit: false,
     };
@@ -829,7 +842,7 @@ mod tests {
             stars: moose_patch::sync::Stars::default(),
             star_plan: None,
             conflicts: Vec::new(),
-            patches: rows::patches(&patches),
+            patches: rows::patches(&patches, &knulli::check(&Paths::default()).line()),
             overlay: Overlay::None,
             should_quit: false,
         };
@@ -1151,7 +1164,7 @@ mod tests {
         press(&mut f, Press::Accept);
         press(&mut f, Press::Accept);
 
-        let fresh = rows::patches(&catalogue::all(&f.2));
+        let fresh = rows::patches(&catalogue::all(&f.2), "test image");
         let row = fresh.rows.iter().find(|r| r.id == "hotkeys").unwrap();
         assert_eq!(row.value(), "ON");
         assert!(!row.pending());
