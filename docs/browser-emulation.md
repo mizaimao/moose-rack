@@ -66,52 +66,60 @@ manifest, and `LICENSES.md` records what each licence asks. Do that, not a
 Budget tens of megabytes per core, served from the ROM host, cached by the
 browser. Ship the cartridge cores; fetch the rest on demand.
 
-## Saves are the hard part, and the rules already exist
+## Saves — built, and measured before it was written
 
-EmulatorJS keeps saves in its own IndexedDB filesystem. Left alone, a browser
-session becomes a third place progress lives, and the two hours you put in from
-the sofa are invisible to the handheld.
+`ui/js/browser-saves.js`, through the negotiate every other device uses. The
+rule is in `src-service/src/saves.rs` and is not restated: resolvable only when
+exactly one side moved, conflict otherwise, never resolved silently.
 
-`src-service/src/saves.rs` already answers this for every other device, and the
-rule is written down: **a difference is only resolvable when exactly one side
-moved.** Agreed on the server's bytes and changed here -> upload. Agreed on
-what you still hold and the server moved -> download. Agreed on neither ->
-conflict, never resolved silently. A browser is just another device with a
-device id.
+**The browser is a device with its own id.** Per browser, not per account: the
+guest account is shared, and the conflict rule works by asking what *this
+device* last agreed with the server, which two people sharing an id cannot
+answer.
 
-So: read the save out of EmulatorJS on exit and on a timer, and put it through
-`/api/saves` with the same negotiate the Flip uses. `/api/states` is already
-built and takes an emulator name. **Do not invent a second sync.**
+Three things were measured in a real browser before any of it was written, and
+two of them changed the design:
 
-The trap is that a browser tab closes without warning. A save written only on
-exit is a save lost to a closed laptop lid.
+* `FS.writeFile(getSaveFilePath(), bytes)` then `loadSaveFiles()` puts a save
+  into the running core, and it takes -- 8192 of 8192 bytes. That is a stronger
+  result than it looks: `getSaveFile()` flushes the core's own SRAM to disk
+  before reading, so what comes back is the core's memory rather than an echo of
+  the file.
+* **EmulatorJS's own IndexedDB copy did not survive a reload** -- 32 of 8192
+  bytes. The browser is not somewhere a save can be left, which is what makes
+  this worth building rather than a convenience.
+* The download happens on the emulator's `start` event, deliberately *after* its
+  own restore rather than racing it. I had expected to have to write before
+  start and win a race; strictly later cannot lose.
 
-## Check it in a browser, not in jsdom
+Two bugs the measurements found, neither of which reading would have:
 
-`node tools/browser-check.mjs http://dev.lan` drives a real Chrome: loads the
-app, opens a console, double-clicks a game with real mouse events at real
-coordinates, and reports whether the stage opened, the canvas exists and the
-shader picker does anything. `--shot out.png` saves what it looked like.
+* **Save ids were too wide for a browser.** `save_id` is md5-derived, and
+  `4585479350140525600` is above 2^53: JavaScript parses it to the nearest
+  double and quotes back a different number, so every download 404'd. Ids are
+  masked to 2^53 - 1 now, and a test asserts `id as f64 as i64 == id`.
+* **An untouched cartridge is not a save.** A core that has never loaded one
+  still has SRAM and it is all zeros. Reported as a save, the first sync of a
+  game you played on the handheld is a *conflict* -- both sides have something,
+  they differ, and this browser has agreed to nothing yet. Safe, and wrong.
 
-**Not having this cost a day.** The jsdom suites run the app's own modules and
-prove the code executes; they have no layout, no top layer, no view transitions
-and no hit-testing, and every one of those turned out to matter. Six fixes
-looked right in jsdom, shipped, and did nothing, and the only witness was
-somebody at a keyboard being asked to try again.
+Flushed every two minutes and on `visibilitychange` and `pagehide`, not only on
+Stop. A tab closes without warning and a save written only on exit is a save
+lost to a closed lid.
 
-What it found in one run, after a day of guessing:
+### Shaders
 
-    click    target=CANVAS  card=-10793  detail=1
-    click    target=HTML    card=NONE    detail=2
-    dblclick target=HTML    card=NONE    detail=2
+Four CRT presets ship with EmulatorJS and `[shaders.by_platform]` names
+RetroArch's, so `toBrowserShader` matches on the last path segment --
+`crt/crt-geom`, `shaders_slang/crt/crt-geom.slangp` and `crt-geom.glslp` are one
+shader named three ways. Anything with no counterpart draws none rather than a
+lookalike: a handheld LCD grid is not a CRT mask, and substituting one is worse
+than nothing because it looks deliberate.
 
-The first click opens the detail pane, the grid reflows, and the card moves out
-from under the pointer. The second click and the `dblclick` land on `<html>` --
-outside the list entirely -- so the delegated handler never ran. No error, no
-log, nothing to see from the server.
-
-It runs muted. Headless is not silent: the first run played ActRaiser's title
-theme out of the speakers of somebody who had not asked for it.
+**Handhelds are offered no CRT at all.** A Game Boy is a reflective LCD held a
+foot from your face: it has no scanlines, no aperture grille and no curved
+glass. The preference is stored per browser, so without an explicit rule a CRT
+chosen for the SNES would follow you onto the Game Boy.
 
 ## What will bite
 
