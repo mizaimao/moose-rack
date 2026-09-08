@@ -1861,45 +1861,6 @@ body.resizing-detail { user-select: none; cursor: col-resize; }
   #list.turn-right { animation: none; }
 }
 
-/* ---- View transitions ----------------------------------------------------
-   The cover art moves from the card into the detail pane instead of the pane
-   being replaced. Only the pair is animated; everything else cross-fades, which
-   is the browser default and right for text.
-
-   Ignored entirely where the API is missing — the app behaves the same, it just
-   does not animate. Nothing may depend on this having run. */
-::view-transition-old(cover),
-::view-transition-new(cover) {
-  /* No fade on the pair: fading a moving element makes it look like two
-     pictures rather than one travelling. */
-  animation: none;
-  mix-blend-mode: normal;
-  object-fit: cover;
-}
-
-::view-transition-group(cover) { animation-duration: 260ms; }
-
-/* The console's name moving between the card and the title bar. Slower than
-   the cover, because it travels much further across the window and at 260ms
-   that reads as a jump rather than a move. */
-::view-transition-old(heading),
-::view-transition-new(heading) {
-  animation-duration: 300ms;
-  animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
-}
-::view-transition-group(heading) {
-  animation-duration: 300ms;
-  animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
-}
-
-::view-transition-old(root),
-::view-transition-new(root) { animation-duration: 160ms; }
-
-@media (prefers-reduced-motion: reduce) {
-  ::view-transition-group(*),
-  ::view-transition-old(*),
-  ::view-transition-new(*) { animation: none !important; }
-}
 
 /* Download readout. Tabular numerals so the digits do not jitter as the size
    and rate change — a percentage that shifts left and right while you watch it

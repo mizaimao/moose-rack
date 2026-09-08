@@ -297,3 +297,43 @@ the string it patches is not where it expects it -- a vendored file that
 silently stopped matching would quietly put the call back. Checked by hooking
 `fetch` for a whole launch: the only requests are `moose://`, `blob:` and
 `tauri://`.
+
+### Choosing it on purpose
+
+The fallback above only fires when RetroArch has no core, which on a machine
+with RetroArch installed is never. So the game's **Core** dropdown in the detail
+pane has an entry of its own: *This window (snes)*. Picking it is remembered for
+that game and `launch()` checks it before anything else, because it is a choice
+rather than a fallback. Picking a real core again takes it off.
+
+Not stored through `set_game_core`. That writes a libretro core name into
+`config.toml` and every launch resolves against it, so a pseudo-core in there
+would be a lie the rest of the app has to keep reading. It is a choice about
+*which emulator* runs the game, not about which core RetroArch should use, and
+it lives in the browser beside the shader choice.
+
+The entry is offered even when the dropdown would otherwise say "none
+installed": a system with nothing to run it is exactly what this is for.
+
+## The Back animation, and what was actually wrong with it
+
+Measured in the window on 2026-09-08, leaving SNES for the console screen. Two
+faults, neither of them the animation itself.
+
+**74ms with the page frozen.** A view transition holds the old snapshot on
+screen for exactly as long as its callback takes, and `showPlatforms` did two
+`invoke` round trips in there -- the console list and the Continue-playing strip
+-- plus the whole grid rebuild. Press Back, nothing happens for 74ms, then the
+name moves. `prefetchPlatforms` does the fetching before the transition starts
+and the callback is down to 9ms.
+
+**The covers.** Forty ids across the IPC boundary, forty paths resolved against
+the SSD, the answer parsed, then decoded and drawn to canvas -- all on the
+thread the animation is running on. Entering SNES that was 32ms a frame against
+17ms with them held; leaving, a single 83ms stall in the middle of the move.
+`whileMovingScreens` holds the queue and lets it go in a `finally`; the pictures
+arrive a third of a second later and nobody can tell.
+
+Out: p50 17ms, 20 frames in 343ms, nothing over 33ms. In: still around 30fps for
+its 300ms, and there is no backend call during it -- that one is compositing two
+full-page snapshots, and is not fixed.

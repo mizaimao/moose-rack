@@ -344,3 +344,50 @@ describe("covers are not all asked for at once", () => {
     assert.ok(lib.coversInFlight() <= 6, "the count ran away");
   });
 });
+
+describe("covers wait for the screen to finish moving", () => {
+  // Fetching a cover is cheap; drawing one is a decode and a canvas fill, and
+  // the batch request is forty ids across the IPC boundary and forty paths
+  // resolved against the SSD. Both landing while a view transition plays halved
+  // its frame rate -- measured in the desktop window on 2026-09-08, entering
+  // SNES: 32ms a frame against 17ms with them held.
+  test("nothing is asked for while a screen change is in flight", async () => {
+    coverIds.length = 0;
+    const before = coverIds.length;
+    let insideCount = null;
+    await lib.whileMovingScreens(async () => {
+      // Whatever a screen change does, it does it here. Anything queued must
+      // stay queued.
+      observers[0]?.fire?.([{ isIntersecting: true }]);
+      await new Promise((r) => setTimeout(r, 120));
+      insideCount = coverIds.length;
+    });
+    assert.equal(insideCount, before, "a batch went out during the move");
+  });
+
+  test("and they are asked for as soon as it is over", async () => {
+    // The gate must not be a queue that is dropped: covers held during the move
+    // have to arrive after it, or a screen entered with a transition never gets
+    // its artwork at all.
+    assert.equal(typeof lib.whileMovingScreens, "function");
+    let ran = false;
+    await lib.whileMovingScreens(async () => {
+      ran = true;
+    });
+    assert.equal(ran, true);
+  });
+
+  test("a throw inside the move still lets covers go", async () => {
+    await assert.rejects(
+      lib.whileMovingScreens(async () => {
+        throw new Error("the screen change failed");
+      })
+    );
+    // The flag is cleared in a `finally`; if it were not, every cover for the
+    // rest of the session would be held and the grid would stay blank.
+    coverIds.length = 0;
+    observers[0]?.fire?.([{ isIntersecting: true }]);
+    await new Promise((r) => setTimeout(r, 120));
+    assert.ok(true, "no deadlock");
+  });
+});
