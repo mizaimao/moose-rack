@@ -307,6 +307,15 @@ async fn firmware_content(
 struct HeartbeatSystem {
     #[serde(rename = "VERSION")]
     version: String,
+    /// Whose server this is.
+    ///
+    /// The shape above is RomM's, so `src/api.rs` reads it without a special
+    /// case -- and could not tell the two apart. It compared our crate version
+    /// against the RomM release it was verified against and printed
+    /// "UNVERIFIED" for ever, about a compatibility question that does not
+    /// exist between two halves of one repository.
+    #[serde(rename = "MOOSE")]
+    moose: String,
 }
 
 #[derive(Serialize)]
@@ -487,9 +496,13 @@ td{padding:.1rem .8rem .1rem 0}code{background:#eee;padding:.1rem .3rem}</style>
 async fn heartbeat() -> Json<Heartbeat> {
     Json(Heartbeat {
         system: HeartbeatSystem {
-            // The client compares this against the release it was verified
-            // against and warns on a mismatch. Ours is the crate version.
+            // The shape RomM's clients expect, so `src/api.rs` needs no special
+            // case to read it.
             version: env!("CARGO_PKG_VERSION").to_owned(),
+            // And a word saying whose it is. The client cannot otherwise tell
+            // this from RomM, so it compared our crate version against a RomM
+            // release and reported a mismatch that will never be resolved.
+            moose: env!("CARGO_PKG_VERSION").to_owned(),
         },
     })
 }
@@ -1105,111 +1118,6 @@ async fn login_page(State(guard): State<std::sync::Arc<Guard>>) -> axum::respons
     axum::response::Html(LOGIN_PAGE.replace("<!--GUEST-->", guest))
 }
 
-/// EmulatorJS on its own, with none of the app around it.
-///
-/// A bisect, not a feature. When "press Play and nothing happens" arrives there
-/// are two suspects -- the integration in `ui/js/player.js`, and EmulatorJS in
-/// this browser on this machine -- and no way to tell them apart from inside
-/// the app. This page is the second one alone: no modules, no shim, no router,
-/// one core and one game.
-///
-///     http://<host>/play-test?id=<rom id>
-const PLAY_TEST: &str = r##"<!doctype html>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>EmulatorJS test</title>
-<style>
- :root { color-scheme: dark }
- body { margin:0; background:#111; color:#ddd;
-        font:13px/1.5 ui-sans-serif,system-ui,sans-serif }
- #bar { padding:8px 12px; background:#1b1e24; border-bottom:1px solid #2a2e35 }
- #log { padding:8px 12px; white-space:pre-wrap; font-family:ui-monospace,monospace;
-        font-size:12px; color:#9aa0a6; max-height:35vh; overflow:auto }
- #log b { color:#ff8a80; font-weight:400 }
- #game { height:60vh }
-</style>
-<div id="bar">EmulatorJS, on its own. <span id="what"></span>
-  <button id="viaplayer" style="margin-left:12px">Run the app's player.js instead</button></div>
-<div id="game"></div>
-<div id="log"></div>
-<script>
-const log = (m, bad) => {
-  const d = document.getElementById("log");
-  d.insertAdjacentHTML("beforeend", (bad ? "<b>" : "") + new Date().toLocaleTimeString() + "  " +
-    String(m).replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" })[c]) + (bad ? "</b>" : "") + "\n");
-  d.scrollTop = d.scrollHeight;
-};
-addEventListener("error", (e) => log("window error: " + (e.message || e.error), true));
-addEventListener("unhandledrejection", (e) => log("unhandled: " + (e.reason?.message ?? e.reason), true));
-
-const id = new URLSearchParams(location.search).get("id");
-(async () => {
-  if (!id) return log("add ?id=<rom id> to the address", true);
-  log("asking the server about rom " + id);
-  const r = await fetch("/invoke/rom_detail", {
-    method: "POST", headers: { "content-type": "application/json" },
-    body: JSON.stringify({ id: Number(id) }),
-  });
-  if (!r.ok) return log("rom_detail: " + r.status + " " + (await r.text()), true);
-  const rom = await r.json();
-  document.getElementById("what").textContent = rom.name + " (" + rom.platform_slug + ")";
-  log("game: " + rom.name + ", " + rom.platform_slug + ", " + rom.size_bytes + " bytes");
-
-  const core = { snes: "snes", sfc: "snes", nes: "nes", famicom: "nes", gb: "gb",
-                 gbc: "gb", gba: "gba", genesis: "segaMD", megadrive: "segaMD" }[rom.platform_slug];
-  if (!core) return log("no core mapped for " + rom.platform_slug + " in this test page", true);
-
-  const url = "/rom?id=" + encodeURIComponent(rom.id);
-  log("checking " + url);
-  const head = await fetch(url, { headers: { Range: "bytes=0-15" } });
-  log("  -> " + head.status + " " + (head.headers.get("content-range") || ""), !head.ok);
-  if (!head.ok) return;
-
-  window.EJS_player = "#game";
-  window.EJS_core = core;
-  window.EJS_gameUrl = url;
-  window.EJS_gameName = rom.name;
-  window.EJS_pathtodata = "/emulatorjs/data/";
-  window.EJS_startOnLoaded = true;
-  window.EJS_AdUrl = "";
-  window.EJS_ready = () => log("EmulatorJS says: ready");
-  window.EJS_onGameStart = () => log("EmulatorJS says: started");
-
-  // The second suspect: the app's own module, on this same bare page. If the
-  // plain path below works and this does not, the fault is in player.js; if
-  // both work, it is in `actions.js` or the app around it.
-  document.getElementById("viaplayer").addEventListener("click", async () => {
-    try {
-      log("loading the shim (player.js -> util.js -> state.js reads it at import)");
-      await new Promise((res, rej) => {
-        const sh = document.createElement("script");
-        sh.src = "/__shim.js";
-        sh.onload = res; sh.onerror = rej;
-        document.head.appendChild(sh);
-      });
-      log("importing /js/player.js");
-      const mod = await import("/js/player.js");
-      log("imported; calling playInBrowser");
-      const out = await mod.playInBrowser(rom);
-      log("playInBrowser returned: " + out);
-      log("stage in the document: " + (document.getElementById("ejs-stage") ? "yes" : "NO"));
-    } catch (e) {
-      log("player.js path threw: " + (e?.message ?? e), true);
-    }
-  });
-
-  log("loading /emulatorjs/data/loader.js (core is " + core + ")");
-  const s = document.createElement("script");
-  s.src = "/emulatorjs/data/loader.js";
-  s.onload = () => log("loader.js loaded; it now fetches emulator.min.js and the core");
-  s.onerror = () => log("loader.js FAILED to load", true);
-  document.body.appendChild(s);
-})();
-</script>
-"##;
-
-async fn play_test() -> axum::response::Html<&'static str> {
-    axum::response::Html(PLAY_TEST)
-}
 
 /// The routes, as a function so tests can build one without a socket.
 /// Tell the browser when it may keep what it has.
@@ -1267,8 +1175,6 @@ fn web_app(st: Arc<web::WebState>) -> Router {
         .route("/media", get(web::media))
         // See `rom_bytes`: the UI holds cache ids, /api/ holds scan ids.
         .route("/rom", get(web::rom_bytes))
-        // A bisect for "press Play and nothing happens" -- see `PLAY_TEST`.
-        .route("/play-test", get(play_test))
 
         // EmulatorJS, vendored by scripts/fetch-emulatorjs.sh. Served from here
         // rather than referenced on a CDN: this is a LAN library and it has to
@@ -2144,6 +2050,24 @@ mod tests {
             "296 MB pinned to a version is re-checked on every load: {}",
             hdr(&r)
         );
+    }
+
+    /// The heartbeat says whose server this is.
+    ///
+    /// Without it the client cannot tell this from RomM: it compared our crate
+    /// version against the RomM release it was read from and reported a
+    /// mismatch on every single `moose-rack check`, about two halves of one
+    /// repository that ship together.
+    #[tokio::test]
+    async fn the_heartbeat_names_this_server_as_ours() {
+        let (_d, app) = built();
+        let (s, body) = get(&app, "/api/heartbeat").await;
+        assert_eq!(s, StatusCode::OK);
+        let v: serde_json::Value = serde_json::from_str(&body).unwrap();
+        // RomM's shape is kept, so `src/api.rs` needs no special case to read
+        // the version.
+        assert_eq!(v["SYSTEM"]["VERSION"], env!("CARGO_PKG_VERSION"));
+        assert_eq!(v["SYSTEM"]["MOOSE"], env!("CARGO_PKG_VERSION"));
     }
 
     #[tokio::test]
