@@ -374,12 +374,20 @@ async fn cmd_check() -> Result<()> {
     match client.heartbeat().await {
         Ok(hb) => {
             let v = &hb.system.version;
-            let note = if v == moose_rack::VERIFIED_AGAINST {
-                "verified".to_owned()
+            // Our own service answers this, and then there is no compatibility
+            // question to report: both halves are in this repository and ship
+            // together. Only a RomM server gets compared against the release
+            // this client was read from.
+            if hb.system.moose.is_some() {
+                println!("version   moose-service {v}");
             } else {
-                format!("UNVERIFIED — client was checked against {}", moose_rack::VERIFIED_AGAINST)
-            };
-            println!("version   server {v} ({note})");
+                let note = if v == moose_rack::VERIFIED_AGAINST {
+                    "verified".to_owned()
+                } else {
+                    format!("UNVERIFIED — client was checked against {}", moose_rack::VERIFIED_AGAINST)
+                };
+                println!("version   RomM {v} ({note})");
+            }
         }
         Err(e) => println!("version   unknown ({e})"),
     }
