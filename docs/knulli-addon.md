@@ -296,13 +296,69 @@ Check a patch on the device, not by reading the file it wrote:
     moose-patch --apply charge-awake=ON
     knulli-settings-get system.batterysaver.chargingbypass   # the reader's answer
 
+## A patch has to claim every key its promise depends on
+
+The same failure came back on 2026-09-08 in a different shape, and cost two
+days of the handheld sleeping mid-game.
+
+There are **two** idle timers, not one. `system.batterysaver.mode` fires at
+`system.idlewatcher.idletimer` (600 s) and `system.batterysaver.extendedmode`
+at `extendedtimer` (900 s), and each has its own `dim | dispoff | suspend |
+shutdown`. `never-sleep` claimed only the second one while calling itself
+"never suspends". KNULLI's `mode=suspend` went on suspending the device ten
+minutes into a game, and `--status` said `never-sleep ON`, correctly: the
+patch was doing exactly what it claimed, and what it claimed was not enough.
+
+`power.conf` now sets both, and the hiding machinery above shadows KNULLI's
+values for both. `dim` rather than `none` for `mode`, because `none` matches no
+case in the hook and so loses the ten-minute dim along with the suspend.
+
+The general rule, which is the part worth keeping: **a patch's block must
+contain every key that has to be true for its title to be true.** Not the key
+that was wrong when it was written. `--status` cannot catch this class — a key
+we never claimed is a key it never looks at.
+
+EmulationStation also rewrote the value *inside* our block: it holds
+`knulli.conf` in memory and writes the whole file back when settings change, so
+`extendedmode=none` came back as `=suspend` between the markers. `--status` did
+catch that one — `changed — not at any known setting` — which is what that
+third state is for. Re-applying is the fix, and it will happen again the next
+time settings are saved from the ES menu.
+
+## The version this was all read against
+
+Every patch here is a bet about files KNULLI ships: that `knulli.conf` is
+first-wins, that the idle hooks are named `mode` and `extendedmode`, that
+`lid-control` exists and reads `system.lid`, that ES's logo is at that path on
+the squashfs. An update is free to move any of it, and when it does a patch
+does not fail loudly — it writes a key nothing reads and reports itself on.
+
+So the build records what it was checked against:
+
+    src-addon/src/knulli.rs   BUILT_FOR = "scarab 2026/05/10 22:54"
+
+compared against `/usr/share/knulli/knulli.version` on the device. The file,
+not the `knulli-version` command — that appends `[c]` and friends for a
+custom.sh and the like, and comparing against those would call every
+customised device a different OS.
+
+`--status` and the top of the patches tab both say which it is. On a KNULLI
+this build has never seen, **applying is refused**, because a patch applied
+against the wrong image leaves markers behind and undoing them needs the same
+wrong build. `--anyway` overrides it. A *missing* version file is allowed:
+every test in the crate runs against a scratch directory that has no squashfs
+in it.
+
+Bumping `BUILT_FOR` is a claim that the patches were re-checked against the new
+image, not a way to silence the warning.
+
 ## Sleep
 
 Three separate mechanisms, and only one of them is automatic:
 
 | What | Where it is decided | Auto? |
 | --- | --- | --- |
-| Idle dim, then idle suspend | `idlewatcher` → `/etc/idlewatcher/*.d/` hooks | yes |
+| Idle dim at 600 s, then idle suspend at 900 s | `idlewatcher` → `/etc/idlewatcher/*.d/` hooks | yes |
 | Closing the lid | `lid-control`, reading `system.lid` | no |
 | Power button | `power-button` → `knulli-suspend` | no |
 

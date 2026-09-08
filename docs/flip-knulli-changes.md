@@ -55,13 +55,22 @@ to `nul` — they were firing by accident.
 
 ### `power` — never sleep
 
-`system.batterysaver.extendedmode=none`. Suspending after 15 minutes idle drops
-the network and reads as a dead device.
+    system.batterysaver.mode=dim
+    system.batterysaver.extendedmode=none
 
-**This did nothing for weeks.** It appended `=none` under the `=suspend`
-KNULLI ships on line 319, and the file is first-wins. The app said ON, the
-handheld went on suspending. Fixed 2026-08-26 by making a block comment out an
-earlier line setting the same key.
+Both, because there are two idle timers: `mode` fires at 600 s and
+`extendedmode` at 900 s, each with its own `dim | dispoff | suspend | shutdown`.
+Suspending on idle drops the network and reads as a dead device. `dim` rather
+than `none` for the first, because `none` matches no case in KNULLI's hook and
+would lose the dim as well as the suspend.
+
+**It has failed twice, differently.** First it appended `=none` under the
+`=suspend` KNULLI ships on line 319 and the file is first-wins, so it did
+nothing for weeks while the app said ON — fixed 2026-08-26 by making a block
+comment out an earlier line setting the same key. Then on 2026-09-08 the device
+turned out to be suspending ten minutes into a game, because the patch only
+ever claimed `extendedmode` and KNULLI's `mode=suspend` was untouched. Both are
+pinned now. The general lesson is in [knulli-addon.md](knulli-addon.md).
 
 ### `charge-awake` — awake while charging
 
@@ -340,3 +349,12 @@ which is the difference that catches the first-wins class of bug.
 that blocks actually override KNULLI's own values, `never-sleep` will do what
 it says — never suspend, on battery too. If the battery should behave normally,
 turn `never-sleep` off and leave `charge-awake` to do the job.
+
+**It did not do what it said, 2026-09-08.** The card suspended six times over
+two days, once mid-game, while `never-sleep` reported ON. Two causes, both
+written up in [knulli-addon.md](knulli-addon.md): the patch claimed only the
+fifteen-minute timer and KNULLI's own ten-minute one was still set to
+`suspend`, and EmulationStation had rewritten the value inside our block. Both
+keys are pinned now — `knulli-settings-get` answers `mode=dim` and
+`extendedmode=none` — and `moose-patch` refuses to apply anything on a KNULLI
+it was not checked against.

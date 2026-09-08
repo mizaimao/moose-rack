@@ -48,6 +48,14 @@ impl Paths {
         self.at("userdata/system/knulli.conf")
     }
 
+    /// Which KNULLI this is. One line, e.g. `scarab 2026/05/10 22:54`.
+    ///
+    /// On the squashfs, so an OS update replaces it — which is the point. See
+    /// `crate::knulli`.
+    pub fn knulli_version(&self) -> PathBuf {
+        self.at("usr/share/knulli/knulli.version")
+    }
+
     pub fn boot_custom(&self) -> PathBuf {
         self.at("boot/boot-custom.sh")
     }
