@@ -16,7 +16,7 @@ import { doubleClickTarget } from "./dblclick-target.js";
 import { play, restoreSidebar, selectRom, showPlatformInfo, withTransition } from "./detail.js";
 import { download, launch } from "./actions.js";
 import { installTilt } from "./tilt.js";
-import { windowRows, stopWindowing, worthWindowing, windowedList } from "./visible.js";
+import { windowRows, stopWindowing, worthWindowing, windowedList, OVERSCAN } from "./visible.js";
 
 /// Everything the console screen needs from the backend, fetched up front.
 ///
@@ -1107,8 +1107,28 @@ let coverTimer;
 /// The gap between the two is the hysteresis: a card just off the top is one
 /// flick from being looked at again, and dropping its cover there means
 /// fetching and decoding it twice.
-const LOAD_SCREENS = 0.4;
-const RELEASE_SCREENS = 1.0;
+/// Ask for a cover as soon as its card exists, and keep it for as long as it
+/// does.
+///
+/// `visible.js` keeps a band of `OVERSCAN` screens either side of the viewport
+/// in the document and replaces the rest with spacers. Both margins used to sit
+/// well inside that band -- asked for at 0.4 screens, thrown away at 1.0 -- and
+/// the effect was a grid that emptied while you scrolled: measured on 2026-09-08
+/// on SNES, 18% of the cards on screen were holding a picture during a scroll,
+/// and scrolling back over ground already loaded re-requested 128 covers to show
+/// 30%.
+///
+/// Loading at the band's edge means a card is asked for a screen and a half
+/// before anybody can see it. Releasing beyond the band means never, in
+/// practice: a card that far out is about to be removed from the document
+/// altogether, which frees the same memory without the round trip.
+///
+/// The memory that bought the old numbers is mostly not there any more. They
+/// were set when a cover was an `<img>` holding the file's own decode -- 4.9 MB
+/// for a 1280x960 miximage -- and it is a canvas the size of the tile now, about
+/// 0.26 MB. The band is a few dozen cards. See `memory-footprint.md`.
+const LOAD_SCREENS = OVERSCAN;
+const RELEASE_SCREENS = OVERSCAN + 0.5;
 
 /// Those two as pixel margins for the observers, measured against the list as
 /// it is now. Re-read whenever the observers are rebuilt, which is every time
@@ -1163,6 +1183,11 @@ export function observeCovers() {
   forgetPendingCovers();
   coverObserver?.disconnect();
   coverReleaser?.disconnect();
+  // Emptied, and that is safe: the new observers report every card they are
+  // given, so anything still on the page and still without a picture is queued
+  // again a frame later. Keeping ids across this instead was tried and is
+  // wrong -- the list can be redrawn with the same games in it, and a stale id
+  // then fetches a cover for a card that already has one.
   coverQueue = [];
   // A card marked `loaded` but holding no picture was queued by the observers
   // being replaced, and that queue has just been thrown away. Leaving the mark
@@ -1192,8 +1217,17 @@ export function observeCovers() {
         e.target.dataset.loaded = "1";
         coverQueue.push(Number(e.target.dataset.id));
       }
-      clearTimeout(coverTimer);
-      coverTimer = setTimeout(flushCovers, 80);
+      // Scheduled, not re-scheduled. `clearTimeout` on every callback meant a
+      // continuous scroll pushed the flush ahead of itself and nothing was
+      // fetched until the scrolling stopped -- which is most of what the empty
+      // grid was. Now the first card to come into view starts an 80ms clock and
+      // everything queued inside it goes in the same batch.
+      if (!coverTimer) {
+        coverTimer = setTimeout(() => {
+          coverTimer = null;
+          flushCovers();
+        }, 80);
+      }
     },
     { root: el.list, rootMargin: margins.load }
   );
@@ -1345,7 +1379,11 @@ async function drawCover(art, url, star) {
 /// Drop anything still queued. Called when the list is redrawn: those cards
 /// are gone, and the ones that replace them will ask again.
 export function forgetPendingCovers() {
-  waiting = [];
+  // Only the ones whose card has gone. `observeCovers` runs on every band
+  // change, and a band change now keeps most of its cards -- throwing away
+  // pictures that had already been fetched and decoded for cards still on the
+  // page meant fetching and decoding them a second time.
+  waiting = waiting.filter((w) => w.art?.isConnected);
 }
 
 async function flushCovers() {

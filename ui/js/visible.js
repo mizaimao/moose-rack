@@ -147,13 +147,52 @@ export function windowRows({ container, scroller, rows, html, onDraw }) {
   const paint = (band) => {
     before.style.height = `${band.before}px`;
     after.style.height = `${band.after}px`;
-    // Everything between the two spacers is the old band.
-    while (before.nextSibling && before.nextSibling !== after) before.nextSibling.remove();
-    const markup = [];
-    for (let i = band.first; i < band.first + band.count; i++) {
-      markup.push(html(rows[view[i]], i));
+    // Keep the cards that are still in the band.
+    //
+    // A band is a contiguous run of indices with one card per index, in order,
+    // so scrolling by two rows is two rows off one end and two onto the other.
+    // Rebuilding all of it -- which is what this did, on every row boundary --
+    // threw away every card's artwork along with it: measured on SNES on
+    // 2026-09-08, 18% of the cards on screen were holding a picture during a
+    // scroll, and every one of them had to be asked for and decoded again.
+    // Nothing about the window's arithmetic changes; only which nodes survive.
+    const nf = band.first;
+    const ne = band.first + band.count;
+    const of = drawn ? drawn.first : 0;
+    const oe = drawn ? drawn.first + drawn.count : 0;
+    // Elements only. `html` returns markup that starts on a new line, so the
+    // band is cards with whitespace text nodes between them -- walking every
+    // sibling counted twice as many and the length check below never held, so
+    // this rebuilt the lot every time and looked exactly like it had not been
+    // written.
+    const held = [];
+    if (drawn) {
+      for (let n = before.nextElementSibling; n && n !== after; n = n.nextElementSibling) {
+        held.push(n);
+      }
     }
-    after.insertAdjacentHTML("beforebegin", markup.join(""));
+    const keepFrom = Math.max(nf, of);
+    const keepTo = Math.min(ne, oe);
+    const markup = (from, to) => {
+      const out = [];
+      for (let i = from; i < to; i++) out.push(html(rows[view[i]], i));
+      return out.join("");
+    };
+    // A jump has nothing in common with what is drawn -- the first band, a
+    // filter, the cursor revealing a row far away -- and so is cheaper whole.
+    // `held.length` is the check that this file's one assumption still holds:
+    // one element per index. A caller whose markup grew a second root would
+    // otherwise shift every card by one and quietly draw the wrong games.
+    if (!drawn || keepFrom >= keepTo || held.length !== oe - of) {
+      while (before.nextSibling && before.nextSibling !== after) before.nextSibling.remove();
+      after.insertAdjacentHTML("beforebegin", markup(nf, ne));
+      drawn = band;
+      return;
+    }
+    for (let i = 0; i < keepFrom - of; i++) held[i].remove();
+    for (let i = 0; i < oe - keepTo; i++) held[held.length - 1 - i].remove();
+    if (nf < keepFrom) before.insertAdjacentHTML("afterend", markup(nf, keepFrom));
+    if (ne > keepTo) after.insertAdjacentHTML("beforebegin", markup(keepTo, ne));
     drawn = band;
   };
 
@@ -191,6 +230,29 @@ export function windowRows({ container, scroller, rows, html, onDraw }) {
     else update(false);
   };
   window.addEventListener("resize", onResize);
+
+  // The container can change width without the window doing anything, and
+  // measuring only on `resize` missed every one of those. Opening the detail
+  // pane is the ordinary case and it is not a small error: measured on
+  // 2026-09-08 with the pane open, this held four columns of 217px rows while
+  // still believing eight columns of 274px. Everything downstream is arithmetic
+  // on those two numbers -- which rows the band is, how tall the spacers are,
+  // where the cursor thinks a row is -- so the band sat below the viewport with
+  // no overscan above it at all, and scrolling up showed placeholders because
+  // the rows above had never been drawn.
+  //
+  // Width only. A `ResizeObserver` on this container also fires for the height
+  // the band itself changes, and reacting to that is a loop.
+  let lastWidth = container.clientWidth;
+  const ro = typeof ResizeObserver === "function"
+    ? new ResizeObserver(() => {
+        const width = container.clientWidth;
+        if (Math.abs(width - lastWidth) < 1) return;
+        lastWidth = width;
+        onResize();
+      })
+    : null;
+  ro?.observe(container);
 
   live = {
     /// How many rows the cursor can visit: what the filter box left, not what
@@ -246,6 +308,7 @@ export function windowRows({ container, scroller, rows, html, onDraw }) {
     stop() {
       scroller.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onResize);
+      ro?.disconnect();
     },
   };
   return live;
