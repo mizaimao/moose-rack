@@ -837,3 +837,19 @@ on the display for as long as it runs. `prefetchRoms` does it first.
 
 Opening SNES, before and after: 14 frames with a p50 of 56ms and nine gaps over
 33ms, to 34 frames with a p50 of 17ms and one.
+
+### A synchronous `#[tauri::command]` runs on the app's main thread
+
+Which is the thread that also serves the webview. Sixty of the app's commands
+were declared `fn` rather than `async fn`, so every one of them blocked it for
+as long as it took, and the page stopped drawing.
+
+Visible as a stall that no JavaScript explains: pressing Back left an 83ms frame
+while `platforms` and `recent_games` were in flight, with nothing running in the
+page at all. Making those two `async fn` -- Tauri then runs them on the async
+runtime instead -- took that frame to 39ms on its own.
+
+Twenty-six read commands are `async fn` now. Only reads: they cannot reorder
+against each other in a way that changes anything, and they are where the time
+was. The setters stay as they are, and so does anything that touches the window,
+the menu or the app icon, which belong on the thread that owns them.
