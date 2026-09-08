@@ -100,8 +100,12 @@ export function readSave(gm) {
   try {
     const bytes = gm?.getSaveFile?.();
     if (!bytes || !bytes.length) return null;
-    const path = gm.getSaveFilePath();
-    return { bytes, fileName: path.split("/").pop() };
+    // Emscripten's virtual filesystem, not the host's. It is POSIX on every
+    // platform -- `/data/saves/Snes9x/ActRaiser (USA).srm` on Windows too --
+    // because the core is a WebAssembly build with its own MEMFS. So this
+    // separator is the right one and not a host assumption.
+    const path = gm.getSaveFilePath(); // separator-literal-ok
+    return { bytes, fileName: path.split("/").pop() }; // separator-literal-ok
   } catch {
     return null;
   }
