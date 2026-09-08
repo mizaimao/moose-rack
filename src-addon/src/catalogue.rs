@@ -541,11 +541,12 @@ pub fn all(paths: &Paths) -> Vec<Patch> {
         Patch {
             id: "never-sleep",
             title: "Never sleep",
-            detail: "system.batterysaver.extendedmode in knulli.conf. Never suspends, on \
-                     battery or plugged in — suspending after 15 minutes idle drops the network \
-                     and reads as a dead device. Dimming stays either way. If you only want \
-                     this while it is charging, use \"Awake while charging\" instead and leave \
-                     this off.",
+            detail: "system.batterysaver.mode and .extendedmode in knulli.conf — both, because \
+                     they are separate timers and KNULLI suspends on the first one. Never \
+                     suspends, on battery or plugged in: suspending on idle drops the network \
+                     and reads as a dead device. Dimming stays either way. Closing the lid and \
+                     the power button still work. If you only want this while it is charging, \
+                     use \"Awake while charging\" instead and leave this off.",
             choices: on_off(
                 "ON",
                 vec![block(paths, "power", Some(POWER))],
@@ -1070,6 +1071,42 @@ mod tests {
         get("charge-awake").apply(0).unwrap();
         let text = std::fs::read_to_string(paths.knulli_conf()).unwrap();
         assert!(live(&text).contains(&"system.batterysaver.chargingbypass=0"));
+    }
+
+    #[test]
+    fn never_sleep_stops_the_ten_minute_timer_as_well_as_the_fifteen() {
+        // The bug this was written for. `never-sleep` claimed only
+        // `extendedmode`, so KNULLI's `mode=suspend` -- a separate, earlier
+        // timer -- went on suspending the device ten minutes into a game while
+        // the patch reported itself ON. Put the failure back by dropping
+        // `mode` from power.conf and this test goes red.
+        let paths = scratch("never-sleep-both");
+        std::fs::create_dir_all(paths.knulli_conf().parent().unwrap()).unwrap();
+        std::fs::write(
+            paths.knulli_conf(),
+            "system.batterysaver.mode=suspend\n\
+             system.batterysaver.extendedmode=suspend\n",
+        )
+        .unwrap();
+        let patches = all(&paths);
+        let get = |id: &str| patches.iter().find(|p| p.id == id).unwrap();
+
+        get("never-sleep").apply(1).unwrap();
+        let text = std::fs::read_to_string(paths.knulli_conf()).unwrap();
+        let power: Vec<&str> =
+            live(&text).into_iter().filter(|l| l.contains("batterysaver")).collect();
+        assert_eq!(
+            power,
+            vec!["system.batterysaver.mode=dim", "system.batterysaver.extendedmode=none"],
+            "both timers, and nothing the reader would meet first"
+        );
+        assert_eq!(get("never-sleep").state(), State::At(1));
+
+        // Off restores both of KNULLI's values, not just the one.
+        get("never-sleep").apply(0).unwrap();
+        let text = std::fs::read_to_string(paths.knulli_conf()).unwrap();
+        assert!(live(&text).contains(&"system.batterysaver.mode=suspend"));
+        assert!(live(&text).contains(&"system.batterysaver.extendedmode=suspend"));
     }
 }
 

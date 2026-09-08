@@ -57,19 +57,21 @@ pub fn sync(server: Option<&str>, status: &str, stars: &str) -> Page {
 }
 
 /// The patches tab, read back off the device.
-pub fn patches(patches: &[Patch]) -> Page {
-    Page::new(
-        patches
-            .iter()
-            .map(|patch| {
-                let live = match patch.state() {
-                    State::At(i) => Some(i),
-                    State::Changed => None,
-                };
-                Row::dial(patch.id, patch.title, patch.detail, patch.option_names(), live)
-            })
-            .collect(),
-    )
+///
+/// `knulli` is which OS this is, as a fact at the top. A patch is a bet about
+/// files KNULLI ships, and an update can move any of them — so the version the
+/// patches were read against belongs beside them, where somebody choosing one
+/// can see it, and not only in `--status`.
+pub fn patches(patches: &[Patch], knulli: &str) -> Page {
+    let mut rows = vec![Row::fact("knulli", "KNULLI", knulli)];
+    rows.extend(patches.iter().map(|patch| {
+        let live = match patch.state() {
+            State::At(i) => Some(i),
+            State::Changed => None,
+        };
+        Row::dial(patch.id, patch.title, patch.detail, patch.option_names(), live)
+    }));
+    Page::new(rows)
 }
 
 #[cfg(test)]
@@ -89,7 +91,7 @@ mod tests {
     fn nothing_is_queued_before_anything_is_touched() {
         // Opening the app must not propose a single change, whatever it finds.
         let paths = scratch("fresh");
-        assert!(patches(&catalogue::all(&paths)).pending().is_empty());
+        assert!(patches(&catalogue::all(&paths), "test image").pending().is_empty());
         assert!(sync(None, "not synced yet", "not checked yet").pending().is_empty());
     }
 
@@ -103,7 +105,7 @@ mod tests {
         let hotkeys = all.iter().find(|p| p.id == "hotkeys").unwrap();
         hotkeys.apply(1).unwrap();
 
-        let page = patches(&catalogue::all(&paths));
+        let page = patches(&catalogue::all(&paths), "test image");
         let row = page.rows.iter().find(|r| r.id == "hotkeys").unwrap();
         assert_eq!(row.value(), "ON");
         assert!(!row.pending());
@@ -119,7 +121,7 @@ mod tests {
         let text = std::fs::read_to_string(&conf).unwrap();
         std::fs::write(&conf, text.replace("global.retroarch", "# global.retroarch")).unwrap();
 
-        let page = patches(&catalogue::all(&paths));
+        let page = patches(&catalogue::all(&paths), "test image");
         let row = page.rows.iter().find(|r| r.id == "hotkeys").unwrap();
         assert!(row.adrift());
         assert_eq!(row.value(), "changed");
@@ -131,7 +133,12 @@ mod tests {
         // The detail line is the only place the file it writes is recorded,
         // and an empty one makes the row unundoable by hand.
         let paths = scratch("details");
-        for row in patches(&catalogue::all(&paths)).rows {
+        // Facts are exempt: a fact is the thing it says, and there is nothing
+        // to undo by hand at two in the morning.
+        for row in patches(&catalogue::all(&paths), "test image").rows {
+            if matches!(row.kind, crate::model::Kind::Fact { .. }) {
+                continue;
+            }
             assert!(
                 row.detail.len() > 40,
                 "{} needs a detail line saying what it touches",
@@ -148,5 +155,18 @@ mod tests {
                 .selected()
                 .is_some_and(|r| r.selectable())
         );
+    }
+
+    #[test]
+    fn the_patches_tab_says_which_knulli_and_does_not_open_on_it() {
+        // The version is a fact, so the cursor must land past it -- and it has
+        // to be there, because a patch list with no OS beside it is what let
+        // `never-sleep` report itself on against a moved image.
+        let paths = scratch("knulli-row");
+        let page = patches(&catalogue::all(&paths), "scarab 2026/05/10 22:54");
+        assert_eq!(page.rows[0].id, "knulli");
+        assert_eq!(page.rows[0].value(), "scarab 2026/05/10 22:54");
+        assert!(page.selected().is_some_and(|r| r.selectable()));
+        assert_ne!(page.selected().map(|r| r.id.as_str()), Some("knulli"));
     }
 }
