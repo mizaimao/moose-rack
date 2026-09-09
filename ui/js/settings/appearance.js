@@ -1,6 +1,7 @@
 // The Appearance tab: the pictures the lists draw, the console pictures, the
 // glass, and the shader backdrop.
 import { invoke, listen, convertFileSrc, MOBILE } from "../state.js";
+import { labelsWanted, setLabels } from "../chrome.js";
 import { toast, escapeHtml, cssColor } from "../util.js";
 import { padFor, padLabelFor, keyLabelFor, actions } from "../bindings.js";
 import {
@@ -25,6 +26,19 @@ export const html = `      <h4>Layout</h4>
       </div>
       <p class="hint set-window-layout">One pane at a time, with Back. Or three
         columns — consoles, games, preview — where nothing is ever replaced.</p>
+
+      <div class="srow">
+        <label>Button labels</label>
+        <div class="ctl">
+          <select class="chrome-labels">
+            <option value="on">Icon and word</option>
+            <option value="off">Icon only</option>
+          </select>
+        </div>
+      </div>
+      <p class="hint">The words on the toolbar — List, Filter, Random, the sort,
+        Take offline, the info pane. Without them the bar is quieter; each button
+        still says what it is, and what it is set to, when you hover it.</p>
 
       <div class="srow">
         <label>Consoles</label>
@@ -223,6 +237,7 @@ export function wire(box) {
   markPadControls(box);
   wireShellMode(box);
   wireViewLayouts(box);
+  wireChromeLabels(box);
   wireBackdropFps(box);
   wireAttract(box);
   wireIconStyles(box);
@@ -540,6 +555,22 @@ function wireBackdropFps(box) {
   down.addEventListener("click", () => step(-1));
   up.addEventListener("click", () => step(1));
   paint();
+}
+
+/// Words on the toolbar buttons, or just their icons.
+///
+/// The buttons are all in the library window; `setLabels` announces, and that
+/// window applies it. Applying it here as well costs nothing -- this document
+/// has none of those six -- and keeps the one code path.
+function wireChromeLabels(box) {
+  const pick = box.querySelector(".chrome-labels");
+  if (!pick) return;
+  pick.value = labelsWanted() ? "on" : "off";
+  pick.addEventListener("change", () => {
+    const on = pick.value === "on";
+    setLabels(on);
+    toast(on ? "Buttons show their words" : "Buttons show icons only");
+  });
 }
 
 /// Grid or list, separately for the console screen and for a console's games.

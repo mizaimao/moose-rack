@@ -110,9 +110,16 @@ export function setSidebar(on, { remember = true } = {}) {
   // Named for what it shows rather than for what pressing it does. "Hide info"
   // on a screen full of consoles does not say *which* info, and the icon
   // already carries the on/off state.
-  el.sidebarBtn.querySelector("span:not(.icon)").textContent =
-    sidebarScope() === "platforms" ? "Platform info" : "Game info";
+  const which = sidebarScope() === "platforms" ? "Platform info" : "Game info";
+  el.sidebarBtn.querySelector("span:not(.icon)").textContent = which;
   el.sidebarBtn.querySelector(".icon").className = `icon icon-info-${on ? "on" : "off"}`;
+  // Which pane, in the title too: with the labels off the icon says on or off
+  // but not what it is a toggle for. See `chrome.js`.
+  // On the element as well as in the attribute: `enter()` in `shell.js` runs
+  // after this on every view change and sets a title of its own, and reads this
+  // back rather than inventing one.
+  el.sidebarBtn.dataset.paneTitle = `${on ? "Hide" : "Show"} the ${which.toLowerCase()} pane`;
+  if (!el.sidebarBtn.disabled) el.sidebarBtn.title = el.sidebarBtn.dataset.paneTitle;
   // In Desk the preview is a column of the layout, so "show it" means show it
   // — on the console list too, where it holds whatever was last selected.
   // This used to insist on a game being selected, which disagreed with the

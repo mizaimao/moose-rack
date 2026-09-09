@@ -927,3 +927,26 @@ describe("a console in the preview pane", () => {
     assert.ok(el.detail.querySelector(".pf-grab"), "no way to download it from here");
   });
 });
+
+describe("the preview toggle keeps the title that names its pane", () => {
+  // `setSidebar` writes a title that says which pane and which way the toggle
+  // goes; `enter()` runs after it on every view change and used to replace that
+  // with "Show or hide the detail pane". Invisible while the button had a word
+  // next to it, and the whole of what the button says once the words are turned
+  // off — see `chrome.js`.
+  test("enter() does not replace it with a generic one", () => {
+    const btn = document.getElementById("sidebar-btn");
+    btn.dataset.paneTitle = "Hide the game info pane";
+    shell.enter({ title: "SNES", sidebar: true, sort: true });
+    assert.equal(btn.title, "Hide the game info pane");
+  });
+
+  test("a screen with nothing to preview still says so", () => {
+    const btn = document.getElementById("sidebar-btn");
+    btn.dataset.paneTitle = "Hide the game info pane";
+    shell.chooseMode("single", { announce: false });
+    shell.enter({ title: "History", sidebar: false });
+    assert.equal(btn.title, "Nothing to preview on this screen");
+    assert.equal(btn.disabled, true);
+  });
+});
