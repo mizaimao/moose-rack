@@ -125,9 +125,7 @@ export async function cycleOrder(delta = 1) {
 async function redraw() {
   const { renderRows } = await import("./library.js");
   if (state.rows.length) renderRows(state.rows, state.view === "search");
-  el.sortBtn?.querySelector("span:not(.icon)")?.replaceChildren(
-    document.createTextNode(currentOrder().label)
-  );
+  refreshSortButton();
 }
 
 /// Keep the header button's label and visibility in step with the view.
@@ -137,6 +135,11 @@ export function refreshSortButton() {
   el.sortBtn.querySelector("span:not(.icon)")?.replaceChildren(
     document.createTextNode(currentOrder().label)
   );
+  // Into the title as well as the label. This button's word *is* the state --
+  // which field the list is ordered by -- and a sort glyph does not say
+  // "Name". With the labels turned off the title is all there is, and it is
+  // also what the button is announced by. See `chrome.js`.
+  el.sortBtn.title = `Sorted by ${currentOrder().label} — press to change (right stick click)`;
 }
 
 export { arrangeCurrentList };
