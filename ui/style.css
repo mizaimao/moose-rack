@@ -1747,6 +1747,27 @@ header button:hover {
     0 0 22px color-mix(in srgb, var(--glass) 65%, transparent);
 }
 header button:active { opacity: 0.7; }
+
+/* ---- Icons without their words ------------------------------------------
+   Settings → Appearance → "Button labels". Six buttons carry both an icon and
+   a word, and the words are what make the bar readable the first week and
+   noisy afterwards.
+
+   Named rather than matched on `:has(.icon)`: the tab row's own buttons are
+   words with no icon, and a rule clever enough to catch these six would take
+   those away too and leave a row of nothing. Each of the six keeps its `title`,
+   which is what a button with no text is announced by. */
+html.no-labels :is(#layout-btn, #filter-btn, #random-btn, #grab-btn, #sort-btn, #sidebar-btn)
+  > span:not(.icon) {
+  display: none;
+}
+
+/* Square, once there is only a glyph in them. Without this they keep the
+   padding a word needed and sit in the bar like gaps. */
+html.no-labels :is(#layout-btn, #filter-btn, #random-btn, #grab-btn, #sort-btn, #sidebar-btn) {
+  padding-inline: 8px;
+  gap: 0;
+}
 header button:focus-visible {
   outline: none;
   border-color: color-mix(in srgb, var(--glass) 70%, transparent);

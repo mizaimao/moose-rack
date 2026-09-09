@@ -3,6 +3,7 @@
 import { statusTag, viewerIsRemote, bareUrl } from "./status-tag.js";
 import { installHistoryNav } from "./history-nav.js";
 import { el, state, trail, invoke, listen, MOBILE } from "./state.js";
+import { applyLabels } from "./chrome.js";
 import { askDownload } from "./bulk.js";
 import { askConfigPatch } from "./conflicts.js";
 import { openSortMenu } from "./sort.js";
@@ -94,6 +95,12 @@ listen("art-changed", () => {
 // The console screen and the inside of a console keep separate layouts, and
 // Settings can set either. Applied only when it is the one on screen; the other
 // is stored and takes effect when you go there.
+listen("chrome-labels", ({ payload }) => {
+  // Applied, never re-saved: saving announces, and this window would then answer
+  // its own message. The same rule the backdrop settings follow.
+  applyLabels(!!payload);
+});
+
 listen("layout-view", async ({ payload }) => {
   const { view, value } = payload || {};
   const key = view === "platforms" ? "layoutPlatforms" : "layoutGames";
@@ -380,6 +387,8 @@ function statusCard(s) {
   // someone's machine is not a decision this app should make for them.
   // Before anything is drawn: which arrangement decides where things go.
   chooseMode(storedMode(), { announce: false });
+  // Before the first paint of the header, so the words never flash on and off.
+  applyLabels();
   if (localStorage.getItem("backdrop") === "on") startBackdrop();
   // Covers the preview pane too: it is a card, and takes the same --tint.
   // The build number under the traffic lights. `hiddenTitle` took the window

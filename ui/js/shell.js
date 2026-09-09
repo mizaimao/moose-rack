@@ -175,7 +175,14 @@ export function enter({
     if (name === "sidebar") {
       const dead = !wants.sidebar && mode !== "columns";
       node.disabled = dead;
-      node.title = dead ? "Nothing to preview on this screen" : "Show or hide the detail pane";
+      // Not a title of its own when it is alive: `setSidebar` writes one that
+      // names the pane and says which way the toggle goes, and this runs after
+      // it on every view change -- so a generic string here silently replaced
+      // it, which matters now that the label can be turned off and the title is
+      // all the button says. It is kept on the element for exactly this.
+      node.title = dead
+        ? "Nothing to preview on this screen"
+        : node.dataset.paneTitle || "Show or hide the detail pane";
     }
   }
   if (el.zoomWrap) {
