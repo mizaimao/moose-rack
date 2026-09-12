@@ -60,13 +60,43 @@ because agreement between a sales chart and a reader poll is real agreement.
 Weight them if that ever becomes possible; drop them before adding a fifth
 opinion-based source.
 
-## Super Famicom's list names games that live under `snes`
+## `sfc` is the Japan-only tail, not the Super Famicom
 
-`sfc` reports its best titles as missing — Super Mario World, A Link to the
-Past, Super Mario Kart, Secret of Mana. They are in the library, under the
-`snes` slug. The split is deliberate and the Japanese romset genuinely lacks
-some of them, so this is the honest answer for an sfc collection rather than a
-matching bug. Do not "fix" it by merging the two platforms.
+This is the thing that made Super Famicom look broken for months, and it is
+about the library rather than the lists.
+
+The `sfc` slug holds pachinko, mahjong, Japan-exclusive releases and
+English-translated romhacks — `Cyber Knight (J) [T+Eng1.01_AGTP]`,
+`西陣パチンコ物語 2`. Every canonical Super Famicom title is filed under `snes`:
+Super Mario World, Mario Kart and Kirby Super Star return **zero** rows for
+`sfc` and one or more for `snes`. Same for `famicom` against `nes`.
+
+So a published "best Super Famicom games" ranking matched 29% against `sfc`,
+was dropped as if it were a list about another console, and the check was
+right on its own terms and wrong about the question. Against `sfc` **and**
+`snes` together the same list scores 86%.
+
+`SIBLINGS` in `build_lists.py` widens the verification pool to the machine for
+those four slugs. **Only the check widens.** The vote and the collection stay
+with the slug the file was filed under, so the Super Famicom collection is
+still Super Famicom games — the question the check asks is "is this list about
+this machine", and the machine is not the folder.
+
+What this does not fix, and should not: `sfc` coverage sits near a third,
+because the games its sources name are mostly filed under `snes`. That is the
+honest answer for a collection built from the `sfc` folder. Do not merge the
+two platforms to make the number go up.
+
+## Wikipedia's API rate limit answers in prose
+
+Pairing Japanese titles to English goes through ja.wikipedia langlinks. The
+first version asked one title at a time, tripped the rate limit, caught the
+exception and returned `None` — which the caller read as "no English article
+exists". Chrono Trigger and Kirby Super Star were both recorded as unpairable.
+
+Batched 40 titles to a request now, with retries, and an error raises instead
+of being swallowed. If a pairing run suddenly reports many titles as having no
+English article, suspect this before suspecting Wikipedia.
 
 ## Caveats carried from the external research package
 

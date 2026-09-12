@@ -97,6 +97,27 @@ def known_titles(manifest, db):
 
 
 
+# Slugs that are the same machine, for the verification pool only.
+#
+# This library files Super Famicom's canonical titles under `snes` and keeps
+# `sfc` for the Japan-only tail -- pachinko, mahjong, translated romhacks. So a
+# Japanese "best Super Famicom games" ranking matched 29% against `sfc` and was
+# dropped as if it were about another console, which is what the check exists
+# to catch and is not what was happening: against `sfc` and `snes` together the
+# same list scores 86%.
+#
+# Only the check widens. The vote and the collection stay with the slug the
+# file was filed under, so the Super Famicom collection is still Super Famicom
+# games -- the question being asked here is "is this list about this machine",
+# and the machine is not the folder.
+SIBLINGS = {
+    "sfc": ("sfc", "snes"),
+    "snes": ("snes", "sfc"),
+    "famicom": ("famicom", "nes"),
+    "nes": ("nes", "famicom"),
+}
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -121,7 +142,9 @@ def main():
         if not titles:
             print(f"  ! {f.name}: no titles", file=sys.stderr)
             continue
-        pool = known.get(platform, set())
+        pool = set()
+        for sib in SIBLINGS.get(platform, (platform,)):
+            pool |= known.get(sib, set())
         hits = sum(1 for t in titles if any(k in pool for k in keys_for(t)))
         rate = hits / len(titles)
         status = "ok " if rate >= args.min_match else "DROP"
