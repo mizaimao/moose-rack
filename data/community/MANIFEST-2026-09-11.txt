@@ -1,0 +1,448 @@
+MANIFEST - published retro 'best games' rankings
+generated 2026-09-11   files: 61   titles: 2386
+one file per source per platform; merging is done downstream
+
+file    : famicom__kopenguin.txt
+url     : https://kopenguin.com/post-14937/
+method  : Kopenguin Famicom all-time SALES ranking (units shipped), top 44; '【<rank>位:売上...】' headings in page order, best-first. Japanese Family Computer software.
+titles  : 44
+fetched : 2026-09-11
+caveats : Japanese SALES ranking by units shipped, NOT a critical/quality ranking - merge should weight accordingly; titles paired as 'English | Japanese' via ja.wikipedia langlinks, reverse-verified so series articles are rejected; 6 entries dropped, no English Wikipedia article for that specific game: プロ野球ファミリースタジアム ’87年度版, ドラゴンボール 神龍の謎, ドラえもん, プロ野球ファミリースタジアム ’88年度版, ドラゴンボールZ 強襲!サイヤ人, ドラゴンボールZII 激神フリーザ!!
+
+file    : famicom__nantoka.txt
+url     : https://nantoka-game.com/famicom-ranking-top50/
+method  : Nantoka Game Famicom all-time SALES ranking (units shipped), top 44; '<rank>位' / title table cells in page order, best-first. Japanese Family Computer software.
+titles  : 44
+fetched : 2026-09-11
+caveats : Japanese SALES ranking by units shipped, NOT a critical/quality ranking - merge should weight accordingly; titles paired as 'English | Japanese' via ja.wikipedia langlinks; 4 entries dropped, no English Wikipedia game article: ドラゴンボール 神龍の謎, ドラえもん, ドラゴンボールZ 強襲!サイヤ人, ドラゴンボールZ2 激神フリーザ!!
+
+file    : famicom__rankingnet.txt
+url     : https://ranking.net/rankings/best-famicon-games
+method  : Minna no Ranking (ranking.net) Famicom software reader poll, top 20 by reader votes; '<rank> 位 <title>' headings in page order, best-first. Japanese Family Computer (Famicom) software only.
+titles  : 20
+fetched : 2026-09-11
+caveats : -
+
+file    : nes__infinityretro.txt
+url     : https://infinityretro.com/top-100-best-nes-games/
+method  : Infinity Retro editorial ranking, NES, top 100; numbered countdown 100->1, reversed to best-first
+titles  : 100
+fetched : 2026-09-11
+caveats : -
+
+file    : nes__nintendolife.txt
+url     : https://www.nintendolife.com/guides/best-nes-games
+method  : Nintendo Life reader-rated ranking, NES, top 50; numbered countdown 50->1, reversed to best-first; page has a numbering typo, document order kept across 2 pages
+titles  : 50
+fetched : 2026-09-11
+caveats : -
+
+file    : nes__retrododo.txt
+url     : https://retrododo.com/best-nes-games/
+method  : Retro Dodo editorial ranking, NES, top 25; numbered 1..25 in page order, best-first as printed
+titles  : 25
+fetched : 2026-09-11
+caveats : -
+
+file    : nes__timeextension.txt
+url     : https://www.timeextension.com/guides/best-nes-games-of-all-time
+method  : Time Extension editors' selection, NES, 26 entries across 2 page(s), page order
+titles  : 26
+fetched : 2026-09-11
+caveats : Source states entries are 'not presented in any kind of order or ranking' - unranked set, line order is NOT rank
+
+file    : sfc__gavas.txt
+url     : https://www.gavas.jp/user_data/superfamicom_game_ranking.php
+method  : Pico Pico Daihyakka (gavas.jp) Super Famicom all-time SALES ranking (units shipped), top 41; '<rank> 位' / title table cells in page order, best-first.
+titles  : 41
+fetched : 2026-09-11
+caveats : Japanese SALES ranking by units shipped, NOT a critical/quality ranking - merge should weight accordingly; titles paired as 'English | Japanese' via ja.wikipedia langlinks; 7 entries dropped, no English Wikipedia game article: スーパードンキーコング2 ディクシー＆ディディー, ロマンシング サ･ガ3, ダービースタリオン3, ドラゴンクエスト1・2, ロマンシング サ･ガ2, ダービースタリオン96, スーパーファミスタ5
+
+file    : sfc__rankingnet.txt
+url     : https://ranking.net/rankings/best-superfamicom-games
+method  : Minna no Ranking (ranking.net) Super Famicom software reader poll, top 20 by reader votes; '<rank> 位 <title>' headings in page order, best-first. Japanese Super Famicom software only.
+titles  : 20
+fetched : 2026-09-11
+caveats : -
+
+file    : sfc__spotgeeks-action.txt
+url     : https://spotgeeks.news/archives/2018
+method  : SpotGeeks Super Famicom classics, action section, top 12 within that genre; '<rank> 位 <title>' headings in page order, best-first. Japanese Super Famicom software.
+titles  : 12
+fetched : 2026-09-11
+caveats : ONE GENRE SECTION ONLY: this file is the 'action' section of a page holding six independent per-genre top-N lists; the page states no global ranking across genres, so these ranks are within-genre only and the six sections must NOT be concatenated; titles paired as 'English | Japanese' via ja.wikipedia langlinks, reverse-verified so series/genre articles are rejected
+
+file    : sfc__spotgeeks-fighting.txt
+url     : https://spotgeeks.news/archives/2018
+method  : SpotGeeks Super Famicom classics, fighting section, top 8 within that genre; '<rank> 位 <title>' headings in page order, best-first. Japanese Super Famicom software.
+titles  : 8
+fetched : 2026-09-11
+caveats : ONE GENRE SECTION ONLY: this file is the 'fighting' section of a page holding six independent per-genre top-N lists; the page states no global ranking across genres, so these ranks are within-genre only and the six sections must NOT be concatenated; titles paired as 'English | Japanese' via ja.wikipedia langlinks, reverse-verified so series/genre articles are rejected
+
+file    : sfc__spotgeeks-puzzle.txt
+url     : https://spotgeeks.news/archives/2018
+method  : SpotGeeks Super Famicom classics, puzzle and other section, top 5 within that genre; '<rank> 位 <title>' headings in page order, best-first. Japanese Super Famicom software.
+titles  : 5
+fetched : 2026-09-11
+caveats : ONE GENRE SECTION ONLY: this file is the 'puzzle and other' section of a page holding six independent per-genre top-N lists; the page states no global ranking across genres, so these ranks are within-genre only and the six sections must NOT be concatenated; titles paired as 'English | Japanese' via ja.wikipedia langlinks, reverse-verified so series/genre articles are rejected; 1 dropped, no English Wikipedia article for that specific game: スーパーテトリス2+ボンブリス
+
+file    : sfc__spotgeeks-rpg.txt
+url     : https://spotgeeks.news/archives/2018
+method  : SpotGeeks Super Famicom classics, RPG section, top 10 within that genre; '<rank> 位 <title>' headings in page order, best-first. Japanese Super Famicom software.
+titles  : 10
+fetched : 2026-09-11
+caveats : ONE GENRE SECTION ONLY: this file is the 'RPG' section of a page holding six independent per-genre top-N lists; the page states no global ranking across genres, so these ranks are within-genre only and the six sections must NOT be concatenated; titles paired as 'English | Japanese' via ja.wikipedia langlinks, reverse-verified so series/genre articles are rejected
+
+file    : sfc__spotgeeks-shooting.txt
+url     : https://spotgeeks.news/archives/2018
+method  : SpotGeeks Super Famicom classics, shooting section, top 8 within that genre; '<rank> 位 <title>' headings in page order, best-first. Japanese Super Famicom software.
+titles  : 8
+fetched : 2026-09-11
+caveats : ONE GENRE SECTION ONLY: this file is the 'shooting' section of a page holding six independent per-genre top-N lists; the page states no global ranking across genres, so these ranks are within-genre only and the six sections must NOT be concatenated; titles paired as 'English | Japanese' via ja.wikipedia langlinks, reverse-verified so series/genre articles are rejected
+
+file    : sfc__spotgeeks-sports.txt
+url     : https://spotgeeks.news/archives/2018
+method  : SpotGeeks Super Famicom classics, sports and racing section, top 3 within that genre; '<rank> 位 <title>' headings in page order, best-first. Japanese Super Famicom software.
+titles  : 3
+fetched : 2026-09-11
+caveats : ONE GENRE SECTION ONLY: this file is the 'sports and racing' section of a page holding six independent per-genre top-N lists; the page states no global ranking across genres, so these ranks are within-genre only and the six sections must NOT be concatenated; titles paired as 'English | Japanese' via ja.wikipedia langlinks, reverse-verified so series/genre articles are rejected; 4 dropped, no English Wikipedia article for that specific game: スーパーサッカー, キャプテン翼III 皇帝の挑戦, 実況パワフルプロ野球’94, プロ野球スーパーファミスタ3
+
+file    : sfc__spotgeeks.txt
+url     : https://spotgeeks.news/archives/2018
+method  : SpotGeeks Super Famicom recommended-classics ranking, top 12; '<rank> 位 <title>' headings in page order, best-first. Japanese Super Famicom software.
+titles  : 12
+fetched : 2026-09-11
+caveats : Japanese-language editorial ranking; titles paired as 'English | Japanese' via ja.wikipedia langlinks, reverse-verified so series/genre articles are rejected
+
+file    : snes__infinityretro.txt
+url     : https://infinityretro.com/top-100-best-snes-games/
+method  : Infinity Retro editorial ranking, SNES, top 99; numbered countdown 100->1, reversed to best-first
+titles  : 99
+fetched : 2026-09-11
+caveats : 1 compilation/multi-game entry removed per brief: Dragon Quest I & II
+
+file    : snes__nintendolife.txt
+url     : https://www.nintendolife.com/guides/50-best-super-nintendo-snes-games-of-all-time
+method  : Nintendo Life reader-rated ranking, SNES, top 49; numbered countdown 50->1, reversed to best-first; page has a numbering typo, document order kept across 2 pages
+titles  : 49
+fetched : 2026-09-11
+caveats : 1 compilation/multi-game entry removed per brief: Super Mario All-Stars
+
+file    : snes__retrododo.txt
+url     : https://retrododo.com/best-snes-games/
+method  : Retro Dodo editorial ranking, SNES, top 24; numbered 1..41 in page order, best-first as printed; page has a numbering typo, document order kept
+titles  : 24
+fetched : 2026-09-11
+caveats : 1 compilation/multi-game entry removed per brief: Super Mario All-Stars
+
+file    : gb__infinityretro.txt
+url     : https://infinityretro.com/top-100-best-game-boy-games/
+method  : Infinity Retro editorial ranking, Game Boy, top 99; numbered countdown 100->1, reversed to best-first
+titles  : 99
+fetched : 2026-09-11
+caveats : 1 compilation/multi-game entry removed per brief: Dragon Warrior I & II
+
+file    : gb__nintendolife.txt
+url     : https://www.nintendolife.com/guides/best-game-boy-games
+method  : Nintendo Life reader-rated ranking, Game Boy, top 50; numbered countdown 50->1, reversed to best-first; page has a numbering typo, document order kept across 2 pages
+titles  : 50
+fetched : 2026-09-11
+caveats : -
+
+file    : gb__timeextension.txt
+url     : https://www.timeextension.com/guides/best-game-boy-games-of-all-time
+method  : Time Extension editors' selection, Game Boy, 20 entries across 1 page(s), page order
+titles  : 20
+fetched : 2026-09-11
+caveats : Source states entries are 'not presented in any kind of order or ranking' - unranked set, line order is NOT rank
+
+file    : gbc__nintendolife.txt
+url     : https://www.nintendolife.com/guides/50-best-game-boy-color-gbc-games-of-all-time
+method  : Nintendo Life reader-rated ranking, Game Boy Color, top 49; numbered countdown 50->1, reversed to best-first across 1 pages
+titles  : 49
+fetched : 2026-09-11
+caveats : 1 compilation/multi-game entry removed per brief: Dragon Warrior I & II
+
+file    : gbc__retrododo.txt
+url     : https://retrododo.com/best-gameboy-color-games/
+method  : Retro Dodo editorial ranking, Game Boy Color, top 25; numbered 1..25 in page order, best-first as printed
+titles  : 25
+fetched : 2026-09-11
+caveats : -
+
+file    : gbc__timeextension.txt
+url     : https://www.timeextension.com/guides/best-game-boy-color-games-of-all-time
+method  : Time Extension editors' selection, Game Boy Color, 24 entries across 2 page(s), page order
+titles  : 24
+fetched : 2026-09-11
+caveats : Source states entries are 'not presented in any kind of order or ranking' - unranked set, line order is NOT rank
+
+file    : gba__metacritic.txt
+url     : https://www.metacritic.com/browse/game/game-boy-advance/
+method  : Metacritic 'Game Boy Advance' browse chart ordered by Metascore, top 24 by critic score; platform page verified distinct from Metacritic's all-platform fallback chart
+titles  : 24
+fetched : 2026-09-11
+caveats : Critic-score chart, not an editorial ranking; only page 1 captured (site paginates)
+
+file    : gba__nintendolife.txt
+url     : https://www.nintendolife.com/guides/50-best-game-boy-advance-games-of-all-time
+method  : Nintendo Life reader-rated ranking, Game Boy Advance, top 49; numbered countdown 50->1, reversed to best-first across 1 pages
+titles  : 49
+fetched : 2026-09-11
+caveats : 1 compilation/multi-game entry removed per brief: Final Fantasy I & II: Dawn of Souls
+
+file    : gba__timeextension.txt
+url     : https://www.timeextension.com/guides/best-gba-games-of-all-time
+method  : Time Extension editors' selection, Game Boy Advance, 26 entries across 2 page(s), page order
+titles  : 26
+fetched : 2026-09-11
+caveats : Source states entries are 'not presented in any kind of order or ranking' - unranked set, line order is NOT rank
+
+file    : n64__infinityretro.txt
+url     : https://infinityretro.com/top-100-best-nintendo-64-games/
+method  : Infinity Retro editorial ranking, Nintendo 64, top 99; numbered countdown 100->1, reversed to best-first
+titles  : 99
+fetched : 2026-09-11
+caveats : -
+
+file    : n64__metacritic.txt
+url     : https://www.metacritic.com/browse/game/nintendo-64/
+method  : Metacritic 'Nintendo 64' browse chart ordered by Metascore, top 24 by critic score; platform page verified distinct from Metacritic's all-platform fallback chart
+titles  : 24
+fetched : 2026-09-11
+caveats : Critic-score chart, not an editorial ranking; only page 1 captured (site paginates)
+
+file    : n64__nintendolife.txt
+url     : https://www.nintendolife.com/guides/best-nintendo-64-games
+method  : Nintendo Life reader-rated ranking, Nintendo 64, top 50; numbered countdown 50->1, reversed to best-first; page has a numbering typo, document order kept across 2 pages
+titles  : 50
+fetched : 2026-09-11
+caveats : -
+
+file    : n64__retrododo.txt
+url     : https://retrododo.com/best-n64-games/
+method  : Retro Dodo editorial ranking, Nintendo 64, top 25; numbered 1..25 in page order, best-first as printed
+titles  : 25
+fetched : 2026-09-11
+caveats : -
+
+file    : n64__timeextension.txt
+url     : https://www.timeextension.com/guides/best-n64-games-of-all-time
+method  : Time Extension editors' selection, Nintendo 64, 26 entries across 2 page(s), page order
+titles  : 26
+fetched : 2026-09-11
+caveats : Source states entries are 'not presented in any kind of order or ranking' - unranked set, line order is NOT rank
+
+file    : ngc__metacritic.txt
+url     : https://www.metacritic.com/browse/game/gamecube/
+method  : Metacritic 'GameCube' browse chart ordered by Metascore, top 24 by critic score; platform page verified distinct from Metacritic's all-platform fallback chart
+titles  : 24
+fetched : 2026-09-11
+caveats : Critic-score chart, not an editorial ranking; only page 1 captured (site paginates)
+
+file    : ngc__nintendolife.txt
+url     : https://www.nintendolife.com/guides/best-gamecube-games
+method  : Nintendo Life reader-rated ranking, GameCube, top 50; numbered countdown 50->1, reversed to best-first across 1 pages
+titles  : 50
+fetched : 2026-09-11
+caveats : -
+
+file    : ngc__retrododo.txt
+url     : https://retrododo.com/best-gamecube-games/
+method  : Retro Dodo editorial ranking, GameCube, top 25; numbered 1..25 in page order, best-first as printed
+titles  : 25
+fetched : 2026-09-11
+caveats : -
+
+file    : ngc__timeextension.txt
+url     : https://www.timeextension.com/guides/best-gamecube-games-of-all-time
+method  : Time Extension editors' selection, GameCube, 24 entries across 2 page(s), page order
+titles  : 24
+fetched : 2026-09-11
+caveats : Source states entries are 'not presented in any kind of order or ranking' - unranked set, line order is NOT rank
+
+file    : megadrive__retrododo.txt
+url     : https://retrododo.com/best-sega-genesis-games/
+method  : Retro Dodo editorial ranking, Mega Drive / Genesis, top 25; numbered 1..25 in page order, best-first as printed
+titles  : 25
+fetched : 2026-09-11
+caveats : -
+
+file    : megadrive__retrosanctuary.txt
+url     : https://retro-sanctuary.com/Top-100-Megadrive-Games-Page-1.html
+method  : Retro-Sanctuary 'The 100 Best Genesis Games' editorial ranking, top 100; rank/title table cells across 10 pages, reordered best-first
+titles  : 100
+fetched : 2026-09-11
+caveats : -
+
+file    : megadrive__timeextension.txt
+url     : https://www.timeextension.com/guides/best-sega-genesis-mega-drive-games-of-all-time
+method  : Time Extension reader-voted ranking, Mega Drive / Genesis, top 50; numbered countdown 50->1, reversed to best-first across 3 page(s)
+titles  : 50
+fetched : 2026-09-11
+caveats : -
+
+file    : mastersystem__retrododo.txt
+url     : https://retrododo.com/best-master-system-games/
+method  : Retro Dodo editorial ranking, Sega Master System, top 25; numbered 1..25 in page order, best-first as printed
+titles  : 25
+fetched : 2026-09-11
+caveats : -
+
+file    : mastersystem__retrosanctuary.txt
+url     : https://retro-sanctuary.com/Top-100-Master-System-Games-Page-1.html
+method  : Retro-Sanctuary 'The 100 Best Master System Games' editorial ranking, top 100; rank/title table cells across 10 pages, reordered best-first
+titles  : 100
+fetched : 2026-09-11
+caveats : -
+
+file    : mastersystem__timeextension.txt
+url     : https://www.timeextension.com/guides/best-sega-master-system-games-of-all-time
+method  : Time Extension reader-voted ranking, Sega Master System, top 20; numbered countdown 20->1, reversed to best-first across 1 page(s)
+titles  : 20
+fetched : 2026-09-11
+caveats : -
+
+file    : gamegear__infinityretro.txt
+url     : https://infinityretro.com/top-50-best-sega-game-gear-games/
+method  : Infinity Retro editorial ranking, Sega Game Gear, top 50; numbered countdown 50->1, reversed to best-first
+titles  : 50
+fetched : 2026-09-11
+caveats : Includes Game Gear 8-bit conversions of Mega Drive titles (Gunstar Heroes, Streets of Rage 2) - verified in page text as genuine Game Gear releases
+
+file    : gamegear__retrododo.txt
+url     : https://retrododo.com/best-sega-game-gear-games/
+method  : Retro Dodo editorial ranking, Sega Game Gear, top 30; numbered 1..30 in page order, best-first as printed
+titles  : 30
+fetched : 2026-09-11
+caveats : -
+
+file    : gamegear__timeextension.txt
+url     : https://www.timeextension.com/guides/best-sega-game-gear-games-of-all-time
+method  : Time Extension reader-voted ranking, Sega Game Gear, top 20; numbered countdown 20->1, reversed to best-first across 1 page(s)
+titles  : 20
+fetched : 2026-09-11
+caveats : -
+
+file    : pcengine__infinityretro.txt
+url     : https://infinityretro.com/top-30-best-turbografx-16-games/
+method  : Infinity Retro editorial ranking, TurboGrafx-16 / PC Engine, top 30; numbered countdown 30->1, reversed to best-first
+titles  : 30
+fetched : 2026-09-11
+caveats : -
+
+file    : pcengine__retrododo.txt
+url     : https://retrododo.com/best-pc-engine-games/
+method  : Retro Dodo editorial ranking, PC Engine / TurboGrafx-16, top 19; numbered 1..20 in page order, best-first as printed
+titles  : 19
+fetched : 2026-09-11
+caveats : 1 compilation/multi-game entry removed per brief: YS I & II
+
+file    : pcengine__retrosanctuary.txt
+url     : https://retro-sanctuary.com/Top-100-Turbografx-Games-Page-1.html
+method  : Retro-Sanctuary 'The 100 Best PC-Engine / TurboGrafx Games' editorial ranking, top 100; rank/title table cells across 10 pages, reordered best-first
+titles  : 100
+fetched : 2026-09-11
+caveats : -
+
+file    : pcengine__timeextension.txt
+url     : https://www.timeextension.com/guides/best-pc-engine-turbografx-16-games
+method  : Time Extension editors' selection, PC Engine / TurboGrafx-16, 23 entries across 1 page(s), page order
+titles  : 22
+fetched : 2026-09-11
+caveats : Source states entries are 'not presented in any kind of order or ranking' - unranked set, line order is NOT rank; 1 compilation/multi-game entry removed per brief: Ys Book I & II
+
+file    : psx__pushsquare.txt
+url     : https://www.pushsquare.com/guides/best-ps1-games
+method  : Push Square reader-rated ranking, PlayStation 1, top 50; numbered countdown 50->1, reversed to best-first across 8 pages
+titles  : 50
+fetched : 2026-09-11
+caveats : Chrono Trigger appears high in this PS1 list on the strength of its 2001 PS1 port (Final Fantasy Chronicles); it is originally a Super Famicom/SNES game
+
+file    : psx__retrododo.txt
+url     : https://retrododo.com/best-ps1-games/
+method  : Retro Dodo editorial ranking, PlayStation, top 25; numbered 1..25 in page order, best-first as printed
+titles  : 25
+fetched : 2026-09-11
+caveats : -
+
+file    : psx__timeextension.txt
+url     : https://www.timeextension.com/guides/best-ps1-games-of-all-time-playstation-titles-you-shouldnt-miss
+method  : Time Extension editors' selection, PlayStation, 26 entries across 1 page(s), page order
+titles  : 26
+fetched : 2026-09-11
+caveats : Source states entries are 'not presented in any kind of order or ranking' - unranked set, line order is NOT rank
+
+file    : neo-geo-pocket__infinityretro.txt
+url     : https://infinityretro.com/top-25-best-neo-geo-pocket-games/
+method  : Infinity Retro editorial ranking, Neo Geo Pocket / Pocket Color, top 25; numbered countdown 25->1, reversed to best-first
+titles  : 25
+fetched : 2026-09-11
+caveats : -
+
+file    : neo-geo-pocket__retrododo.txt
+url     : https://retrododo.com/best-neo-geo-pocket-games/
+method  : Retro Dodo editorial ranking, Neo Geo Pocket / Pocket Color, top 15; numbered 1..15 in page order, best-first as printed
+titles  : 15
+fetched : 2026-09-11
+caveats : -
+
+file    : neo-geo-pocket__timeextension.txt
+url     : https://www.timeextension.com/guides/best-neo-geo-pocket-color-games
+method  : Time Extension reader-voted ranking, Neo Geo Pocket Color, top 20; numbered countdown 20->1, reversed to best-first across 1 page(s)
+titles  : 20
+fetched : 2026-09-11
+caveats : -
+
+file    : arcade__arcademuseum.txt
+url     : https://www.arcade-museum.com/top100
+method  : Museum of the Game 'Top Coin-Operated Videogames of All Time', whole arcade era, operator/coin-op focus, 101 entries
+titles  : 101
+fetched : 2026-09-11
+caveats : Page presents entries in release-year order, NOT rank order - treat as an unranked set
+
+file    : arcade__bitvint.txt
+url     : https://bitvint.com/pages/top-100-arcade-games-of-all-time
+method  : Bitvint 'Top 100 Arcade Games of All Time' editorial ranking, whole arcade era, individual games, top 100; rank markers read from the rendered page, best-first
+titles  : 100
+fetched : 2026-09-11
+caveats : Page is JavaScript-rendered so it was read via a real browser, not curl; same publisher as arcade__bitvint1980s - the two overlap heavily and are NOT independent of each other
+
+file    : arcade__bitvint1980s.txt
+url     : https://bitvint.com/pages/top-50-arcade-games-of-1980s
+method  : Bitvint 'Top 50 Arcade Games of the 1980s' editorial ranking, DECADE-SCOPED (1980s golden age only, not the whole arcade era), top 50; rank markers read from the rendered page, best-first
+titles  : 50
+fetched : 2026-09-11
+caveats : Scope is the 1980s decade only - do NOT treat as an all-era arcade list; page is JavaScript-rendered so it was read via a real browser, not curl
+
+file    : arcade__retrododo.txt
+url     : https://retrododo.com/best-arcade-games/
+method  : Retro Dodo editorial ranking, whole arcade era, individual games, top 20; numbered 1..20 in page order, best-first as printed
+titles  : 20
+fetched : 2026-09-11
+caveats : -
+
+file    : arcade__techradar.txt
+url     : https://www.techradar.com/news/best-arcade-games
+method  : TechRadar '50 best arcade games of all time', whole arcade era, 50 entries in page order
+titles  : 50
+fetched : 2026-09-11
+caveats : Source states the list is 'in no particular order' - line order is NOT rank; treat as an unranked set
+
+COVERAGE
+  famicom          3 source(s)  kopenguin, nantoka, rankingnet
+  nes              4 source(s)  infinityretro, nintendolife, retrododo, timeextension
+  sfc              9 source(s)  gavas, rankingnet, spotgeeks, spotgeeks-action, spotgeeks-fighting, spotgeeks-puzzle, spotgeeks-rpg, spotgeeks-shooting, spotgeeks-sports
+  snes             3 source(s)  infinityretro, nintendolife, retrododo
+  gb               3 source(s)  infinityretro, nintendolife, timeextension
+  gbc              3 source(s)  nintendolife, retrododo, timeextension
+  gba              3 source(s)  metacritic, nintendolife, timeextension
+  n64              5 source(s)  infinityretro, metacritic, nintendolife, retrododo, timeextension
+  ngc              4 source(s)  metacritic, nintendolife, retrododo, timeextension
+  megadrive        3 source(s)  retrododo, retrosanctuary, timeextension
+  mastersystem     3 source(s)  retrododo, retrosanctuary, timeextension
+  gamegear         3 source(s)  infinityretro, retrododo, timeextension
+  pcengine         4 source(s)  infinityretro, retrododo, retrosanctuary, timeextension
+  psx              3 source(s)  pushsquare, retrododo, timeextension
+  neo-geo-pocket   3 source(s)  infinityretro, retrododo, timeextension
+  arcade           5 source(s)  arcademuseum, bitvint, bitvint1980s, retrododo, techradar
