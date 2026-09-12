@@ -406,12 +406,12 @@
    {
     "source": "https://kopenguin.com/post-14937/",
     "how": "Kopenguin Famicom all-time SALES ranking (units shipped), top 44; '【<rank>位:売上...】' headings in page order, best-first. Japanese Family Computer software.",
-    "match_rate": 0.727
+    "match_rate": 0.932
    },
    {
     "source": "https://nantoka-game.com/famicom-ranking-top50/",
     "how": "Nantoka Game Famicom all-time SALES ranking (units shipped), top 44; '<rank>位' / title table cells in page order, best-first. Japanese Family Computer software.",
-    "match_rate": 0.727
+    "match_rate": 0.932
    },
    {
     "source": "https://ranking.net/rankings/best-famicon-games",
@@ -421,7 +421,7 @@
    {
     "source": "https://ranking.net/rankings/best-famicon-games",
     "how": "Minna no Ranking (ranking.net) Famicom software reader poll, top 20 by reader votes; '<rank> 位 <title>' headings in page order, best-first. Japanese Family Computer (Famicom) software only.",
-    "match_rate": 0.6
+    "match_rate": 0.9
    }
   ],
   "source_count": 4,
@@ -2256,7 +2256,7 @@
    {
     "source": "https://infinityretro.com/top-100-best-nes-games/",
     "how": "Infinity Retro editorial ranking, NES, top 100; numbered countdown 100->1, reversed to best-first",
-    "match_rate": 0.75
+    "match_rate": 0.87
    },
    {
     "source": "https://www.nintendolife.com/guides/best-nes-games",
@@ -2271,12 +2271,12 @@
    {
     "source": "https://www.timeextension.com/guides/best-nes-games-of-all-time",
     "how": "Time Extension editors' selection, NES, 26 entries across 2 page(s), page order",
-    "match_rate": 0.846
+    "match_rate": 0.885
    },
    {
     "source": "https://en.wikipedia.org/wiki/Video_games_listed_among_the_best_of_the_Nintendo_Entertainment_System",
     "how": "Wikipedia — games listed among the best by multiple publications",
-    "match_rate": 0.928
+    "match_rate": 0.973
    }
   ],
   "source_count": 5,
@@ -3266,98 +3266,124 @@
    {
     "source": "https://www.gavas.jp/user_data/superfamicom_game_ranking.php",
     "how": "Pico Pico Daihyakka (gavas.jp) Super Famicom all-time SALES ranking (units shipped), top 41; '<rank> 位' / title table cells in page order, best-first.",
-    "match_rate": 0.463
+    "match_rate": 0.78
    },
    {
     "source": "https://ranking.net/rankings/best-superfamicom-games",
     "how": "Minna no Ranking (ranking.net) Super Famicom software reader poll, top 20 by reader votes; '<rank> 位 <title>' headings in page order, best-first. Japanese Super Famicom software only.",
-    "match_rate": 0.45
+    "match_rate": 0.9
+   },
+   {
+    "source": "https://rankingoo.net/articles/comic/00189a",
+    "how": "Rankingoo Super Famicom reader-vote ranking, top 20 by votes cast; '第<rank>位：<title>' headings in page order, best-first. Japanese Super Famicom software; titles paired 'English | Japanese' via ja.wikipedia langlinks",
+    "match_rate": 0.929
+   },
+   {
+    "source": "https://spotgeeks.news/archives/2018",
+    "how": "one publication, one vote - 7 of its lists merged best-first with duplicates dropped: SpotGeeks Super Famicom recommended-classics ranking, top 12; SpotGeeks Super Famicom classics, RPG section, top 10 within that genre; SpotGeeks Super Famicom classics, action section, top 12 within that genre; SpotGeeks Super Famicom classics, fighting section, top 8 within that genre; SpotGeeks Super Famicom classics, shooting section, top 8 within that genre; SpotGeeks Super Famicom classics, puzzle and other section, top 5 within that genre; SpotGeeks Super Famicom classics, sports and racing section, top 3 within that genre",
+    "match_rate": 0.804
    }
   ],
-  "source_count": 2,
+  "source_count": 4,
   "agreed": [
    "Chrono Trigger | クロノ･トリガー",
    "Donkey Kong Country | スーパードンキーコング",
-   "Dragon Quest III | ドラゴンクエスト3 そして伝説へ…",
-   "Dragon Quest V | ドラゴンクエスト5 天空の花嫁",
-   "Dragon Quest VI | ドラゴンクエスト6 幻の大地",
-   "Final Fantasy IV | ファイナルファンタジー4",
-   "Final Fantasy V | ファイナルファンタジー5",
-   "Final Fantasy VI | ファイナルファンタジー6",
    "Kirby Super Star | 星のカービィ スーパーデラックス",
-   "Secret of Mana | 聖剣伝説2",
    "Street Fighter II | ストリートファイター2",
    "Super Mario Kart | スーパーマリオカート",
-   "Super Mario RPG | スーパーマリオRPG",
    "Super Mario World | スーパーマリオワールド",
-   "Tactics Ogre | タクティクスオウガ",
-   "The Legend of Zelda: A Link to the Past | ゼルダの伝説 神々のトライフォース",
-   "Trials of Mana | 聖剣伝説3"
+   "The Legend of Zelda: A Link to the Past | ゼルダの伝説 神々のトライフォース"
   ],
   "most": [
    "Chrono Trigger | クロノ･トリガー",
    "Donkey Kong Country | スーパードンキーコング",
-   "Dragon Quest III | ドラゴンクエスト3 そして伝説へ…",
    "Dragon Quest V | ドラゴンクエスト5 天空の花嫁",
    "Dragon Quest VI | ドラゴンクエスト6 幻の大地",
+   "EarthBound | MOTHER2 ギーグの逆襲",
    "Final Fantasy IV | ファイナルファンタジー4",
-   "Final Fantasy V | ファイナルファンタジー5",
    "Final Fantasy VI | ファイナルファンタジー6",
    "Kirby Super Star | 星のカービィ スーパーデラックス",
-   "Secret of Mana | 聖剣伝説2",
+   "SimCity | シムシティー",
    "Street Fighter II | ストリートファイター2",
    "Super Mario Kart | スーパーマリオカート",
    "Super Mario RPG | スーパーマリオRPG",
    "Super Mario World | スーパーマリオワールド",
-   "Tactics Ogre | タクティクスオウガ",
    "The Legend of Zelda: A Link to the Past | ゼルダの伝説 神々のトライフォース",
-   "Trials of Mana | 聖剣伝説3"
+   "Yoshi's Island | スーパーマリオ ヨッシーアイランド"
   ],
   "votes": {
-   "Super Mario Kart | スーパーマリオカート": 2,
-   "Super Mario World | スーパーマリオワールド": 2,
-   "Dragon Quest VI | ドラゴンクエスト6 幻の大地": 2,
-   "Donkey Kong Country | スーパードンキーコング": 2,
-   "Street Fighter II | ストリートファイター2": 2,
-   "Dragon Quest V | ドラゴンクエスト5 天空の花嫁": 2,
-   "Final Fantasy VI | ファイナルファンタジー6": 2,
+   "Super Mario Kart | スーパーマリオカート": 4,
+   "Super Mario World | スーパーマリオワールド": 4,
+   "Donkey Kong Country | スーパードンキーコング": 4,
+   "Street Fighter II | ストリートファイター2": 4,
+   "Chrono Trigger | クロノ･トリガー": 4,
+   "The Legend of Zelda: A Link to the Past | ゼルダの伝説 神々のトライフォース": 4,
+   "Kirby Super Star | 星のカービィ スーパーデラックス": 4,
+   "Dragon Quest VI | ドラゴンクエスト6 幻の大地": 3,
+   "Dragon Quest V | ドラゴンクエスト5 天空の花嫁": 3,
+   "Final Fantasy VI | ファイナルファンタジー6": 3,
+   "Yoshi's Island | スーパーマリオ ヨッシーアイランド": 3,
+   "Super Mario RPG | スーパーマリオRPG": 3,
+   "Final Fantasy IV | ファイナルファンタジー4": 3,
+   "SimCity | シムシティー": 3,
+   "EarthBound | MOTHER2 ギーグの逆襲": 3,
    "Final Fantasy V | ファイナルファンタジー5": 2,
-   "Chrono Trigger | クロノ･トリガー": 2,
    "Secret of Mana | 聖剣伝説2": 2,
-   "Super Mario RPG | スーパーマリオRPG": 2,
-   "Final Fantasy IV | ファイナルファンタジー4": 2,
    "Dragon Quest III | ドラゴンクエスト3 そして伝説へ…": 2,
-   "The Legend of Zelda: A Link to the Past | ゼルダの伝説 神々のトライフォース": 2,
-   "Kirby Super Star | 星のカービィ スーパーデラックス": 2,
+   "F-Zero | F-ZERO エフゼロ": 2,
+   "Star Fox | スターフォックス": 2,
+   "Torneko's Great Adventure | トルネコの大冒険 不思議のダンジョン": 2,
    "Trials of Mana | 聖剣伝説3": 2,
+   "Super Metroid | スーパーメトロイド": 2,
    "Tactics Ogre | タクティクスオウガ": 2,
+   "Bahamut Lagoon | バハムートラグーン": 2,
+   "Romancing SaGa 2 | ロマンシング サ・ガ2": 2,
+   "Puyo Puyo 2 | す〜ぱ〜ぷよぷよ通": 2,
    "Super Mario All-Stars | スーパーマリオコレクション": 1,
    "Donkey Kong Country 3 | スーパードンキーコング3 謎のクレミス島": 1,
-   "Yoshi's Island | スーパーマリオ ヨッシーアイランド": 1,
    "Puyo Puyo | すーぱーぷよぷよ": 1,
    "Dragon Ball Z: Super Butōden | ドラゴンボールZ 超武闘伝": 1,
    "Dragon Ball Z: Super Butōden 2 | ドラゴンボールZ 超武闘伝2": 1,
    "Romancing SaGa | ロマンシング サ･ガ": 1,
-   "F-Zero | F-ZERO エフゼロ": 1,
-   "SimCity | シムシティー": 1,
    "Dragon Ball Z: Super Butōden 3 | ドラゴンボールZ 超武闘伝3": 1,
-   "Star Fox | スターフォックス": 1,
-   "Torneko's Great Adventure | トルネコの大冒険 不思議のダンジョン": 1,
    "Fire Emblem: Mystery of the Emblem | ファイアーエムブレム 紋章の謎": 1,
-   "Super Metroid | スーパーメトロイド": 1,
    "Banshee's Last Cry | かまいたちの夜": 1,
    "ASCII Corporation | ミニ四駆 シャイニングスコーピオン レッツ＆ゴー!!": 1,
    "Pilotwings | パイロットウイングス": 1,
-   "Bahamut Lagoon | バハムートラグーン": 1,
    "Fire Emblem: Genealogy of the Holy War | ファイアーエムブレム 聖戦の系譜": 1,
    "ActRaiser | アクトレイザー": 1,
    "4th Super Robot Wars | 第4次スーパーロボット大戦": 1,
    "Super Robot Wars | スーパーロボット大戦EX": 1,
    "Kirby's Dream Land 3 | 星のカービィ3": 1,
    "Super Bomberman 4 | スーパーボンバーマン4": 1,
-   "EarthBound | MOTHER2 ギーグの逆襲": 1,
    "Romancing SaGa 3 | ロマンシング サ・ガ3": 1,
-   "Romancing SaGa 2 | ロマンシング サ・ガ2": 1
+   "Sailor Moon | 美少女戦士セーラームーン": 1,
+   "The Magical Quest Starring Mickey Mouse | ミッキーのマジカルアドベンチャー": 1,
+   "Live A Live | ライブ・ア・ライブ": 1,
+   "Tales of Phantasia | テイルズ オブ ファンタジア": 1,
+   "Super Ghouls 'n Ghosts | 超魔界村": 1,
+   "Castlevania | 悪魔城ドラキュラ": 1,
+   "Mega Man X | ロックマンX": 1,
+   "Mega Man X2 | ロックマンX2": 1,
+   "Donkey Kong Country 2 | スーパードンキーコング2 ディクシー&ディディー": 1,
+   "Street Fighter II Turbo | ストリートファイターII ターボ": 1,
+   "Fatal Fury Special | 餓狼伝説スペシャル": 1,
+   "Samurai Shodown | サムライスピリッツ": 1,
+   "Art of Fighting | 龍虎の拳": 1,
+   "Saturday Night Slam Masters | マッスルボマー": 1,
+   "Final Fight | ファイナルファイト": 1,
+   "Shin Kidō Senki Gundam Wing: Endless Duel | 新機動戦記ガンダムW ENDLESS DUEL": 1,
+   "Gradius III | グラディウスIII": 1,
+   "Axelay | アクスレイ": 1,
+   "R-Type | スーパーR-TYPE": 1,
+   "R-Type III: The Third Lightning | R-TYPE III ザ・サード・ライトニング": 1,
+   "Raiden | 雷電伝説": 1,
+   "Eroge | スペースメガフォース": 1,
+   "Darius Twin | ダライアスツイン": 1,
+   "Panel de Pon | パネルでポン": 1,
+   "Super Bomberman 2 | スーパーボンバーマン2": 1,
+   "Mario's Picross | マリオのピクロス": 1,
+   "Tecmo | テクモスーパーボウルIII": 1
   }
  },
  "snes": {
@@ -3365,7 +3391,7 @@
    {
     "source": "https://infinityretro.com/top-100-best-snes-games/",
     "how": "Infinity Retro editorial ranking, SNES, top 99; numbered countdown 100->1, reversed to best-first",
-    "match_rate": 0.838
+    "match_rate": 0.859
    },
    {
     "source": "https://www.nintendolife.com/guides/50-best-super-nintendo-snes-games-of-all-time",
