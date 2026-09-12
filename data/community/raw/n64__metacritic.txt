@@ -1,5 +1,5 @@
-# source: https://www.metacritic.com/browse/game/nintendo-64/all/all-time/metascore/
-# how: Metacritic, ranked by Metascore
+# source: https://www.metacritic.com/browse/game/nintendo-64/
+# how: Metacritic 'Nintendo 64' browse chart ordered by Metascore, top 24 by critic score; platform page verified distinct from Metacritic's all-platform fallback chart
 The Legend of Zelda: Ocarina of Time
 Perfect Dark
 GoldenEye 007
@@ -19,8 +19,8 @@ Beetle Adventure Racing
 Resident Evil 2
 WWF No Mercy
 Excitebike 64
-Diddy Kong Racing
 Star Fox 64
+Diddy Kong Racing
 Turok 2: Seeds of Evil
 F-Zero X
-Star Wars: Rogue Squadron
+Star Wars: Rogue Squadron 3D

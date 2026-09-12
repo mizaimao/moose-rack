@@ -1,11 +1,10 @@
 # source: https://www.timeextension.com/guides/best-pc-engine-turbografx-16-games
-# how: Time Extension guide, ranked by reader votes
+# how: Time Extension editors' selection, PC Engine / TurboGrafx-16, 23 entries across 1 page(s), page order
 R-Type
 Castlevania: Rondo of Blood
 Blazing Lazers
 Soldier Blade
 Alien Crush
-Ys Book I & II
 Splatterhouse
 Bonk 3: Bonk's Big Adventure
 Bomberman '94
@@ -20,3 +19,6 @@ Gate of Thunder
 Dungeon Explorer
 Air Zonk
 Street Fighter II': Champion Edition
+When did TurboGrafx-16 launch?
+How many TurboGrafx-16 games are there?
+Can you play PC Engine games on TurboGrafx-16?

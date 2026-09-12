@@ -1,46 +1,51 @@
 # source: https://www.nintendolife.com/guides/50-best-game-boy-color-gbc-games-of-all-time
-# how: Nintendo Life top 50, ranked by reader ratings
-Mr. Driller
-Dragon Ball Z: Legendary Super Warriors
-Tomb Raider
-Harry Potter And The Philosopher's Stone
-Ms. Pac-Man: Special Color Edition
-Perfect Dark
-Legend of the River King
-Mega Man Xtreme
-Duke Nukem
-Survival Kids
-Street Fighter Alpha: Warriors' Dreams
-Pac-Man: Special Color Edition
-Mega Man Xtreme 2
-Bionic Commando: Elite Forces
-Kirby Tilt 'n' Tumble
-Toki Tori
-Harry Potter and the Chamber of Secrets
-Harvest Moon
-Rayman
-Harvest Moon 3
-Harvest Moon 2
-Crystalis
-Lufia: The Legend Returns
-Warlocked
-Game & Watch Gallery 3
-Mickey's Racing Adventure
-R-Type DX
-Game & Watch Gallery 2
-Hamtaro: Ham-Hams Unite!
-Mario Golf
-Donkey Kong Country
-Tetris DX
-Pokémon Puzzle Challenge
+# how: Nintendo Life reader-rated ranking, Game Boy Color, top 49; numbered countdown 50->1, reversed to best-first across 1 pages
+The Legend of Zelda: Link's Awakening DX
+Pokémon Gold And Silver
+Pokémon Crystal
+The Legend of Zelda: Oracle of Ages
+The Legend of Zelda: Oracle of Seasons
+Shantae
+Dragon Warrior III
+Wario Land II
+Pokémon Trading Card Game
+Dragon Warrior Monsters
+Super Mario Bros. Deluxe
+Mario Tennis
 Dragon Warrior Monsters 2: Tara's Adventure & Cobi's Journey
 Pokémon Pinball
-Dragon Warrior I & II
-Mario Tennis
 Wario Land 3
 Metal Gear Solid
-Super Mario Bros. Deluxe
-Dragon Warrior Monsters
-Pokémon Trading Card Game
-Wario Land II
-Dragon Warrior III
+Pokémon Puzzle Challenge
+Tetris DX
+Mario Golf
+Game & Watch Gallery 2
+Donkey Kong Country
+Hamtaro: Ham-Hams Unite!
+R-Type DX
+Mickey's Racing Adventure
+Warlocked
+Lufia: The Legend Returns
+Game & Watch Gallery 3
+Crystalis
+Harvest Moon 2
+Harvest Moon 3
+Rayman
+Harvest Moon
+Harry Potter and the Chamber of Secrets
+Toki Tori
+Bionic Commando: Elite Forces
+Mega Man Xtreme 2
+Kirby Tilt 'n' Tumble
+Pac-Man: Special Color Edition
+Street Fighter Alpha: Warriors' Dreams
+Survival Kids
+Duke Nukem
+Mega Man Xtreme
+Legend of the River King
+Perfect Dark
+Ms. Pac-Man: Special Color Edition
+Harry Potter And The Philosopher's Stone
+Tomb Raider
+Dragon Ball Z: Legendary Super Warriors
+Mr. Driller

@@ -1,5 +1,5 @@
 # source: https://retrododo.com/best-master-system-games/
-# how: Retro Dodo editorial top 25
+# how: Retro Dodo editorial ranking, Sega Master System, top 25; numbered 1..25 in page order, best-first as printed
 Psycho Fox
 Sonic The Hedgehog 2
 Fantasy Zone II: The Tears Of Opa-Opa
@@ -18,7 +18,7 @@ Golvellius: Valley of Doom
 Phantasy Star
 Operation Wolf
 Fantasy Zone
-Ghouls ‘n Ghosts
+Ghouls 'n Ghosts
 California Games
 Out Run
 Chase HQ

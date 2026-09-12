@@ -1,5 +1,5 @@
 # source: https://infinityretro.com/top-50-best-sega-game-gear-games/
-# how: Infinity Retro editorial top 50
+# how: Infinity Retro editorial ranking, Sega Game Gear, top 50; numbered countdown 50->1, reversed to best-first
 Gunstar Heroes
 Streets of Rage 2
 Sonic the Hedgehog: Triple Trouble
@@ -32,14 +32,14 @@ Sonic Drift II
 Deep Duck Trouble Starring Donald Duck
 OutRun
 Shinobi
-Chase H.Q
+Chase H.Q.
 Fantasy Zone
-Tempo Jr
+Tempo Jr.
 Shining Force II: The Sword of Hajya
 Coca Cola Kid
 Super Off-Road
 Ax Battler: A Legend of Golden Axe
-Tails’ Skypatrol
+Tails' Skypatrol
 Space Harrier
 Magic Knight Rayearth
 Baku Baku

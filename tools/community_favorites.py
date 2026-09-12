@@ -57,6 +57,29 @@ def norm(s):
     return " ".join(s.split())
 
 
+def keys_for(title):
+    """Every normalised form a line might be stored under.
+
+    A Japanese title arrives paired, English first -- `Chrono Trigger |
+    クロノ・トリガー` -- because the library romanises perhaps half its Japanese
+    games and stores the rest in kana. Which of the two a given romset uses is
+    not something a published ranking can know, so both sides are kept and a
+    hit on either is a hit.
+
+    Without this the pairing is worse than no pairing: the whole line
+    normalises to one key that is neither half, and a correctly paired list
+    scores 0%. That is exactly what happened to every Super Famicom source.
+    """
+    parts = [s.strip() for s in title.split("|")]
+    return [k for k in dict.fromkeys(norm(s) for s in parts if s) if k]
+
+
+def english(title):
+    """The readable half of a paired line, for printing."""
+    head = title.split("|", 1)[0].strip()
+    return head or title.strip()
+
+
 def build_index(con):
     idx = {}
     for rid, slug, name in con.execute(
@@ -73,13 +96,13 @@ def match(table, title):
     against `Phantasy Star IV - The End of the Millennium`. An ambiguous prefix
     is dropped rather than guessed at.
     """
-    t = norm(title)
-    if not t:
-        return None
-    if t in table:
-        return table[t]
-    hits = [v for k, v in table.items() if k.startswith(t + " ")]
-    return hits[0] if len(hits) == 1 else None
+    for t in keys_for(title):
+        if t in table:
+            return table[t]
+        hits = [v for k, v in table.items() if k.startswith(t + " ")]
+        if len(hits) == 1:
+            return hits[0]
+    return None
 
 
 class Api:

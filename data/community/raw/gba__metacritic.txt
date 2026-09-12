@@ -1,6 +1,6 @@
-# source: https://www.metacritic.com/browse/game/game-boy-advance/all/all-time/metascore/
-# how: Metacritic, ranked by Metascore
-The Legend of Zelda: A Link to the Past
+# source: https://www.metacritic.com/browse/game/game-boy-advance/
+# how: Metacritic 'Game Boy Advance' browse chart ordered by Metascore, top 24 by critic score; platform page verified distinct from Metacritic's all-platform fallback chart
+The Legend of Zelda: A Link to the Past / Four Swords
 Tony Hawk's Pro Skater 2
 Super Mario Advance 4: Super Mario Bros. 3
 Mario Kart: Super Circuit
@@ -24,24 +24,3 @@ WarioWare: Twisted!
 Bomberman Tournament
 Fire Emblem
 Castlevania: Harmony of Dissonance
-Final Fantasy Tactics Advance
-Sonic Advance
-Golden Sun: The Lost Age
-Tony Hawk's Underground
-F-Zero: Maximum Velocity
-Astro Boy: Omega Factor
-Fire Emblem: The Sacred Stones
-Tony Hawk's Pro Skater 4
-Final Fantasy IV
-Mario Golf: Advance Tour
-Super Street Fighter II Turbo: Revival
-Spider-Man: Mysterio's Menace
-Super Mario Bros.
-Super Mario Advance
-Puyo Pop
-Rayman
-The Legend of Zelda
-ChuChu Rocket!
-Virtua Tennis
-Klonoa: Empire of Dreams
-Racing Gears Advance

@@ -1,0 +1,22 @@
+# source: https://retrododo.com/best-arcade-games/
+# how: Retro Dodo editorial ranking, whole arcade era, individual games, top 20; numbered 1..20 in page order, best-first as printed
+Donkey Kong
+Pac-Man
+Miss Pac-Man
+Mario Bros
+Space Invaders
+Missile Command
+Galaga
+Centipede
+Robotron 2084
+Street Fighter II
+Spy Hunter
+Teenage Mutant Ninja Turtles
+Golden Axe
+SEGA Rally
+R-Type
+Bubble Bobble
+Time Crisis
+Pong
+Frogger
+Metal Slug

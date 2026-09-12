@@ -1,52 +1,52 @@
-# source: https://www.nintendolife.com/guides/50-best-game-boy-games-of-all-time
-# how: Nintendo Life top 50, ranked by reader ratings
-Kirby's Block Ball
-Mortal Kombat II
-Bionic Commando
-Operation C
-Kid Icarus: Of Myths and Monsters
-Wario Blast: Featuring Bomberman!
-Tetris 2
-Pinball: Revenge of the 'Gator
-Catrap
-Motocross Maniacs
-Double Dragon II
-Dr. Mario
-Darkwing Duck
-Super R.C. Pro-Am
-Donkey Kong Land III
-Super Mario Land
-Donkey Kong Land
-Game & Watch Gallery
-QIX
-Donkey Kong Land 2
-The Final Fantasy Legend
-Bubble Bobble
-Kirby's Pinball Land
-Game Boy Camera
-Tetris Attack
-Final Fantasy Legend III
-Trip World
-DuckTales 2
-Picross 2
-Kid Dracula
-Batman: The Video Game
-Gargoyle's Quest
-Kirby's Dream Land
-Harvest Moon GB
-Final Fantasy Legend II
-Final Fantasy Adventure
-Castlevania II: Belmont's Revenge
-Mega Man V
+# source: https://www.nintendolife.com/guides/best-game-boy-games
+# how: Nintendo Life reader-rated ranking, Game Boy, top 50; numbered countdown 50->1, reversed to best-first; page has a numbering typo, document order kept across 2 pages
+The Legend of Zelda: Link's Awakening
+Tetris
+Donkey Kong
+Pokémon Red and Blue
+Pokémon Yellow Version: Special Pikachu Edition
+Wario Land: Super Mario Land 3
+Super Mario Land 2: 6 Golden Coins
+Mole Mania
+Kirby's Dream Land 2
 Wario Land II
 Mario's Picross
 DuckTales
-Kirby's Dream Land 2
-Mole Mania
-Super Mario Land 2: 6 Golden Coins
-Wario Land: Super Mario Land 3
-Pokémon Yellow Version: Special Pikachu Edition
-Pokémon Red and Blue
-Donkey Kong
-Tetris
-The Legend of Zelda: Link's Awakening
+Mega Man V
+Castlevania II: Belmont's Revenge
+Final Fantasy Adventure
+Kirby's Dream Land
+Batman: The Video Game
+Final Fantasy Legend II
+Picross 2
+Gargoyle's Quest
+Harvest Moon GB
+Kid Dracula
+Game Boy Camera
+Bubble Bobble
+Kirby's Pinball Land
+The Final Fantasy Legend
+Final Fantasy Legend III
+QIX
+Tetris Attack
+DuckTales 2
+Game & Watch Gallery
+Donkey Kong Land 2
+Super Mario Land
+Donkey Kong Land
+Super R.C. Pro-Am
+Darkwing Duck
+Trip World
+Dr. Mario
+Donkey Kong Land III
+Double Dragon II
+Motocross Maniacs
+Catrap
+Pinball: Revenge of the 'Gator
+Tetris 2
+Wario Blast: Featuring Bomberman!
+Kid Icarus: Of Myths and Monsters
+Operation C
+Mortal Kombat II
+Kirby's Block Ball
+Metroid II: Return of Samus

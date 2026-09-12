@@ -1,5 +1,5 @@
-# source: https://www.metacritic.com/browse/game/gamecube/all/all-time/metascore/
-# how: Metacritic, ranked by Metascore
+# source: https://www.metacritic.com/browse/game/gamecube/
+# how: Metacritic 'GameCube' browse chart ordered by Metascore, top 24 by critic score; platform page verified distinct from Metacritic's all-platform fallback chart
 Metroid Prime
 Resident Evil 4
 The Legend of Zelda: Twilight Princess

@@ -1,53 +1,48 @@
 # source: https://spotgeeks.news/archives/2018
-# how: SpotGeeks — Super Famicom masterpiece recommendation ranking [50 choices, by genre: 6 genre departments, 51 games ranked per genre], complete list, Japanese titles
-クロノ・トリガー
-ファイナルファンタジーVI
-ドラゴンクエストV 天空の花嫁
-ファイナルファンタジーIV
-ドラゴンクエストVI 幻の大地
-ライブ・ア・ライブ
-ロマンシング サ・ガ2
-MOTHER2 ギーグの逆襲
-テイルズ オブ ファンタジア
-バハムートラグーン
-スーパーマリオワールド
-ゼルダの伝説 神々のトライフォース
-スーパーメトロイド
-悪魔城ドラキュラ
-ロックマンX
-スーパードンキーコング
-スーパーマリオ ヨッシーアイランド
-ロックマンX2
-スーパードンキーコング2 ディクシー&ディディー
-スーパーマリオRPG
-星のカービィ スーパーデラックス
-超魔界村
-ストリートファイターII ターボ
-スーパーストリートファイターII
-餓狼伝説スペシャル
-サムライスピリッツ
-龍虎の拳
-マッスルボマー
-ファイナルファイト
-新機動戦記ガンダムW ENDLESS DUEL
-スターフォックス
-グラディウスIII
-アクスレイ
-スーパーR-TYPE
-R-TYPE III ザ・サード・ライトニング
-雷電伝説
-スペースメガフォース
-ダライアスツイン
-スーパーマリオカート
+# how: one publication, one vote - 7 of its lists merged best-first with duplicates dropped: SpotGeeks Super Famicom recommended-classics ranking, top 12; SpotGeeks Super Famicom classics, RPG section, top 10 within that genre; SpotGeeks Super Famicom classics, action section, top 12 within that genre; SpotGeeks Super Famicom classics, fighting section, top 8 within that genre; SpotGeeks Super Famicom classics, shooting section, top 8 within that genre; SpotGeeks Super Famicom classics, puzzle and other section, top 5 within that genre; SpotGeeks Super Famicom classics, sports and racing section, top 3 within that genre
+Chrono Trigger | クロノ・トリガー
+Final Fantasy VI | ファイナルファンタジーVI
+Dragon Quest V | ドラゴンクエストV 天空の花嫁
+Final Fantasy IV | ファイナルファンタジーIV
+Dragon Quest VI | ドラゴンクエストVI 幻の大地
+Live A Live | ライブ・ア・ライブ
+Romancing SaGa 2 | ロマンシング サ・ガ2
+EarthBound | MOTHER2 ギーグの逆襲
+Tales of Phantasia | テイルズ オブ ファンタジア
+Bahamut Lagoon | バハムートラグーン
+Kirby Super Star | 星のカービィ スーパーデラックス
+Super Ghouls 'n Ghosts | 超魔界村
+Super Mario World | スーパーマリオワールド
+The Legend of Zelda: A Link to the Past | ゼルダの伝説 神々のトライフォース
+Super Metroid | スーパーメトロイド
+Castlevania | 悪魔城ドラキュラ
+Mega Man X | ロックマンX
+Donkey Kong Country | スーパードンキーコング
+Yoshi's Island | スーパーマリオ ヨッシーアイランド
+Mega Man X2 | ロックマンX2
+Donkey Kong Country 2 | スーパードンキーコング2 ディクシー&ディディー
+Super Mario RPG | スーパーマリオRPG
+Street Fighter II Turbo | ストリートファイターII ターボ
+Street Fighter II | スーパーストリートファイターII
+Fatal Fury Special | 餓狼伝説スペシャル
+Samurai Shodown | サムライスピリッツ
+Art of Fighting | 龍虎の拳
+Saturday Night Slam Masters | マッスルボマー
+Final Fight | ファイナルファイト
+Shin Kidō Senki Gundam Wing: Endless Duel | 新機動戦記ガンダムW ENDLESS DUEL
+Star Fox | スターフォックス
+Gradius III | グラディウスIII
+Axelay | アクスレイ
+R-Type | スーパーR-TYPE
+R-Type III: The Third Lightning | R-TYPE III ザ・サード・ライトニング
+Raiden | 雷電伝説
+Eroge | スペースメガフォース
+Darius Twin | ダライアスツイン
+Puyo Puyo 2 | ぷよぷよ通
+Panel de Pon | パネルでポン
+SimCity | シムシティ
+Super Bomberman 2 | スーパーボンバーマン2
+Mario's Picross | マリオのピクロス
+Super Mario Kart | スーパーマリオカート
 F-ZERO
-スーパーサッカー
-テクモスーパーボウルIII
-キャプテン翼III 皇帝の挑戦
-実況パワフルプロ野球’94
-プロ野球スーパーファミスタ3
-ぷよぷよ通
-パネルでポン
-シムシティ
-スーパーボンバーマン2
-マリオのピクロス
-スーパーテトリス2+ボンブリス
+Tecmo | テクモスーパーボウルIII

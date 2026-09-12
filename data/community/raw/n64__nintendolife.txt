@@ -1,52 +1,52 @@
-# source: https://www.nintendolife.com/guides/50-best-nintendo-64-games-of-all-time
-# how: Nintendo Life top 50, ranked by reader ratings
-Gauntlet Legends
-WWF WrestleMania 2000
-StarCraft 64
-Space Station Silicon Valley
-WCW/nWo Revenge
-Turok 2: Seeds of Evil
-Jet Force Gemini
-Duke Nukem 64
-Worms Armageddon
-Star Wars Episode I: Racer
-Tony Hawk's Pro Skater 2
-Harvest Moon 64
-Doom 64
-Mario Party
-Mortal Kombat Trilogy
-Pilotwings 64
-Donkey Kong 64
+# source: https://www.nintendolife.com/guides/best-nintendo-64-games
+# how: Nintendo Life reader-rated ranking, Nintendo 64, top 50; numbered countdown 50->1, reversed to best-first; page has a numbering typo, document order kept across 2 pages
+The Legend of Zelda: Ocarina of Time
+The Legend of Zelda: Majora's Mask
+Super Mario 64
+GoldenEye 007
+Paper Mario
+Star Fox 64
+Banjo-Kazooie
+Perfect Dark
+Super Smash Bros.
+F-Zero X
+Diddy Kong Racing
+Banjo-Tooie
+Mario Party 2
+Conker's Bad Fur Day
+Mario Kart 64
+Star Wars: Rogue Squadron
+Mario Party 3
+Resident Evil 2
+Wave Race 64
+Mario Tennis
+Mystical Ninja Starring Goemon
+Sin and Punishment
+WWF No Mercy
+Pokémon Snap
+Pokémon Stadium 2
+Ogre Battle 64: Person of Lordly Caliber
+Blast Corps
+Mario Golf
+Rayman 2: The Great Escape
+Goemon's Great Adventure
 Quake II
 Kirby 64: The Crystal Shards
 Mischief Makers
-Blast Corps
-Ogre Battle 64: Person of Lordly Caliber
-Mario Golf
-Goemon's Great Adventure
-Rayman 2: The Great Escape
-Pokémon Snap
-Pokémon Stadium 2
-Sin and Punishment
-WWF No Mercy
-Mystical Ninja Starring Goemon
-Mario Tennis
-Wave Race 64
-Resident Evil 2
-Mario Party 3
-Star Wars: Rogue Squadron
-Mario Kart 64
-Conker's Bad Fur Day
-Mario Party 2
-Banjo-Tooie
-Diddy Kong Racing
-F-Zero X
-Super Smash Bros.
-Perfect Dark
-Star Fox 64
-Paper Mario
-Banjo-Kazooie
-GoldenEye 007
-Super Mario 64
-The Legend of Zelda: Majora's Mask
-The Legend of Zelda: Ocarina of Time
+Mortal Kombat Trilogy
+Donkey Kong 64
+Pilotwings 64
+Mario Party
+Doom 64
+Star Wars Episode I: Racer
+Harvest Moon 64
+Worms Armageddon
+Tony Hawk's Pro Skater 2
+StarCraft 64
+Jet Force Gemini
+Turok 2: Seeds of Evil
+WWF WrestleMania 2000
+Duke Nukem 64
+WCW/nWo Revenge
+Space Station Silicon Valley
+Pokémon Stadium
