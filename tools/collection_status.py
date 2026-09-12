@@ -23,7 +23,7 @@ import sqlite3
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
-from community_favorites import norm  # noqa: E402
+from community_favorites import english, match, norm  # noqa: E402
 from drive_vs_library import PLATFORM_MAP, open_manifest  # noqa: E402
 
 
@@ -65,8 +65,15 @@ def main():
             continue
         have, copy, gone = [], [], []
         for t in v[args.tier]:
-            k = norm(t)
-            (have if k in lib.get(p, {}) else copy if k in drive.get(p, {}) else gone).append(t)
+            # The same matcher the collection builder uses, rather than an
+            # exact key: this report exists to say what a collection *would*
+            # contain, and a stricter rule here reports games as missing that
+            # the builder would go on to include. It carries both halves of a
+            # paired Japanese title and the unique-prefix rule that finds
+            # `Dragon Quest V` inside `Dragon Quest V - Tenkuu no Hanayome`.
+            here_, there = lib.get(p, {}), drive.get(p, {})
+            where = (have if match(here_, t) else copy if match(there, t) else gone)
+            where.append(english(t))
         rows.append((p, v["source_count"], len(v[args.tier]), have, copy, gone))
         if args.list and args.platform:
             for label, items in (("in your library", have), ("on the drive", copy), ("nowhere", gone)):

@@ -46,7 +46,7 @@ import sqlite3
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
-from community_favorites import norm  # noqa: E402
+from community_favorites import keys_for, norm  # noqa: E402
 from drive_vs_library import PLATFORM_MAP, open_manifest  # noqa: E402
 
 
@@ -96,6 +96,7 @@ def known_titles(manifest, db):
     return known
 
 
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -121,7 +122,7 @@ def main():
             print(f"  ! {f.name}: no titles", file=sys.stderr)
             continue
         pool = known.get(platform, set())
-        hits = sum(1 for t in titles if norm(t) in pool)
+        hits = sum(1 for t in titles if any(k in pool for k in keys_for(t)))
         rate = hits / len(titles)
         status = "ok " if rate >= args.min_match else "DROP"
         if args.report or status == "DROP":
@@ -137,11 +138,20 @@ def main():
     for platform, lists in sorted(by_platform.items()):
         votes = collections.Counter()
         display = {}
+        alias = {}
         for lst in lists:
             for t in dict.fromkeys(lst["titles"]):   # a source votes once per title
-                k = norm(t)
-                if not k:
+                # A paired line is one game, so its two keys must not each cast
+                # a vote -- that would let a single Japanese source outvote two
+                # English ones. One vote, under the first key, and every other
+                # key aliased to it so a source spelling it the other way lands
+                # on the same tally.
+                ks = keys_for(t)
+                if not ks:
                     continue
+                k = next((a for a in ks if a in alias), ks[0])
+                for other in ks:
+                    alias.setdefault(other, k)
                 votes[k] += 1
                 display.setdefault(k, t)
         n = len(lists)
