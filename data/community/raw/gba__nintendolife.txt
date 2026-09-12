@@ -1,38 +1,51 @@
 # source: https://www.nintendolife.com/guides/50-best-game-boy-advance-games-of-all-time
-# how: Nintendo Life top 50, ranked by reader ratings
-Breath of Fire
-Rhythm Tengoku
-Ninja Five-O
-Klonoa: Empire of Dreams
-Sonic Advance 2
-Mario Golf: Advance Tour
-Harvest Moon: More Friends of Mineral Town
-Mario Tennis: Power Tour
-Mega Man Zero 3
-Super Mario Advance
-Pokémon Pinball: Ruby & Sapphire
-Mario vs. Donkey Kong
-Sonic Advance
-Drill Dozer
-Kirby & The Amazing Mirror
-Final Fantasy I & II: Dawn of Souls
-WarioWare Twisted!
-Pokémon Mystery Dungeon: Red Rescue Team
-Gunstar Super Heroes
-Astro Boy: The Omega Factor
-Harvest Moon: Friends of Mineral Town
-Tactics Ogre: The Knight of Lodis
-Final Fantasy IV Advance
-Final Fantasy V Advance
-Wario Land 4
-Advance Wars 2: Black Hole Rising
-Kirby: Nightmare in Dream Land
+# how: Nintendo Life reader-rated ranking, Game Boy Advance, top 49; numbered countdown 50->1, reversed to best-first across 1 pages
+Metroid: Zero Mission
+Final Fantasy VI Advance
+Metroid Fusion
+Pokémon Emerald
+The Legend of Zelda: The Minish Cap
+Mario & Luigi: Superstar Saga
+Golden Sun: The Lost Age
+Golden Sun
+Pokémon FireRed and LeafGreen
+Super Mario Advance 4: Super Mario Bros. 3
+The Legend of Zelda: A Link to the Past and Four Swords
+Super Mario Advance 2: Super Mario World
+Castlevania: Aria of Sorrow
+Castlevania: Circle of the Moon
+Mother 3
+Advance Wars
+Final Fantasy Tactics Advance
+Fire Emblem
+Super Mario Advance 3: Yoshi's Island
+Fire Emblem: The Sacred Stones
 Castlevania: Harmony of Dissonance
 Pokémon Ruby & Sapphire
 WarioWare, Inc.: Mega Microgame$!
-Fire Emblem: The Sacred Stones
-Super Mario Advance 3: Yoshi's Island
-Fire Emblem
-Final Fantasy Tactics Advance
-Advance Wars
-Castlevania: Circle of the Moon
+Kirby: Nightmare in Dream Land
+Advance Wars 2: Black Hole Rising
+Wario Land 4
+Final Fantasy IV Advance
+Tactics Ogre: The Knight of Lodis
+Final Fantasy V Advance
+Harvest Moon: Friends of Mineral Town
+Astro Boy: The Omega Factor
+Pokémon Mystery Dungeon: Red Rescue Team
+Gunstar Super Heroes
+WarioWare Twisted!
+Kirby & The Amazing Mirror
+Sonic Advance
+Mario vs. Donkey Kong
+Drill Dozer
+Pokémon Pinball: Ruby & Sapphire
+Super Mario Advance
+Mega Man Zero 3
+Mario Tennis: Power Tour
+Sonic Advance 2
+Mario Golf: Advance Tour
+Sword of Mana
+Sonic Advance 3
+Harvest Moon: More Friends of Mineral Town
+Dragon Ball Z: The Legacy of Goku II
+Donkey Kong Country

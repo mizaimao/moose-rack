@@ -1,7 +1,7 @@
 # source: https://retrododo.com/best-pc-engine-games/
-# how: Retro Dodo editorial top 20
+# how: Retro Dodo editorial ranking, PC Engine / TurboGrafx-16, top 19; numbered 1..20 in page order, best-first as printed
 Ninja Spirit
-Devil’s Crush
+Devil's Crush
 Splatterhouse
 Cadash
 Lords Of Thunder
@@ -14,9 +14,8 @@ Blazing Lazers
 Parasol Stars
 Galaga 88
 Magical Chase
-YS I & II
-Bonk 3: Bonk’s Big Adventure
+Bonk 3: Bonk's Big Adventure
 Keith Courage in Alpha Zones
 Neutopia II
 Gekisha Boy
-Bomberman ’94
+Bomberman '94

@@ -1,5 +1,5 @@
 # source: https://retrododo.com/best-neo-geo-pocket-games/
-# how: Retro Dodo editorial top 15
+# how: Retro Dodo editorial ranking, Neo Geo Pocket / Pocket Color, top 15; numbered 1..15 in page order, best-first as printed
 Rockman Battle & Fighters
 SNK VS Capcom: Cardfighters Clash
 Sonic the Hedgehog Pocket Adventure
@@ -8,7 +8,7 @@ SNK Vs Capcom: The Match of the Millennium
 The Last Blade: Beyond the Destiny
 Metal Slug: 1st Mission
 King Of Fighters: R2
-SNK Gals’ Fighters
+SNK Gals' Fighters
 Neo Turf Masters
 Pocket Tennis Color
 Crush Roller
