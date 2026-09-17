@@ -33,6 +33,7 @@ these look like to-do lists and are not.
 | [library-service.md](library-service.md) | **Design, now largely built —** see service-api.md. Replacing RomM — why it is the wrong shape for this library, and the 24 method/path pairs a drop-in has to answer |
 | [browser-emulation.md](browser-emulation.md) | **Planned, not built.** Playing a game in the web UI with EmulatorJS — which 10,700 of the 11,867 games are viable, where it hooks into the existing launch path, and why the saves must go through the sync that already exists |
 | [dos.md](dos.md) | **Tested by hand, not built.** DOS games from eXoDOS in DOSBox Pure — fetching a game by torrent index, packing its conf into the zip, and the three launch settings DOOM needed |
+| [win9x.md](win9x.md) | **Probed by hand, not built.** Windows 95 and 98 games the eXoWin9x way in DOSBox-X: a clean Windows on every boot, one disk per game, and the four changes the Mac needed before Red Alert would start |
 | [not-built.md](not-built.md) | **Designed, not built.** The arcade screensaver, the cartridge shelf, and the features a retro frontend normally has and this one does not. A menu, not a queue |
 
 ## The library
