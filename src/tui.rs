@@ -188,8 +188,9 @@ impl App {
     /// multi-disc game that had downloaded fine still reported itself missing.
     /// `launch::plan` resolves the directory to the playlist inside it.
     fn local_path(&self, rom: &RomRow) -> Option<PathBuf> {
-        let p = self.local_roms.join(&rom.platform_slug).join(&rom.fs_name);
-        (p.is_file() || p.is_dir()).then_some(p)
+        [self.local_roms.join(rom.folder()).join(&rom.fs_name), rom.legacy_path(&self.local_roms)]
+            .into_iter()
+            .find(|p| p.is_file() || p.is_dir())
     }
 
     fn apply_filter(&mut self) {
@@ -464,11 +465,12 @@ impl App {
                 Vec::new()
             };
 
+            let folder = rom.folder();
             let target = download::Target {
                 rom_id: rom.id,
                 members: &members,
                 fs_name: &rom.fs_name,
-                platform_slug: &rom.platform_slug,
+                folder: &folder,
                 expected_size: (rom.fs_size_bytes > 0).then_some(rom.fs_size_bytes as u64),
                 md5: rom.md5_hash.as_deref(),
                 sha1: rom.sha1_hash.as_deref(),

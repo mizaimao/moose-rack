@@ -448,10 +448,9 @@ export async function playInBrowser(rom) {
     return "Cancelled";
   }
 
-  // `/rom`, not `/api/roms/{id}/content/`. Two id spaces live in that process:
-  // /api/ numbers the scan it serves to clients, and the UI works in cache ids,
-  // which are negative for anything found on this machine. Building an /api/
-  // URL from a cache id 404s on every game, which is what it did.
+  // `/rom`, which serves the file from the cache row this page is showing. It
+  // was added when the page and `/api/` numbered games differently; they share
+  // one stable id now (see `moose_rack::gameid`).
   const url = urls.rom(rom.id);
 
   // Let the page settle first. The clicks that got here start view transitions,
