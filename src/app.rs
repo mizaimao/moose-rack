@@ -115,18 +115,14 @@ impl AppState {
     /// the state the desktop app does rather than an approximation of it.
     /// Rescan an ES-DE tree into the metadata cache the UI reads.
     ///
-    /// Three calls, and the CLI's `scan-esde` is the same three -- the rest of
-    /// that command is printing. Shared because the fold at the end is easy to
-    /// leave out and expensive to leave out: without `absorb_local_into_server`
-    /// the scan sits beside whatever a server sync already found and every game
-    /// both know about appears twice. That is 11,062 rows against 11,473, in a
-    /// library of about 11,500.
+    /// The same calls the CLI's `scan-esde` makes -- the rest of that command
+    /// is printing.
     ///
-    /// Returns the rows written and the rows folded.
+    /// Returns the rows written and how many of those the server also lists.
     pub fn rescan(&self, layout: &crate::esde::Layout) -> anyhow::Result<(usize, usize)> {
         let mut store = self.cache.lock().map_err(|e| anyhow::anyhow!("{e}"))?;
         let scan = scan_into(&mut store, layout, &self.map)?;
-        Ok((scan.written, scan.folded))
+        Ok((scan.written, scan.on_server))
     }
 
     /// Point the state at a library somewhere other than the config's.
@@ -275,7 +271,9 @@ impl AppState {
 /// What a scan put into the cache, and what it found on the way.
 pub struct Scan {
     pub written: usize,
-    pub folded: usize,
+    /// Of those, how many the server lists as well. The same row, since both
+    /// sides derive the id from the file's location.
+    pub on_server: usize,
     pub games: Vec<crate::esde::Game>,
     /// Systems with no platform mapping, so nothing from them was stored.
     pub skipped: Vec<String>,
@@ -310,8 +308,8 @@ pub fn scan_into(
         })
         .collect();
     store.name_platforms(&names)?;
-    let folded = store.absorb_local_into_server()?;
-    Ok(Scan { written, folded, games, skipped })
+    let on_server = store.on_both()?;
+    Ok(Scan { written, on_server, games, skipped })
 }
 
 #[cfg(test)]

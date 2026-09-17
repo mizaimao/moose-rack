@@ -72,8 +72,21 @@ CREATE TABLE IF NOT EXISTS plays (
     seconds    INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS plays_rom ON plays(rom_id);
+-- Play history recorded against ids from before `gameid`, waiting for the scan
+-- or sync that says which game each one was. See `adopt_stable_ids`.
+CREATE TABLE IF NOT EXISTS id_migration (
+    old_id        INTEGER PRIMARY KEY,
+    platform_slug TEXT,
+    fs_name       TEXT,
+    esde_system   TEXT,
+    rel_dir       TEXT
+);
 CREATE INDEX IF NOT EXISTS collections_grp ON collections(grp);
 "#;
+
+/// `(old id, platform slug, file name, system folder, relative dir)`, one row of
+/// `id_migration`.
+type Pending = (i64, String, String, Option<String>, Option<String>);
 
 pub struct Cache {
     conn: Connection,
@@ -180,7 +193,7 @@ const ROM_COLUMNS: &str = "id, platform_slug, COALESCE(NULLIF(name, ''), fs_name
 ///
 /// Only ever hides the container. The proper cure is rescanning on the RomM
 /// side so the server indexes the games individually.
-const NOT_A_WALKED_SHELF: &str = "NOT (roms.id > 0 AND COALESCE(roms.multi_file, 0)      AND EXISTS (SELECT 1 FROM roms AS l WHERE l.id < 0                    AND l.platform_slug = roms.platform_slug                    AND (l.rel_dir = roms.fs_name OR l.rel_dir LIKE roms.fs_name || '/%')))";
+const NOT_A_WALKED_SHELF: &str = "NOT (roms.from_server = 1 AND roms.from_scan = 0 AND COALESCE(roms.multi_file, 0)      AND EXISTS (SELECT 1 FROM roms AS l WHERE l.from_scan = 1                    AND l.platform_slug = roms.platform_slug                    AND (l.rel_dir = roms.fs_name OR l.rel_dir LIKE roms.fs_name || '/%')))";
 
 /// Whether a row is something to put on screen.
 ///
@@ -235,6 +248,29 @@ fn rom_from_row(r: &rusqlite::Row<'_>) -> rusqlite::Result<RomRow> {
 }
 
 impl RomRow {
+    /// Where this game belongs under a library's ROMs folder: its ES-DE system
+    /// folder and the path inside that, which is exactly what its id is taken
+    /// from. A download written here is found by the next scan as the same
+    /// game. Platform alone for a row from a server too old to say.
+    pub fn folder(&self) -> std::path::PathBuf {
+        match self.esde_system.as_deref().filter(|s| !s.is_empty()) {
+            Some(system) => {
+                let mut p = std::path::PathBuf::from(system);
+                for part in self.rel_dir.split(['/', '\\']).filter(|s| !s.is_empty()) {
+                    p.push(part);
+                }
+                p
+            }
+            None => std::path::PathBuf::from(&self.platform_slug),
+        }
+    }
+
+    /// Where a download used to go, `<platform>/<file>`. Still looked at, so a
+    /// game fetched by an older build counts as here.
+    pub fn legacy_path(&self, roms: &Path) -> std::path::PathBuf {
+        roms.join(&self.platform_slug).join(&self.fs_name)
+    }
+
     /// Server-side screenshot paths, newest schema first, falling back to the
     /// single-path column for caches written before the list was stored.
     pub fn screenshots(&self) -> Vec<String> {
@@ -277,10 +313,113 @@ impl Cache {
             // top, `Aftermarket` or `AdditionalRoms/Homebrew` below it — the
             // folders ES-DE walks into and the front ends now draw.
             ("rel_dir", "TEXT"),
+            // Who knows about this game: a scan of this machine's disk, the
+            // server, or both. The sign of the id used to say this -- local
+            // rows were negative -- and could only say one of the two, which
+            // is why the same game was stored twice and folded together
+            // afterwards. With one id per game it is one row with two flags.
+            ("from_scan", "INTEGER NOT NULL DEFAULT 0"),
+            ("from_server", "INTEGER NOT NULL DEFAULT 0"),
         ] {
             let _ = conn.execute(&format!("ALTER TABLE roms ADD COLUMN {col} {ty}"), []);
         }
-        Ok(Self { conn })
+        let cache = Self { conn };
+        cache.adopt_stable_ids()?;
+        Ok(cache)
+    }
+
+    /// Move a cache written under positional ids onto stable ones, once.
+    ///
+    /// Everything keyed by a game id here is either rebuilt by the next scan
+    /// and sync -- the rows, collection membership, platforms -- or is play
+    /// history, which nothing else holds. So the rebuildable part is emptied
+    /// and the sync watermark dropped so the next pull is a full one, and each
+    /// old id that has plays against it is written down with enough to find the
+    /// game again. `apply_id_migration` finishes the job once rows exist.
+    ///
+    /// Rows under old ids are cleared on every open, not only the first. An
+    /// older build still installed alongside -- the Flip, a copy of the app
+    /// not yet updated -- can sync into this file again and write positional
+    /// ids back into it, and those would sit here beside the stable rows for
+    /// the same games.
+    fn adopt_stable_ids(&self) -> Result<()> {
+        let floor = crate::gameid::FLOOR;
+        if self.meta_get("id_scheme").as_deref() == Some("stable") {
+            self.conn.execute(
+                "INSERT OR IGNORE INTO id_migration(old_id, platform_slug, fs_name, esde_system, rel_dir)
+                      SELECT id, platform_slug, fs_name, esde_system, rel_dir FROM roms
+                       WHERE id > -?1 AND id < ?1 AND id IN (SELECT rom_id FROM plays)",
+                [floor],
+            )?;
+            self.conn.execute("DELETE FROM roms WHERE id > -?1 AND id < ?1", [floor])?;
+            return Ok(());
+        }
+        self.conn.execute_batch(
+            "BEGIN;
+             INSERT OR IGNORE INTO id_migration(old_id, platform_slug, fs_name, esde_system, rel_dir)
+                  SELECT id, platform_slug, fs_name, esde_system, rel_dir FROM roms
+                   WHERE id IN (SELECT rom_id FROM plays);
+             DELETE FROM roms;
+             DELETE FROM collection_roms;
+             DELETE FROM collections;
+             DELETE FROM platforms;
+             DELETE FROM meta WHERE key = 'roms_updated_through';
+             INSERT OR REPLACE INTO meta(key, value) VALUES ('id_scheme', 'stable');
+             COMMIT;",
+        )?;
+        Ok(())
+    }
+
+    /// Point play history recorded under old ids at the games they were.
+    ///
+    /// By location where the old row knew it (a local scan always did), and by
+    /// platform and file name otherwise -- but only where that names exactly
+    /// one game, because it is not unique: `Astrohawk (World) (Unl).zip` is in
+    /// two folders of `sfc`. An old id that cannot be resolved yet is kept for
+    /// the next pass rather than guessed at.
+    pub fn apply_id_migration(&self) -> Result<usize> {
+        let pending: Vec<Pending> = {
+            let mut stmt = self.conn.prepare(
+                "SELECT old_id, platform_slug, fs_name, esde_system, rel_dir FROM id_migration",
+            )?;
+            stmt.query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?)))?
+                .collect::<std::result::Result<_, _>>()?
+        };
+        let mut moved = 0;
+        for (old, slug, fs_name, system, rel_dir) in pending {
+            let new: Option<i64> = match (&system, &rel_dir) {
+                (Some(system), Some(rel_dir)) => {
+                    let id = crate::gameid::game_id(system, rel_dir, &fs_name);
+                    self.conn
+                        .query_row("SELECT id FROM roms WHERE id = ?1", [id], |r| r.get(0))
+                        .ok()
+                }
+                _ => {
+                    let ids: Vec<i64> = self
+                        .conn
+                        .prepare("SELECT id FROM roms WHERE platform_slug = ?1 AND fs_name = ?2")?
+                        .query_map(params![slug, fs_name], |r| r.get(0))?
+                        .collect::<std::result::Result<_, _>>()?;
+                    (ids.len() == 1).then(|| ids[0])
+                }
+            };
+            if let Some(new) = new {
+                self.conn.execute("UPDATE plays SET rom_id = ?1 WHERE rom_id = ?2", params![new, old])?;
+                self.conn.execute("DELETE FROM id_migration WHERE old_id = ?1", [old])?;
+                moved += 1;
+            }
+        }
+        Ok(moved)
+    }
+
+    /// How many games this machine has on disk that the server also lists.
+    pub fn on_both(&self) -> Result<usize> {
+        let n: i64 = self.conn.query_row(
+            "SELECT COUNT(*) FROM roms WHERE from_scan = 1 AND from_server = 1",
+            [],
+            |r| r.get(0),
+        )?;
+        Ok(n as usize)
     }
 
     /// Replace the stored collections wholesale.
@@ -489,23 +628,38 @@ impl Cache {
     /// reconciling would be more code for no gain. Collections are left alone —
     /// they belong to RomM and mean nothing here.
     ///
-    /// Local rows are numbered **negatively**, and that is the whole reason the
-    /// two sources can share one table. They used to be numbered positionally
-    /// from 1, straight into RomM's own id space, so a sync landing on one of
-    /// those ids overwrote another game's row — which is why the server upsert
-    /// used to blank `local_path` and `esde_system` on every write. Nothing
-    /// collides now, so nothing has to be blanked, and a game found on disk
-    /// keeps knowing where it is.
+    /// Every game gets its stable id (see `gameid`), so a game the server also
+    /// lists is the same row, not a second one to be folded in later. The scan
+    /// answers for what only the disk knows -- where the file is, which system
+    /// folder named it, the folders above it -- and takes the description only
+    /// for games the server does not describe.
+    ///
+    /// Games no longer on disk lose the scan's claim: the row goes if the
+    /// server does not list it either, and otherwise stays with no local path.
     pub fn replace_from_esde(&mut self, games: &[crate::esde::Game]) -> Result<usize> {
         let tx = self.conn.transaction()?;
-        // Only ours. A server sync's rows are not this function's to remove.
-        tx.execute("DELETE FROM roms WHERE id < 0", [])?;
+        tx.execute("UPDATE roms SET from_scan = 0", [])?;
+        let mut written = 0usize;
         {
             let mut ins = tx.prepare(
                 "INSERT INTO roms (id, platform_slug, name, fs_name, fs_size_bytes,
                                    summary, meta_json, local_path, esde_system, multi_file,
-                                   rel_dir)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+                                   rel_dir, from_scan)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, 1)
+                 ON CONFLICT(id) DO UPDATE SET
+                    local_path    = excluded.local_path,
+                    esde_system   = excluded.esde_system,
+                    rel_dir       = excluded.rel_dir,
+                    multi_file    = excluded.multi_file,
+                    fs_size_bytes = excluded.fs_size_bytes,
+                    from_scan     = 1,
+                    -- The server's description where it gave one. Its rows
+                    -- carry artwork paths and collection membership that a
+                    -- gamelist does not, so a scan must not overwrite them.
+                    platform_slug = CASE WHEN roms.from_server = 1 THEN roms.platform_slug ELSE excluded.platform_slug END,
+                    name          = CASE WHEN roms.from_server = 1 THEN roms.name ELSE excluded.name END,
+                    summary       = CASE WHEN roms.from_server = 1 THEN COALESCE(roms.summary, excluded.summary) ELSE excluded.summary END,
+                    meta_json     = CASE WHEN roms.from_server = 1 THEN COALESCE(roms.meta_json, excluded.meta_json) ELSE excluded.meta_json END",
             )?;
             // OR IGNORE, not OR REPLACE: a platform the server already knows
             // about keeps its own id, name and count. This only has to make
@@ -515,11 +669,22 @@ impl Cache {
                  VALUES (?1, ?2, ?3, 0)",
             )?;
             let mut counts: std::collections::BTreeMap<&str, i64> = Default::default();
+            let mut seen: std::collections::HashMap<i64, &crate::esde::Game> = Default::default();
 
-            for (i, g) in games.iter().enumerate() {
-                // Negative, and one apart, so no local row can ever land on a
-                // RomM id. See the note above.
-                let id = -(i as i64 + 1);
+            for g in games {
+                let id = crate::gameid::game_id(&g.system, &g.rel_dir, &g.fs_name);
+                // One in a hundred million for a library this size, and loud
+                // when it happens: the second game would otherwise overwrite
+                // the first's row and nobody would know which went missing.
+                if let Some(first) = seen.get(&id) {
+                    eprintln!(
+                        "two games share id {id}: {} and {} -- only the first is listed",
+                        crate::gameid::key(&first.system, &first.rel_dir, &first.fs_name),
+                        crate::gameid::key(&g.system, &g.rel_dir, &g.fs_name),
+                    );
+                    continue;
+                }
+                seen.insert(id, g);
                 let meta = serde_json::json!({
                     "genres": g.genres,
                     "player_count": g.players,
@@ -542,18 +707,18 @@ impl Cache {
                     i64::from(g.path.is_dir()),
                     g.rel_dir,
                 ])?;
+                written += 1;
                 *counts.entry(g.platform_slug.as_str()).or_default() += 1;
             }
-            // Platform ids below anything already stored, for the same reason
-            // the rows are negative.
-            let mut next: i64 = tx
-                .query_row("SELECT COALESCE(MIN(id), 0) FROM platforms", [], |r| r.get(0))
-                .unwrap_or(0);
             for slug in counts.keys() {
-                next -= 1;
-                plat.execute(params![next, slug, slug])?;
+                plat.execute(params![crate::gameid::platform_id(slug), slug, slug])?;
             }
         }
+        tx.execute("DELETE FROM roms WHERE from_scan = 0 AND from_server = 0", [])?;
+        tx.execute(
+            "UPDATE roms SET local_path = NULL WHERE from_scan = 0 AND from_server = 1",
+            [],
+        )?;
         // The count the grid shows is how many games are known, from either
         // source, so it is counted rather than assumed. Only the systems this
         // scan touched: a platform with nothing local keeps whatever the server
@@ -572,7 +737,8 @@ impl Cache {
             }
         }
         tx.commit()?;
-        Ok(games.len())
+        self.apply_id_migration()?;
+        Ok(written)
     }
 
     pub fn collection_count(&self) -> Result<i64> {
@@ -956,59 +1122,6 @@ impl Cache {
         Ok(rows)
     }
 
-    /// Fold each locally scanned game into its server row, where there is one.
-    ///
-    /// The two halves of the library are found independently — one by walking
-    /// the disk, one by asking RomM — and the same game will usually be in
-    /// both. Without this it appears twice in the grid.
-    ///
-    /// **Matched on platform and file name**, which is the trade Frank chose
-    /// over hashing. It costs nothing and is right whenever both sides were
-    /// named by the same tools, which is the normal case for a library the same
-    /// person built. It is wrong when the names differ — `Sonic (USA).md`
-    /// against `Sonic (USA) (Rev 1).md` — and then the game is listed twice
-    /// rather than hidden, which is the failure worth having: a duplicate is
-    /// visible and fixable, a silently dropped game is neither.
-    ///
-    /// The server row wins and keeps its id, because it carries the artwork,
-    /// the summary and the collection membership. What it gains is the two
-    /// things only the disk knows: where the file is, and which ES-DE system
-    /// named it — that second one decides which artwork folder is read.
-    ///
-    /// Idempotent, and meant to run after either pass.
-    pub fn absorb_local_into_server(&mut self) -> Result<usize> {
-        let tx = self.conn.transaction()?;
-        // Give the server row the path first — deleting the local row before
-        // copying would lose the only thing this whole step exists to keep.
-        let folded = tx.execute(
-            "UPDATE roms AS server
-                SET local_path  = (SELECT l.local_path  FROM roms AS l
-                                    WHERE l.id < 0
-                                      AND l.platform_slug = server.platform_slug
-                                      AND l.fs_name       = server.fs_name),
-                    esde_system = (SELECT l.esde_system FROM roms AS l
-                                    WHERE l.id < 0
-                                      AND l.platform_slug = server.platform_slug
-                                      AND l.fs_name       = server.fs_name)
-              WHERE server.id > 0
-                AND EXISTS (SELECT 1 FROM roms AS l
-                             WHERE l.id < 0
-                               AND l.platform_slug = server.platform_slug
-                               AND l.fs_name       = server.fs_name)",
-            [],
-        )?;
-        tx.execute(
-            "DELETE FROM roms WHERE id < 0 AND EXISTS (
-                 SELECT 1 FROM roms AS s
-                  WHERE s.id > 0
-                    AND s.platform_slug = roms.platform_slug
-                    AND s.fs_name       = roms.fs_name)",
-            [],
-        )?;
-        tx.commit()?;
-        Ok(folded)
-    }
-
     /// Drop cached roms the server no longer has.
     ///
     /// Incremental sync only ever learns about additions and changes, so
@@ -1016,11 +1129,9 @@ impl Cache {
     /// multi-disc playlist stubs were replaced by folder ROMs and both showed
     /// up in the UI.
     ///
-    /// Server rows only, which is what `id > 0` means here. A locally scanned
-    /// game is not missing because RomM has never heard of it — that is the
-    /// ordinary case for a library that exists on disk and not on the server,
-    /// and without the guard the first sync after a scan would delete every one
-    /// of them.
+    /// Only the server's claim is withdrawn. A game this machine also found on
+    /// disk stays, with `from_server` cleared; only a row the server alone knew
+    /// about is deleted.
     pub fn prune_missing(&mut self, live_ids: &[i64]) -> Result<usize> {
         if live_ids.is_empty() {
             return Ok(0);
@@ -1036,8 +1147,14 @@ impl Cache {
                 stmt.execute([id])?;
             }
         }
+        tx.execute(
+            "UPDATE roms SET from_server = 0
+              WHERE from_server = 1 AND from_scan = 1 AND id NOT IN (SELECT id FROM live_ids)",
+            [],
+        )?;
         let removed = tx.execute(
-            "DELETE FROM roms WHERE id > 0 AND id NOT IN (SELECT id FROM live_ids)",
+            "DELETE FROM roms
+              WHERE from_server = 1 AND from_scan = 0 AND id NOT IN (SELECT id FROM live_ids)",
             [],
         )?;
         tx.commit()?;
@@ -1058,9 +1175,10 @@ impl Cache {
                                           cover_small_path, summary, meta_json,
                                           alt_names_json, regions_json,
                                           manual_path, youtube_id, multi_file,
-                                          last_played)
+                                          last_played, esde_system, rel_dir,
+                                          from_server)
                          VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,
-                                ?14,?15,?16,?17,?18,?19,?20,?21)
+                                ?14,?15,?16,?17,?18,?19,?20,?21,?22,?23,1)
                          ON CONFLICT(id) DO UPDATE SET
                             platform_slug = excluded.platform_slug,
                             name          = excluded.name,
@@ -1081,18 +1199,15 @@ impl Cache {
                             manual_path    = excluded.manual_path,
                             youtube_id     = excluded.youtube_id,
                             multi_file     = excluded.multi_file,
-                            -- Both describe a file found on this machine, and
-                            -- a server pull knows nothing about either — so it
-                            -- must not answer for them. COALESCE keeps what is
-                            -- there, because `excluded` carries NULL for both.
-                            --
-                            -- These used to be blanked outright, because local
-                            -- rows were numbered from 1 into RomM's own id
-                            -- space and a sync could land on one. Local rows
-                            -- are negative now, so nothing collides and
-                            -- blanking would only lose the path to a game the
-                            -- user actually has.
+                            -- Where the server keeps the file. The same values
+                            -- the id is derived from, so they agree with a scan
+                            -- of the same library by construction. COALESCE for
+                            -- a server too old to send them.
                             esde_system    = COALESCE(excluded.esde_system, roms.esde_system),
+                            rel_dir        = COALESCE(excluded.rel_dir, roms.rel_dir),
+                            from_server    = 1,
+                            -- Only a scan of this machine knows this. The
+                            -- server sends NULL, and COALESCE keeps the path.
                             local_path     = COALESCE(excluded.local_path, roms.local_path),
                             -- Only when the server has one. An incremental
                             -- pull can return a row with no per-user block,
@@ -1148,6 +1263,17 @@ impl Cache {
             if page.items.is_empty() {
                 break;
             }
+            // A server still numbering games by position. Its ids move when
+            // its library changes and would land on nothing here, so nothing
+            // is taken from it; the fix is on the server.
+            if let Some(old) = page.items.iter().find(|r| crate::gameid::is_legacy(r.id)) {
+                anyhow::bail!(
+                    "the server numbers games the old way (it sent id {} for {}); \
+                     update moose-service on it before syncing",
+                    old.id,
+                    old.fs_name
+                );
+            }
             let n = page.items.len();
             {
                 let tx = self.conn.transaction()?;
@@ -1166,7 +1292,14 @@ impl Cache {
                     // deleted after the last sync arrives as an *update*, not as
                     // an absence.
                     if rom.missing_from_fs {
-                        tx.execute("DELETE FROM roms WHERE id = ?1", params![rom.id])?;
+                        tx.execute(
+                            "UPDATE roms SET from_server = 0 WHERE id = ?1 AND from_scan = 1",
+                            params![rom.id],
+                        )?;
+                        tx.execute(
+                            "DELETE FROM roms WHERE id = ?1 AND from_scan = 0",
+                            params![rom.id],
+                        )?;
                         continue;
                     }
                     tx.execute(
@@ -1193,6 +1326,8 @@ impl Cache {
                             rom.youtube_video_id,
                             rom.has_multiple_files as i64,
                             rom.rom_user.as_ref().and_then(|u| u.last_played.clone()),
+                            rom.esde_system,
+                            rom.rel_dir,
                         ],
                     )?;
                 }
@@ -1208,6 +1343,7 @@ impl Cache {
         if !high.is_empty() {
             self.meta_set("roms_updated_through", &high)?;
         }
+        self.apply_id_migration()?;
         Ok((platforms.len(), upserted, since.is_some()))
     }
 }
@@ -1380,74 +1516,118 @@ mod tests {
         }
     }
 
-    /// A local scan and a RomM sync must not share an id space.
-    ///
-    /// They used to. `replace_from_esde` numbered its rows positionally — 1, 2,
-    /// 3 — straight into the server's own ids, so syncing after a scan landed
-    /// the upsert on a row holding another game entirely. It overwrote
-    /// `platform_slug` and left the stale `esde_system` behind; that column
-    /// picks the artwork, so a Super Famicom game quietly rendered as a PS2
-    /// one. On a real library 1,253 of 9,160 rows were wrong this way.
-    ///
-    /// The fix then was to blank both columns on every server write, which cost
-    /// a locally scanned game the path to its own file. The fix now is that
-    /// local rows are negative, so there is nothing to collide with and nothing
-    /// to blank.
-    #[test]
-    fn a_local_scan_never_lands_on_a_server_id() {
-        let mut c = cache("local-ids-negative");
-        c.replace_from_esde(&[
-            local_game("ps2", "ps2", "Some PS2 Game", "g.iso"),
-            local_game("snes", "snes", "Chrono Trigger", "ct.sfc"),
-        ])
-        .unwrap();
+    /// A row the way a server sync writes it: through the real upsert, with a
+    /// server's stable id and location.
+    fn server_row(c: &Cache, id: i64, slug: &str, name: &str, file: &str, system: &str, rel: &str) {
+        c.conn
+            .execute(
+                Cache::ROM_UPSERT,
+                params![
+                    id, slug, name, file, 512i64,
+                    None::<String>, None::<String>, None::<String>, None::<String>,
+                    Some("/cover.png"), None::<String>, None::<String>, None::<String>,
+                    Some("From the server."), None::<String>, None::<String>, None::<String>,
+                    None::<String>, None::<String>, 0i64, None::<String>,
+                    Some(system), Some(rel),
+                ],
+            )
+            .unwrap();
+    }
 
-        let ids: Vec<i64> = c
-            .conn
+    fn ids(c: &Cache) -> Vec<i64> {
+        c.conn
             .prepare("SELECT id FROM roms ORDER BY id")
             .unwrap()
             .query_map([], |r| r.get(0))
             .unwrap()
             .collect::<Result<_, _>>()
-            .unwrap();
-        assert!(
-            ids.iter().all(|id| *id < 0),
-            "local rows must be negative, got {ids:?}"
-        );
+            .unwrap()
+    }
+
+    fn flags(c: &Cache, id: i64) -> (i64, i64) {
+        c.conn
+            .query_row("SELECT from_scan, from_server FROM roms WHERE id = ?1", [id], |r| {
+                Ok((r.get(0)?, r.get(1)?))
+            })
+            .unwrap()
+    }
+
+    /// A scanned game's id is the one every other machine derives for the same
+    /// file, not a position in this scan.
+    #[test]
+    fn a_scanned_game_gets_its_stable_id() {
+        let mut c = cache("stable-scan-ids");
+        c.replace_from_esde(&[
+            local_game("ps2", "ps2", "Some PS2 Game", "g.iso"),
+            local_game("snes", "snes", "Chrono Trigger", "ct.sfc"),
+        ])
+        .unwrap();
+        let mut want = vec![
+            crate::gameid::game_id("ps2", "", "g.iso"),
+            crate::gameid::game_id("snes", "", "ct.sfc"),
+        ];
+        want.sort();
+        assert_eq!(ids(&c), want);
+    }
+
+    /// Two files with one name in different folders are two games. Keyed on
+    /// platform and file name they were one, and the second scan overwrote the
+    /// first; both of these are in the real library.
+    #[test]
+    fn the_same_name_in_two_folders_is_two_rows() {
+        let mut c = cache("same-name-two-folders");
+        let mut a = local_game("sfc", "sfc", "Astrohawk", "Astrohawk (World) (Unl).zip");
+        a.rel_dir = "AdditionalRoms/Public Domain".into();
+        let mut b = a.clone();
+        b.rel_dir = "AdditionalRoms/Homebrew".into();
+        c.replace_from_esde(&[a, b]).unwrap();
+        assert_eq!(c.rom_count().unwrap(), 2);
+    }
+
+    /// A game downloaded to where `folder` says is the same game, with the
+    /// same id, when this machine next scans. Downloads used to go to
+    /// `<platform>/<file>`, which dropped the system folder and every folder
+    /// inside it: the game came back under a different id, and two files with
+    /// one name in different folders landed on the same path.
+    #[test]
+    fn a_download_is_found_again_under_the_servers_id() {
+        let dir = std::env::temp_dir().join("moose-rack-cache-test-download-home");
+        std::fs::remove_dir_all(&dir).ok();
+        let (system, rel, file) = ("sfc", "AdditionalRoms/Homebrew", "Astrohawk (World) (Unl).zip");
+        let server_id = crate::gameid::game_id(system, rel, file);
+
+        let c = cache("download-home");
+        server_row(&c, server_id, "snes", "Astrohawk", file, system, rel);
+        let row = c.rom_by_id(server_id).unwrap().unwrap();
+        assert_eq!(row.folder(), Path::new("sfc/AdditionalRoms/Homebrew"));
+
+        // Put the file where a download would, then scan the tree.
+        let roms = dir.join("ROMs");
+        std::fs::create_dir_all(roms.join(row.folder())).unwrap();
+        std::fs::write(roms.join(row.folder()).join(file), b"rom").unwrap();
+        let layout = crate::esde::Layout::new(&dir, Some(&roms));
+        let (games, _) = crate::esde::scan(&layout, &crate::coremap::CoreMap::embedded()).unwrap();
+        let found = games.iter().find(|g| g.fs_name == file).expect("the scan finds the download");
+        assert_eq!(crate::gameid::game_id(&found.system, &found.rel_dir, &found.fs_name), server_id);
+    }
+
+    #[test]
+    fn a_row_from_an_older_server_falls_back_to_its_platform() {
+        let c = cache("folder-fallback");
+        add_rom(&c, crate::gameid::game_id("x", "", "g.sfc"), "snes", "G", "g.sfc");
+        let row = c.rom_by_id(crate::gameid::game_id("x", "", "g.sfc")).unwrap().unwrap();
+        assert_eq!(row.folder(), Path::new("snes"));
     }
 
     /// A server sync must not blank the path to a game that is on this disk.
-    ///
-    /// The counterpart to the test above: now that ids cannot collide, a pull
-    /// that knows nothing about local files must leave them alone rather than
-    /// answering NULL for them.
     #[test]
     fn a_sync_leaves_a_local_path_where_it_found_one() {
-        let c = cache("sync-keeps-local-path");
-        add_platform(&c, 1, "snes", "Super Nintendo");
-        c.conn
-            .execute(
-                "INSERT INTO roms(id, platform_slug, name, fs_name, fs_size_bytes, \
-                 esde_system, local_path) \
-                 VALUES(7,'snes','Chrono Trigger','ct.sfc',9,'snes','/ES-DE/ROMs/snes/ct.sfc')",
-                [],
-            )
-            .unwrap();
+        let mut c = cache("sync-keeps-local-path");
+        c.replace_from_esde(&[local_game("snes", "snes", "Chrono Trigger", "ct.sfc")]).unwrap();
+        let id = crate::gameid::game_id("snes", "", "ct.sfc");
+        server_row(&c, id, "snes", "Chrono Trigger", "ct.sfc", "snes", "");
 
-        c.conn
-            .execute(
-                Cache::ROM_UPSERT,
-                params![
-                    7i64, "snes", "Chrono Trigger", "ct.sfc", 512i64,
-                    None::<String>, None::<String>, None::<String>, None::<String>,
-                    None::<String>, None::<String>, None::<String>, None::<String>,
-                    None::<String>, None::<String>, None::<String>, None::<String>,
-                    None::<String>, None::<String>, 0i64, None::<String>,
-                ],
-            )
-            .unwrap();
-
-        let r = c.rom_by_id(7).unwrap().expect("the upserted row");
+        let r = c.rom_by_id(id).unwrap().expect("the upserted row");
         assert_eq!(
             r.local_path.as_deref(),
             Some("/ES-DE/ROMs/snes/ct.sfc"),
@@ -1456,51 +1636,174 @@ mod tests {
         assert_eq!(r.esde_system.as_deref(), Some("snes"));
     }
 
-    /// The same game found twice must end up in the grid once.
-    ///
-    /// Matched on platform and file name. The server row survives because it
-    /// carries the artwork and the summary; what it gains is the path and the
-    /// ES-DE system, which only the disk knows.
+    /// The same game found on disk and on the server is one row, in either
+    /// order, with no folding step. Both sides derive the id from where the
+    /// file is. The server's description wins, and the disk supplies the path.
     #[test]
     fn a_game_found_on_disk_and_on_the_server_is_one_game() {
-        let mut c = cache("absorb-match");
-        add_platform(&c, 1, "snes", "Super Nintendo");
-        add_rom(&c, 500, "snes", "Chrono Trigger", "ct.sfc");
-        c.replace_from_esde(&[local_game("snes", "snes", "Chrono Trigger", "ct.sfc")])
-            .unwrap();
-        assert_eq!(c.rom_count().unwrap(), 2, "both halves are present first");
+        let id = crate::gameid::game_id("snes", "", "ct.sfc");
 
-        assert_eq!(c.absorb_local_into_server().unwrap(), 1);
-        assert_eq!(c.rom_count().unwrap(), 1, "and one game afterwards");
+        let mut scan_first = cache("one-game-scan-first");
+        scan_first.replace_from_esde(&[local_game("snes", "snes", "CT (gamelist)", "ct.sfc")]).unwrap();
+        server_row(&scan_first, id, "snes", "Chrono Trigger", "ct.sfc", "snes", "");
 
-        let r = c.rom_by_id(500).unwrap().expect("the server row survives");
-        assert_eq!(
-            r.local_path.as_deref(),
-            Some("/ES-DE/ROMs/snes/ct.sfc"),
-            "having gained the one thing only the disk knew"
-        );
+        let mut sync_first = cache("one-game-sync-first");
+        server_row(&sync_first, id, "snes", "Chrono Trigger", "ct.sfc", "snes", "");
+        sync_first.replace_from_esde(&[local_game("snes", "snes", "CT (gamelist)", "ct.sfc")]).unwrap();
+
+        for c in [&scan_first, &sync_first] {
+            assert_eq!(c.rom_count().unwrap(), 1);
+            assert_eq!(flags(c, id), (1, 1));
+            let r = c.rom_by_id(id).unwrap().unwrap();
+            assert_eq!(r.name, "Chrono Trigger", "the server names it");
+            assert_eq!(r.cover_path.as_deref(), Some("/cover.png"), "and keeps its artwork");
+            assert_eq!(r.local_path.as_deref(), Some("/ES-DE/ROMs/snes/ct.sfc"), "the disk says where");
+        }
     }
 
-    /// A game on this disk that the server has never heard of must survive
-    /// both a sync and its pruning.
-    ///
-    /// This is the ordinary case for a library built locally, and the whole
-    /// point of scanning before asking the server. `prune_missing` deletes what
-    /// the server did not list, which without a guard is every local game.
+    /// What the server stops listing and what the disk stops holding are
+    /// separate claims. Withdrawing one leaves a game the other still vouches
+    /// for; a game nobody vouches for goes.
     #[test]
-    fn a_local_only_game_survives_the_server() {
-        let mut c = cache("local-only-survives");
-        add_platform(&c, 1, "snes", "Super Nintendo");
-        add_rom(&c, 500, "snes", "A Server Game", "server.sfc");
-        c.replace_from_esde(&[local_game("snes", "snes", "Mine Alone", "mine.sfc")])
+    fn each_side_withdraws_only_its_own_claim() {
+        let mut c = cache("claims");
+        let both = crate::gameid::game_id("snes", "", "both.sfc");
+        let server_only = crate::gameid::game_id("snes", "", "server.sfc");
+        server_row(&c, both, "snes", "Both", "both.sfc", "snes", "");
+        server_row(&c, server_only, "snes", "Server", "server.sfc", "snes", "");
+        c.replace_from_esde(&[
+            local_game("snes", "snes", "Both", "both.sfc"),
+            local_game("snes", "snes", "Mine", "mine.sfc"),
+        ])
+        .unwrap();
+        let mine = crate::gameid::game_id("snes", "", "mine.sfc");
+
+        // The server now lists nothing of these.
+        c.prune_missing(&[crate::gameid::game_id("snes", "", "elsewhere.sfc")]).unwrap();
+        assert_eq!(flags(&c, both), (1, 0), "still on disk");
+        assert_eq!(flags(&c, mine), (1, 0), "never on the server");
+        assert!(c.rom_by_id(server_only).unwrap().is_none(), "nobody vouches for it");
+
+        // And the disk loses one.
+        c.replace_from_esde(&[local_game("snes", "snes", "Mine", "mine.sfc")]).unwrap();
+        assert!(c.rom_by_id(both).unwrap().is_none());
+        assert_eq!(c.rom_count().unwrap(), 1);
+    }
+
+    /// A game the server still lists keeps its row when it leaves this disk,
+    /// but stops claiming a local file.
+    #[test]
+    fn leaving_the_disk_drops_the_path_not_the_game() {
+        let mut c = cache("left-disk");
+        let id = crate::gameid::game_id("snes", "", "ct.sfc");
+        server_row(&c, id, "snes", "Chrono Trigger", "ct.sfc", "snes", "");
+        c.replace_from_esde(&[local_game("snes", "snes", "CT", "ct.sfc")]).unwrap();
+        c.replace_from_esde(&[]).unwrap();
+        let r = c.rom_by_id(id).unwrap().expect("still listed by the server");
+        assert_eq!(r.local_path, None);
+        assert_eq!(flags(&c, id), (0, 1));
+    }
+
+    /// Play history is the one thing in this cache nothing else has, so moving
+    /// to stable ids must carry it across rather than start the history over.
+    #[test]
+    fn play_history_survives_the_move_to_stable_ids() {
+        let dir = std::env::temp_dir().join("moose-rack-cache-test-adopt");
+        std::fs::remove_dir_all(&dir).ok();
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("c.sqlite3");
+        {
+            // A cache as the old build left it: a local row at -3 and a server
+            // row at 42, each played, and no scheme marker.
+            let c = Cache::open(&path).unwrap();
+            c.conn.execute_batch(
+                "DELETE FROM meta WHERE key = 'id_scheme';
+                 INSERT INTO roms(id, platform_slug, name, fs_name, esde_system, rel_dir)
+                      VALUES (-3, 'snes', 'CT', 'ct.sfc', 'snes', '');
+                 INSERT INTO roms(id, platform_slug, name, fs_name)
+                      VALUES (42, 'gba', 'Kirby', 'kirby.gba');
+                 INSERT INTO plays(rom_id, started_at, seconds) VALUES (-3, '2026-01-01', 600);
+                 INSERT INTO plays(rom_id, started_at, seconds) VALUES (42, '2026-01-02', 300);
+                 INSERT INTO plays(rom_id, started_at, seconds) VALUES (42, '2026-01-03', 60);",
+            ).unwrap();
+        }
+        let mut c = Cache::open(&path).unwrap();
+        assert_eq!(c.rom_count().unwrap(), 0, "rows are rebuilt, not kept under old ids");
+
+        // The scan resolves the local game by location, the sync the other by
+        // platform and name.
+        c.replace_from_esde(&[local_game("snes", "snes", "CT", "ct.sfc")]).unwrap();
+        let kirby = crate::gameid::game_id("gba", "", "kirby.gba");
+        server_row(&c, kirby, "gba", "Kirby", "kirby.gba", "gba", "");
+        c.apply_id_migration().unwrap();
+
+        let plays = |id: i64| -> i64 {
+            c.conn.query_row("SELECT COUNT(*) FROM plays WHERE rom_id = ?1", [id], |r| r.get(0)).unwrap()
+        };
+        assert_eq!(plays(crate::gameid::game_id("snes", "", "ct.sfc")), 1);
+        assert_eq!(plays(kirby), 2);
+        let left: i64 = c.conn.query_row("SELECT COUNT(*) FROM id_migration", [], |r| r.get(0)).unwrap();
+        assert_eq!(left, 0, "nothing left waiting");
+
+        // And it only happens once.
+        drop(c);
+        let c = Cache::open(&path).unwrap();
+        assert_eq!(c.rom_count().unwrap(), 2, "a second open does not wipe it again");
+    }
+
+    /// An old build syncing into a cache that has already moved over writes
+    /// positional ids again. The next open clears them, and keeps their plays
+    /// waiting to be matched.
+    #[test]
+    fn rows_an_old_build_writes_later_are_cleared_on_open() {
+        let dir = std::env::temp_dir().join("moose-rack-cache-test-late-legacy");
+        std::fs::remove_dir_all(&dir).ok();
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("c.sqlite3");
+        let stable = crate::gameid::game_id("snes", "", "ct.sfc");
+        {
+            let c = Cache::open(&path).unwrap();
+            server_row(&c, stable, "snes", "CT", "ct.sfc", "snes", "");
+            c.conn.execute_batch(
+                "INSERT INTO roms(id, platform_slug, name, fs_name) VALUES (12, 'snes', 'CT', 'ct.sfc');
+                 INSERT INTO plays(rom_id, started_at, seconds) VALUES (12, '2026-02-01', 90);",
+            ).unwrap();
+        }
+        let c = Cache::open(&path).unwrap();
+        assert_eq!(ids(&c), vec![stable], "the positional row is gone, the stable one kept");
+        c.apply_id_migration().unwrap();
+        let on_stable: i64 = c.conn
+            .query_row("SELECT COUNT(*) FROM plays WHERE rom_id = ?1", [stable], |r| r.get(0))
             .unwrap();
+        assert_eq!(on_stable, 1, "its play went to the game it was");
+    }
 
-        // Nothing matches, so nothing is folded away.
-        assert_eq!(c.absorb_local_into_server().unwrap(), 0);
-        // The server lists only its own game.
-        c.prune_missing(&[500]).unwrap();
-
-        assert_eq!(c.rom_count().unwrap(), 2, "the local game is still here");
+    /// An old id that names more than one game is left waiting, not guessed.
+    #[test]
+    fn an_ambiguous_old_id_is_not_guessed() {
+        let dir = std::env::temp_dir().join("moose-rack-cache-test-ambiguous");
+        std::fs::remove_dir_all(&dir).ok();
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("c.sqlite3");
+        {
+            let c = Cache::open(&path).unwrap();
+            c.conn.execute_batch(
+                "DELETE FROM meta WHERE key = 'id_scheme';
+                 INSERT INTO roms(id, platform_slug, name, fs_name)
+                      VALUES (7, 'sfc', 'Astrohawk', 'Astrohawk (World) (Unl).zip');
+                 INSERT INTO plays(rom_id, started_at, seconds) VALUES (7, '2026-01-01', 60);",
+            ).unwrap();
+        }
+        let mut c = Cache::open(&path).unwrap();
+        let mut a = local_game("sfc", "sfc", "Astrohawk", "Astrohawk (World) (Unl).zip");
+        a.rel_dir = "AdditionalRoms/Public Domain".into();
+        let mut b = a.clone();
+        b.rel_dir = "AdditionalRoms/Homebrew".into();
+        c.replace_from_esde(&[a, b]).unwrap();
+        let waiting: i64 = c.conn.query_row("SELECT COUNT(*) FROM id_migration", [], |r| r.get(0)).unwrap();
+        assert_eq!(waiting, 1);
+        let moved: i64 = c.conn.query_row("SELECT COUNT(*) FROM plays WHERE rom_id <> 7", [], |r| r.get(0)).unwrap();
+        assert_eq!(moved, 0);
     }
 
     /// Every column read by position, checked in one place.
@@ -1572,11 +1875,13 @@ mod tests {
         assert_eq!(got[0].2, 3);
     }
 
+    /// A row as a server sync leaves it. Marked as the server's, because the
+    /// pruning and ownership rules act on that flag and not on the id.
     fn add_rom(c: &Cache, id: i64, slug: &str, name: &str, fs_name: &str) {
         c.conn
             .execute(
-                "INSERT INTO roms(id, platform_slug, name, fs_name, fs_size_bytes)
-                 VALUES(?1,?2,?3,?4,0)",
+                "INSERT INTO roms(id, platform_slug, name, fs_name, fs_size_bytes, from_server)
+                 VALUES(?1,?2,?3,?4,0,1)",
                 params![id, slug, name, fs_name],
             )
             .unwrap();

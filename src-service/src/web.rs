@@ -363,12 +363,10 @@ pub async fn media(
 
 /// One game's bytes, by the id the web UI actually holds.
 ///
-/// Not `/api/roms/{id}/content/`, and the difference is the whole reason this
-/// route exists. There are two id spaces in this process: `/api/` numbers the
-/// scan it serves to clients, one-based and positive, while the UI works in
-/// cache ids, which are negative for rows found on this machine. The player
-/// built an `/api/` URL out of a cache id and got a 404 for every game --
-/// correctly, because that row does not exist in that numbering.
+/// It began as a workaround for two id spaces, positional `/api/` ids against
+/// negative cache ids, when an `/api/` URL built from a cache id 404ed on every
+/// game. Both are the stable id from `gameid` now; this route stays because it
+/// serves the file straight from the cache row the page is showing.
 ///
 /// Resolved through `commands::row_path`, which is what the desktop uses to
 /// find the same file, so a game the app can launch is a game this can serve.
@@ -593,12 +591,11 @@ mod tests {
 
     /// The player must not build an `/api/` URL out of a cache id.
     ///
-    /// Two id spaces share this process: `/api/roms/{id}` numbers the scan it
-    /// serves to clients (one-based, positive) and the UI works in cache ids,
-    /// which are negative for rows found on this machine. The first version
-    /// built `/api/roms/-10793/content/...` and got a 404 for every game --
-    /// correctly, since no such row exists in that numbering. Caught by asking
-    /// the live server for the URL rather than by reading the code.
+    /// When this was written, two id spaces shared this process: `/api/roms/{id}`
+    /// numbered the scan by position and the UI worked in negative cache ids,
+    /// so `/api/roms/-10793/content/...` 404ed for every game. Both now use the
+    /// stable id from `gameid`, but `/rom` is still the route the player uses:
+    /// it serves the file straight from the cache row, folder games included.
     #[test]
     fn the_player_fetches_by_cache_id_not_by_api_id() {
         // The URL moved to `ejs-base.js` when the desktop got its own way of

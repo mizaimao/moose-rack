@@ -751,3 +751,313 @@ mod state_tests {
         assert_eq!(s.read(999), None);
     }
 }
+
+/// Moving saves and states stored under positional game ids to stable ones.
+///
+/// Until `gameid`, a game's id was its position in the scan, and saves live on
+/// disk at `<saves>/<rom_id>/`. Checked on dev.lan on 2026-09-17: all seven
+/// saves filed under server ids sat under ids that by then named other games,
+/// Chrono Trigger's under a Game Boy Color racer. Nothing had been overwritten
+/// yet; the next sync would have paired them with the wrong games.
+///
+/// A save carries its game's name, because every emulator names it after the
+/// ROM file: `Chrono Trigger (USA).srm`. So each old folder goes to the game
+/// whose file has that stem, when exactly one game does. States are named by
+/// time, not game, and follow the save folder with the same old id; the two
+/// were written under the same numbering. Anything that does not resolve to a
+/// single game is left where it is and reported, never guessed.
+pub mod legacy {
+    use std::collections::{BTreeMap, HashMap};
+    use std::path::Path;
+
+    use moose_rack::gameid;
+
+    /// Marker written when the move is done, holding the report.
+    pub const MARKER: &str = ".stable-ids.json";
+
+    #[derive(Debug, Default, serde::Serialize, serde::Deserialize, PartialEq)]
+    pub struct Report {
+        /// Old id to new id, for everything that moved.
+        pub moved: BTreeMap<i64, i64>,
+        /// Old id to why it stayed.
+        pub left: BTreeMap<i64, String>,
+    }
+
+    fn stem(name: &str) -> String {
+        let name = moose_rack::savesync::local_name(name);
+        let p = Path::new(&name);
+        // `.state1`, `.state.auto`: everything from the first save-ish dot.
+        let base = p.file_name().and_then(|s| s.to_str()).unwrap_or(&name);
+        for ext in [".state", ".srm", ".sav", ".rtc"] {
+            if let Some(at) = base.find(ext) {
+                return base[..at].to_owned();
+            }
+        }
+        p.file_stem().and_then(|s| s.to_str()).unwrap_or(base).to_owned()
+    }
+
+    fn legacy_dirs(root: &Path) -> Vec<(i64, std::path::PathBuf)> {
+        let Ok(rd) = std::fs::read_dir(root) else { return Vec::new() };
+        let mut out: Vec<_> = rd
+            .filter_map(|e| e.ok())
+            .filter(|e| e.path().is_dir())
+            .filter_map(|e| {
+                let id: i64 = e.file_name().to_str()?.parse().ok()?;
+                gameid::is_legacy(id).then(|| (id, e.path()))
+            })
+            .collect();
+        out.sort();
+        out
+    }
+
+    /// Work out what would move, without moving anything.
+    ///
+    /// `games` is every game the server lists, as `(stable id, file name)`.
+    pub fn plan(saves_root: &Path, games: &[(i64, String)]) -> Report {
+        let mut by_stem: HashMap<String, Vec<i64>> = HashMap::new();
+        for (id, fs_name) in games {
+            by_stem.entry(stem(fs_name)).or_default().push(*id);
+        }
+        let mut report = Report::default();
+        for (old, dir) in legacy_dirs(saves_root) {
+            let names: Vec<String> = std::fs::read_dir(&dir)
+                .map(|rd| {
+                    rd.filter_map(|e| e.ok())
+                        .filter(|e| e.path().is_file())
+                        .filter_map(|e| e.file_name().to_str().map(str::to_owned))
+                        .filter(|n| !n.starts_with('.'))
+                        .collect()
+                })
+                .unwrap_or_default();
+            let mut targets: Vec<i64> = Vec::new();
+            let mut why = None;
+            for n in &names {
+                match by_stem.get(&stem(n)).map(Vec::as_slice) {
+                    Some([one]) => targets.push(*one),
+                    Some(many) => {
+                        why = Some(format!("{n} matches {} games", many.len()));
+                    }
+                    None => why = Some(format!("no game is named like {n}")),
+                }
+            }
+            targets.sort();
+            targets.dedup();
+            match (why, targets.as_slice()) {
+                (None, [new]) => {
+                    report.moved.insert(old, *new);
+                }
+                (None, []) => {
+                    report.left.insert(old, "no save files in it".into());
+                }
+                (None, _) => {
+                    report.left.insert(old, "its files name different games".into());
+                }
+                (Some(reason), _) => {
+                    report.left.insert(old, reason);
+                }
+            }
+        }
+        // States carry no game name. They go with the save folder of the same
+        // old id, or they stay.
+        for (old, _) in legacy_dirs(&saves_root.join("_states")) {
+            if !report.moved.contains_key(&old) && !report.left.contains_key(&old) {
+                report.left.insert(old, "states only, and states are not named after a game".into());
+            }
+        }
+        report
+    }
+
+    /// Move one directory's files into another, keeping anything that would
+    /// collide where it was.
+    fn merge_into(from: &Path, to: &Path) -> std::io::Result<Vec<String>> {
+        std::fs::create_dir_all(to)?;
+        let mut clashes = Vec::new();
+        for e in std::fs::read_dir(from)?.filter_map(|e| e.ok()) {
+            let target = to.join(e.file_name());
+            if target.exists() {
+                clashes.push(e.file_name().to_string_lossy().into_owned());
+                continue;
+            }
+            std::fs::rename(e.path(), target)?;
+        }
+        if clashes.is_empty() {
+            std::fs::remove_dir(from).ok();
+        }
+        Ok(clashes)
+    }
+
+    /// Do it, once. Returns `None` when it has already been done.
+    pub fn apply(saves_root: &Path, games: &[(i64, String)]) -> std::io::Result<Option<Report>> {
+        let marker = saves_root.join(MARKER);
+        if marker.exists() {
+            return Ok(None);
+        }
+        let mut report = plan(saves_root, games);
+        let moves: Vec<(i64, i64)> = report.moved.iter().map(|(a, b)| (*a, *b)).collect();
+        for (old, new) in moves {
+            for sub in ["", "_states"] {
+                let base = if sub.is_empty() { saves_root.to_path_buf() } else { saves_root.join(sub) };
+                let from = base.join(old.to_string());
+                if !from.is_dir() {
+                    continue;
+                }
+                let clashes = merge_into(&from, &base.join(new.to_string()))?;
+                if !clashes.is_empty() {
+                    report.left.insert(
+                        old,
+                        format!("{} already existed under {new}: {}", if sub.is_empty() { "saves" } else { "states" }, clashes.join(", ")),
+                    );
+                }
+            }
+        }
+        std::fs::write(&marker, serde_json::to_vec_pretty(&report).unwrap_or_default())?;
+        Ok(Some(report))
+    }
+
+    /// Rewrite `device\0rom_id\0file` bookkeeping keys onto the new ids.
+    ///
+    /// Keys under an old id that did not move are dropped: that id names
+    /// nothing any more, and a device that lost its record of agreeing is asked
+    /// about the save next time rather than assumed to agree.
+    pub fn remap_seen(seen: &mut HashMap<String, String>, moved: &BTreeMap<i64, i64>) -> usize {
+        let old: Vec<(String, String)> = seen.drain().collect();
+        let mut changed = 0;
+        for (key, hash) in old {
+            let mut parts = key.splitn(3, '\0');
+            let (Some(device), Some(rom), Some(file)) = (parts.next(), parts.next(), parts.next()) else {
+                continue;
+            };
+            let Ok(rom) = rom.parse::<i64>() else { continue };
+            if !gameid::is_legacy(rom) {
+                seen.insert(key, hash);
+                continue;
+            }
+            if let Some(new) = moved.get(&rom) {
+                seen.insert(format!("{device}\0{new}\0{file}"), hash);
+                changed += 1;
+            }
+        }
+        changed
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        fn tree(name: &str) -> std::path::PathBuf {
+            let d = std::env::temp_dir().join(format!("moose-legacy-{name}"));
+            std::fs::remove_dir_all(&d).ok();
+            std::fs::create_dir_all(&d).unwrap();
+            d
+        }
+
+        fn put(root: &Path, rel: &str) {
+            let p = root.join(rel);
+            std::fs::create_dir_all(p.parent().unwrap()).unwrap();
+            std::fs::write(p, b"x").unwrap();
+        }
+
+        const CT: i64 = 20_000_001;
+        const RIPTIDE: i64 = 20_000_002;
+        const ASTRO_A: i64 = 20_000_003;
+        const ASTRO_B: i64 = 20_000_004;
+
+        fn games() -> Vec<(i64, String)> {
+            vec![
+                (CT, "Chrono Trigger (USA).zip".into()),
+                (RIPTIDE, "Rip-Tide Racer (Europe).zip".into()),
+                (ASTRO_A, "Astrohawk (World) (Unl).zip".into()),
+                (ASTRO_B, "Astrohawk (World) (Unl).zip".into()),
+            ]
+        }
+
+        /// The live case: Chrono Trigger's save under the id that now names
+        /// Rip-Tide Racer goes to Chrono Trigger, not to Rip-Tide Racer.
+        #[test]
+        fn a_save_goes_to_the_game_it_is_named_after() {
+            let root = tree("named");
+            put(&root, "5653/Chrono Trigger (USA).srm");
+            let r = apply(&root, &games()).unwrap().unwrap();
+            assert_eq!(r.moved.get(&5653), Some(&CT));
+            assert!(root.join(format!("{CT}/Chrono Trigger (USA).srm")).is_file());
+            assert!(!root.join("5653").exists());
+        }
+
+        #[test]
+        fn states_follow_the_save_folder_with_the_same_old_id() {
+            let root = tree("states");
+            put(&root, "-10793/Chrono Trigger (USA).srm");
+            put(&root, "_states/-10793/2026-09-08T04-25-32-465Z.state");
+            put(&root, "_states/-10793/.2026-09-08T04-25-32-465Z.state.emulator");
+            apply(&root, &games()).unwrap();
+            assert!(root.join(format!("_states/{CT}/2026-09-08T04-25-32-465Z.state")).is_file());
+            assert!(root.join(format!("_states/{CT}/.2026-09-08T04-25-32-465Z.state.emulator")).is_file());
+        }
+
+        #[test]
+        fn a_name_two_games_share_is_left_alone() {
+            let root = tree("ambiguous");
+            put(&root, "12/Astrohawk (World) (Unl).srm");
+            let r = apply(&root, &games()).unwrap().unwrap();
+            assert!(r.moved.is_empty());
+            assert!(r.left[&12].contains("matches 2 games"), "{:?}", r.left);
+            assert!(root.join("12/Astrohawk (World) (Unl).srm").is_file(), "not moved");
+        }
+
+        #[test]
+        fn a_save_named_after_no_game_is_left_alone() {
+            let root = tree("unknown");
+            put(&root, "6411/a-plumber-for-all-seasons_2021-11-22.srm");
+            let r = apply(&root, &games()).unwrap().unwrap();
+            assert!(r.left.contains_key(&6411));
+            assert!(root.join("6411/a-plumber-for-all-seasons_2021-11-22.srm").is_file());
+        }
+
+        #[test]
+        fn it_runs_once() {
+            let root = tree("once");
+            put(&root, "5653/Chrono Trigger (USA).srm");
+            assert!(apply(&root, &games()).unwrap().is_some());
+            put(&root, "7/Chrono Trigger (USA).srm");
+            assert!(apply(&root, &games()).unwrap().is_none());
+            assert!(root.join("7").exists(), "a second start does not move anything");
+        }
+
+        #[test]
+        fn a_file_already_under_the_new_id_is_not_overwritten() {
+            let root = tree("clash");
+            put(&root, "5653/Chrono Trigger (USA).srm");
+            std::fs::create_dir_all(root.join(CT.to_string())).unwrap();
+            std::fs::write(root.join(format!("{CT}/Chrono Trigger (USA).srm")), b"newer").unwrap();
+            let r = apply(&root, &games()).unwrap().unwrap();
+            assert_eq!(std::fs::read(root.join(format!("{CT}/Chrono Trigger (USA).srm"))).unwrap(), b"newer");
+            assert!(root.join("5653/Chrono Trigger (USA).srm").is_file(), "the old one kept aside");
+            assert!(r.left[&5653].contains("already existed"));
+        }
+
+        #[test]
+        fn a_romm_stamped_name_still_matches() {
+            let root = tree("stamped");
+            put(&root, "44/Chrono Trigger (USA) [2026-08-06_23-06-01].srm");
+            let r = apply(&root, &games()).unwrap().unwrap();
+            assert_eq!(r.moved.get(&44), Some(&CT));
+        }
+
+        #[test]
+        fn bookkeeping_follows_the_move_and_forgets_what_did_not() {
+            let mut seen: HashMap<String, String> = [
+                ("dev\u{0}5653\u{0}Chrono Trigger (USA).srm", "h1"),
+                ("dev\u{0}6411\u{0}plumber.srm", "h2"),
+                (&format!("dev\u{0}{CT}\u{0}Already.srm") as &str, "h3"),
+            ]
+            .into_iter()
+            .map(|(k, v)| (k.to_owned(), v.to_owned()))
+            .collect();
+            let moved: BTreeMap<i64, i64> = [(5653, CT)].into_iter().collect();
+            assert_eq!(remap_seen(&mut seen, &moved), 1);
+            assert_eq!(seen.get(&format!("dev\u{0}{CT}\u{0}Chrono Trigger (USA).srm")).map(String::as_str), Some("h1"));
+            assert!(!seen.keys().any(|k| k.contains("\u{0}6411\u{0}")), "an unmoved old id names nothing");
+            assert!(seen.contains_key(&format!("dev\u{0}{CT}\u{0}Already.srm")), "stable keys untouched");
+        }
+    }
+}

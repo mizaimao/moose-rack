@@ -850,7 +850,8 @@ impl Library {
                     .map(Path::new)
                     .filter(|p| p.exists())
                     .is_some()
-                    || roms_dir.join(&r.platform_slug).join(&r.fs_name).exists(),
+                    || roms_dir.join(r.folder()).join(&r.fs_name).exists()
+                    || r.legacy_path(&roms_dir).exists(),
                 id: r.id,
                 name: r.name,
                 platform: r.platform_slug,

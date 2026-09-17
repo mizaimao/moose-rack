@@ -977,11 +977,12 @@ async fn cmd_get_bulk(rows: Vec<cache::RomRow>, jobs: usize, cfg: &Config) -> Re
             } else {
                 Vec::new()
             };
+            let folder = rom.folder();
             let target = download::Target {
                 rom_id: rom.id,
                 members: &members,
                 fs_name: &rom.fs_name,
-                platform_slug: &rom.platform_slug,
+                folder: &folder,
                 expected_size: (rom.fs_size_bytes > 0).then_some(rom.fs_size_bytes as u64),
                 md5: rom.md5_hash.as_deref(),
                 sha1: rom.sha1_hash.as_deref(),
@@ -1097,18 +1098,20 @@ async fn cmd_probe(
     let mut tally: std::collections::BTreeMap<String, (usize, usize)> = Default::default();
 
     for rom in &roms {
-        let local = roms_dir.join(&rom.platform_slug).join(&rom.fs_name);
+        let home = roms_dir.join(rom.folder()).join(&rom.fs_name);
+        let local = if home.exists() { home } else { rom.legacy_path(&roms_dir) };
         if !local.exists() {
             let Some(client) = client.as_ref() else {
                 println!("{:<44} skipped (not downloaded, no server)", short(&rom.name));
                 continue;
             };
             let members = if rom.multi_file { client.member_hashes(rom.id).await } else { Vec::new() };
+            let folder = rom.folder();
             let target = download::Target {
                 rom_id: rom.id,
                 members: &members,
                 fs_name: &rom.fs_name,
-                platform_slug: &rom.platform_slug,
+                folder: &folder,
                 expected_size: (rom.fs_size_bytes > 0).then_some(rom.fs_size_bytes as u64),
                 md5: rom.md5_hash.as_deref(),
                 sha1: rom.sha1_hash.as_deref(),
@@ -1268,8 +1271,8 @@ fn cmd_scan_esde(root: Option<&str>, roms: Option<&str>, media: Option<&str>) ->
     let map = CoreMap::load_or_embedded(Path::new(CORE_MAP));
     let started = std::time::Instant::now();
     let mut store = cache::Cache::open(Path::new(CACHE_DB))?;
-    // Shared with the service, fold included -- see `moose_rack::app::scan_into`.
-    let moose_rack::app::Scan { written: n, folded, games, skipped } =
+    // Shared with the service -- see `moose_rack::app::scan_into`.
+    let moose_rack::app::Scan { written: n, on_server, games, skipped } =
         moose_rack::app::scan_into(&mut store, &layout, &map)?;
     if games.is_empty() {
         bail!("found no games under {}", layout.roms.display());
@@ -1285,8 +1288,8 @@ fn cmd_scan_esde(root: Option<&str>, roms: Option<&str>, media: Option<&str>) ->
         }
     }
     println!("\n{n} games in {:.1}s, {with_art} with cover art", started.elapsed().as_secs_f64());
-    if folded > 0 {
-        println!("{folded} folded into rows the server already had — they launch from disk now\n");
+    if on_server > 0 {
+        println!("{on_server} of them are also on the server\n");
     } else {
         println!();
     }
@@ -1389,11 +1392,12 @@ async fn download_one(rom: cache::RomRow, cfg: &Config) -> Result<()> {
         Vec::new()
     };
 
+    let folder = rom.folder();
     let target = download::Target {
         rom_id: rom.id,
         members: &members,
         fs_name: &rom.fs_name,
-        platform_slug: &rom.platform_slug,
+        folder: &folder,
         expected_size: (rom.fs_size_bytes > 0).then_some(rom.fs_size_bytes as u64),
         md5: rom.md5_hash.as_deref(),
         sha1: rom.sha1_hash.as_deref(),

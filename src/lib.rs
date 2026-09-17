@@ -28,6 +28,7 @@ pub mod ejs;
 pub mod esde;
 pub mod favorites;
 pub mod gamefilter;
+pub mod gameid;
 pub mod gamelist;
 pub mod focusring;
 pub mod gamesort;

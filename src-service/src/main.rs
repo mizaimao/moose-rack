@@ -40,7 +40,7 @@ use axum::{
     Json, Router,
 };
 use clap::Parser;
-use moose_rack::{coremap::CoreMap, esde};
+use moose_rack::{coremap::CoreMap, esde, gameid};
 use serde::{Deserialize, Serialize};
 use tower_http::services::ServeFile;
 
@@ -140,6 +140,11 @@ struct Args {
     /// password is never stored anywhere; paste the printed line into the config.
     #[arg(long, value_name = "PASSWORD")]
     hash_password: Option<String>,
+    /// Print where saves stored under old positional game ids would move, and
+    /// exit without moving anything. The move itself happens once, at the
+    /// first start of a build with stable ids.
+    #[arg(long)]
+    plan_stable_ids: bool,
 }
 
 /// The scan, held for the process lifetime.
@@ -149,6 +154,8 @@ struct Args {
 /// than an Arc.
 struct Library {
     games: Vec<esde::Game>,
+    /// Stable id -> index into `games`. See `moose_rack::gameid`.
+    by_id: std::collections::HashMap<i64, usize>,
     /// The curated lists, resolved to ids at startup.
     collections: Vec<collections::Collection>,
     /// The BIOS set, flattened.
@@ -171,6 +178,36 @@ struct Library {
     /// first transfers here unverified. The hashes were computed once over
     /// 1.76 TB; not serving them was the whole gap.
     hashes: Hashes,
+}
+
+impl Library {
+    fn game(&self, id: i64) -> Option<&esde::Game> {
+        self.by_id.get(&id).and_then(|&i| self.games.get(i))
+    }
+}
+
+/// Index a scan by stable id, and say so loudly if two games share one.
+///
+/// The chance for this library is about one in a hundred million, and when it
+/// happens it has to be visible rather than one game silently answering for
+/// the other. The second is left out of the index; it is still listed, and
+/// asking for it by id finds the first.
+fn index_games(games: &[esde::Game]) -> std::collections::HashMap<i64, usize> {
+    let mut by_id = std::collections::HashMap::with_capacity(games.len());
+    for (i, g) in games.iter().enumerate() {
+        let id = gameid::game_id(&g.system, &g.rel_dir, &g.fs_name);
+        if let Some(&first) = by_id.get(&id) {
+            let a: &esde::Game = &games[first];
+            eprintln!(
+                "two games share id {id}: {} and {} -- the second cannot be fetched by id",
+                gameid::key(&a.system, &a.rel_dir, &a.fs_name),
+                gameid::key(&g.system, &g.rel_dir, &g.fs_name),
+            );
+            continue;
+        }
+        by_id.insert(id, i);
+    }
+    by_id
 }
 
 /// Device registrations and what each last agreed with the server.
@@ -366,6 +403,16 @@ struct Rom {
     platform_fs_slug: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     summary: Option<String>,
+    /// Where the game lives: the ES-DE system folder and the path inside it.
+    ///
+    /// Sent so a client can put a download in the same place. The id is taken
+    /// from exactly these, so a game downloaded to `<roms>/<system>/<rel_dir>/`
+    /// is the same game with the same id when that machine next scans. Without
+    /// them a download went to `<roms>/<platform>/`, came back under a
+    /// different id, and two games with one file name in different folders
+    /// overwrote each other.
+    esde_system: String,
+    rel_dir: String,
 }
 
 #[derive(Serialize)]
@@ -386,17 +433,15 @@ fn default_limit() -> usize {
     50
 }
 
-/// The scan index is the id, one-based.
-///
-/// One-based because zero is what a missing field deserializes to, and a game
-/// that silently becomes "game 0" is the kind of bug that takes an evening.
-fn to_rom(i: usize, g: &esde::Game, lib: &Library) -> Rom {
+/// A game as the API describes it. The id comes from where the file is; see
+/// `moose_rack::gameid`.
+fn to_rom(g: &esde::Game, lib: &Library) -> Rom {
     // The dump's hash, not the container's: the client hashes the file it just
     // wrote, which is the zip, so the container hash is the one that compares.
     let key = (g.system.clone(), rel_of(g));
     let (md5, sha1, crc) = lib.hashes.get(&key).cloned().unwrap_or((None, None, None));
     Rom {
-        id: i as i64 + 1,
+        id: gameid::game_id(&g.system, &g.rel_dir, &g.fs_name),
         md5_hash: md5,
         sha1_hash: sha1,
         crc_hash: crc,
@@ -408,6 +453,8 @@ fn to_rom(i: usize, g: &esde::Game, lib: &Library) -> Rom {
         fs_size_bytes: Some(g.size_bytes),
         platform_fs_slug: Some(g.platform_slug.clone()),
         summary: g.summary.clone(),
+        esde_system: g.system.clone(),
+        rel_dir: g.rel_dir.clone(),
     }
 }
 
@@ -543,9 +590,8 @@ async fn platforms(State(lib): State<Arc<Library>>) -> Json<Vec<Platform>> {
     }
     Json(
         seen.iter()
-            .enumerate()
-            .map(|(i, (slug, (count, system)))| Platform {
-                id: i as i64 + 1,
+            .map(|(slug, (count, system))| Platform {
+                id: gameid::platform_id(slug),
                 fs_slug: (*slug).to_owned(),
                 slug: (*slug).to_owned(),
                 name: Some((*system).to_owned()),
@@ -559,10 +605,9 @@ async fn roms(State(lib): State<Arc<Library>>, Query(p): Query<Page>) -> Json<Ro
     let items = lib
         .games
         .iter()
-        .enumerate()
         .skip(p.offset)
         .take(p.limit)
-        .map(|(i, g)| to_rom(i, g, &lib))
+        .map(|g| to_rom(g, &lib))
         .collect();
     Json(RomPage {
         items,
@@ -582,7 +627,7 @@ async fn roms(State(lib): State<Arc<Library>>, Query(p): Query<Page>) -> Json<Ro
 /// segment to a dynamic one however they are registered. The test asserts the
 /// route exists, having been checked to fail when it is removed.
 async fn rom_identifiers(State(lib): State<Arc<Library>>) -> Json<Vec<i64>> {
-    Json((1..=lib.games.len() as i64).collect())
+    Json(lib.by_id.keys().copied().collect())
 }
 
 /// The curated lists.
@@ -624,10 +669,7 @@ async fn rom_content(
     AxPath((id, _name)): AxPath<(i64, String)>,
     req: axum::extract::Request,
 ) -> axum::response::Response {
-    let Ok(idx) = usize::try_from(id - 1) else {
-        return axum::http::StatusCode::NOT_FOUND.into_response();
-    };
-    let Some(game) = lib.games.get(idx) else {
+    let Some(game) = lib.game(id) else {
         return axum::http::StatusCode::NOT_FOUND.into_response();
     };
     match tower::ServiceExt::oneshot(ServeFile::new(&game.path), req).await {
@@ -683,6 +725,23 @@ async fn list_saves(
     Json(lib.sync.lock().unwrap().store.list(q.rom_id))
 }
 
+/// Refuse a save or state that names a game by its old positional id.
+///
+/// An old client -- the Flip, a copy of the app not yet updated -- still sends
+/// those, and a save written under one lands in a folder no updated client
+/// will ever look in: silently lost rather than synced. 400 with a message,
+/// not 409, because 409 is how an older client learns of a save *conflict* and
+/// it would ask which copy to keep.
+fn refuse_legacy(ids: impl IntoIterator<Item = i64>) -> Option<axum::response::Response> {
+    ids.into_iter().find(|id| gameid::is_legacy(*id)).map(|id| {
+        (
+            axum::http::StatusCode::BAD_REQUEST,
+            format!("game id {id} is from before stable game ids; update this client, then sync"),
+        )
+            .into_response()
+    })
+}
+
 #[derive(Deserialize)]
 struct NegotiateReq {
     device_id: String,
@@ -693,14 +752,17 @@ struct NegotiateReq {
 async fn negotiate(
     State(lib): State<Arc<Library>>,
     Json(req): Json<NegotiateReq>,
-) -> Json<saves::SyncPlan> {
+) -> axum::response::Response {
+    if let Some(no) = refuse_legacy(req.saves.iter().map(|s| s.rom_id)) {
+        return no;
+    }
     let st = lib.sync.lock().unwrap();
     let server = st.store.list(None);
     let mut plan = saves::plan(&req.device_id, &req.saves, &server, &st.seen_map());
     // A session id the client can quote back. Nothing is reserved by it -- it
     // exists so `complete_session` has something to close.
     plan.session_id = Some(1);
-    Json(plan)
+    Json(plan).into_response()
 }
 
 async fn save_content(
@@ -755,6 +817,9 @@ async fn upload_state(
     Query(q): Query<StateUploadQuery>,
     mut form: axum::extract::Multipart,
 ) -> axum::response::Response {
+    if let Some(no) = refuse_legacy([q.rom_id]) {
+        return no;
+    }
     let mut file_name = String::new();
     let mut bytes: Vec<u8> = Vec::new();
     while let Ok(Some(field)) = form.next_field().await {
@@ -799,6 +864,9 @@ async fn upload_save(
     Query(q): Query<UploadQuery>,
     mut form: axum::extract::Multipart,
 ) -> axum::response::Response {
+    if let Some(no) = refuse_legacy([q.rom_id]) {
+        return no;
+    }
     let mut name = String::new();
     let mut bytes = Vec::new();
     while let Ok(Some(field)) = form.next_field().await {
@@ -852,10 +920,8 @@ async fn rom_by_id(
     State(lib): State<Arc<Library>>,
     AxPath(id): AxPath<i64>,
 ) -> Result<Json<Rom>, axum::http::StatusCode> {
-    let idx = usize::try_from(id - 1).map_err(|_| axum::http::StatusCode::NOT_FOUND)?;
-    lib.games
-        .get(idx)
-        .map(|g| Json(to_rom(idx, g, &lib)))
+    lib.game(id)
+        .map(|g| Json(to_rom(g, &lib)))
         .ok_or(axum::http::StatusCode::NOT_FOUND)
 }
 
@@ -1302,11 +1368,50 @@ async fn main() -> Result<()> {
         .map(std::path::PathBuf::from)
         .unwrap_or_else(|| std::path::Path::new(&root).join("saves"));
     std::fs::create_dir_all(&saves_root)?;
+    // Saves were stored under positional game ids, which move whenever the
+    // library changes. See `saves::legacy`.
+    let by_stable: Vec<(i64, String)> = games
+        .iter()
+        .map(|g| (gameid::game_id(&g.system, &g.rel_dir, &g.fs_name), g.fs_name.clone()))
+        .collect();
+    if args.plan_stable_ids {
+        let plan = saves::legacy::plan(&saves_root, &by_stable);
+        let name = |id: &i64| {
+            games.iter().find(|g| gameid::game_id(&g.system, &g.rel_dir, &g.fs_name) == *id)
+                .map(|g| gameid::key(&g.system, &g.rel_dir, &g.fs_name))
+                .unwrap_or_default()
+        };
+        for (old, new) in &plan.moved {
+            println!("move  {old:>7} -> {new}  {}", name(new));
+        }
+        for (old, why) in &plan.left {
+            println!("leave {old:>7}  {why}");
+        }
+        return Ok(());
+    }
     let state_path = saves_root.join("sync-state.json");
-    let data: Persisted = std::fs::read(&state_path)
+    let mut data: Persisted = std::fs::read(&state_path)
         .ok()
         .and_then(|b| serde_json::from_slice(&b).ok())
         .unwrap_or_default();
+    match saves::legacy::apply(&saves_root, &by_stable) {
+        Ok(None) => {}
+        Ok(Some(report)) => {
+            let rekeyed = saves::legacy::remap_seen(&mut data.seen, &report.moved);
+            if let Ok(bytes) = serde_json::to_vec_pretty(&data) {
+                std::fs::write(&state_path, bytes)?;
+            }
+            println!(
+                "saves      moved {} folder(s) to stable game ids, left {}, {rekeyed} sync record(s) rekeyed -- see {}",
+                report.moved.len(),
+                report.left.len(),
+                saves_root.join(saves::legacy::MARKER).display()
+            );
+        }
+        // Not fatal: the saves are where they were, and nothing reads them
+        // under ids that no longer name their games until this succeeds.
+        Err(e) => eprintln!("saves      could not move to stable ids: {e}"),
+    }
     println!(
         "saves      {} ({} devices known)",
         saves_root.display(),
@@ -1329,8 +1434,10 @@ async fn main() -> Result<()> {
     let by_name = collections::name_table(
         games
             .iter()
-            .enumerate()
-            .map(|(i, g)| (g.platform_slug.as_str(), g.name.as_str(), g.fs_name.as_str(), i as i64 + 1)),
+            .map(|g| {
+                let id = gameid::game_id(&g.system, &g.rel_dir, &g.fs_name);
+                (g.platform_slug.as_str(), g.name.as_str(), g.fs_name.as_str(), id)
+            }),
     );
     let col_dir = pick(args.collections.clone(), &cfg.library.collections)
         .map(std::path::PathBuf::from)
@@ -1357,6 +1464,7 @@ async fn main() -> Result<()> {
         }
     }
     let lib = Arc::new(Library {
+        by_id: index_games(&games),
         games,
         collections: cols,
         hashes,
@@ -1397,10 +1505,7 @@ async fn main() -> Result<()> {
         // scan that already happened and means the page can never show a
         // library that is no longer there.
         match state.rescan(&layout) {
-            Ok((n, folded)) => println!(
-                "ui cache   {n} games{}",
-                if folded > 0 { format!(", {folded} folded into synced rows") } else { String::new() }
-            ),
+            Ok((n, _)) => println!("ui cache   {n} games"),
             // Not fatal. The API half is unaffected, and a UI listing a stale
             // cache beats a service that refuses to start.
             Err(e) => eprintln!("ui cache   not rebuilt: {e}"),
@@ -1518,6 +1623,7 @@ mod tests {
         let saves_root = dir.join("saves");
         std::fs::create_dir_all(&saves_root).unwrap();
         let lib = Library {
+            by_id: index_games(&games),
             games,
             collections: Vec::new(),
             hashes: Default::default(),
@@ -1796,7 +1902,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method("POST")
-                    .uri("/api/states?rom_id=1&emulator=snes9x")
+                    .uri("/api/states?rom_id=16777217&emulator=snes9x")
                     .header("content-type", "multipart/form-data; boundary=X")
                     .body(Body::from(body))
                     .unwrap(),
@@ -1807,12 +1913,12 @@ mod tests {
         let up: serde_json::Value =
             serde_json::from_slice(&axum::body::to_bytes(r.into_body(), usize::MAX).await.unwrap())
                 .unwrap();
-        assert_eq!(up["rom_id"], 1);
+        assert_eq!(up["rom_id"], 16777217);
         assert_eq!(up["file_name"], "Game.state1");
         assert_eq!(up["emulator"], "snes9x");
         let id = up["id"].as_i64().unwrap();
 
-        let (s, body) = get(&app, "/api/states?rom_id=1").await;
+        let (s, body) = get(&app, "/api/states?rom_id=16777217").await;
         assert_eq!(s, StatusCode::OK);
         let list: serde_json::Value = serde_json::from_str(&body).unwrap();
         assert_eq!(list.as_array().unwrap().len(), 1);
@@ -1823,7 +1929,7 @@ mod tests {
         assert_eq!(bytes, "frozen");
 
         // Another game's states are not this game's.
-        let (_, other) = get(&app, "/api/states?rom_id=2").await;
+        let (_, other) = get(&app, "/api/states?rom_id=16777218").await;
         assert_eq!(other, "[]");
     }
 
@@ -1840,7 +1946,7 @@ mod tests {
                 .oneshot(
                     Request::builder()
                         .method("POST")
-                        .uri("/api/states?rom_id=1")
+                        .uri("/api/states?rom_id=16777217")
                         .header("content-type", "multipart/form-data; boundary=X")
                         .body(Body::from(body))
                         .unwrap(),
@@ -2091,16 +2197,58 @@ mod tests {
         let (_d, app) = built();
         let (s, body) = get(&app, "/api/roms/identifiers").await;
         assert_eq!(s, StatusCode::OK, "identifiers must not hit the i64 extractor");
-        assert_eq!(serde_json::from_str::<Vec<i64>>(&body).unwrap(), vec![1, 2]);
+        let mut got = serde_json::from_str::<Vec<i64>>(&body).unwrap();
+        got.sort();
+        let mut want = vec![alpha(), gameid::game_id("nes", "", "Beta (USA).zip")];
+        want.sort();
+        assert_eq!(got, want);
     }
 
+    fn alpha() -> i64 {
+        gameid::game_id("nes", "", "Alpha (USA).zip")
+    }
+
+    /// A game is found by its stable id, and not by the position it used to
+    /// have. `/api/roms/1` answered with the first game in the scan, so an old
+    /// client asking for it now must get a 404, not somebody else's game.
     #[tokio::test]
-    async fn ids_are_one_based_and_out_of_range_is_404() {
+    async fn a_game_is_found_by_its_stable_id_and_not_its_old_position() {
         let (_d, app) = built();
-        assert_eq!(get(&app, "/api/roms/1").await.0, StatusCode::OK);
-        // Zero is what a missing field deserializes to; it must not resolve.
-        assert_eq!(get(&app, "/api/roms/0").await.0, StatusCode::NOT_FOUND);
-        assert_eq!(get(&app, "/api/roms/99").await.0, StatusCode::NOT_FOUND);
+        let (s, body) = get(&app, &format!("/api/roms/{}", alpha())).await;
+        assert_eq!(s, StatusCode::OK);
+        let v: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(v["fs_name"], "Alpha (USA).zip");
+        assert_eq!(v["esde_system"], "nes");
+        assert_eq!(v["rel_dir"], "");
+        for old in ["1", "2", "0", "99"] {
+            assert_eq!(get(&app, &format!("/api/roms/{old}")).await.0, StatusCode::NOT_FOUND, "{old}");
+        }
+    }
+
+    /// The bug this replaced. Ids were positions in the scan, so a game added
+    /// in front of another renumbered it, and saves stored under the old id
+    /// then belonged to a different game. On the live server all seven saves
+    /// under server ids had moved this way.
+    #[tokio::test]
+    async fn adding_a_game_does_not_renumber_the_others() {
+        let d = tempdir::TempDir::new("svc").unwrap();
+        let (lib, media) = fixture(d.path());
+        let (_, before) = get(&app(lib, media.clone(), true), "/api/roms").await;
+        // Sorts in front of both existing games.
+        std::fs::write(d.path().join("ROMs/nes/Aardvark (USA).zip"), b"a").unwrap();
+        let (lib2, _) = fixture(d.path());
+        let (_, after) = get(&app(lib2, media, true), "/api/roms").await;
+        let ids = |body: &str| -> std::collections::BTreeMap<String, i64> {
+            let v: serde_json::Value = serde_json::from_str(body).unwrap();
+            v["items"].as_array().unwrap().iter()
+                .map(|i| (i["fs_name"].as_str().unwrap().to_owned(), i["id"].as_i64().unwrap()))
+                .collect()
+        };
+        let (before, after) = (ids(&before), ids(&after));
+        assert_eq!(after.len(), before.len() + 1, "setup: the new game should be listed");
+        for (name, id) in &before {
+            assert_eq!(after.get(name), Some(id), "{name} changed id when a game was added");
+        }
     }
 
     /// The client reads an empty list as "none yet" and a 404 as an error, and
@@ -2158,7 +2306,7 @@ mod tests {
     #[tokio::test]
     async fn content_serves_the_bytes_and_honours_range() {
         let (_d, app) = built();
-        let (s, body) = get(&app, "/api/roms/1/content/Alpha%20(USA).zip").await;
+        let (s, body) = get(&app, &format!("/api/roms/{}/content/Alpha%20(USA).zip", alpha())).await;
         assert_eq!(s, StatusCode::OK);
         assert_eq!(body, "alpha-bytes");
 
@@ -2168,7 +2316,7 @@ mod tests {
             .clone()
             .oneshot(
                 Request::builder()
-                    .uri("/api/roms/1/content/Alpha%20(USA).zip")
+                    .uri(format!("/api/roms/{}/content/Alpha%20(USA).zip", alpha()))
                     .header("Range", "bytes=6-")
                     .body(Body::empty())
                     .unwrap(),
@@ -2235,12 +2383,12 @@ mod tests {
     #[tokio::test]
     async fn an_uploaded_save_can_be_listed_and_read_back() {
         let (_d, app) = built();
-        let (s, body) = post_save(&app, "/api/saves?rom_id=1&device_id=dev", "a.srm", b"save-bytes").await;
+        let (s, body) = post_save(&app, "/api/saves?rom_id=16777217&device_id=dev", "a.srm", b"save-bytes").await;
         assert_eq!(s, StatusCode::OK, "{body}");
         let saved: serde_json::Value = serde_json::from_str(&body).unwrap();
         let id = saved["id"].as_i64().unwrap();
 
-        let (_, listed) = get(&app, "/api/saves?rom_id=1").await;
+        let (_, listed) = get(&app, "/api/saves?rom_id=16777217").await;
         let v: serde_json::Value = serde_json::from_str(&listed).unwrap();
         assert_eq!(v.as_array().unwrap().len(), 1);
 
@@ -2253,13 +2401,13 @@ mod tests {
     #[tokio::test]
     async fn a_second_device_overwriting_blind_is_refused() {
         let (_d, app) = built();
-        let (s1, _) = post_save(&app, "/api/saves?rom_id=1&device_id=alice", "a.srm", b"from-alice").await;
+        let (s1, _) = post_save(&app, "/api/saves?rom_id=16777217&device_id=alice", "a.srm", b"from-alice").await;
         assert_eq!(s1, StatusCode::OK);
         // Bob never agreed on alice's bytes, so his upload must not land.
-        let (s2, body) = post_save(&app, "/api/saves?rom_id=1&device_id=bob", "a.srm", b"from-bob").await;
+        let (s2, body) = post_save(&app, "/api/saves?rom_id=16777217&device_id=bob", "a.srm", b"from-bob").await;
         assert_eq!(s2, StatusCode::CONFLICT, "{body}");
         // and the bytes are untouched
-        let (_, listed) = get(&app, "/api/saves?rom_id=1").await;
+        let (_, listed) = get(&app, "/api/saves?rom_id=16777217").await;
         let v: serde_json::Value = serde_json::from_str(&listed).unwrap();
         let id = v[0]["id"].as_i64().unwrap();
         assert_eq!(get(&app, &format!("/api/saves/{id}/content")).await.1, "from-alice");
@@ -2270,11 +2418,11 @@ mod tests {
     #[tokio::test]
     async fn overwrite_true_lands_after_a_conflict() {
         let (_d, app) = built();
-        post_save(&app, "/api/saves?rom_id=1&device_id=alice", "a.srm", b"from-alice").await;
+        post_save(&app, "/api/saves?rom_id=16777217&device_id=alice", "a.srm", b"from-alice").await;
         let (s, _) = post_save(
-            &app, "/api/saves?rom_id=1&device_id=bob&overwrite=true", "a.srm", b"from-bob").await;
+            &app, "/api/saves?rom_id=16777217&device_id=bob&overwrite=true", "a.srm", b"from-bob").await;
         assert_eq!(s, StatusCode::OK);
-        let (_, listed) = get(&app, "/api/saves?rom_id=1").await;
+        let (_, listed) = get(&app, "/api/saves?rom_id=16777217").await;
         let id = serde_json::from_str::<serde_json::Value>(&listed).unwrap()[0]["id"].as_i64().unwrap();
         assert_eq!(get(&app, &format!("/api/saves/{id}/content")).await.1, "from-bob");
     }
@@ -2284,15 +2432,15 @@ mod tests {
     #[tokio::test]
     async fn uploading_records_agreement_so_the_next_sync_is_quiet() {
         let (_d, app) = built();
-        post_save(&app, "/api/saves?rom_id=1&device_id=alice", "a.srm", b"bytes").await;
+        post_save(&app, "/api/saves?rom_id=16777217&device_id=alice", "a.srm", b"bytes").await;
         let hash = "b1946ac92492d2347c6235b4d2611184"; // md5 of "bytes\n"? no: of "bytes"
-        let (_, listed) = get(&app, "/api/saves?rom_id=1").await;
+        let (_, listed) = get(&app, "/api/saves?rom_id=16777217").await;
         let server_hash = serde_json::from_str::<serde_json::Value>(&listed).unwrap()[0]
             ["content_hash"].as_str().unwrap().to_owned();
         let _ = hash;
         let (s, body) = post_json(&app, "/api/sync/negotiate", serde_json::json!({
             "device_id": "alice",
-            "saves": [{"rom_id": 1, "file_name": "a.srm", "content_hash": server_hash,
+            "saves": [{"rom_id": 16777217, "file_name": "a.srm", "content_hash": server_hash,
                        "updated_at": "now", "file_size_bytes": 5}]
         })).await;
         assert_eq!(s, StatusCode::OK);
@@ -2301,10 +2449,38 @@ mod tests {
         assert_eq!(plan["total_conflict"], 0);
     }
 
+    /// A client still on positional ids is refused, loudly, before it can
+    /// write a save where no updated client would look for it.
+    #[tokio::test]
+    async fn a_save_under_an_old_game_id_is_refused() {
+        let (_d, app) = built();
+        let (s, body) = post_save(&app, "/api/saves?rom_id=5653&device_id=flip", "Chrono Trigger (USA).srm", b"x").await;
+        assert_eq!(s, StatusCode::BAD_REQUEST, "{body}");
+        assert!(body.contains("update this client"), "{body}");
+        let (_, listed) = get(&app, "/api/saves").await;
+        assert_eq!(listed, "[]", "nothing was written");
+
+        let r = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/sync/negotiate")
+                    .header("content-type", "application/json")
+                    .body(Body::from(
+                        r#"{"device_id":"flip","saves":[{"rom_id":12,"file_name":"a.srm","content_hash":"h","updated_at":"2026-01-01T00:00:00Z","file_size_bytes":1}]}"#,
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(r.status(), StatusCode::BAD_REQUEST);
+    }
+
     #[tokio::test]
     async fn negotiate_tells_a_new_device_to_download() {
         let (_d, app) = built();
-        post_save(&app, "/api/saves?rom_id=1&device_id=alice", "a.srm", b"bytes").await;
+        post_save(&app, "/api/saves?rom_id=16777217&device_id=alice", "a.srm", b"bytes").await;
         let (_, body) = post_json(&app, "/api/sync/negotiate", serde_json::json!({
             "device_id": "flip", "saves": []
         })).await;
