@@ -815,8 +815,14 @@ pub mod legacy {
     /// `games` is every game the server lists, as `(stable id, file name)`.
     pub fn plan(saves_root: &Path, games: &[(i64, String)]) -> Report {
         let mut by_stem: HashMap<String, Vec<i64>> = HashMap::new();
+        // Case-folded too, for a save and a ROM that disagree only in case.
+        // Found on dev.lan: `Kirby & the Amazing Mirror (USA).srm` beside
+        // `Kirby & The Amazing Mirror (USA).zip`. Used only when the exact name
+        // matches nothing, and still only when it names a single game.
+        let mut by_folded: HashMap<String, Vec<i64>> = HashMap::new();
         for (id, fs_name) in games {
             by_stem.entry(stem(fs_name)).or_default().push(*id);
+            by_folded.entry(stem(fs_name).to_lowercase()).or_default().push(*id);
         }
         let mut report = Report::default();
         for (old, dir) in legacy_dirs(saves_root) {
@@ -832,7 +838,8 @@ pub mod legacy {
             let mut targets: Vec<i64> = Vec::new();
             let mut why = None;
             for n in &names {
-                match by_stem.get(&stem(n)).map(Vec::as_slice) {
+                let found = by_stem.get(&stem(n)).or_else(|| by_folded.get(&stem(n).to_lowercase()));
+                match found.map(Vec::as_slice) {
                     Some([one]) => targets.push(*one),
                     Some(many) => {
                         why = Some(format!("{n} matches {} games", many.len()));
@@ -1033,6 +1040,14 @@ pub mod legacy {
             assert_eq!(std::fs::read(root.join(format!("{CT}/Chrono Trigger (USA).srm"))).unwrap(), b"newer");
             assert!(root.join("5653/Chrono Trigger (USA).srm").is_file(), "the old one kept aside");
             assert!(r.left[&5653].contains("already existed"));
+        }
+
+        #[test]
+        fn a_save_that_differs_from_its_rom_only_in_case_still_goes_home() {
+            let root = tree("case");
+            put(&root, "1918/chrono trigger (usa).srm");
+            let r = apply(&root, &games()).unwrap().unwrap();
+            assert_eq!(r.moved.get(&1918), Some(&CT));
         }
 
         #[test]
