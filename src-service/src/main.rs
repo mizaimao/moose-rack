@@ -1384,6 +1384,9 @@ async fn main() -> Result<()> {
         for (old, new) in &plan.moved {
             println!("move  {old:>7} -> {new}  {}", name(new));
         }
+        for (old, new) in &plan.states_moved {
+            println!("state {old:>7} -> {new}  {}", name(new));
+        }
         for (old, why) in &plan.left {
             println!("leave {old:>7}  {why}");
         }
