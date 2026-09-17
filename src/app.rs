@@ -328,14 +328,17 @@ pub fn adopt_client_stores(store: &cache::Cache, library_root: &std::path::Path,
         eprintln!("stable ids: play history not moved: {e}");
     }
     let moves = match store.id_moves() {
-        Ok(m) if !m.is_empty() => m,
-        Ok(_) => return,
+        Ok(m) => m,
         Err(e) => return eprintln!("stable ids: {e}"),
     };
+    let settled = store.id_migration_settled().unwrap_or(false);
+    // Backups are files a person restores from, and there is no server copy
+    // of them, so one under an untranslatable id is left where it is rather
+    // than deleted.
     if let Err(e) = crate::savebackup::adopt_stable_ids(library_root, &moves) {
         eprintln!("stable ids: save backups not moved: {e}");
     }
-    if let Err(e) = crate::statesync::Ledger::adopt_stable_ids(data_dir, &moves) {
+    if let Err(e) = crate::statesync::Ledger::adopt_stable_ids(data_dir, &moves, settled) {
         eprintln!("stable ids: state ledger not rekeyed: {e}");
     }
 }

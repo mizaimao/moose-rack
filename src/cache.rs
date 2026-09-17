@@ -472,6 +472,26 @@ impl Cache {
         Ok(moved)
     }
 
+    /// Whether anything still keyed by an old id that has not been placed can
+    /// be given up on.
+    ///
+    /// True once a full pull from the server has completed under stable ids --
+    /// from then on the server's copy is the one to use, and whatever could not
+    /// be translated is rebuilt from it -- or once nothing is left waiting that a
+    /// later scan or sync could still place. Frank's rule: an old id that cannot
+    /// be translated is not kept around; the server's version replaces it.
+    pub fn id_migration_settled(&self) -> Result<bool> {
+        if self.meta_get("id_scheme_settled").as_deref() == Some("1") {
+            return Ok(true);
+        }
+        let waiting: i64 = self.conn.query_row(
+            "SELECT COUNT(*) FROM id_migration WHERE ambiguous = 0",
+            [],
+            |r| r.get(0),
+        )?;
+        Ok(waiting == 0)
+    }
+
     /// Every old id placed so far, and the stable id of the game it named.
     pub fn id_moves(&self) -> Result<std::collections::BTreeMap<i64, i64>> {
         Ok(self
@@ -1418,6 +1438,12 @@ impl Cache {
             self.meta_set("roms_updated_through", &high)?;
         }
         self.apply_id_migration()?;
+        // A full pull is everything the server has. Past this point an old id
+        // it did not place names nothing the server knows, and the server's
+        // copy of anything is what gets used.
+        if since.is_none() {
+            self.meta_set("id_scheme_settled", "1")?;
+        }
         Ok((platforms.len(), upserted, since.is_some()))
     }
 }
@@ -2053,6 +2079,30 @@ mod tests {
         assert_eq!(on(kirby), 0, "not merged into Kirby");
         assert_eq!(on(zelda), 0, "nor into Zelda");
         assert_eq!(on(-5), 2, "left where they were");
+    }
+
+    /// Settled once nothing is waiting, or once a full pull has happened even
+    /// if something is.
+    #[test]
+    fn the_migration_settles_when_nothing_can_still_be_placed() {
+        let dir = std::env::temp_dir().join("moose-rack-cache-test-settled");
+        std::fs::remove_dir_all(&dir).ok();
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("c.sqlite3");
+        {
+            let c = Cache::open(&path).unwrap();
+            c.conn.execute_batch(
+                "DELETE FROM meta WHERE key = 'id_scheme';
+                 INSERT INTO roms(id, platform_slug, name, fs_name) VALUES (-5, 'gba', 'Gone', 'gone.gba');",
+            ).unwrap();
+        }
+        let c = Cache::open(&path).unwrap();
+        assert!(!c.id_migration_settled().unwrap(), "-5 could still be placed by a sync");
+        c.meta_set("id_scheme_settled", "1").unwrap();
+        assert!(c.id_migration_settled().unwrap(), "after a full pull it is final");
+
+        let fresh = cache("settled-fresh");
+        assert!(fresh.id_migration_settled().unwrap(), "nothing waiting is settled");
     }
 
     /// An old id that names more than one game is left waiting, not guessed.
