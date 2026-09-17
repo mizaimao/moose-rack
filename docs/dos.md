@@ -7,19 +7,19 @@ before any code was written, so this is the record to start from.
 
 ## What was decided
 
-- **Source: eXoDOS**, used as a resource and never run. Its launchers,
+- The source is eXoDOS, used as a resource and never run. Its launchers,
   LaunchBox and bundled emulators are Windows-only; everything we need from it
   is zips, text and a torrent, which any machine can read. It lives on the
   server because the library and the service already do.
-- **Emulator: DOSBox Pure**, on the desktop through RetroArch and, later, in the
+- The emulator is DOSBox Pure, on the desktop through RetroArch and, later, in the
   browser through EmulatorJS (whose DOS core is the same one). One emulator
   means one config adapter and one save file for both.
-- **Fallback: DOSBox Staging**, per game, for what Pure cannot run. Not
+- The fallback is DOSBox Staging, per game, for what Pure cannot run, and not
   DOSBox-X: eXoDOS moved all but a few of its DOSBox-X, Daum and custom-build
   games to Staging in 2024 ([eXoDOS#5148](https://github.com/exoscoriae/eXoDOS/issues/5148)),
   and 18 games are left on X.
-- **eXoDOS's per-game emulator choice is a hint, not an instruction.** It names
-  Windows builds, and ECE (2,100 games) has no Mac build.
+- eXoDOS's per-game emulator choice is used as a hint. It names Windows
+  builds, and ECE (2,100 games) has no Mac build.
 
 ## eXoDOS Lite on the server
 
@@ -76,7 +76,7 @@ runs instead. Dune II's wraps DOSBox in a mouse helper `.exe`.
 
 Found by playing DOOM on the Mac. Each fix was confirmed by Frank.
 
-1. **The game ran far too fast.** It was not frame pacing: 1,400 frames took
+1. The game ran far too fast. It was not frame pacing: 1,400 frames took
    20 s, which is real time at DOOM's 70 Hz, on a 120 Hz display, with audio
    muted or not. RetroArch's keyboard hotkeys were still live, and the log
    recorded `[DBP THROTTLE] NONE 70.08 -> FAST_FORWARD`. Space is fast-forward
@@ -86,13 +86,13 @@ Found by playing DOOM on the Mac. Each fix was confirmed by Frank.
    The app's pad hotkey block does not cover this. It gates hotkeys behind the
    pad's modifier only when a pad profile is found, and a DOS game is usually
    played with no pad at all.
-2. **"The frontend MIDI output is not set up correctly."** Pure's MIDI default
+2. RetroArch said "The frontend MIDI output is not set up correctly". Pure's MIDI default
    is the first soundfont in RetroArch's system directory, and RetroArch's own
    MIDI driver when there is none. eXo's `run.bat` also sets `mididevice` with
    `CONFIG -set`. Put `SoundCanvas.sf2` (47 MB, `EXTDOS.zip` -> `mt32/`) in the
    system directory and set `dosbox_pure_midi = "SoundCanvas.sf2"`. The log
    then reads `MIDI: Opened device:tsf`.
-3. **No mouse.** RetroArch does not capture the mouse in a window. Set
+3. The mouse did nothing. RetroArch does not capture the mouse in a window. Set
    `input_auto_mouse_grab = "true"`, which grabs it whenever the window has
    focus. DOOM's `DEFAULT.CFG` already has `use_mouse 1`.
    Game Focus would also grab the mouse and pass the keyboard through, but
