@@ -170,7 +170,7 @@ struct Library {
     /// check only when the server publishes nothing, which is what made the
     /// first transfers here unverified. The hashes were computed once over
     /// 1.76 TB; not serving them was the whole gap.
-    hashes: std::collections::HashMap<(String, String), (Option<String>, Option<String>, Option<String>)>,
+    hashes: Hashes,
 }
 
 /// Device registrations and what each last agreed with the server.
@@ -423,12 +423,17 @@ fn rel_of(g: &esde::Game) -> String {
 
 /// Load `(system, path) -> hashes` out of inventory.db.
 ///
+/// `(system, path)` to the container's `(md5, sha1, crc32)`, any of which the
+/// inventory may not have.
+type Hashes =
+    std::collections::HashMap<(String, String), (Option<String>, Option<String>, Option<String>)>;
+
 /// Container hashes, because the client hashes the file it wrote. Missing rows
 /// are not an error: a game the inventory has not seen simply gets no hash and
 /// falls back to a size check, which is what happens today for everything.
 fn load_hashes(
     path: &str,
-) -> Result<std::collections::HashMap<(String, String), (Option<String>, Option<String>, Option<String>)>>
+) -> Result<Hashes>
 {
     let conn = rusqlite::Connection::open(path)?;
     let mut out = std::collections::HashMap::new();
@@ -808,8 +813,8 @@ async fn upload_save(
 
     let mut st = lib.sync.lock().unwrap();
     let existing = st.store.list(Some(q.rom_id)).into_iter().find(|s| s.file_name == name);
-    if !q.overwrite.unwrap_or(false) {
-        if let Some(cur) = &existing {
+    if !q.overwrite.unwrap_or(false)
+        && let Some(cur) = &existing {
             let agreed = st
                 .data
                 .seen
@@ -828,7 +833,6 @@ async fn upload_save(
                     .into_response();
             }
         }
-    }
 
     match st.store.write(q.rom_id, &name, &bytes) {
         Ok(s) => {
@@ -929,17 +933,15 @@ async fn require_auth(
     // than between the routes. Decided here rather than in the handler: this
     // runs before the router resolves anything, so the rule holds however the
     // handler is later rewritten, and it can be tested against any router.
-    if !who.is_owner() {
-        if let Some(cmd) = req.uri().path().strip_prefix("/invoke/") {
-            if auth::owner_only(cmd) {
+    if !who.is_owner()
+        && let Some(cmd) = req.uri().path().strip_prefix("/invoke/")
+            && auth::owner_only(cmd) {
                 return (
                     axum::http::StatusCode::FORBIDDEN,
                     format!("{cmd} is the owner's to do"),
                 )
                     .into_response();
             }
-        }
-    }
     req.extensions_mut().insert(who);
     let mut res = next.run(req).await;
     // The session the guest was just given, so the next request is not a second

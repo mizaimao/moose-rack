@@ -334,13 +334,6 @@ mod tests {
         .expect("test fixture matches the CoreMap schema")
     }
 
-    /// A per-game pin beats the platform override, which beats the ES-DE
-    /// default. This ordering is why arcade works at all: one platform, many
-    /// romsets, no single core that runs them.
-    /// The compiled-in map has to parse, since `embedded()` unwraps it. This
-    /// is what makes that unwrap safe: a bad `data/esde-core-map.json` fails
-    /// here rather than at a user's first launch.
-    #[test]
     /// A console that scans must have a name, or the card draws its folder.
     ///
     /// The core map names 38 systems and ES-DE names 195, and the gap was
@@ -398,6 +391,10 @@ mod tests {
         assert_eq!(map.display_name("snes"), Some("Nintendo SNES (Super Nintendo)"));
     }
 
+    /// The compiled-in map has to parse, since `embedded()` unwraps it. This
+    /// is what makes that unwrap safe: a bad `data/esde-core-map.json` fails
+    /// here rather than at a user's first launch.
+    #[test]
     fn the_embedded_core_map_parses() {
         let m = CoreMap::embedded();
         assert!(!m.systems.is_empty(), "the embedded map has systems");
@@ -407,6 +404,9 @@ mod tests {
         );
     }
 
+    /// A per-game pin beats the platform override, which beats the ES-DE
+    /// default. This ordering is why arcade works at all: one platform, many
+    /// romsets, no single core that runs them.
     #[test]
     fn per_game_beats_override_beats_default() {
         let m = map();

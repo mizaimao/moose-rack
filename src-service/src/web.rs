@@ -535,11 +535,10 @@ mod tests {
             // `invoke("name"` and `invoke(\n  "name"`, both of which occur.
             for (i, _) in src.match_indices("invoke(") {
                 let rest = src[i + "invoke(".len()..].trim_start();
-                if let Some(r) = rest.strip_prefix('"') {
-                    if let Some(end) = r.find('"') {
+                if let Some(r) = rest.strip_prefix('"')
+                    && let Some(end) = r.find('"') {
                         called.insert(r[..end].to_owned());
                     }
-                }
             }
         }
         assert!(called.len() > 50, "only found {} invokes; the scan broke", called.len());
