@@ -62,6 +62,45 @@ fn fingerprint(state: &crate::api::SaveState) -> String {
 }
 
 impl Ledger {
+    /// Rekey entries recorded under old positional game ids onto stable ones.
+    ///
+    /// Losing an entry is safe -- the state is asked about again rather than
+    /// assumed -- but it turns every synced state into a question, so entries
+    /// whose old id has a known game are moved. The rest are kept for later.
+    pub fn remap(&mut self, moves: &std::collections::BTreeMap<i64, i64>) -> usize {
+        let mut changed = 0;
+        for map in [&mut self.seen, &mut self.server] {
+            let old = std::mem::take(map);
+            for (key, value) in old {
+                let rekeyed = key.split_once('/').and_then(|(id, file)| {
+                    let id: i64 = id.parse().ok()?;
+                    let new = moves.get(&id).filter(|_| crate::gameid::is_legacy(id))?;
+                    Some(format!("{new}/{file}"))
+                });
+                match rekeyed {
+                    Some(k) => {
+                        changed += 1;
+                        map.entry(k).or_insert(value);
+                    }
+                    None => {
+                        map.insert(key, value);
+                    }
+                }
+            }
+        }
+        changed
+    }
+
+    /// Load, rekey and save the ledger in `dir`, when there is anything to move.
+    pub fn adopt_stable_ids(dir: &Path, moves: &std::collections::BTreeMap<i64, i64>) -> Result<usize> {
+        let mut ledger = Self::load(dir);
+        let changed = ledger.remap(moves);
+        if changed > 0 {
+            ledger.save(dir)?;
+        }
+        Ok(changed)
+    }
+
     pub fn load(dir: &Path) -> Self {
         std::fs::read_to_string(dir.join(LEDGER))
             .ok()
@@ -385,6 +424,22 @@ async fn server_print(client: &Client, rom_id: i64, file_name: &str) -> Option<S
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn ledger_entries_follow_their_game_to_its_stable_id() {
+        let mut l = Ledger::default();
+        l.seen.insert("-12/Game.state1".into(), "h".into());
+        l.server.insert("-12/Game.state1".into(), "10:t".into());
+        l.seen.insert("-99/Other.state".into(), "x".into());
+        l.seen.insert("20000009/Kept.state".into(), "k".into());
+        let moves = [(-12i64, 20_000_001i64)].into_iter().collect();
+        assert_eq!(l.remap(&moves), 2);
+        assert_eq!(l.seen.get("20000001/Game.state1").map(String::as_str), Some("h"));
+        assert_eq!(l.server.get("20000001/Game.state1").map(String::as_str), Some("10:t"));
+        assert!(l.seen.contains_key("-99/Other.state"), "unplaced ids wait");
+        assert!(l.seen.contains_key("20000009/Kept.state"), "stable keys untouched");
+        assert_eq!(l.remap(&moves), 0, "idempotent");
+    }
 
     /// One side only. Nothing to weigh up: copy it to the other.
     #[test]

@@ -326,3 +326,83 @@ mod tests {
         assert!(kept.file_name().unwrap().to_string_lossy().ends_with("-Zelda.srm"));
     }
 }
+
+/// Move backups kept under old positional game ids to the stable ids.
+///
+/// Backups sit at `saves-backup/<rom_id>/...`, and until `gameid` that id was a
+/// position in a scan. `moves` is the cache's record of which game each old id
+/// named (`Cache::id_moves`). A folder whose old id is not in it stays where it
+/// is: a backup is only ever read by a person looking for it, and leaving one
+/// behind loses nothing, while putting it under the wrong game would. A file
+/// already present under the new id is not overwritten.
+///
+/// Safe to run on every start; a folder that has moved is no longer there.
+pub fn adopt_stable_ids(
+    library_root: &Path,
+    moves: &std::collections::BTreeMap<i64, i64>,
+) -> Result<usize> {
+    let base = root(library_root);
+    let Ok(rd) = std::fs::read_dir(&base) else { return Ok(0) };
+    let mut moved = 0;
+    for e in rd.flatten() {
+        let Some(old) = e.file_name().to_str().and_then(|n| n.parse::<i64>().ok()) else {
+            continue;
+        };
+        if !crate::gameid::is_legacy(old) {
+            continue;
+        }
+        let Some(new) = moves.get(&old) else { continue };
+        moved += merge_tree(&e.path(), &base.join(new.to_string()))?;
+    }
+    Ok(moved)
+}
+
+/// Move every file under `from` to the same relative path under `to`, leaving
+/// anything that would collide. Removes directories it empties.
+fn merge_tree(from: &Path, to: &Path) -> Result<usize> {
+    let mut moved = 0;
+    std::fs::create_dir_all(to).with_context(|| format!("creating {}", to.display()))?;
+    for e in std::fs::read_dir(from)?.flatten() {
+        let target = to.join(e.file_name());
+        if e.path().is_dir() {
+            moved += merge_tree(&e.path(), &target)?;
+        } else if !target.exists() {
+            std::fs::rename(e.path(), &target)
+                .with_context(|| format!("moving {}", e.path().display()))?;
+            moved += 1;
+        }
+    }
+    std::fs::remove_dir(from).ok();
+    Ok(moved)
+}
+
+#[cfg(test)]
+mod stable_id_tests {
+    use super::*;
+
+    #[test]
+    fn backups_follow_their_game_and_nothing_is_overwritten() {
+        let lib = std::env::temp_dir().join("moose-backup-stable-ids");
+        std::fs::remove_dir_all(&lib).ok();
+        let put = |rel: &str, body: &[u8]| {
+            let p = root(&lib).join(rel);
+            std::fs::create_dir_all(p.parent().unwrap()).unwrap();
+            std::fs::write(p, body).unwrap();
+        };
+        let new = 20_000_001i64;
+        put("-12/unslotted/1-Chrono Trigger (USA).srm", b"old backup");
+        put("-12/unslotted/2-Chrono Trigger (USA).srm", b"clashes");
+        put(&format!("{new}/unslotted/2-Chrono Trigger (USA).srm"), b"already here");
+        put("-99/unslotted/1-Unknown.srm", b"no record of this id");
+        let moves = [(-12i64, new)].into_iter().collect();
+
+        assert_eq!(adopt_stable_ids(&lib, &moves).unwrap(), 1);
+        let under_new = root(&lib).join(format!("{new}/unslotted"));
+        assert_eq!(std::fs::read(under_new.join("1-Chrono Trigger (USA).srm")).unwrap(), b"old backup");
+        assert_eq!(std::fs::read(under_new.join("2-Chrono Trigger (USA).srm")).unwrap(), b"already here");
+        assert!(root(&lib).join("-12/unslotted/2-Chrono Trigger (USA).srm").is_file(), "the clash stays put");
+        assert!(root(&lib).join("-99/unslotted/1-Unknown.srm").is_file(), "an unplaced id stays put");
+        // And again, nothing left to do.
+        assert_eq!(adopt_stable_ids(&lib, &moves).unwrap(), 0);
+    }
+}

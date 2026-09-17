@@ -4,6 +4,7 @@ import { statusTag, viewerIsRemote, bareUrl } from "./status-tag.js";
 import { installHistoryNav } from "./history-nav.js";
 import { el, state, trail, invoke, listen, MOBILE } from "./state.js";
 import { applyLabels } from "./chrome.js";
+import { adoptStableIds } from "./id-migration.js";
 import { askDownload } from "./bulk.js";
 import { askConfigPatch } from "./conflicts.js";
 import { openSortMenu } from "./sort.js";
@@ -415,6 +416,8 @@ function statusCard(s) {
     loadListControls()
       .then((c) => setFilters(c.filters))
       .catch((e) => console.warn("loading list controls:", e)),
+    // Before the first list draws: it restores the cursor from `lastRom`.
+    adoptStableIds(invoke, state).catch((e) => console.warn("remembered games:", e)),
   ]);
   await showSection("library", { force: true });
   installPageFilter();

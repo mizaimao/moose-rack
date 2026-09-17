@@ -904,6 +904,20 @@ pub fn to_views(
     views
 }
 
+/// Stable ids for game ids a page remembered from before `gameid`.
+///
+/// Only the ids this machine has placed; an id not placed yet is absent from
+/// the answer and the page keeps it until a later scan or sync can place it.
+/// Keys are strings because this crosses JSON, where object keys always are.
+pub fn stable_ids(state: &AppState, ids: Vec<i64>) -> CmdResult<std::collections::BTreeMap<String, i64>> {
+    let moves = state.cache.lock().map_err(err)?.id_moves().map_err(err)?;
+    Ok(ids
+        .into_iter()
+        .filter(|id| crate::gameid::is_legacy(*id))
+        .filter_map(|id| moves.get(&id).map(|new| (id.to_string(), *new)))
+        .collect())
+}
+
 pub fn roms(
     state: &AppState,
     platform: String,

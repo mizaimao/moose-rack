@@ -112,6 +112,11 @@ async fn sync_library(app: tauri::AppHandle, state: State<'_, AppState>, full: b
     // One row per game whichever side found it, because both derive the id
     // from where the file is. This only counts the overlap for the message.
     let folded = store.on_both().unwrap_or(0);
+    // Server rows are in now, so old ids that only the server's rows could
+    // place are placeable; move what is still keyed by them.
+    if let Some(library_root) = state.roms_dir.parent() {
+        moose_rack::app::adopt_client_stores(&store, library_root, Path::new("."));
+    }
 
     let total = store.rom_count().unwrap_or(0);
     let _ = app.emit("sync-progress", "done");
@@ -1020,6 +1025,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             measure_note,
             browser_play_base,
+            stable_ids,
             local_save,
             put_local_save,
             bios_status,
@@ -1274,6 +1280,11 @@ async fn download_estimate(
     choice: DownloadChoice,
 ) -> CmdResult<(String, bool, String)> {
     moose_rack::commands::download_estimate(&state, choice).await
+}
+
+#[tauri::command]
+async fn stable_ids(state: State<'_, AppState>, ids: Vec<i64>) -> CmdResult<std::collections::BTreeMap<String, i64>> {
+    moose_rack::commands::stable_ids(&state, ids)
 }
 
 #[tauri::command]
