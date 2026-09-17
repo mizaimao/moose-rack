@@ -11,9 +11,13 @@
 // or sync has placed it, and this asks it, once per start, for whatever is
 // still old.
 //
-// An old id the backend cannot place yet is kept as it is -- a later start may
-// place it -- and nothing here ever throws past its caller: a preference that
-// could not be moved is not a reason for the page not to load.
+// An old id the backend cannot place is kept only while it still might be
+// placed. Once the backend says the migration has settled -- a full pull from
+// the server has happened, or nothing is left waiting -- it is dropped, and
+// what it pointed at comes from the server again: the list opens at the top,
+// the game plays the default way, EmulatorJS starts from its defaults. Nothing
+// here ever throws past its caller: a preference that could not be moved is
+// not a reason for the page not to load.
 
 /// Anything smaller than this in magnitude is an old id. Mirrors
 /// `moose_rack::gameid::FLOOR`.
@@ -62,14 +66,18 @@ export async function adoptStableIds(invoke, state = null) {
   ].map(Number);
   if (!old.length) return 0;
 
-  let map;
+  let answer;
   try {
-    map = await invoke("stable_ids", { ids: [...new Set(old)] });
+    answer = await invoke("stable_ids", { ids: [...new Set(old)] });
   } catch {
     return 0;
   }
+  const map = answer?.moved;
   if (!map || typeof map !== "object") return 0;
+  const settled = answer.settled === true;
   const to = (id) => (isLegacy(id) && map[String(id)] != null ? Number(map[String(id)]) : null);
+  // Old, untranslatable, and never going to be: dropped.
+  const dead = (id) => isLegacy(id) && to(id) == null && settled;
 
   let moved = 0;
   for (const [k, v] of Object.entries(lastRom)) {
@@ -77,16 +85,37 @@ export async function adoptStableIds(invoke, state = null) {
     if (n != null) {
       lastRom[k] = n;
       moved += 1;
+    } else if (dead(v)) {
+      delete lastRom[k];
+      if (state?.lastRom) delete state.lastRom[k];
+      moved += 1;
     }
   }
-  const nextPlayHere = [...new Set((Array.isArray(playHere) ? playHere : []).map((id) => {
+  const nextPlayHere = [...new Set((Array.isArray(playHere) ? playHere : []).flatMap((id) => {
     const n = to(id);
-    if (n != null) moved += 1;
-    return n ?? id;
+    if (n != null) {
+      moved += 1;
+      return [n];
+    }
+    if (dead(id)) {
+      moved += 1;
+      return [];
+    }
+    return [id];
   }))];
   for (const [key, id, rest] of emulator) {
     const n = to(id);
-    if (n == null) continue;
+    if (n == null) {
+      if (dead(id)) {
+        try {
+          localStorage.removeItem(key);
+          moved += 1;
+        } catch {
+          // Tried again next start.
+        }
+      }
+      continue;
+    }
     try {
       const target = `ejs-${n}-${rest}`;
       // A game already played under its new id keeps those settings.

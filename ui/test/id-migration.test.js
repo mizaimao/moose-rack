@@ -32,7 +32,7 @@ describe("remembered games move to stable ids", () => {
     const state = { lastRom: JSON.parse(store.get("lastRom")) };
     const moved = await adoptStableIds(async (cmd, args) => {
       asked.push([cmd, args]);
-      return { "5653": STABLE }; // 1918 not placed yet
+      return { moved: { "5653": STABLE }, settled: false }; // 1918 not placed yet
     }, state);
 
     assert.equal(moved, 2);
@@ -53,7 +53,7 @@ describe("remembered games move to stable ids", () => {
     const ACT = 3550463174075161;
     await adoptStableIds(async (cmd, { ids }) => {
       assert.deepEqual(ids.sort((a, b) => a - b), [-10793, 5653]);
-      return { "-10793": ACT, "5653": STABLE };
+      return { moved: { "-10793": ACT, "5653": STABLE }, settled: false };
     });
     assert.equal(store.get(`ejs-${ACT}-snes9x-ActRaiser (USA)-settings`), '{"controlSettings":"mine"}');
     assert.equal(store.has("ejs--10793-snes9x-ActRaiser (USA)-settings"), false);
@@ -65,6 +65,19 @@ describe("remembered games move to stable ids", () => {
     assert.equal(store.get("ejs-settings"), '{"volume":0.5}', "the global settings key is not a game's");
   });
 
+  test("once settled, what cannot be translated is dropped and the server's version used", async () => {
+    store.set("lastRom", JSON.stringify({ "roms:snes": 5653, "roms:gba": 1918 }));
+    store.set("playHere", JSON.stringify([5653, 1918]));
+    store.set("ejs-1918-mgba-Kirby-settings", '{"cheats":"orphaned"}');
+    const state = { lastRom: JSON.parse(store.get("lastRom")) };
+    await adoptStableIds(async () => ({ moved: { "5653": STABLE }, settled: true }), state);
+    const lastRom = JSON.parse(store.get("lastRom"));
+    assert.deepEqual(lastRom, { "roms:snes": STABLE }, "1918 names nothing and is gone");
+    assert.deepEqual(state.lastRom, { "roms:snes": STABLE });
+    assert.deepEqual(JSON.parse(store.get("playHere")), [STABLE]);
+    assert.equal(store.has("ejs-1918-mgba-Kirby-settings"), false);
+  });
+
   test("nothing old means no call at all", async () => {
     store.set("lastRom", JSON.stringify({ a: STABLE }));
     let called = false;
@@ -74,7 +87,7 @@ describe("remembered games move to stable ids", () => {
 
   test("a backend that fails or does not know the command leaves storage alone", async () => {
     store.set("lastRom", JSON.stringify({ a: 12 }));
-    for (const invoke of [async () => { throw new Error("unknown command"); }, async () => null]) {
+    for (const invoke of [async () => { throw new Error("unknown command"); }, async () => null, async () => ({ settled: true })]) {
       assert.equal(await adoptStableIds(invoke), 0);
       assert.equal(JSON.parse(store.get("lastRom")).a, 12);
     }
@@ -83,7 +96,7 @@ describe("remembered games move to stable ids", () => {
   test("corrupt storage is not a reason for the page not to load", async () => {
     store.set("lastRom", "{not json");
     store.set("playHere", "[also not");
-    assert.equal(await adoptStableIds(async () => ({})), 0);
+    assert.equal(await adoptStableIds(async () => ({ moved: {}, settled: true })), 0);
   });
 
   test("the threshold agrees with the backend's", () => {

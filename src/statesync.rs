@@ -67,7 +67,11 @@ impl Ledger {
     /// Losing an entry is safe -- the state is asked about again rather than
     /// assumed -- but it turns every synced state into a question, so entries
     /// whose old id has a known game are moved. The rest are kept for later.
-    pub fn remap(&mut self, moves: &std::collections::BTreeMap<i64, i64>) -> usize {
+    ///
+    /// With `settled`, an old-id entry that has no translation is dropped
+    /// instead: the migration has given up on it, so the state is compared
+    /// with the server's afresh on the next sync and the server's copy is used.
+    pub fn remap(&mut self, moves: &std::collections::BTreeMap<i64, i64>, settled: bool) -> usize {
         let mut changed = 0;
         for map in [&mut self.seen, &mut self.server] {
             let old = std::mem::take(map);
@@ -77,11 +81,16 @@ impl Ledger {
                     let new = moves.get(&id).filter(|_| crate::gameid::is_legacy(id))?;
                     Some(format!("{new}/{file}"))
                 });
+                let legacy = key
+                    .split_once('/')
+                    .and_then(|(id, _)| id.parse::<i64>().ok())
+                    .is_some_and(crate::gameid::is_legacy);
                 match rekeyed {
                     Some(k) => {
                         changed += 1;
                         map.entry(k).or_insert(value);
                     }
+                    None if legacy && settled => changed += 1,
                     None => {
                         map.insert(key, value);
                     }
@@ -92,9 +101,13 @@ impl Ledger {
     }
 
     /// Load, rekey and save the ledger in `dir`, when there is anything to move.
-    pub fn adopt_stable_ids(dir: &Path, moves: &std::collections::BTreeMap<i64, i64>) -> Result<usize> {
+    pub fn adopt_stable_ids(
+        dir: &Path,
+        moves: &std::collections::BTreeMap<i64, i64>,
+        settled: bool,
+    ) -> Result<usize> {
         let mut ledger = Self::load(dir);
-        let changed = ledger.remap(moves);
+        let changed = ledger.remap(moves, settled);
         if changed > 0 {
             ledger.save(dir)?;
         }
@@ -433,12 +446,17 @@ mod tests {
         l.seen.insert("-99/Other.state".into(), "x".into());
         l.seen.insert("20000009/Kept.state".into(), "k".into());
         let moves = [(-12i64, 20_000_001i64)].into_iter().collect();
-        assert_eq!(l.remap(&moves), 2);
+        assert_eq!(l.remap(&moves, false), 2);
         assert_eq!(l.seen.get("20000001/Game.state1").map(String::as_str), Some("h"));
         assert_eq!(l.server.get("20000001/Game.state1").map(String::as_str), Some("10:t"));
         assert!(l.seen.contains_key("-99/Other.state"), "unplaced ids wait");
         assert!(l.seen.contains_key("20000009/Kept.state"), "stable keys untouched");
-        assert_eq!(l.remap(&moves), 0, "idempotent");
+        assert_eq!(l.remap(&moves, false), 0, "idempotent");
+        // Once the migration has settled, what could not be translated goes and
+        // the server's copy is used on the next sync.
+        assert_eq!(l.remap(&moves, true), 1);
+        assert!(!l.seen.contains_key("-99/Other.state"));
+        assert!(l.seen.contains_key("20000009/Kept.state"));
     }
 
     /// One side only. Nothing to weigh up: copy it to the other.

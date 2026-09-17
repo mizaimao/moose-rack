@@ -1283,7 +1283,7 @@ async fn download_estimate(
 }
 
 #[tauri::command]
-async fn stable_ids(state: State<'_, AppState>, ids: Vec<i64>) -> CmdResult<std::collections::BTreeMap<String, i64>> {
+async fn stable_ids(state: State<'_, AppState>, ids: Vec<i64>) -> CmdResult<moose_rack::commands::StableIds> {
     moose_rack::commands::stable_ids(&state, ids)
 }
 
