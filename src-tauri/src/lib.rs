@@ -109,9 +109,9 @@ async fn sync_library(app: tauri::AppHandle, state: State<'_, AppState>, full: b
     let names = moose_rack::arcade::names(Path::new("data/arcade-names.json"));
     let renamed = store.apply_arcade_names(&names).unwrap_or(0);
 
-    // Both passes are in now, so the games that are in both stop being two.
-    // Matched on platform and file name — see `absorb_local_into_server`.
-    let folded = store.absorb_local_into_server().unwrap_or(0);
+    // One row per game whichever side found it, because both derive the id
+    // from where the file is. This only counts the overlap for the message.
+    let folded = store.on_both().unwrap_or(0);
 
     let total = store.rom_count().unwrap_or(0);
     let _ = app.emit("sync-progress", "done");
@@ -205,11 +205,12 @@ async fn download_set(
             } else {
                 Vec::new()
             };
+            let folder = row.folder();
             let target = moose_rack::download::Target {
                 rom_id: row.id,
                 members: &members,
                 fs_name: &row.fs_name,
-                platform_slug: &row.platform_slug,
+                folder: &folder,
                 expected_size: (row.fs_size_bytes > 0).then_some(row.fs_size_bytes as u64),
                 md5: row.md5_hash.as_deref(),
                 sha1: row.sha1_hash.as_deref(),
@@ -323,11 +324,12 @@ async fn download_rom(
         Vec::new()
     };
 
+    let folder = row.folder();
     let target = download::Target {
         rom_id: row.id,
         members: &members,
         fs_name: &row.fs_name,
-        platform_slug: &row.platform_slug,
+        folder: &folder,
         expected_size: (row.fs_size_bytes > 0).then_some(row.fs_size_bytes as u64),
         md5: row.md5_hash.as_deref(),
         sha1: row.sha1_hash.as_deref(),

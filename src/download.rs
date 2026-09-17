@@ -48,7 +48,8 @@ pub struct Target<'a> {
     /// file after unpacking.
     pub members: &'a [(String, String)],
     pub fs_name: &'a str,
-    pub platform_slug: &'a str,
+    /// The directory under the ROMs folder, from `RomRow::folder`.
+    pub folder: &'a Path,
     pub expected_size: Option<u64>,
     pub md5: Option<&'a str>,
     pub sha1: Option<&'a str>,
@@ -453,7 +454,7 @@ pub async fn fetch(
         );
     }
 
-    let dir = library_roms.join(target.platform_slug);
+    let dir = library_roms.join(target.folder);
     std::fs::create_dir_all(&dir).with_context(|| format!("creating {}", dir.display()))?;
     let final_path = dir.join(target.fs_name);
     let part_path = dir.join(format!("{}.part", target.fs_name));

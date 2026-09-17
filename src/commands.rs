@@ -849,7 +849,8 @@ impl Listings {
         {
             return true;
         }
-        self.has(&state.roms_dir.join(&row.platform_slug).join(&row.fs_name))
+        self.has(&state.roms_dir.join(row.folder()).join(&row.fs_name))
+            || self.has(&row.legacy_path(&state.roms_dir))
     }
 }
 
@@ -2974,6 +2975,11 @@ pub fn row_path(state: &AppState, row: &cache::RomRow) -> Option<PathBuf> {
         && (p.is_file() || p.is_dir())
     {
         return Some(p);
+    }
+    // Where a download goes now, then where an older build put it.
+    let home = state.roms_dir.join(row.folder()).join(&row.fs_name);
+    if home.is_file() || home.is_dir() {
+        return Some(home);
     }
     local_path(state, &row.platform_slug, &row.fs_name)
 }

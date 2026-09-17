@@ -127,6 +127,14 @@ pub struct Rom {
     pub fs_size_bytes: Option<i64>,
     #[serde(default)]
     pub platform_fs_slug: Option<String>,
+    /// Where the server keeps the file: its ES-DE system folder and the path
+    /// inside that. The id is derived from exactly these (see `gameid`), so a
+    /// download put back at the same place is the same game when this machine
+    /// scans. Absent from a server older than stable ids.
+    #[serde(default)]
+    pub esde_system: Option<String>,
+    #[serde(default)]
+    pub rel_dir: Option<String>,
     #[serde(default)]
     pub md5_hash: Option<String>,
     #[serde(default)]
