@@ -1394,23 +1394,37 @@ async fn main() -> Result<()> {
         .ok()
         .and_then(|b| serde_json::from_slice(&b).ok())
         .unwrap_or_default();
-    match saves::legacy::apply(&saves_root, &by_stable) {
-        Ok(None) => {}
-        Ok(Some(report)) => {
-            let rekeyed = saves::legacy::remap_seen(&mut data.seen, &report.moved);
-            if let Ok(bytes) = serde_json::to_vec_pretty(&data) {
-                std::fs::write(&state_path, bytes)?;
-            }
-            println!(
-                "saves      moved {} folder(s) to stable game ids, left {}, {rekeyed} sync record(s) rekeyed -- see {}",
+    if by_stable.is_empty() {
+        // Nothing to match saves against: the library is missing or empty,
+        // which is a mount problem, not a verdict on every save.
+        println!("saves      not placing old-id saves: the library scanned empty");
+    } else {
+        match saves::legacy::apply(&saves_root, &by_stable) {
+            Ok(None) => {}
+            Ok(Some(report)) => println!(
+                "saves      {} save folder(s) and {} state folder(s) moved to stable game ids, {} left -- see {}",
                 report.moved.len(),
+                report.states_moved.len(),
                 report.left.len(),
                 saves_root.join(saves::legacy::MARKER).display()
-            );
+            ),
+            // Not fatal. Anything unmoved stays where it is, is never offered to
+            // a device, and is tried again next start.
+            Err(e) => eprintln!("saves      could not record stable-id moves: {e}"),
         }
-        // Not fatal: the saves are where they were, and nothing reads them
-        // under ids that no longer name their games until this succeeds.
-        Err(e) => eprintln!("saves      could not move to stable ids: {e}"),
+    }
+    // Against every move ever made, so bookkeeping a failed write left behind
+    // is rekeyed now. Idempotent.
+    let rekeyed = saves::legacy::remap_seen(&mut data.seen, &saves::legacy::all_moved(&saves_root));
+    if rekeyed > 0 {
+        match serde_json::to_vec_pretty(&data) {
+            Ok(bytes) => {
+                if let Err(e) = std::fs::write(&state_path, bytes) {
+                    eprintln!("saves      could not rewrite sync-state.json: {e}");
+                }
+            }
+            Err(e) => eprintln!("saves      could not encode sync-state.json: {e}"),
+        }
     }
     println!(
         "saves      {} ({} devices known)",

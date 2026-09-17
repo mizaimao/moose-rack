@@ -260,6 +260,14 @@ impl SaveStore {
             else {
                 continue;
             };
+            // Never offered. A folder still under an old positional id is one
+            // the migration could not place (see `legacy`), and listing it made
+            // negotiate tell every device to download it -- a device holds its
+            // save under the stable id, so the old copy looked like one it
+            // lacked, and it would land over the current file of the same name.
+            if moose_rack::gameid::is_legacy(rid) {
+                continue;
+            }
             let Ok(rd) = std::fs::read_dir(&d) else { continue };
             for e in rd.flatten() {
                 let p = e.path();
@@ -453,11 +461,11 @@ mod tests {
     #[test]
     fn a_written_save_comes_back_with_its_hash_and_size() {
         let (_d, st) = store();
-        let w = st.write(7, "battery.srm", b"hello").unwrap();
-        assert_eq!(w.rom_id, 7);
+        let w = st.write(16777223, "battery.srm", b"hello").unwrap();
+        assert_eq!(w.rom_id, 16777223);
         assert_eq!(w.file_size_bytes, 5);
         assert_eq!(w.content_hash.as_deref(), Some("5d41402abc4b2a76b9719d911017c592"));
-        assert_eq!(st.list(Some(7)).len(), 1);
+        assert_eq!(st.list(Some(16777223)).len(), 1);
     }
 
     /// Two games may both hold `battery.srm`. Flattening them would make one
@@ -465,8 +473,8 @@ mod tests {
     #[test]
     fn the_same_name_under_two_games_is_two_saves() {
         let (_d, st) = store();
-        st.write(1, "battery.srm", b"one").unwrap();
-        st.write(2, "battery.srm", b"two").unwrap();
+        st.write(16777217, "battery.srm", b"one").unwrap();
+        st.write(16777218, "battery.srm", b"two").unwrap();
         let all = st.list(None);
         assert_eq!(all.len(), 2);
         assert_ne!(all[0].id, all[1].id, "ids must not collide across games");
@@ -488,8 +496,8 @@ mod tests {
     #[test]
     fn rewriting_a_save_changes_its_hash_but_not_its_id() {
         let (_d, st) = store();
-        let first = st.write(3, "a.srm", b"before").unwrap();
-        let second = st.write(3, "a.srm", b"after").unwrap();
+        let first = st.write(16777219, "a.srm", b"before").unwrap();
+        let second = st.write(16777219, "a.srm", b"after").unwrap();
         assert_eq!(first.id, second.id);
         assert_ne!(first.content_hash, second.content_hash);
         assert_eq!(st.read(second.id).unwrap(), b"after");
@@ -499,7 +507,7 @@ mod tests {
     fn listing_an_empty_or_missing_store_is_not_an_error() {
         let (_d, st) = store();
         assert!(st.list(None).is_empty());
-        assert!(st.list(Some(99)).is_empty());
+        assert!(st.list(Some(16777315)).is_empty());
         assert!(st.read(12345).is_none());
     }
 
@@ -507,9 +515,9 @@ mod tests {
     #[test]
     fn a_stored_save_matching_the_client_plans_as_no_op() {
         let (_d, st) = store();
-        let s = st.write(5, "a.srm", b"same-bytes").unwrap();
+        let s = st.write(16777221, "a.srm", b"same-bytes").unwrap();
         let c = ClientSaveState {
-            rom_id: 5,
+            rom_id: 16777221,
             file_name: "a.srm".into(),
             slot: None,
             emulator: None,
@@ -585,6 +593,10 @@ impl StateStore {
             else {
                 continue;
             };
+            // Same rule as saves: an unplaced old folder is never offered.
+            if moose_rack::gameid::is_legacy(rid) {
+                continue;
+            }
             let Ok(rd) = std::fs::read_dir(&d) else { continue };
             for e in rd.flatten() {
                 let p = e.path();
@@ -699,15 +711,15 @@ mod state_tests {
     #[test]
     fn a_state_round_trips_with_its_emulator() {
         let (_d, s) = store("st");
-        let w = s.write(7, "Game.state1", Some("snes9x"), b"frozen").unwrap();
-        assert_eq!(w.rom_id, 7);
+        let w = s.write(16777223, "Game.state1", Some("snes9x"), b"frozen").unwrap();
+        assert_eq!(w.rom_id, 16777223);
         assert_eq!(w.file_name, "Game.state1");
         assert_eq!(w.file_size_bytes, 6);
         assert_eq!(w.emulator.as_deref(), Some("snes9x"));
         assert_eq!(s.read(w.id).as_deref(), Some(&b"frozen"[..]));
-        assert_eq!(s.list(Some(7)), vec![w.clone()]);
+        assert_eq!(s.list(Some(16777223)), vec![w.clone()]);
         assert_eq!(s.list(None), vec![w]);
-        assert_eq!(s.list(Some(8)), vec![]);
+        assert_eq!(s.list(Some(16777224)), vec![]);
     }
 
     /// The sidecar must never be listed as a state of its own, or every state
@@ -715,7 +727,7 @@ mod state_tests {
     #[test]
     fn the_emulator_sidecar_is_not_a_state() {
         let (_d, s) = store("st-side");
-        s.write(1, "A.state", Some("mesen"), b"x").unwrap();
+        s.write(16777217, "A.state", Some("mesen"), b"x").unwrap();
         let names: Vec<_> = s.list(None).into_iter().map(|x| x.file_name).collect();
         assert_eq!(names, ["A.state"]);
     }
@@ -725,10 +737,10 @@ mod state_tests {
     #[test]
     fn ids_survive_a_rebuild() {
         let (_d, s) = store("st-id");
-        let a = s.write(3, "X.state", None, b"one").unwrap();
+        let a = s.write(16777219, "X.state", None, b"one").unwrap();
         let again = s.list(None)[0].clone();
         assert_eq!(a.id, again.id);
-        assert_eq!(a.id, save_id(3, "X.state"));
+        assert_eq!(a.id, save_id(16777219, "X.state"));
     }
 
     /// Re-uploading replaces, and an upload with no emulator does not inherit
@@ -736,8 +748,8 @@ mod state_tests {
     #[test]
     fn uploading_again_replaces_and_clears_a_stale_emulator() {
         let (_d, s) = store("st-re");
-        let first = s.write(2, "S.state", Some("mupen"), b"aa").unwrap();
-        let second = s.write(2, "S.state", None, b"bbbb").unwrap();
+        let first = s.write(16777218, "S.state", Some("mupen"), b"aa").unwrap();
+        let second = s.write(16777218, "S.state", None, b"bbbb").unwrap();
         assert_eq!(first.id, second.id, "the same file is the same state");
         assert_eq!(second.file_size_bytes, 4);
         assert_eq!(second.emulator, None, "the previous emulator stuck to a new state");
@@ -747,7 +759,7 @@ mod state_tests {
     #[test]
     fn an_unknown_id_reads_nothing() {
         let (_d, s) = store("st-none");
-        s.write(1, "A.state", None, b"x").unwrap();
+        s.write(16777217, "A.state", None, b"x").unwrap();
         assert_eq!(s.read(999), None);
     }
 }
@@ -772,13 +784,23 @@ pub mod legacy {
 
     use moose_rack::gameid;
 
-    /// Marker written when the move is done, holding the report.
+    /// Every old id placed so far, kept across starts. Also the report.
     pub const MARKER: &str = ".stable-ids.json";
+
+    /// A state goes with the save folder of the same old id only if the two
+    /// were written within this long of each other. Old ids drifted -- that is
+    /// the bug being fixed -- so a states folder and a saves folder can carry
+    /// the same number and belong to different games. Written in one session
+    /// they are the same game; the live pair on dev.lan was three minutes apart.
+    const SAME_SESSION: std::time::Duration = std::time::Duration::from_secs(24 * 3600);
 
     #[derive(Debug, Default, serde::Serialize, serde::Deserialize, PartialEq)]
     pub struct Report {
-        /// Old id to new id, for everything that moved.
+        /// Old id to new id, for save folders that moved.
         pub moved: BTreeMap<i64, i64>,
+        /// Old id to new id, for state folders that moved.
+        #[serde(default)]
+        pub states_moved: BTreeMap<i64, i64>,
         /// Old id to why it stayed.
         pub left: BTreeMap<i64, String>,
     }
@@ -808,6 +830,22 @@ pub mod legacy {
             .collect();
         out.sort();
         out
+    }
+
+    /// The newest modification time among the files in `dir`, sidecars aside.
+    fn newest(dir: &Path) -> Option<std::time::SystemTime> {
+        std::fs::read_dir(dir)
+            .ok()?
+            .filter_map(|e| e.ok())
+            .filter(|e| e.path().is_file())
+            .filter(|e| !e.file_name().to_string_lossy().starts_with('.'))
+            .filter_map(|e| e.metadata().ok()?.modified().ok())
+            .max()
+    }
+
+    fn near(a: std::time::SystemTime, b: std::time::SystemTime) -> bool {
+        let gap = a.duration_since(b).or_else(|_| b.duration_since(a)).unwrap_or_default();
+        gap <= SAME_SESSION
     }
 
     /// Work out what would move, without moving anything.
@@ -841,9 +879,7 @@ pub mod legacy {
                 let found = by_stem.get(&stem(n)).or_else(|| by_folded.get(&stem(n).to_lowercase()));
                 match found.map(Vec::as_slice) {
                     Some([one]) => targets.push(*one),
-                    Some(many) => {
-                        why = Some(format!("{n} matches {} games", many.len()));
-                    }
+                    Some(many) => why = Some(format!("{n} matches {} games", many.len())),
                     None => why = Some(format!("no game is named like {n}")),
                 }
             }
@@ -864,11 +900,25 @@ pub mod legacy {
                 }
             }
         }
-        // States carry no game name. They go with the save folder of the same
-        // old id, or they stay.
-        for (old, _) in legacy_dirs(&saves_root.join("_states")) {
-            if !report.moved.contains_key(&old) && !report.left.contains_key(&old) {
-                report.left.insert(old, "states only, and states are not named after a game".into());
+        // States carry no game name. They follow the save folder of the same
+        // old id, and only when they were written in the same session.
+        let states_root = saves_root.join("_states");
+        for (old, dir) in legacy_dirs(&states_root) {
+            let paired = report.moved.get(&old).copied().filter(|_| {
+                match (newest(&dir), newest(&saves_root.join(old.to_string()))) {
+                    (Some(a), Some(b)) => near(a, b),
+                    _ => false,
+                }
+            });
+            match paired {
+                Some(new) => {
+                    report.states_moved.insert(old, new);
+                }
+                None => {
+                    report.left.entry(old).or_insert_with(|| {
+                        "states, not written near a save of the same old id, so no game to put them with".into()
+                    });
+                }
             }
         }
         report
@@ -893,39 +943,79 @@ pub mod legacy {
         Ok(clashes)
     }
 
-    /// Do it, once. Returns `None` when it has already been done.
+    /// Place whatever can be placed, on every start.
+    ///
+    /// Not once: a start with the library missing or empty would otherwise
+    /// record every folder as unplaceable and never look again. With nothing
+    /// to match against it does nothing at all. Each folder is moved on its own,
+    /// so one that fails is reported and the rest still move. Folders left
+    /// behind are safe where they are -- `SaveStore::list` never offers them.
+    ///
+    /// Returns this start's report, or `None` when there was nothing to do.
+    /// The file at `MARKER` accumulates every move ever made, which is what
+    /// `remap_seen` reads, so bookkeeping that failed to save is rekeyed next
+    /// time rather than lost.
     pub fn apply(saves_root: &Path, games: &[(i64, String)]) -> std::io::Result<Option<Report>> {
-        let marker = saves_root.join(MARKER);
-        if marker.exists() {
+        if games.is_empty() {
             return Ok(None);
         }
-        let mut report = plan(saves_root, games);
-        let moves: Vec<(i64, i64)> = report.moved.iter().map(|(a, b)| (*a, *b)).collect();
-        for (old, new) in moves {
-            for sub in ["", "_states"] {
-                let base = if sub.is_empty() { saves_root.to_path_buf() } else { saves_root.join(sub) };
-                let from = base.join(old.to_string());
-                if !from.is_dir() {
-                    continue;
+        let planned = plan(saves_root, games);
+        if planned.moved.is_empty() && planned.states_moved.is_empty() {
+            return Ok(if planned.left.is_empty() { None } else { Some(planned) });
+        }
+        let mut done = Report::default();
+        let moves = planned.moved.iter().map(|(o, n)| ("", *o, *n));
+        let state_moves = planned.states_moved.iter().map(|(o, n)| ("_states", *o, *n));
+        for (sub, old, new) in moves.chain(state_moves) {
+            let base = if sub.is_empty() { saves_root.to_path_buf() } else { saves_root.join(sub) };
+            let from = base.join(old.to_string());
+            let what = if sub.is_empty() { "saves" } else { "states" };
+            match merge_into(&from, &base.join(new.to_string())) {
+                Ok(clashes) if clashes.is_empty() => {
+                    if sub.is_empty() {
+                        done.moved.insert(old, new);
+                    } else {
+                        done.states_moved.insert(old, new);
+                    }
                 }
-                let clashes = merge_into(&from, &base.join(new.to_string()))?;
-                if !clashes.is_empty() {
-                    report.left.insert(
-                        old,
-                        format!("{} already existed under {new}: {}", if sub.is_empty() { "saves" } else { "states" }, clashes.join(", ")),
-                    );
+                Ok(clashes) => {
+                    done.left.insert(old, format!("{what} already under {new}: {}", clashes.join(", ")));
+                }
+                Err(e) => {
+                    done.left.insert(old, format!("{what} could not move: {e}"));
                 }
             }
         }
-        std::fs::write(&marker, serde_json::to_vec_pretty(&report).unwrap_or_default())?;
-        Ok(Some(report))
+        for (old, why) in planned.left {
+            done.left.entry(old).or_insert(why);
+        }
+        let mut all: Report = std::fs::read(saves_root.join(MARKER))
+            .ok()
+            .and_then(|b| serde_json::from_slice(&b).ok())
+            .unwrap_or_default();
+        all.moved.extend(done.moved.iter().map(|(a, b)| (*a, *b)));
+        all.states_moved.extend(done.states_moved.iter().map(|(a, b)| (*a, *b)));
+        all.left = done.left.clone();
+        for old in all.moved.keys().chain(all.states_moved.keys()) {
+            all.left.remove(old);
+        }
+        std::fs::write(saves_root.join(MARKER), serde_json::to_vec_pretty(&all).unwrap_or_default())?;
+        Ok(Some(done))
+    }
+
+    /// Every save folder ever moved, from the accumulated report.
+    pub fn all_moved(saves_root: &Path) -> BTreeMap<i64, i64> {
+        std::fs::read(saves_root.join(MARKER))
+            .ok()
+            .and_then(|b| serde_json::from_slice::<Report>(&b).ok())
+            .map(|r| r.moved)
+            .unwrap_or_default()
     }
 
     /// Rewrite `device\0rom_id\0file` bookkeeping keys onto the new ids.
     ///
-    /// Keys under an old id that did not move are dropped: that id names
-    /// nothing any more, and a device that lost its record of agreeing is asked
-    /// about the save next time rather than assumed to agree.
+    /// Keys under an old id that has not moved are kept for a later start.
+    /// Idempotent, so it runs against every move ever made, not only today's.
     pub fn remap_seen(seen: &mut HashMap<String, String>, moved: &BTreeMap<i64, i64>) -> usize {
         let old: Vec<(String, String)> = seen.drain().collect();
         let mut changed = 0;
@@ -939,9 +1029,16 @@ pub mod legacy {
                 seen.insert(key, hash);
                 continue;
             }
-            if let Some(new) = moved.get(&rom) {
-                seen.insert(format!("{device}\0{new}\0{file}"), hash);
-                changed += 1;
+            match moved.get(&rom) {
+                Some(new) => {
+                    seen.insert(format!("{device}\0{new}\0{file}"), hash);
+                    changed += 1;
+                }
+                // Kept. An old id that has not been placed yet may be placed on
+                // a later start, and its record of agreement moves then.
+                None => {
+                    seen.insert(key, hash);
+                }
             }
         }
         changed
@@ -1020,14 +1117,70 @@ pub mod legacy {
             assert!(root.join("6411/a-plumber-for-all-seasons_2021-11-22.srm").is_file());
         }
 
+        /// A start with the library empty or unmounted does nothing and uses
+        /// nothing up: the next start with the library present still places
+        /// every save.
         #[test]
-        fn it_runs_once() {
-            let root = tree("once");
+        fn an_empty_library_does_not_use_the_migration_up() {
+            let root = tree("empty-lib");
             put(&root, "5653/Chrono Trigger (USA).srm");
-            assert!(apply(&root, &games()).unwrap().is_some());
-            put(&root, "7/Chrono Trigger (USA).srm");
-            assert!(apply(&root, &games()).unwrap().is_none());
-            assert!(root.join("7").exists(), "a second start does not move anything");
+            assert!(apply(&root, &[]).unwrap().is_none());
+            assert!(root.join("5653/Chrono Trigger (USA).srm").is_file());
+            assert!(!root.join(MARKER).exists());
+            let r = apply(&root, &games()).unwrap().unwrap();
+            assert_eq!(r.moved.get(&5653), Some(&CT));
+        }
+
+        /// Every start places what it can. A folder that could not be placed
+        /// before is placed once the library has the game.
+        #[test]
+        fn a_later_start_places_what_became_placeable() {
+            let root = tree("later");
+            put(&root, "5653/Chrono Trigger (USA).srm");
+            put(&root, "77/Late Game (USA).srm");
+            let first = apply(&root, &games()).unwrap().unwrap();
+            assert!(first.left.contains_key(&77));
+            let mut more = games();
+            more.push((20_000_099, "Late Game (USA).zip".into()));
+            let second = apply(&root, &more).unwrap().unwrap();
+            assert_eq!(second.moved.get(&77), Some(&20_000_099));
+            let all = all_moved(&root);
+            assert_eq!(all.get(&5653), Some(&CT), "the first start's moves are remembered");
+            assert_eq!(all.get(&77), Some(&20_000_099));
+        }
+
+        /// States under an old id that was reused for a different game are not
+        /// dragged along with that game's save.
+        #[test]
+        fn states_written_long_after_the_save_stay_behind() {
+            let root = tree("states-far");
+            put(&root, "-300/Chrono Trigger (USA).srm");
+            put(&root, "_states/-300/2026-01-01T00-00-00-000Z.state");
+            let old = std::time::SystemTime::now() - std::time::Duration::from_secs(40 * 24 * 3600);
+            let f = std::fs::File::options()
+                .write(true)
+                .open(root.join("-300/Chrono Trigger (USA).srm"))
+                .unwrap();
+            f.set_modified(old).unwrap();
+            let r = apply(&root, &games()).unwrap().unwrap();
+            assert_eq!(r.moved.get(&-300), Some(&CT), "the save still goes home");
+            assert!(r.states_moved.is_empty());
+            assert!(root.join("_states/-300/2026-01-01T00-00-00-000Z.state").is_file(), "states left");
+        }
+
+        /// What is left behind is never offered to a device. Offering it made
+        /// negotiate send a stale save down over a current one of the same name.
+        #[test]
+        fn a_left_behind_save_is_never_listed() {
+            let root = tree("hidden");
+            put(&root, "12/Astrohawk (World) (Unl).srm");
+            apply(&root, &games()).unwrap();
+            let store = super::super::SaveStore::new(&root);
+            assert!(store.list(None).is_empty(), "{:?}", store.list(None));
+            assert!(store.list(Some(12)).is_empty());
+            let states = super::super::StateStore::new(root.join("_states"));
+            put(&root, "_states/9/2026-01-01T00-00-00-000Z.state");
+            assert!(states.list(None).is_empty());
         }
 
         #[test]
@@ -1039,7 +1192,7 @@ pub mod legacy {
             let r = apply(&root, &games()).unwrap().unwrap();
             assert_eq!(std::fs::read(root.join(format!("{CT}/Chrono Trigger (USA).srm"))).unwrap(), b"newer");
             assert!(root.join("5653/Chrono Trigger (USA).srm").is_file(), "the old one kept aside");
-            assert!(r.left[&5653].contains("already existed"));
+            assert!(r.left[&5653].contains("already under"), "{:?}", r.left);
         }
 
         #[test]
@@ -1059,7 +1212,7 @@ pub mod legacy {
         }
 
         #[test]
-        fn bookkeeping_follows_the_move_and_forgets_what_did_not() {
+        fn bookkeeping_follows_the_move_and_keeps_what_did_not() {
             let mut seen: HashMap<String, String> = [
                 ("dev\u{0}5653\u{0}Chrono Trigger (USA).srm", "h1"),
                 ("dev\u{0}6411\u{0}plumber.srm", "h2"),
@@ -1071,7 +1224,9 @@ pub mod legacy {
             let moved: BTreeMap<i64, i64> = [(5653, CT)].into_iter().collect();
             assert_eq!(remap_seen(&mut seen, &moved), 1);
             assert_eq!(seen.get(&format!("dev\u{0}{CT}\u{0}Chrono Trigger (USA).srm")).map(String::as_str), Some("h1"));
-            assert!(!seen.keys().any(|k| k.contains("\u{0}6411\u{0}")), "an unmoved old id names nothing");
+            assert!(seen.keys().any(|k| k.contains("\u{0}6411\u{0}")), "an unmoved old id waits for a later start");
+            // Idempotent: running it again against the same moves changes nothing.
+            assert_eq!(remap_seen(&mut seen, &moved), 0);
             assert!(seen.contains_key(&format!("dev\u{0}{CT}\u{0}Already.srm")), "stable keys untouched");
         }
     }

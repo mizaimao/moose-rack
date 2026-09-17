@@ -252,16 +252,28 @@ impl RomRow {
     /// folder and the path inside that, which is exactly what its id is taken
     /// from. A download written here is found by the next scan as the same
     /// game. Platform alone for a row from a server too old to say.
+    ///
+    /// Both values come from the server and are joined onto a local folder a
+    /// download is written into, so each piece must be a plain name: no `..`,
+    /// no `.`, no drive or root. A row that fails that is filed by platform
+    /// instead, which is where a download went before this existed.
     pub fn folder(&self) -> std::path::PathBuf {
+        fn plain(part: &str) -> bool {
+            !part.is_empty()
+                && part != "."
+                && part != ".."
+                && !part.contains(':')
+                && std::path::Path::new(part).components().count() == 1
+                && matches!(std::path::Path::new(part).components().next(), Some(std::path::Component::Normal(_)))
+        }
+        let parts: Vec<&str> = self.rel_dir.split(['/', '\\']).filter(|s| !s.is_empty()).collect();
         match self.esde_system.as_deref().filter(|s| !s.is_empty()) {
-            Some(system) => {
+            Some(system) if plain(system) && parts.iter().all(|p| plain(p)) => {
                 let mut p = std::path::PathBuf::from(system);
-                for part in self.rel_dir.split(['/', '\\']).filter(|s| !s.is_empty()) {
-                    p.push(part);
-                }
+                p.extend(parts);
                 p
             }
-            None => std::path::PathBuf::from(&self.platform_slug),
+            _ => std::path::PathBuf::from(&self.platform_slug),
         }
     }
 
@@ -352,6 +364,11 @@ impl Cache {
                 [floor],
             )?;
             self.conn.execute("DELETE FROM roms WHERE id > -?1 AND id < ?1", [floor])?;
+            // A row with neither flag was written by an older build syncing from
+            // an updated server: the id is stable, but that build knows nothing
+            // of ownership. It came from the server, so it is the server's --
+            // left unflagged, the next scan would delete it as nobody's.
+            self.conn.execute("UPDATE roms SET from_server = 1 WHERE from_scan = 0 AND from_server = 0", [])?;
             return Ok(());
         }
         self.conn.execute_batch(
@@ -1136,6 +1153,11 @@ impl Cache {
         if live_ids.is_empty() {
             return Ok(0);
         }
+        // A server still on positional ids lists ids that name nothing here,
+        // and pruning against that list would delete every server row.
+        if live_ids.iter().any(|id| crate::gameid::is_legacy(*id)) {
+            return Ok(0);
+        }
         let tx = self.conn.transaction()?;
         tx.execute_batch(
             "CREATE TEMP TABLE IF NOT EXISTS live_ids(id INTEGER PRIMARY KEY);
@@ -1611,6 +1633,63 @@ mod tests {
         assert_eq!(crate::gameid::game_id(&found.system, &found.rel_dir, &found.fs_name), server_id);
     }
 
+    /// The folder comes from the server and a download is written into it, so
+    /// a value that would climb out of the ROMs folder is not used.
+    #[test]
+    fn a_server_cannot_point_a_download_outside_the_roms_folder() {
+        let c = cache("folder-escape");
+        for (system, rel) in [
+            ("..", ""),
+            ("snes", "../../.ssh"),
+            ("/etc", ""),
+            ("snes", "a/./b"),
+            ("C:", "x"),
+            ("snes", "ok\\..\\up"),
+        ] {
+            let id = crate::gameid::game_id(system, rel, "g.sfc");
+            server_row(&c, id, "snes", "G", "g.sfc", system, rel);
+            let row = c.rom_by_id(id).unwrap().unwrap();
+            assert_eq!(row.folder(), Path::new("snes"), "{system:?} {rel:?}");
+        }
+        let id = crate::gameid::game_id("sfc", "AdditionalRoms/Homebrew", "g.sfc");
+        server_row(&c, id, "snes", "G", "g.sfc", "sfc", "AdditionalRoms/Homebrew");
+        assert_eq!(c.rom_by_id(id).unwrap().unwrap().folder(), Path::new("sfc/AdditionalRoms/Homebrew"));
+    }
+
+    /// An older build syncing from an updated server writes stable-id rows
+    /// with neither ownership flag. They are the server's; left unflagged, the
+    /// next scan deleted them.
+    #[test]
+    fn rows_an_old_build_synced_are_kept_as_the_servers() {
+        let dir = std::env::temp_dir().join("moose-rack-cache-test-unflagged");
+        std::fs::remove_dir_all(&dir).ok();
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("c.sqlite3");
+        let id = crate::gameid::game_id("gba", "", "kirby.gba");
+        {
+            let c = Cache::open(&path).unwrap();
+            c.conn
+                .execute(
+                    "INSERT INTO roms(id, platform_slug, name, fs_name) VALUES (?1, 'gba', 'Kirby', 'kirby.gba')",
+                    [id],
+                )
+                .unwrap();
+        }
+        let mut c = Cache::open(&path).unwrap();
+        assert_eq!(flags(&c, id), (0, 1));
+        c.replace_from_esde(&[]).unwrap();
+        assert!(c.rom_by_id(id).unwrap().is_some(), "a scan does not delete it");
+    }
+
+    #[test]
+    fn pruning_against_a_positional_list_deletes_nothing() {
+        let mut c = cache("prune-legacy-list");
+        let id = crate::gameid::game_id("snes", "", "a.sfc");
+        server_row(&c, id, "snes", "A", "a.sfc", "snes", "");
+        assert_eq!(c.prune_missing(&[1, 2, 3]).unwrap(), 0);
+        assert!(c.rom_by_id(id).unwrap().is_some());
+    }
+
     #[test]
     fn a_row_from_an_older_server_falls_back_to_its_platform() {
         let c = cache("folder-fallback");
@@ -1925,13 +2004,18 @@ mod tests {
     #[test]
     fn pruning_drops_exactly_what_the_server_no_longer_has() {
         let mut c = cache("prune");
-        add_rom(&c, 1, "snes", "Kept", "kept.sfc");
-        add_rom(&c, 2, "snes", "Gone", "gone.sfc");
-        add_rom(&c, 3, "snes", "Also gone", "gone2.sfc");
+        let [kept, gone, also] = [
+            crate::gameid::game_id("snes", "", "kept.sfc"),
+            crate::gameid::game_id("snes", "", "gone.sfc"),
+            crate::gameid::game_id("snes", "", "gone2.sfc"),
+        ];
+        add_rom(&c, kept, "snes", "Kept", "kept.sfc");
+        add_rom(&c, gone, "snes", "Gone", "gone.sfc");
+        add_rom(&c, also, "snes", "Also gone", "gone2.sfc");
 
-        assert_eq!(c.prune_missing(&[1]).unwrap(), 2);
+        assert_eq!(c.prune_missing(&[kept]).unwrap(), 2);
         assert_eq!(c.rom_count().unwrap(), 1);
-        assert!(c.rom_by_id(1).unwrap().is_some());
+        assert!(c.rom_by_id(kept).unwrap().is_some());
     }
 
     /// The guard that matters most: an empty id list means the server call
