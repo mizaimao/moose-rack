@@ -309,7 +309,35 @@ pub fn scan_into(
         .collect();
     store.name_platforms(&names)?;
     let on_server = store.on_both()?;
+    if let Some(library_root) = layout.roms.parent() {
+        adopt_client_stores(store, library_root, std::path::Path::new("."));
+    }
     Ok(Scan { written, on_server, games, skipped })
+}
+
+/// Move what this machine keeps under old positional game ids onto stable ones.
+///
+/// The cache knows which game each old id named once a scan or a sync has
+/// placed it (`Cache::id_moves`); this carries that to the two other stores
+/// keyed by game id: save backups under the library folder, and the state
+/// ledger in the data directory. Run after every scan and sync, because an old
+/// id is only placeable once the row it named exists again. Failures are
+/// reported and stepped over -- both stores are safe to leave as they are.
+pub fn adopt_client_stores(store: &cache::Cache, library_root: &std::path::Path, data_dir: &std::path::Path) {
+    if let Err(e) = store.apply_id_migration() {
+        eprintln!("stable ids: play history not moved: {e}");
+    }
+    let moves = match store.id_moves() {
+        Ok(m) if !m.is_empty() => m,
+        Ok(_) => return,
+        Err(e) => return eprintln!("stable ids: {e}"),
+    };
+    if let Err(e) = crate::savebackup::adopt_stable_ids(library_root, &moves) {
+        eprintln!("stable ids: save backups not moved: {e}");
+    }
+    if let Err(e) = crate::statesync::Ledger::adopt_stable_ids(data_dir, &moves) {
+        eprintln!("stable ids: state ledger not rekeyed: {e}");
+    }
 }
 
 #[cfg(test)]

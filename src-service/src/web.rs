@@ -183,6 +183,7 @@ pub async fn dispatch(state: &AppState, cmd: &str, args: &Value) -> Result<Value
         // Artwork. The desktop build passes a closure that emits `covers-ready`
         // so the grid fills as they land; one JSON response has nothing to fill
         // progressively, so this one does nothing.
+        "stable_ids" => j!(c::stable_ids(state, p!("ids"))),
         "rom_covers" => j!(c::rom_covers(state, p!("ids"), p!("local_only"), &|_| {}).await),
         "warm_media" => j!(c::warm_media(state, p!("platform")).await),
 

@@ -79,7 +79,19 @@ CREATE TABLE IF NOT EXISTS id_migration (
     platform_slug TEXT,
     fs_name       TEXT,
     esde_system   TEXT,
-    rel_dir       TEXT
+    rel_dir       TEXT,
+    -- Set when one old id turned up naming two different games: an older build
+    -- reused the number. Nothing is attributed to it then.
+    ambiguous     INTEGER NOT NULL DEFAULT 0
+);
+-- Every old id placed so far, with the game it named. Kept, not consumed, so
+-- anything else on this machine still keyed by old ids -- save backups, the
+-- state ledger, a browser's remembered selection -- can be moved later.
+CREATE TABLE IF NOT EXISTS id_moves (
+    old_id        INTEGER PRIMARY KEY,
+    new_id        INTEGER NOT NULL,
+    platform_slug TEXT NOT NULL,
+    fs_name       TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS collections_grp ON collections(grp);
 "#;
@@ -335,6 +347,7 @@ impl Cache {
         ] {
             let _ = conn.execute(&format!("ALTER TABLE roms ADD COLUMN {col} {ty}"), []);
         }
+        let _ = conn.execute("ALTER TABLE id_migration ADD COLUMN ambiguous INTEGER NOT NULL DEFAULT 0", []);
         let cache = Self { conn };
         cache.adopt_stable_ids()?;
         Ok(cache)
@@ -357,10 +370,29 @@ impl Cache {
     fn adopt_stable_ids(&self) -> Result<()> {
         let floor = crate::gameid::FLOOR;
         if self.meta_get("id_scheme").as_deref() == Some("stable") {
+            // An old id already placed, now naming a different game, was reused
+            // by an older build. Its earlier placement is dropped so it is
+            // worked out again for the game it names now.
+            self.conn.execute(
+                "DELETE FROM id_moves WHERE old_id IN (
+                     SELECT r.id FROM roms r JOIN id_moves m ON m.old_id = r.id
+                      WHERE r.id > -?1 AND r.id < ?1
+                        AND (m.platform_slug <> r.platform_slug OR m.fs_name <> r.fs_name))",
+                [floor],
+            )?;
+            // One still waiting, now naming a different game: the plays under
+            // it could be either, so none are attributed.
+            self.conn.execute(
+                "UPDATE id_migration SET ambiguous = 1 WHERE old_id IN (
+                     SELECT r.id FROM roms r JOIN id_migration m ON m.old_id = r.id
+                      WHERE r.id > -?1 AND r.id < ?1
+                        AND (m.platform_slug <> r.platform_slug OR m.fs_name <> r.fs_name))",
+                [floor],
+            )?;
             self.conn.execute(
                 "INSERT OR IGNORE INTO id_migration(old_id, platform_slug, fs_name, esde_system, rel_dir)
                       SELECT id, platform_slug, fs_name, esde_system, rel_dir FROM roms
-                       WHERE id > -?1 AND id < ?1 AND id IN (SELECT rom_id FROM plays)",
+                       WHERE id > -?1 AND id < ?1",
                 [floor],
             )?;
             self.conn.execute("DELETE FROM roms WHERE id > -?1 AND id < ?1", [floor])?;
@@ -374,8 +406,7 @@ impl Cache {
         self.conn.execute_batch(
             "BEGIN;
              INSERT OR IGNORE INTO id_migration(old_id, platform_slug, fs_name, esde_system, rel_dir)
-                  SELECT id, platform_slug, fs_name, esde_system, rel_dir FROM roms
-                   WHERE id IN (SELECT rom_id FROM plays);
+                  SELECT id, platform_slug, fs_name, esde_system, rel_dir FROM roms;
              DELETE FROM roms;
              DELETE FROM collection_roms;
              DELETE FROM collections;
@@ -402,8 +433,16 @@ impl Cache {
             stmt.query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?)))?
                 .collect::<std::result::Result<_, _>>()?
         };
+        let ambiguous: std::collections::HashSet<i64> = self
+            .conn
+            .prepare("SELECT old_id FROM id_migration WHERE ambiguous = 1")?
+            .query_map([], |r| r.get(0))?
+            .collect::<std::result::Result<_, _>>()?;
         let mut moved = 0;
         for (old, slug, fs_name, system, rel_dir) in pending {
+            if ambiguous.contains(&old) {
+                continue;
+            }
             let new: Option<i64> = match (&system, &rel_dir) {
                 (Some(system), Some(rel_dir)) => {
                     let id = crate::gameid::game_id(system, rel_dir, &fs_name);
@@ -422,11 +461,24 @@ impl Cache {
             };
             if let Some(new) = new {
                 self.conn.execute("UPDATE plays SET rom_id = ?1 WHERE rom_id = ?2", params![new, old])?;
+                self.conn.execute(
+                    "INSERT OR REPLACE INTO id_moves(old_id, new_id, platform_slug, fs_name) VALUES (?1, ?2, ?3, ?4)",
+                    params![old, new, slug, fs_name],
+                )?;
                 self.conn.execute("DELETE FROM id_migration WHERE old_id = ?1", [old])?;
                 moved += 1;
             }
         }
         Ok(moved)
+    }
+
+    /// Every old id placed so far, and the stable id of the game it named.
+    pub fn id_moves(&self) -> Result<std::collections::BTreeMap<i64, i64>> {
+        Ok(self
+            .conn
+            .prepare("SELECT old_id, new_id FROM id_moves")?
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?
+            .collect::<std::result::Result<_, _>>()?)
     }
 
     /// How many games this machine has on disk that the server also lists.
@@ -1690,6 +1742,89 @@ mod tests {
         assert!(c.rom_by_id(id).unwrap().is_some());
     }
 
+    /// The same round trip through the real downloader: a server row fetched
+    /// over HTTP by `download::fetch`, then a scan of the folder it wrote. The
+    /// test above writes to `folder()` by hand, which would still pass if the
+    /// downloader put the file somewhere else.
+    #[tokio::test]
+    async fn a_real_download_scans_back_to_the_servers_id() {
+        use std::io::{Read, Write};
+        let dir = std::env::temp_dir().join("moose-rack-cache-test-real-download");
+        std::fs::remove_dir_all(&dir).ok();
+        let (system, rel, file) = ("sfc", "AdditionalRoms/Homebrew", "Astrohawk (World) (Unl).zip");
+        let body = b"not really a rom".to_vec();
+
+        // One request, answered with the file. Enough for a fresh download.
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let base = format!("http://{}", listener.local_addr().unwrap());
+        let served = body.clone();
+        let server = std::thread::spawn(move || {
+            let (mut sock, _) = listener.accept().unwrap();
+            let mut buf = [0u8; 4096];
+            let n = sock.read(&mut buf).unwrap();
+            let request = String::from_utf8_lossy(&buf[..n]).into_owned();
+            let head = format!(
+                "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nContent-Type: application/octet-stream\r\nConnection: close\r\n\r\n",
+                served.len()
+            );
+            sock.write_all(head.as_bytes()).unwrap();
+            sock.write_all(&served).unwrap();
+            request
+        });
+
+        let server_id = crate::gameid::game_id(system, rel, file);
+        let c = cache("real-download");
+        server_row(&c, server_id, "snes", "Astrohawk", file, system, rel);
+        let row = c.rom_by_id(server_id).unwrap().unwrap();
+        let folder = row.folder();
+        let target = crate::download::Target {
+            rom_id: row.id,
+            members: &[],
+            fs_name: &row.fs_name,
+            folder: &folder,
+            expected_size: Some(body.len() as u64),
+            md5: None,
+            sha1: None,
+            multi_file: false,
+        };
+        let roms = dir.join("ROMs");
+        crate::util::install_tls();
+        crate::download::fetch(&reqwest::Client::new(), &base, "", &target, &roms, |_, _| {})
+            .await
+            .expect("the download completes");
+        let request = server.join().unwrap();
+        assert!(request.starts_with(&format!("GET /api/roms/{server_id}/content/")), "{request}");
+
+        let layout = crate::esde::Layout::new(&dir, Some(&roms));
+        let (games, _) = crate::esde::scan(&layout, &crate::coremap::CoreMap::embedded()).unwrap();
+        let found = games.iter().find(|g| g.fs_name == file).expect("the scan finds what was downloaded");
+        assert_eq!(crate::gameid::game_id(&found.system, &found.rel_dir, &found.fs_name), server_id);
+    }
+
+    /// A real scan of a tree with folders inside a system, compared with the id
+    /// written the way a Linux server writes it. On macOS and Linux this checks
+    /// the scan; on the Windows CI runner the scanner sees backslashes, and this
+    /// is the test that says the two still agree.
+    #[test]
+    fn a_scan_on_this_platform_agrees_with_a_linux_servers_id() {
+        let dir = std::env::temp_dir().join("moose-rack-cache-test-platform-scan");
+        std::fs::remove_dir_all(&dir).ok();
+        let roms = dir.join("ROMs");
+        let nested = roms.join("snes").join("AdditionalRoms").join("Homebrew");
+        std::fs::create_dir_all(&nested).unwrap();
+        std::fs::write(nested.join("g.sfc"), b"x").unwrap();
+        let layout = crate::esde::Layout::new(&dir, Some(&roms));
+        let (games, _) = crate::esde::scan(&layout, &crate::coremap::CoreMap::embedded()).unwrap();
+        let g = games.iter().find(|g| g.fs_name == "g.sfc").expect("scanned");
+        assert_eq!(
+            crate::gameid::game_id(&g.system, &g.rel_dir, &g.fs_name),
+            crate::gameid::game_id("snes", "AdditionalRoms/Homebrew", "g.sfc"),
+            "scanned as {:?} / {:?}",
+            g.system,
+            g.rel_dir
+        );
+    }
+
     #[test]
     fn a_row_from_an_older_server_falls_back_to_its_platform() {
         let c = cache("folder-fallback");
@@ -1855,6 +1990,69 @@ mod tests {
             .query_row("SELECT COUNT(*) FROM plays WHERE rom_id = ?1", [stable], |r| r.get(0))
             .unwrap();
         assert_eq!(on_stable, 1, "its play went to the game it was");
+    }
+
+    /// Placing an old id is recorded, not consumed, so the other stores keyed by
+    /// game id can be moved after the plays have been.
+    #[test]
+    fn every_placed_old_id_is_remembered() {
+        let dir = std::env::temp_dir().join("moose-rack-cache-test-moves-kept");
+        std::fs::remove_dir_all(&dir).ok();
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("c.sqlite3");
+        {
+            let c = Cache::open(&path).unwrap();
+            // Unplayed as well: backups and the state ledger key on games that
+            // were never timed.
+            c.conn.execute_batch(
+                "DELETE FROM meta WHERE key = 'id_scheme';
+                 INSERT INTO roms(id, platform_slug, name, fs_name, esde_system, rel_dir)
+                      VALUES (-3, 'snes', 'CT', 'ct.sfc', 'snes', '');",
+            ).unwrap();
+        }
+        let mut c = Cache::open(&path).unwrap();
+        c.replace_from_esde(&[local_game("snes", "snes", "CT", "ct.sfc")]).unwrap();
+        let moves = c.id_moves().unwrap();
+        assert_eq!(moves.get(&-3), Some(&crate::gameid::game_id("snes", "", "ct.sfc")));
+    }
+
+    /// An older build that reuses an old number for a different game, while
+    /// plays under that number are still waiting, must not have them handed to
+    /// either game.
+    #[test]
+    fn a_reused_old_id_attributes_nothing() {
+        let dir = std::env::temp_dir().join("moose-rack-cache-test-reused");
+        std::fs::remove_dir_all(&dir).ok();
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("c.sqlite3");
+        {
+            let c = Cache::open(&path).unwrap();
+            c.conn.execute_batch(
+                "DELETE FROM meta WHERE key = 'id_scheme';
+                 INSERT INTO roms(id, platform_slug, name, fs_name) VALUES (-5, 'gba', 'Kirby', 'kirby.gba');
+                 INSERT INTO plays(rom_id, started_at, seconds) VALUES (-5, '2026-01-01', 60);",
+            ).unwrap();
+        }
+        // Waiting on -5 = Kirby. Now an old build writes -5 = Zelda and plays it.
+        {
+            let c = Cache::open(&path).unwrap();
+            c.conn.execute_batch(
+                "INSERT INTO roms(id, platform_slug, name, fs_name) VALUES (-5, 'gba', 'Zelda', 'zelda.gba');
+                 INSERT INTO plays(rom_id, started_at, seconds) VALUES (-5, '2026-02-01', 90);",
+            ).unwrap();
+        }
+        let c = Cache::open(&path).unwrap();
+        let kirby = crate::gameid::game_id("gba", "", "kirby.gba");
+        let zelda = crate::gameid::game_id("gba", "", "zelda.gba");
+        server_row(&c, kirby, "gba", "Kirby", "kirby.gba", "gba", "");
+        server_row(&c, zelda, "gba", "Zelda", "zelda.gba", "gba", "");
+        c.apply_id_migration().unwrap();
+        let on = |id: i64| -> i64 {
+            c.conn.query_row("SELECT COUNT(*) FROM plays WHERE rom_id = ?1", [id], |r| r.get(0)).unwrap()
+        };
+        assert_eq!(on(kirby), 0, "not merged into Kirby");
+        assert_eq!(on(zelda), 0, "nor into Zelda");
+        assert_eq!(on(-5), 2, "left where they were");
     }
 
     /// An old id that names more than one game is left waiting, not guessed.
