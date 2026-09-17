@@ -413,7 +413,7 @@ mod scan_tests {
         assert!(before, "an app launched by its icon should be able to launch");
         assert!(!after, "serve_only did not take");
         // And it reaches the wire, which is what the UI reads.
-        assert_eq!(reported.expect("status"), false);
+        assert!(!reported.expect("status"));
         std::fs::remove_dir_all(&root).ok();
     }
 

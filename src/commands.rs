@@ -601,7 +601,7 @@ pub fn recent_games(
         let cache = state.cache.lock().map_err(err)?;
         cache.recently_played(limit.unwrap_or(8)).map_err(err)?
     };
-    Ok(to_views(&state, rows, list.map(|l| l.scope()).as_deref()))
+    Ok(to_views(state, rows, list.map(|l| l.scope()).as_deref()))
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -667,12 +667,12 @@ pub async fn download_estimate(
 ) -> CmdResult<(String, bool, String)> {
     use crate::{bulk, diskspace};
 
-    let rows = rows_for_choice(&state, &choice.platforms, &choice.collection, &choice.collections)?;
+    let rows = rows_for_choice(state, &choice.platforms, &choice.collection, &choice.collections)?;
     let want = choice.want();
     // One listing per directory rather than a `stat` per game: a download
     // estimate for a whole console asks about every row of it.
     let mut here = Listings::default();
-    let mut est = bulk::estimate(&rows, want, |r| here.holds(&state, r));
+    let mut est = bulk::estimate(&rows, want, |r| here.holds(state, r));
     // Asked of the server rather than averaged, because unlike artwork there is
     // a fixed set of these and it already knows which are here.
     let mut summary = est.describe();
@@ -731,7 +731,7 @@ pub fn platforms(state: &AppState) -> CmdResult<Vec<PlatformView>> {
     let views: Vec<PlatformView> = rows
         .into_iter()
         .map(|p| PlatformView {
-            playable: resolve_core(&state, &p.fs_slug).is_some(),
+            playable: resolve_core(state, &p.fs_slug).is_some(),
             // A theme, if one is installed, then the console picture from the
             // server. The theme wins because installing one is a deliberate
             // choice and this is the fallback that means nobody has to.
@@ -739,7 +739,7 @@ pub fn platforms(state: &AppState) -> CmdResult<Vec<PlatformView>> {
                 .or_else(|| crate::platformicon::installed(&state.media_dir, &p.fs_slug))
                 .map(|p| crate::util::webview_path(&p)),
             logo_wordmark: look.starts_with("styled-text")
-                || (set.is_empty() && current_style(&state) == theme::IconStyle::Logo),
+                || (set.is_empty() && current_style(state) == theme::IconStyle::Logo),
             // The info pane's picture, which does *not* follow the grid.
             //
             // Select cycles the grid's artwork — logo, console, controller —
@@ -912,7 +912,7 @@ pub fn roms(
         let cache = state.cache.lock().map_err(err)?;
         cache.roms_for(&platform).map_err(err)?
     };
-    Ok(to_views(&state, rows, list.map(|l| l.scope()).as_deref()))
+    Ok(to_views(state, rows, list.map(|l| l.scope()).as_deref()))
 }
 
 #[derive(serde::Serialize)]
@@ -987,7 +987,7 @@ pub fn collections_in(state: &AppState, group: String) -> CmdResult<Vec<Collecti
         .map(|c| CollectionView {
             local_count: cache
                 .roms_in_collection(&c.id)
-                .map(|rows| rows.iter().filter(|r| here.holds(&state, r)).count() as i64)
+                .map(|rows| rows.iter().filter(|r| here.holds(state, r)).count() as i64)
                 .unwrap_or(0),
             sample_ids: c.sample_ids,
             id: c.id,
@@ -1007,7 +1007,7 @@ pub fn collection_roms(
         let cache = state.cache.lock().map_err(err)?;
         cache.roms_in_collection(&id).map_err(err)?
     };
-    Ok(to_views(&state, rows, list.map(|l| l.scope()).as_deref()))
+    Ok(to_views(state, rows, list.map(|l| l.scope()).as_deref()))
 }
 
 pub fn search(
@@ -1019,7 +1019,7 @@ pub fn search(
         let cache = state.cache.lock().map_err(err)?;
         cache.search(&term, 200).map_err(err)?
     };
-    Ok(to_views(&state, rows, list.map(|l| l.scope()).as_deref()))
+    Ok(to_views(state, rows, list.map(|l| l.scope()).as_deref()))
 }
 
 pub async fn rom_detail(state: &AppState, id: i64) -> CmdResult<RomDetail> {
@@ -1029,7 +1029,7 @@ pub async fn rom_detail(state: &AppState, id: i64) -> CmdResult<RomDetail> {
     }
     .ok_or_else(|| format!("no rom with id {id}"))?;
 
-    let core = resolve_core_for(&state, &row.platform_slug, Some(&row.fs_name));
+    let core = resolve_core_for(state, &row.platform_slug, Some(&row.fs_name));
     let core_label = core
         .as_deref()
         .and_then(|c| state.map.label_for(c))
@@ -1049,7 +1049,7 @@ pub async fn rom_detail(state: &AppState, id: i64) -> CmdResult<RomDetail> {
     // the server client is dropped for those rows — otherwise every miss would
     // become a pointless request against a server this library did not come
     // from.
-    let (scope_dir, scope_key) = media_scope(&state, &row);
+    let (scope_dir, scope_key) = media_scope(state, &row);
     let media_root = scope_dir.to_path_buf();
     let media_key = scope_key.to_owned();
     let client = if state.esde_media.is_some() && row.esde_system.is_some() {
@@ -1134,10 +1134,10 @@ pub async fn rom_detail(state: &AppState, id: i64) -> CmdResult<RomDetail> {
             .map(|p| crate::util::webview_path(&p))
             .collect(),
         art,
-        downloaded: row_path(&state, &row).is_some(),
+        downloaded: row_path(state, &row).is_some(),
         autofire: autofire_possible(&row)
             .then(|| crate::tweaks::AutoFire::parse(&stored_autofire()).key().to_owned()),
-        autofire_hz: autofire_hz(&state),
+        autofire_hz: autofire_hz(state),
         platform_slug: row.platform_slug.clone(),
         id: row.id,
         name: row.name,
@@ -1357,7 +1357,7 @@ pub async fn game_video(state: &AppState, id: i64) -> CmdResult<String> {
         .file_stem()
         .map(|s| s.to_string_lossy().to_string())
         .unwrap_or_else(|| row.fs_name.clone());
-    let (scope_dir, scope_key) = media_scope(&state, &row);
+    let (scope_dir, scope_key) = media_scope(state, &row);
     let (media_root, media_key) = (scope_dir.to_path_buf(), scope_key.to_owned());
     let client = state.client.clone();
 
@@ -1492,7 +1492,7 @@ pub fn android_launch_plan(
     }
     .ok_or_else(|| format!("no rom with id {id}"))?;
 
-    let rom = row_path(&state, &row).ok_or("not downloaded yet")?;
+    let rom = row_path(state, &row).ok_or("not downloaded yet")?;
 
     // The user's own choice of core, where they made one. The `resolve_core_for`
     // on `AppState` cannot answer here — it starts by unwrapping the RetroArch
@@ -1540,7 +1540,7 @@ pub fn android_launch_plan(
     }
 
     let (config, notes) = android_config(
-        &state, &row, &rom, &retroarch_package, &config_dir, pad.as_deref(), refresh,
+        state, &row, &rom, &retroarch_package, &config_dir, pad.as_deref(), refresh,
     );
 
     Ok(AndroidPlan {
@@ -1568,7 +1568,7 @@ pub async fn warm_media(state: &AppState, platform: String) -> CmdResult<()> {
         match row {
             // Through the same scope a real lookup uses, or the wrong tree is warmed.
             Some(row) => {
-                let (d, k) = media_scope(&state, &row);
+                let (d, k) = media_scope(state, &row);
                 (d.to_path_buf(), k.to_owned())
             }
             None => (state.media_dir.clone(), platform.clone()),
@@ -1591,7 +1591,7 @@ pub async fn android_sync_before(state: &AppState, id: i64) -> CmdResult<String>
     let Some(ra) = state.retroarch.as_ref() else {
         return Ok(String::new());
     };
-    let pre = auto_sync(&state, ra, &row, savesync::When::BeforeLaunch).await;
+    let pre = auto_sync(state, ra, &row, savesync::When::BeforeLaunch).await;
     if !pre.conflicts.is_empty() {
         *state.pending_conflicts.lock().map_err(err)? = pre.conflicts.clone();
         return Err(format!(
@@ -1625,7 +1625,7 @@ pub async fn android_after_play(
         notes.push(format!("played for {}", crate::util::spell_duration(seconds)));
     }
     if let Some(ra) = state.retroarch.as_ref() {
-        let post = auto_sync(&state, ra, &row, savesync::When::AfterExit).await;
+        let post = auto_sync(state, ra, &row, savesync::When::AfterExit).await;
         if let Some(note) = post.note {
             notes.push(note);
         }
@@ -2305,7 +2305,7 @@ pub fn systems(state: &AppState) -> CmdResult<Vec<SystemView>> {
                     .unwrap_or_else(|e| e.into_inner())
                     .get(&slug)
                     .is_some_and(|v| v.trim() == "on"),
-                core: resolve_core(&state, &slug),
+                core: resolve_core(state, &slug),
                 shader: if state.shaders_enabled {
                     crate::shaders::preset_for(
                         &state.shader_overrides.lock().unwrap_or_else(|e| e.into_inner()),
@@ -2450,7 +2450,7 @@ fn file_name_of(p: &std::path::Path) -> String {
 
 pub async fn sync_saves_plan(state: &AppState) -> CmdResult<crate::syncplan::Review> {
     let client = state.client.clone().ok_or("not connected to a server")?;
-    let root = saves_root(&state);
+    let root = saves_root(state);
 
     // Same shape as `sync_saves`: the cache is not Sync, so the scan takes the
     // lock and gives it back before anything is awaited.
@@ -2487,7 +2487,7 @@ pub async fn attract_pool(state: &AppState) -> CmdResult<Vec<AttractPick>> {
             .map_err(err)?
             .into_iter()
             .map(|row| {
-                let (dir, key) = media_scope(&state, &row);
+                let (dir, key) = media_scope(state, &row);
                 let (dir, key) = (dir.to_path_buf(), key.to_owned());
                 (row.id, row.name, row.platform_slug, row.fs_name, dir, key)
             })
@@ -2534,7 +2534,7 @@ pub struct SyncRun {
 pub async fn sync_saves(state: &AppState) -> CmdResult<SyncRun> {
     let client = state.client.clone().ok_or("not connected to a server")?;
     // Not RetroArch's install folder: the saves folder. See `saves_root`.
-    let root = saves_root(&state);
+    let root = saves_root(state);
 
     // The cache is not Sync, so the scan takes the lock and releases it before
     // any awaiting starts. A future holding the connection across an await
@@ -2650,7 +2650,7 @@ pub fn game_cores(state: &AppState, id: i64) -> CmdResult<Vec<CoreChoice>> {
     }
     .ok_or_else(|| format!("no rom with id {id}"))?;
 
-    let current = resolve_core_for(&state, &row.platform_slug, Some(&row.fs_name));
+    let current = resolve_core_for(state, &row.platform_slug, Some(&row.fs_name));
     let pinned = state
         .core_per_game
         .lock()
@@ -3205,7 +3205,7 @@ pub fn arrangement(state: &AppState, list: &ListRef) -> Result<Arrangement, Stri
 }
 
 pub fn arrange_list(state: &AppState, list: ListRef) -> CmdResult<Arrangement> {
-    arrangement(&state, &list)
+    arrangement(state, &list)
 }
 
 pub fn set_list_order(
@@ -3223,7 +3223,7 @@ pub fn set_list_order(
             chosen.set_order(&scope, &order);
         }
     }
-    arrangement(&state, &list)
+    arrangement(state, &list)
 }
 
 pub fn cycle_list_order(
@@ -3237,7 +3237,7 @@ pub fn cycle_list_order(
         let next = crate::gamesort::cycle(chosen.order(&scope).id, delta);
         chosen.set_order(&scope, next.id);
     }
-    arrangement(&state, &list)
+    arrangement(state, &list)
 }
 
 pub fn toggle_list_filter(
@@ -3246,12 +3246,12 @@ pub fn toggle_list_filter(
     filter: String,
 ) -> CmdResult<Arrangement> {
     state.chosen.lock().map_err(err)?.toggle_filter(&list.scope(), &filter);
-    arrangement(&state, &list)
+    arrangement(state, &list)
 }
 
 pub fn clear_list_filters(state: &AppState, list: ListRef) -> CmdResult<Arrangement> {
     state.chosen.lock().map_err(err)?.clear_filters(&list.scope());
-    arrangement(&state, &list)
+    arrangement(state, &list)
 }
 
 #[derive(Serialize)]

@@ -180,18 +180,6 @@ fn already_have(path: &Path, want: &Firmware) -> bool {
     }
 }
 
-/// Download every BIOS the server has that is not already here.
-///
-/// `progress` is called with `(done, total, name)` so a frontend can show which
-/// file it is on — the set is 67 files on this server and a bare spinner says
-/// nothing about how far through it is.
-/// What a BIOS sync would do, without doing any of it.
-///
-/// The button that starts one used to sit silent for as long as the listing
-/// took, which reads as a control that does nothing. Asking first costs one
-/// request and answers the only questions worth asking: is this already done,
-/// and how much would it fetch.
-
 /// Where one firmware file belongs under `system/`.
 ///
 /// The server reports a `file_path` — `mame`, `pcsx2/Langs/de_DE` — and the tree
@@ -225,6 +213,12 @@ pub fn local_path(dest: &Path, file_path: Option<&str>, file_name: &str) -> Opti
     Some(out.join(leaf))
 }
 
+/// What a BIOS sync would do, without doing any of it.
+///
+/// The button that starts one used to sit silent for as long as the listing
+/// took, which reads as a control that does nothing. Asking first costs one
+/// request and answers the only questions worth asking: is this already done,
+/// and how much would it fetch.
 pub async fn status(client: &Client, library_root: &Path) -> Result<(usize, usize, u64)> {
     let list = client
         .firmware()
@@ -250,6 +244,11 @@ pub async fn status(client: &Client, library_root: &Path) -> Result<(usize, usiz
     Ok((list.len(), have, bytes))
 }
 
+/// Download every BIOS the server has that is not already here.
+///
+/// `progress` is called with `(done, total, name)` so a frontend can show which
+/// file it is on — the set is 67 files on this server and a bare spinner says
+/// nothing about how far through it is.
 pub async fn sync(
     client: &Client,
     library_root: &Path,
@@ -279,10 +278,10 @@ pub async fn sync(
             .file_name()
             .map(|n| n.to_string_lossy().into_owned())
             .unwrap_or_default();
-        if let Some(parent) = path.parent() {
-            if std::fs::create_dir_all(parent).is_err() {
-                continue;
-            }
+        if let Some(parent) = path.parent()
+            && std::fs::create_dir_all(parent).is_err()
+        {
+            continue;
         }
         progress(i + 1, total, &leaf);
 

@@ -114,7 +114,7 @@ fn derive(plain: &str, salt: &[u8], rounds: u32) -> [u8; KEY_LEN] {
     let mut key = [0u8; KEY_LEN];
     // Infallible for a non-zero round count; the type is fallible because
     // PBKDF2 rejects zero.
-    let _ = pbkdf2::pbkdf2_hmac::<sha2::Sha256>(plain.as_bytes(), salt, rounds, &mut key);
+    pbkdf2::pbkdf2_hmac::<sha2::Sha256>(plain.as_bytes(), salt, rounds, &mut key);
     key
 }
 
@@ -391,7 +391,7 @@ mod tests {
         assert!(AuthConfig::default().open());
         assert!(AuthConfig { token: Some(String::new()), users: vec![], guest: false }.open());
         assert!(!cfg().open());
-        assert!(AuthConfig { token: None, users: cfg().users, guest: false }.open() == false);
+        assert!(!AuthConfig { token: None, users: cfg().users, guest: false }.open());
     }
 
     /// A guest may look; a guest may not change what the next person sees.

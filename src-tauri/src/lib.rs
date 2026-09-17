@@ -183,9 +183,9 @@ async fn download_set(
     use moose_rack::{bulk, diskspace};
 
     let client = state.client.clone().ok_or("no server configured")?;
-    let rows = rows_for_choice(&*state, &choice.platforms, &choice.collection, &choice.collections)?;
+    let rows = rows_for_choice(&state, &choice.platforms, &choice.collection, &choice.collections)?;
     let want = choice.want();
-    let est = bulk::estimate(&rows, want, |r| row_path(&*state, r).is_some());
+    let est = bulk::estimate(&rows, want, |r| row_path(&state, r).is_some());
     if let diskspace::Fit::No { short, .. } = diskspace::fits(&state.roms_dir, est.total()) {
         return Err(format!(
             "not enough room — {:.1} GB short. Free some space or take less media.",
@@ -199,7 +199,7 @@ async fn download_set(
     let total = rows.len();
 
     for (i, row) in rows.iter().enumerate() {
-        if row_path(&*state, row).is_none() {
+        if row_path(&state, row).is_none() {
             let members = if row.multi_file {
                 client.member_hashes(row.id).await
             } else {
@@ -485,7 +485,7 @@ async fn launch_rom(
     // row_path, not local_path: the grid marks a row downloaded with this, and
     // a launch that disagreed said "not downloaded yet" about a folder ROM
     // sitting right there. launch::plan resolves the folder to its playlist.
-    let path = row_path(&*state, &row).ok_or("not downloaded yet")?;
+    let path = row_path(&state, &row).ok_or("not downloaded yet")?;
     // One shared planner for GUI, CLI and TUI — see launch.rs for why.
     let overrides = state.core_overrides.lock().map_err(err)?.clone();
     let per_game = state.core_per_game.lock().map_err(err)?.clone();
@@ -510,7 +510,7 @@ async fn launch_rom(
         save_state_on_exit: Config::load()
             .map(|c| c.retroarch.save_state_on_exit)
             .unwrap_or(false),
-        autofire_hz: autofire_hz(&*state),
+        autofire_hz: autofire_hz(&state),
         mirror_players: state.mirror_players,
         entry_slot,
         rom: &path,
@@ -621,7 +621,7 @@ async fn launch_rom(
         AutoSync::default()
     } else {
         say("checking saves with the server…");
-        auto_sync(&*state, ra, &row, savesync::When::BeforeLaunch).await
+        auto_sync(&state, ra, &row, savesync::When::BeforeLaunch).await
     };
     if let Some(note) = pre.note {
         notes.push(note);
@@ -664,7 +664,7 @@ async fn launch_rom(
     let post = if skip_sync.unwrap_or(false) {
         AutoSync::default()
     } else {
-        auto_sync(&*state, ra, &row, savesync::When::AfterExit).await
+        auto_sync(&state, ra, &row, savesync::When::AfterExit).await
     };
     if let Some(note) = post.note {
         notes.push(note);
@@ -1219,12 +1219,12 @@ async fn verify_server(
 
 #[tauri::command]
 async fn bios_status(state: State<'_, AppState>) -> CmdResult<(usize, usize, u64)> {
-    moose_rack::commands::bios_status(&*state).await
+    moose_rack::commands::bios_status(&state).await
 }
 
 #[tauri::command]
 async fn versions(state: State<'_, AppState>) -> CmdResult<(String, Option<String>)> {
-    moose_rack::commands::versions(&*state)
+    moose_rack::commands::versions(&state)
 }
 
 #[tauri::command]
@@ -1239,12 +1239,12 @@ async fn verify_achievements() -> CmdResult<moose_rack::achievements::Verified> 
 
 #[tauri::command]
 async fn game_states(state: State<'_, AppState>, id: i64) -> CmdResult<Vec<StateView>> {
-    moose_rack::commands::game_states(&*state, id)
+    moose_rack::commands::game_states(&state, id)
 }
 
 #[tauri::command]
 fn delete_state(state: State<'_, AppState>, id: i64, slot: String) -> CmdResult<String> {
-    moose_rack::commands::delete_state(&*state, id, slot)
+    moose_rack::commands::delete_state(&state, id, slot)
 }
 
 #[tauri::command]
@@ -1254,7 +1254,7 @@ fn confirm_delete_state() -> CmdResult<bool> {
 
 #[tauri::command]
 async fn play_history(state: State<'_, AppState>) -> CmdResult<History> {
-    moose_rack::commands::play_history(&*state)
+    moose_rack::commands::play_history(&state)
 }
 
 #[tauri::command]
@@ -1263,7 +1263,7 @@ async fn recent_games(
     limit: Option<usize>,
     list: Option<ListRef>,
 ) -> CmdResult<Vec<RomView>> {
-    moose_rack::commands::recent_games(&*state, limit, list)
+    moose_rack::commands::recent_games(&state, limit, list)
 }
 
 #[tauri::command]
@@ -1271,12 +1271,12 @@ async fn download_estimate(
     state: State<'_, AppState>,
     choice: DownloadChoice,
 ) -> CmdResult<(String, bool, String)> {
-    moose_rack::commands::download_estimate(&*state, choice).await
+    moose_rack::commands::download_estimate(&state, choice).await
 }
 
 #[tauri::command]
 async fn platforms(state: State<'_, AppState>) -> CmdResult<Vec<PlatformView>> {
-    moose_rack::commands::platforms(&*state)
+    moose_rack::commands::platforms(&state)
 }
 
 #[tauri::command]
@@ -1285,17 +1285,17 @@ async fn roms(
     platform: String,
     list: Option<ListRef>,
 ) -> CmdResult<Vec<RomView>> {
-    moose_rack::commands::roms(&*state, platform, list)
+    moose_rack::commands::roms(&state, platform, list)
 }
 
 #[tauri::command]
 async fn collection_groups(state: State<'_, AppState>) -> CmdResult<Vec<GroupView>> {
-    moose_rack::commands::collection_groups(&*state)
+    moose_rack::commands::collection_groups(&state)
 }
 
 #[tauri::command]
 async fn collections_in(state: State<'_, AppState>, group: String) -> CmdResult<Vec<CollectionView>> {
-    moose_rack::commands::collections_in(&*state, group)
+    moose_rack::commands::collections_in(&state, group)
 }
 
 #[tauri::command]
@@ -1304,7 +1304,7 @@ async fn collection_roms(
     id: String,
     list: Option<ListRef>,
 ) -> CmdResult<Vec<RomView>> {
-    moose_rack::commands::collection_roms(&*state, id, list)
+    moose_rack::commands::collection_roms(&state, id, list)
 }
 
 #[tauri::command]
@@ -1313,37 +1313,37 @@ async fn search(
     term: String,
     list: Option<ListRef>,
 ) -> CmdResult<Vec<RomView>> {
-    moose_rack::commands::search(&*state, term, list)
+    moose_rack::commands::search(&state, term, list)
 }
 
 #[tauri::command]
 async fn rom_detail(state: State<'_, AppState>, id: i64) -> CmdResult<RomDetail> {
-    moose_rack::commands::rom_detail(&*state, id).await
+    moose_rack::commands::rom_detail(&state, id).await
 }
 
 #[tauri::command]
 async fn toggle_favorite(state: State<'_, AppState>, id: i64) -> CmdResult<bool> {
-    moose_rack::commands::toggle_favorite(&*state, id).await
+    moose_rack::commands::toggle_favorite(&state, id).await
 }
 
 #[tauri::command]
 async fn list_art_options(state: State<'_, AppState>) -> CmdResult<(Vec<(String, String)>, String)> {
-    moose_rack::commands::list_art_options(&*state)
+    moose_rack::commands::list_art_options(&state)
 }
 
 #[tauri::command]
 fn set_list_art(state: State<'_, AppState>, value: String) -> CmdResult<String> {
-    moose_rack::commands::set_list_art(&*state, value)
+    moose_rack::commands::set_list_art(&state, value)
 }
 
 #[tauri::command]
 async fn game_video(state: State<'_, AppState>, id: i64) -> CmdResult<String> {
-    moose_rack::commands::game_video(&*state, id).await
+    moose_rack::commands::game_video(&state, id).await
 }
 
 #[tauri::command]
 fn set_autofire_hz(state: State<'_, AppState>, hz: u32) -> CmdResult<u32> {
-    moose_rack::commands::set_autofire_hz(&*state, hz)
+    moose_rack::commands::set_autofire_hz(&state, hz)
 }
 
 #[tauri::command]
@@ -1360,17 +1360,17 @@ fn android_launch_plan(
     pad: Option<String>,
     refresh: Option<f32>,
 ) -> CmdResult<AndroidPlan> {
-    moose_rack::commands::android_launch_plan(&*state, id, retroarch_package, config_dir, pad, refresh)
+    moose_rack::commands::android_launch_plan(&state, id, retroarch_package, config_dir, pad, refresh)
 }
 
 #[tauri::command]
 async fn warm_media(state: State<'_, AppState>, platform: String) -> CmdResult<()> {
-    moose_rack::commands::warm_media(&*state, platform).await
+    moose_rack::commands::warm_media(&state, platform).await
 }
 
 #[tauri::command]
 async fn android_sync_before(state: State<'_, AppState>, id: i64) -> CmdResult<String> {
-    moose_rack::commands::android_sync_before(&*state, id).await
+    moose_rack::commands::android_sync_before(&state, id).await
 }
 
 #[tauri::command]
@@ -1379,7 +1379,7 @@ async fn android_after_play(
     id: i64,
     seconds: i64,
 ) -> CmdResult<String> {
-    moose_rack::commands::android_after_play(&*state, id, seconds).await
+    moose_rack::commands::android_after_play(&state, id, seconds).await
 }
 
 #[tauri::command]
@@ -1388,19 +1388,19 @@ async fn resolve_save_conflict(
     file_name: String,
     keep: moose_rack::savesync::Keep,
 ) -> CmdResult<String> {
-    moose_rack::commands::resolve_save_conflict(&*state, file_name, keep).await
+    moose_rack::commands::resolve_save_conflict(&state, file_name, keep).await
 }
 
 #[tauri::command]
 async fn icon_sets(state: State<'_, AppState>) -> CmdResult<Vec<moose_rack::iconsets::IconSetView>> {
-    moose_rack::commands::icon_sets(&*state).await
+    moose_rack::commands::icon_sets(&state).await
 }
 
 #[tauri::command]
 async fn check_update(
     state: State<'_, AppState>,
 ) -> CmdResult<Option<moose_rack::update::Update>> {
-    moose_rack::commands::check_update(&*state).await
+    moose_rack::commands::check_update(&state).await
 }
 
 #[tauri::command]
@@ -1415,47 +1415,47 @@ fn config_patch() -> CmdResult<String> {
 
 #[tauri::command]
 async fn game_lightgun(state: State<'_, AppState>, id: i64) -> CmdResult<Option<(String, String)>> {
-    moose_rack::commands::game_lightgun(&*state, id)
+    moose_rack::commands::game_lightgun(&state, id)
 }
 
 #[tauri::command]
 fn set_icon_set(state: State<'_, AppState>, dir: String) -> CmdResult<String> {
-    moose_rack::commands::set_icon_set(&*state, dir)
+    moose_rack::commands::set_icon_set(&state, dir)
 }
 
 #[tauri::command]
 fn remove_icon_set(state: State<'_, AppState>, dir: String) -> CmdResult<String> {
-    moose_rack::commands::remove_icon_set(&*state, dir)
+    moose_rack::commands::remove_icon_set(&state, dir)
 }
 
 #[tauri::command]
 async fn systems(state: State<'_, AppState>) -> CmdResult<Vec<SystemView>> {
-    moose_rack::commands::systems(&*state)
+    moose_rack::commands::systems(&state)
 }
 
 #[tauri::command]
 async fn sync_saves_plan(state: State<'_, AppState>) -> CmdResult<moose_rack::syncplan::Review> {
-    moose_rack::commands::sync_saves_plan(&*state).await
+    moose_rack::commands::sync_saves_plan(&state).await
 }
 
 #[tauri::command]
 async fn attract_pool(state: State<'_, AppState>) -> CmdResult<Vec<AttractPick>> {
-    moose_rack::commands::attract_pool(&*state).await
+    moose_rack::commands::attract_pool(&state).await
 }
 
 #[tauri::command]
 async fn sync_saves(state: State<'_, AppState>) -> CmdResult<SyncRun> {
-    moose_rack::commands::sync_saves(&*state).await
+    moose_rack::commands::sync_saves(&state).await
 }
 
 #[tauri::command]
 async fn motion_options(state: State<'_, AppState>) -> CmdResult<MotionView> {
-    moose_rack::commands::motion_options(&*state)
+    moose_rack::commands::motion_options(&state)
 }
 
 #[tauri::command]
 fn set_motion_shader(state: State<'_, AppState>, value: String) -> CmdResult<String> {
-    moose_rack::commands::set_motion_shader(&*state, value)
+    moose_rack::commands::set_motion_shader(&state, value)
 }
 
 #[tauri::command]
@@ -1465,32 +1465,32 @@ fn set_system_choice(
     field: String,
     value: String,
 ) -> CmdResult<String> {
-    moose_rack::commands::set_system_choice(&*state, slug, field, value)
+    moose_rack::commands::set_system_choice(&state, slug, field, value)
 }
 
 #[tauri::command]
 async fn game_cores(state: State<'_, AppState>, id: i64) -> CmdResult<Vec<CoreChoice>> {
-    moose_rack::commands::game_cores(&*state, id)
+    moose_rack::commands::game_cores(&state, id)
 }
 
 #[tauri::command]
 fn set_game_core(state: State<'_, AppState>, id: i64, core: String) -> CmdResult<String> {
-    moose_rack::commands::set_game_core(&*state, id, core)
+    moose_rack::commands::set_game_core(&state, id, core)
 }
 
 #[tauri::command]
 fn install_theme_logos(state: State<'_, AppState>) -> CmdResult<String> {
-    moose_rack::commands::install_theme_logos(&*state)
+    moose_rack::commands::install_theme_logos(&state)
 }
 
 #[tauri::command]
 async fn status(state: State<'_, AppState>) -> CmdResult<Status> {
-    moose_rack::commands::status(&*state)
+    moose_rack::commands::status(&state)
 }
 
 #[tauri::command]
 async fn disk_usage(state: State<'_, AppState>) -> CmdResult<u64> {
-    moose_rack::commands::disk_usage(&*state).await
+    moose_rack::commands::disk_usage(&state).await
 }
 
 #[tauri::command]
@@ -1500,17 +1500,17 @@ fn set_retroarch_root(path: String) -> CmdResult<String> {
 
 #[tauri::command]
 async fn icon_styles(state: State<'_, AppState>) -> CmdResult<Vec<IconStyleView>> {
-    moose_rack::commands::icon_styles(&*state)
+    moose_rack::commands::icon_styles(&state)
 }
 
 #[tauri::command]
 fn set_icon_style(state: State<'_, AppState>, key: String) -> CmdResult<String> {
-    moose_rack::commands::set_icon_style(&*state, key)
+    moose_rack::commands::set_icon_style(&state, key)
 }
 
 #[tauri::command]
 async fn ui_bindings(state: State<'_, AppState>) -> CmdResult<BindingsView> {
-    moose_rack::commands::ui_bindings(&*state)
+    moose_rack::commands::ui_bindings(&state)
 }
 
 #[tauri::command]
@@ -1519,7 +1519,7 @@ fn set_key_binding(
     action: String,
     key: Option<String>,
 ) -> CmdResult<BindingsView> {
-    moose_rack::commands::set_key_binding(&*state, action, key)
+    moose_rack::commands::set_key_binding(&state, action, key)
 }
 
 #[tauri::command]
@@ -1528,12 +1528,12 @@ fn set_pad_binding(
     action: String,
     index: Option<u8>,
 ) -> CmdResult<BindingsView> {
-    moose_rack::commands::set_pad_binding(&*state, action, index)
+    moose_rack::commands::set_pad_binding(&state, action, index)
 }
 
 #[tauri::command]
 fn reset_bindings(state: State<'_, AppState>, which: String) -> CmdResult<BindingsView> {
-    moose_rack::commands::reset_bindings(&*state, which)
+    moose_rack::commands::reset_bindings(&state, which)
 }
 
 #[tauri::command]
@@ -1542,7 +1542,7 @@ fn import_bindings(
     keys: std::collections::BTreeMap<String, Option<String>>,
     pad: std::collections::BTreeMap<String, Option<String>>,
 ) -> CmdResult<BindingsView> {
-    moose_rack::commands::import_bindings(&*state, keys, pad)
+    moose_rack::commands::import_bindings(&state, keys, pad)
 }
 
 #[tauri::command]
@@ -1552,7 +1552,7 @@ async fn list_controls() -> ListControls {
 
 #[tauri::command]
 async fn arrange_list(state: State<'_, AppState>, list: ListRef) -> CmdResult<Arrangement> {
-    moose_rack::commands::arrange_list(&*state, list)
+    moose_rack::commands::arrange_list(&state, list)
 }
 
 #[tauri::command]
@@ -1562,7 +1562,7 @@ fn set_list_order(
     order: String,
     preferred: Option<bool>,
 ) -> CmdResult<Arrangement> {
-    moose_rack::commands::set_list_order(&*state, list, order, preferred)
+    moose_rack::commands::set_list_order(&state, list, order, preferred)
 }
 
 #[tauri::command]
@@ -1571,7 +1571,7 @@ fn cycle_list_order(
     list: ListRef,
     delta: i32,
 ) -> CmdResult<Arrangement> {
-    moose_rack::commands::cycle_list_order(&*state, list, delta)
+    moose_rack::commands::cycle_list_order(&state, list, delta)
 }
 
 #[tauri::command]
@@ -1580,12 +1580,12 @@ fn toggle_list_filter(
     list: ListRef,
     filter: String,
 ) -> CmdResult<Arrangement> {
-    moose_rack::commands::toggle_list_filter(&*state, list, filter)
+    moose_rack::commands::toggle_list_filter(&state, list, filter)
 }
 
 #[tauri::command]
 fn clear_list_filters(state: State<'_, AppState>, list: ListRef) -> CmdResult<Arrangement> {
-    moose_rack::commands::clear_list_filters(&*state, list)
+    moose_rack::commands::clear_list_filters(&state, list)
 }
 
 #[tauri::command]
@@ -1594,17 +1594,17 @@ async fn sort_picker(
     kind: String,
     rows: Vec<moose_rack::pickorder::PickerRow>,
 ) -> CmdResult<PickerArrangement> {
-    moose_rack::commands::sort_picker(&*state, kind, rows)
+    moose_rack::commands::sort_picker(&state, kind, rows)
 }
 
 #[tauri::command]
 async fn picker_controls(state: State<'_, AppState>, kind: String) -> CmdResult<PickerArrangement> {
-    moose_rack::commands::picker_controls(&*state, kind)
+    moose_rack::commands::picker_controls(&state, kind)
 }
 
 #[tauri::command]
 fn set_picker_order(state: State<'_, AppState>, kind: String, order: String) -> CmdResult<()> {
-    moose_rack::commands::set_picker_order(&*state, kind, order)
+    moose_rack::commands::set_picker_order(&state, kind, order)
 }
 
 #[tauri::command]
@@ -1613,12 +1613,12 @@ fn set_page_names(
     names: Vec<String>,
     groups: Option<Vec<Vec<usize>>>,
 ) -> CmdResult<()> {
-    moose_rack::commands::set_page_names(&*state, names, groups)
+    moose_rack::commands::set_page_names(&state, names, groups)
 }
 
 #[tauri::command]
 async fn page_filter(state: State<'_, AppState>, query: String) -> CmdResult<PageFilterResult> {
-    moose_rack::commands::page_filter(&*state, query)
+    moose_rack::commands::page_filter(&state, query)
 }
 
 #[tauri::command]
