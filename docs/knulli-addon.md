@@ -159,6 +159,26 @@ smaller file is a smaller thing to lose. `--status` prints the server and which
 credential it found, so "cannot reach RomM" and "no patch is on" are one line
 apart instead of guesswork.
 
+### Answering a conflict over ssh
+
+    moose-patch --sync --keep local     # this device's copy wins
+    moose-patch --sync --keep server    # the server's copy wins
+
+Until 0.4.311 a conflict on the handheld could only be answered on its own
+screen, with a controller in hand. `--keep` answers every conflict that run
+finds through `savesync::resolve`, the same call the desktop's
+`sync-saves --keep` uses: the copy being replaced is backed up first, and it is
+the only path that sends `overwrite`. Nothing that already agreed is rewritten.
+
+**Save names are compared case-sensitively, and the card is not.** The Flip's
+exFAT treats `Kirby & the …` and `Kirby & The …` as one file; the server's disk
+keeps both. A save imported from RomM under the lowercase spelling was pulled
+down, re-uploaded under the ROM's spelling, and then offered for pulling again
+on every sync. With identical bytes that is harmless, but after a session on the
+Flip it would pull the old copy over the new one. The duplicate was moved aside
+on 2026-09-24 (`moose-library/backups/saves-case-duplicates-20260924/`); the
+comparison itself is not fixed yet.
+
 ### Still to do
 
 The three sync actions are drawn but not wired. `moose_rack::savesync` already
