@@ -169,7 +169,8 @@ fn main() -> Result<()> {
         }
         Some(other) if other.starts_with("--") => {
             eprintln!(
-                "moose-patch [--status | --apply <id>=<option> [--anyway] | --plan | --sync \
+                "moose-patch [--status | --apply <id>=<option> [--anyway] | --plan \
+                 | --sync [--keep local|server] \
                  | --refresh | --pull-all | --stars | --stars-apply | --restore | --save]"
             );
             std::process::exit(2);
@@ -215,7 +216,7 @@ fn saves_cli() -> Result<()> {
 fn refresh_cli() -> Result<()> {
     let cfg = moose_rack::config::Config::load().unwrap_or_default();
     let app_dir = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
-    drain_to_end(worker::refresh_index(&cfg, &app_dir))
+    drain_to_end(worker::refresh_index(&cfg, &app_dir)).map(|_| ())
 }
 
 /// Take everything the server holds. For a device being set up, or one whose
@@ -227,22 +228,96 @@ fn pull_all_cli() -> Result<()> {
     let library_root = moose_rack::util::expand_tilde(&cfg.library.local_root);
     let app_dir = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
     let job = worker::pull_all(&cfg, &ra_root, &app_dir, &library_root);
-    drain_to_end(job)
+    drain_to_end(job).map(|_| ())
 }
 
 fn sync_cli(carry_out: bool) -> Result<()> {
+    let args: Vec<String> = std::env::args().collect();
+    let keep = keep_arg(&args)?;
+    if keep.is_some() && !carry_out {
+        anyhow::bail!("--keep answers conflicts, so it goes with --sync, not --plan");
+    }
     let cfg = moose_rack::config::Config::load().unwrap_or_default();
     let ra_root = moose_rack::util::expand_tilde(&cfg.saves.root);
+    let library_root = moose_rack::util::expand_tilde(&cfg.library.local_root);
     let app_dir = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
     println!("saves under {}", ra_root.display());
 
     let job = if carry_out {
-        let library_root = moose_rack::util::expand_tilde(&cfg.library.local_root);
         worker::carry_out(&cfg, &ra_root, &app_dir, &library_root)
     } else {
         worker::negotiate(&cfg, &ra_root, &app_dir)
     };
-    drain_to_end(job)
+    let conflicts = drain_to_end(job)?;
+    match keep {
+        Some(keep) if !conflicts.is_empty() => {
+            resolve_all(&cfg, &conflicts, keep, &ra_root, &library_root, &app_dir)
+        }
+        _ => Ok(()),
+    }
+}
+
+/// `--sync --keep local|server`: answer every conflict the run turned up.
+///
+/// On the handheld a conflict could only be answered on its own screen, with a
+/// controller in hand -- there was no way to do it over ssh. The desktop CLI
+/// has had `sync-saves --keep` for this, and this is the same answer through
+/// the same `savesync::resolve`: it backs up the copy it replaces, and it is
+/// the only place `overwrite` is ever sent. Only the conflicts this run found
+/// are touched, so nothing that agreed is rewritten.
+fn keep_arg(args: &[String]) -> Result<Option<moose_rack::savesync::Keep>> {
+    use moose_rack::savesync::Keep;
+    let Some(at) = args.iter().position(|a| a == "--keep") else {
+        return Ok(None);
+    };
+    match args.get(at + 1).map(String::as_str) {
+        Some("local" | "mine") => Ok(Some(Keep::Local)),
+        Some("server" | "remote") => Ok(Some(Keep::Server)),
+        Some(other) => anyhow::bail!("--keep takes `local` or `server`, not {other:?}"),
+        None => anyhow::bail!("--keep needs `local` or `server`"),
+    }
+}
+
+fn resolve_all(
+    cfg: &moose_rack::config::Config,
+    conflicts: &[moose_rack::savesync::SaveConflict],
+    keep: moose_rack::savesync::Keep,
+    ra_root: &std::path::Path,
+    library_root: &std::path::Path,
+    app_dir: &std::path::Path,
+) -> Result<()> {
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .context("starting the network")?;
+    let client = moose_rack::api::Client::with_auth(
+        &cfg.server.url,
+        &cfg.server.username,
+        &cfg.server.password,
+        cfg.server.token.as_deref(),
+    )?;
+    let whose = match keep {
+        moose_rack::savesync::Keep::Local => "this device's copy",
+        moose_rack::savesync::Keep::Server => "the server's copy",
+    };
+    println!("resolving {} conflict(s), keeping {whose}:", conflicts.len());
+    let mut failed = 0;
+    for c in conflicts {
+        let done = runtime.block_on(moose_rack::savesync::resolve(
+            &client, c, keep, ra_root, library_root, app_dir,
+        ));
+        match done {
+            Ok(msg) => println!("  {msg}"),
+            Err(e) => {
+                failed += 1;
+                println!("  {}: FAILED -- {e:#}", c.file_name);
+            }
+        }
+    }
+    if failed > 0 {
+        std::process::exit(1);
+    }
+    Ok(())
 }
 
 /// Turn one patch to one of its options, from a shell.
@@ -373,7 +448,9 @@ fn stars_cli(carry_out: bool) -> Result<()> {
 }
 
 /// Follow one job to its end, printing each new thing it says.
-fn drain_to_end(job: worker::Job) -> Result<()> {
+/// Run a job to the end, printing as it goes. Returns the conflicts it was
+/// left holding, so a caller that was told how to answer them can.
+fn drain_to_end(job: worker::Job) -> Result<Vec<moose_rack::savesync::SaveConflict>> {
     let mut stage = Stage::default();
     let mut conflicts = Vec::new();
     let mut last = String::new();
@@ -390,14 +467,14 @@ fn drain_to_end(job: worker::Job) -> Result<()> {
                     let why = line.reason.as_deref().unwrap_or("");
                     println!("  {:<9} {} {why}", line.action.label(), line.title);
                 }
-                return Ok(());
+                return Ok(Vec::new());
             }
             Stage::Done { moved, conflicts: n, .. } => {
                 println!("moved {moved}, {n} conflict(s)");
                 for c in &conflicts {
                     println!("  conflict  {}  {}", c.file_name, c.reason.as_deref().unwrap_or("both sides changed"));
                 }
-                return Ok(());
+                return Ok(conflicts);
             }
             Stage::Failed(_) => std::process::exit(1),
             _ => std::thread::sleep(std::time::Duration::from_millis(200)),
@@ -825,6 +902,20 @@ fn act(
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn keep_takes_a_side_or_says_what_it_wanted() {
+        use moose_rack::savesync::Keep;
+        let args = |s: &str| s.split(' ').map(String::from).collect::<Vec<_>>();
+        assert_eq!(keep_arg(&args("moose-patch --sync")).unwrap(), None);
+        assert_eq!(keep_arg(&args("moose-patch --sync --keep local")).unwrap(), Some(Keep::Local));
+        assert_eq!(keep_arg(&args("moose-patch --sync --keep mine")).unwrap(), Some(Keep::Local));
+        assert_eq!(keep_arg(&args("moose-patch --sync --keep server")).unwrap(), Some(Keep::Server));
+        // A typo must not fall through to "no --keep", or the run looks like it
+        // answered the conflicts when it left every one of them standing.
+        assert!(keep_arg(&args("moose-patch --sync --keep lcoal")).is_err());
+        assert!(keep_arg(&args("moose-patch --sync --keep")).is_err());
+    }
     use super::*;
 
     /// A whole app pointed at a temporary directory, so pressing buttons in
