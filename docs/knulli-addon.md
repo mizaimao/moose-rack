@@ -174,10 +174,21 @@ the only path that sends `overwrite`. Nothing that already agreed is rewritten.
 exFAT treats `Kirby & the …` and `Kirby & The …` as one file; the server's disk
 keeps both. A save imported from RomM under the lowercase spelling was pulled
 down, re-uploaded under the ROM's spelling, and then offered for pulling again
-on every sync. With identical bytes that is harmless, but after a session on the
-Flip it would pull the old copy over the new one. The duplicate was moved aside
-on 2026-09-24 (`moose-library/backups/saves-case-duplicates-20260924/`); the
-comparison itself is not fixed yet.
+on every sync. Worse, it had already happened once: the first pull landed on
+the Flip's own newer Kirby save and replaced it, and nothing called it a
+conflict, because by the server's reckoning the two files had never met. The
+Flip's copy was restored from the pre-sync backup and the stale spelling moved
+aside (`moose-library/backups/saves-case-duplicates-20260924/`).
+
+Fixed in 0.4.312, on the client. Before a download, `savesync::case_twins` asks
+whether the file it would write is already a local save of the same game under
+another spelling. `occupies` answers that from the disk itself: the other
+spelling resolves, yet no directory entry carries it. Same bytes means nothing
+moves and the local file takes the server's spelling; different bytes means a
+conflict, answered with `--keep` like any other. On a case-sensitive disk the
+two spellings are two files and the check never fires, so Linux behaves exactly
+as before. The Mac, Windows and Android SD cards fold case like the Flip, and
+get the same protection when they are next built.
 
 ### Still to do
 

@@ -388,6 +388,109 @@ pub fn describe(when: When, summary: &Summary) -> Option<String> {
     Some(line)
 }
 
+/// One save on the server, and a file here that the filesystem treats as the
+/// same file although its name is spelled with different case.
+///
+/// The server compares names exactly, because its disk does. A card formatted
+/// exFAT, APFS in its default form, NTFS and an Android SD card do not: there
+/// `Kirby & the Amazing Mirror (USA).srm` and `Kirby & The Amazing Mirror
+/// (USA).srm` are one file. So the server offered its lowercase copy as a
+/// download "this device does not have", the download landed on the Flip's own
+/// newer save and replaced it, and nothing called it a conflict because by the
+/// server's reckoning the two had never met. It then re-uploaded under the
+/// other spelling, which left both on the server and a pull on every sync
+/// after that.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Twin {
+    /// Same bytes under both spellings. Nothing to move; the local file takes
+    /// the server's spelling so both sides name it the same from now on.
+    Same { local: PathBuf, server_name: String },
+    /// Different bytes. A conflict: neither side is allowed to replace the
+    /// other without somebody choosing.
+    Differ { candidate: usize },
+}
+
+/// Whether a file named `other_name` beside `existing` would be `existing`.
+///
+/// True only on a filesystem that folds case: the other spelling resolves, yet
+/// no directory entry carries it. On a case-sensitive disk the lookup fails,
+/// or finds a genuinely separate file with an entry of its own, and the answer
+/// is false -- which is what keeps this inert on ext4.
+pub fn occupies(existing: &Path, other_name: &str) -> bool {
+    if existing.file_name().is_some_and(|n| n == other_name) {
+        return false;
+    }
+    if !existing.with_file_name(other_name).exists() {
+        return false;
+    }
+    let Some(dir) = existing.parent() else {
+        return false;
+    };
+    std::fs::read_dir(dir)
+        .map(|entries| !entries.flatten().any(|e| e.file_name() == other_name))
+        .unwrap_or(false)
+}
+
+/// Every download in `plan` that would land on a differently spelled local
+/// save, keyed by its index in `plan`.
+///
+/// `folds` answers [`occupies`] and is a parameter so the decision can be
+/// tested on any disk. Only saves resolved to the same game are considered, so
+/// two games whose names happen to differ only in case are never paired.
+pub fn case_twins(
+    plan: &[crate::api::SyncOperation],
+    candidates: &[Candidate],
+    folds: &dyn Fn(&Path, &str) -> bool,
+) -> std::collections::HashMap<usize, Twin> {
+    let mut out = std::collections::HashMap::new();
+    for (i, op) in plan.iter().enumerate() {
+        if op.action != "download" {
+            continue;
+        }
+        let Some(server_name) = op.file_name.as_deref().map(local_name) else {
+            continue;
+        };
+        let folded = server_name.to_lowercase();
+        let found = candidates.iter().position(|c| {
+            c.kind == saves::Kind::Save
+                && matches!(c.resolution, Resolution::Resolved { rom_id, .. } if rom_id == op.rom_id)
+                && c.path.file_name().is_some_and(|n| {
+                    let n = n.to_string_lossy();
+                    n != server_name && n.to_lowercase() == folded
+                })
+                && folds(&c.path, &server_name)
+        });
+        let Some(at) = found else {
+            continue;
+        };
+        let same = op.server_content_hash.as_deref() == Some(candidates[at].content_hash.as_str());
+        out.insert(
+            i,
+            if same {
+                Twin::Same { local: candidates[at].path.clone(), server_name }
+            } else {
+                Twin::Differ { candidate: at }
+            },
+        );
+    }
+    out
+}
+
+/// Rename a file to a name that differs only in case.
+///
+/// Through a temporary name, because on a filesystem that folds case a direct
+/// rename finds the target already there -- it is the same file -- and
+/// Linux's `rename` then does nothing and reports success.
+pub fn respell(path: &Path, new_name: &str) -> Result<PathBuf> {
+    let target = path.with_file_name(new_name);
+    let step = path.with_file_name(format!(".{new_name}.respelling"));
+    std::fs::rename(path, &step)
+        .with_context(|| format!("renaming {} aside", path.display()))?;
+    std::fs::rename(&step, &target)
+        .with_context(|| format!("renaming it to {new_name}"))?;
+    Ok(target)
+}
+
 /// Negotiate and carry out the plan for an already-scanned tree.
 pub async fn run(
     client: &Client,
@@ -412,7 +515,50 @@ pub async fn run(
         .await
         .context("asking the server what to sync")?;
 
-    for op in &plan.operations {
+    // Downloads that would land on a local save spelled differently. The
+    // upload the server asks for alongside each one is the same save seen from
+    // this side, so it is skipped too: the pair is settled once, below.
+    let twins = case_twins(&plan.operations, candidates, &occupies);
+    let paired: std::collections::HashSet<PathBuf> = twins
+        .values()
+        .map(|t| match t {
+            Twin::Same { local, .. } => local.clone(),
+            Twin::Differ { candidate } => candidates[*candidate].path.clone(),
+        })
+        .collect();
+
+    for (at, op) in plan.operations.iter().enumerate() {
+        if let Some(twin) = twins.get(&at) {
+            match twin {
+                Twin::Same { local, server_name } => match respell(local, server_name) {
+                    Ok(_) => {
+                        summary.unchanged += 1;
+                        summary.notes.push(format!("{server_name}: already here, spelled differently; renamed to match"));
+                    }
+                    Err(e) => summary.notes.push(format!("{server_name}: could not rename the local copy: {e:#}")),
+                },
+                Twin::Differ { candidate } => {
+                    let c = &candidates[*candidate];
+                    let here = c.path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+                    let name = op.file_name.clone().unwrap_or_default();
+                    summary.conflicts.push(SaveConflict {
+                        rom_id: op.rom_id,
+                        save_id: op.save_id,
+                        slot: op.slot.clone().or_else(|| Some(c.slot.clone())),
+                        emulator: op.emulator.clone().or_else(|| c.core.clone()),
+                        reason: Some(format!(
+                            "this device keeps it as {here} and the server as {name}, and they differ"
+                        )),
+                        local_updated: Some(modified_rfc3339(&c.path)),
+                        local_bytes: c.size as i64,
+                        local_path: Some(c.path.clone()),
+                        server_updated: op.server_updated_at.clone(),
+                        file_name: name,
+                    });
+                }
+            }
+            continue;
+        }
         match op.action.as_str() {
             "download" => {
                 let Some(save_id) = op.save_id else {
@@ -448,6 +594,9 @@ pub async fn run(
                     summary.notes.push(format!("server asked to upload {name}, which is not here"));
                     continue;
                 };
+                if paired.contains(&c.path) {
+                    continue;
+                }
                 match upload_one(client, c, op.rom_id, &identity, plan.session_id, false).await {
                     Ok(true) => {
                         summary.uploaded += 1;
@@ -558,7 +707,18 @@ pub async fn resolve(
                 )
                 .await?;
             match result {
-                Ok(_) => Ok(format!("{}: kept this machine's copy", conflict.file_name)),
+                Ok(_) => {
+                    // A conflict between two spellings of one file: now the
+                    // bytes agree, make the names agree too, or the next sync
+                    // pairs them up all over again.
+                    let server_name = local_name(&conflict.file_name);
+                    if path.file_name().is_some_and(|n| n.to_string_lossy() != server_name)
+                        && occupies(&path, &server_name)
+                    {
+                        respell(&path, &server_name)?;
+                    }
+                    Ok(format!("{}: kept this machine's copy", conflict.file_name))
+                }
                 // Refused even with overwrite on: the server moved again
                 // between being asked and being answered. Saying so beats
                 // reporting a success that did not happen.
@@ -1011,5 +1171,147 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(s.headline(), "2 uploaded, 1 in conflict");
+    }
+
+
+    fn scratch(name: &str) -> PathBuf {
+        let dir = std::env::temp_dir().join(format!("moose-savesync-{name}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    /// What this disk does with case, asked without the code under test.
+    fn disk_folds_case(dir: &Path) -> bool {
+        std::fs::write(dir.join("Probe"), b"").unwrap();
+        let folds = dir.join("probe").exists();
+        std::fs::remove_file(dir.join("Probe")).unwrap();
+        folds
+    }
+
+    fn twin_save(path: &str, rom_id: i64, hash: &str) -> Candidate {
+        Candidate {
+            path: PathBuf::from(path),
+            kind: saves::Kind::Save,
+            core_dir: "gba".into(),
+            core: Some("mgba".into()),
+            rom_base: Path::new(path).file_stem().unwrap().to_string_lossy().into_owned(),
+            slot: "unslotted".into(),
+            size: 32768,
+            content_hash: hash.into(),
+            resolution: Resolution::Resolved {
+                rom_id,
+                platform: "gba".into(),
+                fs_name: "rom.zip".into(),
+            },
+            canonical: true,
+            superseded_by: None,
+        }
+    }
+
+    fn op(action: &str, rom_id: i64, name: &str, hash: Option<&str>) -> crate::api::SyncOperation {
+        crate::api::SyncOperation {
+            action: action.into(),
+            rom_id,
+            save_id: Some(1),
+            file_name: Some(name.into()),
+            slot: None,
+            emulator: None,
+            reason: None,
+            server_content_hash: hash.map(str::to_owned),
+            server_updated_at: None,
+        }
+    }
+
+    const THE: &str = "/card/saves/gba/Kirby & The Amazing Mirror (USA).srm";
+    const THE_NAME: &str = "Kirby & The Amazing Mirror (USA).srm";
+    const LOWER: &str = "Kirby & the Amazing Mirror (USA).srm";
+
+    /// The Flip's own Kirby save was replaced by the server's older copy this
+    /// way on 2026-09-24. Take `folds(...)` out of `case_twins` and the first
+    /// assertion fails: the download goes through as a plain download.
+    #[test]
+    fn a_download_spelled_differently_is_never_written_over_a_local_save() {
+        let local = twin_save(THE, 7, "newer");
+        let plan = vec![
+            op("upload", 7, THE_NAME, None),
+            op("download", 7, LOWER, Some("older")),
+        ];
+        let folds = |_: &Path, _: &str| true;
+        let twins = case_twins(&plan, std::slice::from_ref(&local), &folds);
+        assert_eq!(twins.get(&1), Some(&Twin::Differ { candidate: 0 }), "a conflict, not a download");
+        assert_eq!(twins.len(), 1);
+
+        // Same bytes: nothing moves either way, and the local file takes the
+        // server's spelling so the pair is not offered again.
+        let same = vec![op("upload", 7, THE_NAME, None), op("download", 7, LOWER, Some("newer"))];
+        assert_eq!(
+            case_twins(&same, std::slice::from_ref(&local), &folds).get(&1),
+            Some(&Twin::Same { local: PathBuf::from(THE), server_name: LOWER.into() })
+        );
+    }
+
+    /// On a disk that keeps case the two spellings are two files, and a
+    /// download writes the one it names. Nothing changes there.
+    #[test]
+    fn a_case_sensitive_disk_pairs_nothing() {
+        let local = twin_save(THE, 7, "newer");
+        let plan = vec![op("download", 7, LOWER, Some("older"))];
+        let keeps = |_: &Path, _: &str| false;
+        assert!(case_twins(&plan, &[local], &keeps).is_empty());
+    }
+
+    #[test]
+    fn only_the_same_game_is_ever_paired() {
+        let folds = |_: &Path, _: &str| true;
+        // Another game whose name happens to differ only in case.
+        let other = twin_save(THE, 8, "h");
+        assert!(case_twins(&[op("download", 7, LOWER, Some("h"))], &[other], &folds).is_empty());
+        // A save state is not a save.
+        let mut state = twin_save(THE, 7, "h");
+        state.kind = saves::Kind::State;
+        assert!(case_twins(&[op("download", 7, LOWER, Some("h"))], &[state], &folds).is_empty());
+        // The exact name is a normal download, handled by the server's own rules.
+        let exact = twin_save(THE, 7, "h");
+        assert!(case_twins(&[op("download", 7, THE_NAME, Some("x"))], &[exact], &folds).is_empty());
+    }
+
+    /// Against the real disk under the test, whichever kind it is: the Mac and
+    /// Windows fold case, the Linux CI runner does not.
+    #[test]
+    fn another_spelling_occupies_the_file_only_where_the_disk_folds_case() {
+        let dir = scratch("occupies");
+        let folds = disk_folds_case(&dir);
+        let real = dir.join(THE_NAME);
+        std::fs::write(&real, b"the flip's save").unwrap();
+
+        assert_eq!(occupies(&real, LOWER), folds);
+        assert!(!occupies(&real, THE_NAME), "its own name is not another spelling");
+        assert!(!occupies(&real, "Kirby & the Amazing Mirror (Europe).srm"));
+        if !folds {
+            // Two genuinely separate files: neither is the other.
+            std::fs::write(dir.join(LOWER), b"another file").unwrap();
+            assert!(!occupies(&real, LOWER));
+        }
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// A direct rename to a case variant is a silent no-op on Linux over a
+    /// folding filesystem, so `respell` goes through a temporary name.
+    #[test]
+    fn respelling_changes_the_name_and_keeps_the_bytes() {
+        let dir = scratch("respell");
+        let real = dir.join(THE_NAME);
+        std::fs::write(&real, b"progress").unwrap();
+
+        let moved = respell(&real, LOWER).unwrap();
+        let names: Vec<String> = std::fs::read_dir(&dir)
+            .unwrap()
+            .flatten()
+            .map(|e| e.file_name().to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(names, vec![LOWER.to_owned()], "one file, spelled the server's way");
+        assert_eq!(std::fs::read(moved).unwrap(), b"progress");
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }
