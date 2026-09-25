@@ -389,6 +389,29 @@ pub enum Form {
     Seeded(PathBuf),
 }
 
+/// Lines in a `key=value` file that point at something of ours: a key ending
+/// in `key_suffix` whose value starts with `value_prefix`.
+#[derive(Clone, Debug)]
+pub struct NamedIn {
+    pub conf: PathBuf,
+    pub key_suffix: &'static str,
+    pub value_prefix: &'static str,
+}
+
+impl NamedIn {
+    /// Whether any live line still names one. Every live line counts, not
+    /// only the first-wins one: configgen reads knulli.conf its own way, and
+    /// a file anything may still load has to stay.
+    fn still_named(&self) -> Result<bool> {
+        let Some(text) = read_text(&self.conf)? else { return Ok(false) };
+        Ok(text.lines().any(|line| {
+            let Some(key) = key_of(line) else { return false };
+            let value = line.split_once('=').map(|(_, v)| v.trim()).unwrap_or("");
+            key.ends_with(self.key_suffix) && value.starts_with(self.value_prefix)
+        }))
+    }
+}
+
 /// One thing a patch does.
 #[derive(Clone, Debug)]
 pub enum Step {
@@ -409,6 +432,12 @@ pub enum Step {
     /// ours and there is no backup, and otherwise leaves it alone. So a stock
     /// file reads as off, which is what a fresh install is.
     Cover { path: PathBuf, ours: &'static [u8], on: bool, backup: PathBuf },
+    /// A file of ours that more than one patch can need at once: the shader
+    /// presets and sets, which the global shader and every per-system shader
+    /// name. `want` places it. Otherwise it is removed unless `named` still
+    /// finds a line pointing at one of ours, so no option is ever left naming
+    /// a set that was deleted from under it.
+    Shared { path: PathBuf, bytes: &'static [u8], want: bool, named: NamedIn },
 }
 
 /// Write, even if the filesystem says no.
@@ -572,6 +601,13 @@ impl Step {
                 Ok(now) => (now.as_deref() == Some(*ours)) == *on,
                 Err(_) => false,
             },
+            Step::Shared { path, bytes, want, named } => {
+                if *want {
+                    fs::read(path).map(|got| got == *bytes).unwrap_or(false)
+                } else {
+                    !path.exists() || named.still_named().unwrap_or(false)
+                }
+            }
         }
     }
 
@@ -650,6 +686,19 @@ impl Step {
                     // Somebody else's: KNULLI's own, or one ES wrote since.
                     Ok(())
                 }
+            }
+            Step::Shared { path, bytes, want, named } => {
+                if *want {
+                    if let Some(parent) = path.parent() {
+                        fs::create_dir_all(parent).ok();
+                    }
+                    return write_through(path, bytes)
+                        .with_context(|| format!("writing {}", path.display()));
+                }
+                if !path.exists() || named.still_named()? {
+                    return Ok(());
+                }
+                remove_through(path).with_context(|| format!("removing {}", path.display()))
             }
         }
     }
