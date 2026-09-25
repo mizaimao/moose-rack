@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Merged by Tauri into the bundle's own Info.plist.
+
+  The server is usually on the LAN, and macOS 15 and later block an app from
+  reaching LAN addresses until the user allows it. The connect fails with
+  "No route to host" (os error 65) while the same binary run from a terminal
+  works, because there it borrows the terminal's permission. This string is
+  what the permission prompt shows.
+-->
+<plist version="1.0">
+<dict>
+  <key>NSLocalNetworkUsageDescription</key>
+  <string>Moose Rack reads your game library from your server on this network.</string>
+</dict>
+</plist>
