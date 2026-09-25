@@ -495,6 +495,17 @@ pub fn incoming<'a>(
             .filter(|c| resolved(c) == Some(s.rom_id))
             .collect::<Vec<_>>();
         let Some(beside) = here.first() else { continue };
+        // Only a state this device's emulator would load: RetroArch names
+        // them after the game, `ActRaiser (USA).state1`. The browser's player
+        // names them after the time, and one of those came down to the Flip,
+        // where nothing will ever open it.
+        let named_for_the_game = s
+            .file_name
+            .to_lowercase()
+            .starts_with(&format!("{}.state", beside.rom_base.to_lowercase()));
+        if !named_for_the_game {
+            continue;
+        }
         let held = here.iter().any(|c| {
             c.kind == Kind::State && c.path.file_name().is_some_and(|n| n.to_string_lossy() == s.file_name)
         });
@@ -770,6 +781,13 @@ mod tests {
         let got = incoming(&server, &here, &Ledger::default());
         assert_eq!(got.len(), 1);
         assert_eq!(got[0].1, std::path::PathBuf::from("/userdata/saves/snes/ActRaiser (USA).state1"));
+    }
+
+    #[test]
+    fn a_state_this_emulator_would_never_load_stays_on_the_server() {
+        let here = [local("/userdata/saves/snes/ActRaiser (USA).srm", 7, Kind::Save)];
+        let server = [on_server(1, 7, "2026-09-08T04-25-32-465Z.state")];
+        assert!(incoming(&server, &here, &Ledger::default()).is_empty());
     }
 
     #[test]
