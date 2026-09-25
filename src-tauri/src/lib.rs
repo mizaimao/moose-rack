@@ -163,9 +163,7 @@ async fn open_settings(app: tauri::AppHandle) -> CmdResult<()> {
 #[tauri::command]
 async fn sync_bios(app: tauri::AppHandle, state: State<'_, AppState>) -> CmdResult<String> {
     let client = state.client.clone().ok_or("not connected to a server")?;
-    let library_root = state.roms_dir.parent().unwrap_or(Path::new(".")).to_path_buf();
-
-    let summary = moose_rack::bios::sync(&client, &library_root, |done, total, name| {
+    let summary = moose_rack::bios::sync(&client, &state.system_dir(), |done, total, name| {
         let _ = app.emit("bios-progress", (done, total, name.to_owned()));
     })
     .await
@@ -275,9 +273,8 @@ async fn download_set(
     // with no server to fetch from.
     let mut bios_note = String::new();
     if choice.bios {
-        let library_root = state.roms_dir.parent().unwrap_or(Path::new(".")).to_path_buf();
         let _ = app.emit("bulk-progress", "BIOS files…".to_owned());
-        match moose_rack::bios::sync(&client, &library_root, |done, got, name| {
+        match moose_rack::bios::sync(&client, &state.system_dir(), |done, got, name| {
             let _ = app.emit("bulk-progress", format!("BIOS {done}/{got} — {name}"));
         })
         .await
@@ -581,9 +578,9 @@ async fn launch_rom(
         // BIOS, for the same reason as the core: telling someone to go and
         // install one is advice delivered at the exact moment they cannot see
         // why the screen is black. Only what this platform actually needs.
-        let library_root = state.roms_dir.parent().unwrap_or(Path::new("."));
+        let bios_dir = state.system_dir();
         say("checking BIOS files…");
-        match moose_rack::bios::ensure(api, library_root, core, &row.platform_slug).await {
+        match moose_rack::bios::ensure(api, &bios_dir, core, &row.platform_slug).await {
             Ok(0) => {}
             Ok(n) => fetched.push(format!("fetched {n} BIOS file(s)")),
             Err(e) => {
@@ -595,10 +592,9 @@ async fn launch_rom(
                 // because a core that wants a BIOS sometimes runs without one.
                 if !skip_sync.unwrap_or(false) {
                     let want = moose_rack::bios::required_for(core, &row.platform_slug);
-                    let dest = moose_rack::bios::system_dir(library_root);
                     let missing: Vec<String> = want
                         .into_iter()
-                        .filter(|n| !dest.join(n).is_file())
+                        .filter(|n| !bios_dir.join(n).is_file())
                         .collect();
                     if !missing.is_empty() {
                         return Err(format!(
@@ -614,6 +610,11 @@ async fn launch_rom(
         }
     }
 
+    // The BIOS folder as it is now. `state.retroarch` was pointed at it at
+    // startup only if it existed then, and on a fresh machine the fetch above
+    // is what creates it: the first Neo Geo launch would otherwise download
+    // aes.zip and still tell RetroArch to look somewhere else.
+    let ra = &ra.clone().with_system_dir(Some(state.system_dir()));
     let plan = moose_rack::launch::plan(ra, &state.map, &req).map_err(err)?;
 
     // Steam-cloud shape: pull what the server has that is newer, play, then

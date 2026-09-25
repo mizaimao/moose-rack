@@ -142,6 +142,12 @@ impl AppState {
         self.can_launch = false;
     }
 
+    /// The BIOS folder: what Sync BIOS fills, what a launch fetches into, and
+    /// what RetroArch is told to read.
+    pub fn system_dir(&self) -> PathBuf {
+        crate::config::bios_dir(&self.roms_dir)
+    }
+
     pub fn point_at(&mut self, layout: &crate::esde::Layout) {
         self.roms_dir = layout.roms.clone();
         self.esde_media = Some(layout.media.clone());
@@ -452,6 +458,37 @@ mod scan_tests {
         assert!(!after, "serve_only did not take");
         // And it reaches the wire, which is what the UI reads.
         assert!(!reported.expect("status"));
+        std::fs::remove_dir_all(&root).ok();
+    }
+
+    /// BIOS are fetched into the folder RetroArch is pointed at, and icons and
+    /// artwork are read from the ES-DE folder.
+    ///
+    /// The BIOS sync, the bulk download and the fetch before a launch all wrote
+    /// to `<roms>/../system` while the launch pointed RetroArch at
+    /// `<roms>/0_BIOS`, so Neo Geo failed on an aes.zip that had been fetched.
+    #[test]
+    fn the_desktop_reads_bios_and_art_where_the_config_says() {
+        let (root, layout) = tree("biosdir");
+        let cfg_path = root.join("c.toml");
+        std::fs::write(
+            &cfg_path,
+            format!("[esde]\nroot = {:?}\nroms = {:?}\n", root.display().to_string(),
+                    layout.roms.display().to_string()),
+        )
+        .unwrap();
+        let _guard = cwd_lock();
+        let cwd = std::env::current_dir().unwrap();
+        std::env::set_current_dir(&root).unwrap();
+        let built = AppState::from_config_at(&cfg_path).map(|st| (st.system_dir(), st.media_dir.clone()));
+        crate::config::set_path(PathBuf::from("config.toml"));
+        std::env::set_current_dir(cwd).unwrap();
+
+        let (bios, media) = built.expect("state did not build");
+        let cfg = Config::load_from(&cfg_path).unwrap();
+        assert_eq!(bios, cfg.system_dir());
+        assert_eq!(bios, layout.roms.join("0_BIOS"));
+        assert_eq!(media, root.join("downloaded_media"), "icons and art should follow the ES-DE folder");
         std::fs::remove_dir_all(&root).ok();
     }
 

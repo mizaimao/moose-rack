@@ -266,9 +266,7 @@ motion_shader: cfg.shaders.motion.as_deref(),
                 Ok(false) => {}
                 Err(e) => eprintln!("warning: could not fetch {core}: {e}"),
             }
-            match moose_rack::bios::ensure(
-                &client, Path::new(&cfg.library.local_root), core, &platform,
-            ).await {
+            match moose_rack::bios::ensure(&client, &cfg.system_dir(), core, &platform).await {
                 Ok(0) => {}
                 Ok(n) => println!("fetched {n} BIOS file(s)"),
                 Err(e) => eprintln!("warning: could not fetch BIOS: {e}"),
@@ -281,6 +279,8 @@ motion_shader: cfg.shaders.motion.as_deref(),
         }
     }
 
+    // The BIOS folder as it is after the fetch above, which may have made it.
+    let ra = ra.with_system_dir(Some(cfg.system_dir()));
     let plan = launch::plan(&ra, &map, &req)?;
 
     for note in &plan.notes {
@@ -2082,10 +2082,12 @@ async fn cmd_sync_saves(dry_run: bool, keep: Option<&str>) -> Result<()> {
 async fn cmd_sync_bios() -> Result<()> {
     let cfg = Config::load()?;
     let client = cfg.server.client()?;
-    let root = Path::new(&cfg.library.local_root);
+    // The folder a launch points RetroArch at, not `<library>/system`: the
+    // two differed, and BIOS synced here were never seen by a core.
+    let dest = cfg.system_dir();
 
     let interactive = std::io::IsTerminal::is_terminal(&std::io::stdout());
-    let summary = moose_rack::bios::sync(&client, root, |done, total, name| {
+    let summary = moose_rack::bios::sync(&client, &dest, |done, total, name| {
         if interactive {
             print!("\r  {done}/{total}  {:<38}", name.chars().take(36).collect::<String>());
             use std::io::Write as _;
@@ -2101,7 +2103,7 @@ async fn cmd_sync_bios() -> Result<()> {
         println!("  {note}");
     }
     println!("{}", summary.headline());
-    println!("into {}", moose_rack::bios::system_dir(root).display());
+    println!("into {}", dest.display());
     Ok(())
 }
 

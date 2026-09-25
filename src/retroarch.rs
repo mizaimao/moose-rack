@@ -66,7 +66,7 @@ const USER_CONFIG_TEMPLATE: &str = r#"# Your RetroArch settings, applied every t
 "#;
 
 /// A located RetroArch install.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct RetroArch {
     /// Set when BIOS should be read from somewhere other than
     /// `<root>/system`; see [`Self::with_system_dir`].

@@ -338,14 +338,14 @@ impl App {
         // less room than the GUI to explain one.
         if let (Some(client), Ok(cfg)) = (self.client.clone(), crate::config::Config::load()) {
             let core = self.resolve_core_for(ra, &rom.platform_slug, Some(&rom.fs_name));
-            let lib = std::path::PathBuf::from(&cfg.library.local_root);
+            let bios_dir = cfg.system_dir();
             let root = ra.root.clone();
             let ra_for_fetch = crate::retroarch::RetroArch::locate_in(&[root.display().to_string()]);
             if let (Some(core), Ok(ra2)) = (core, ra_for_fetch) {
                 let slug = rom.platform_slug.clone();
                 self.rt.block_on(async {
                     let _ = crate::cores::ensure(client.http(), &ra2, &core).await;
-                    let _ = crate::bios::ensure(&client, &lib, &core, &slug).await;
+                    let _ = crate::bios::ensure(&client, &bios_dir, &core, &slug).await;
                     if cfg.shaders.enabled {
                         let _ = crate::shaders::ensure_pack(client.http(), &ra2).await;
                     }

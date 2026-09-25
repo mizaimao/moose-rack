@@ -79,7 +79,7 @@ pub fn required_for(core: &str, platform: &str) -> Vec<String> {
 /// not stop a game that might well run without one.
 pub async fn ensure(
     client: &Client,
-    library_root: &Path,
+    dest: &Path,
     core: &str,
     platform: &str,
 ) -> Result<usize> {
@@ -87,7 +87,6 @@ pub async fn ensure(
     if wanted.is_empty() {
         return Ok(0);
     }
-    let dest = system_dir(library_root);
     let missing: Vec<String> = wanted
         .into_iter()
         .filter(|name| !dest.join(name).is_file())
@@ -96,7 +95,7 @@ pub async fn ensure(
         return Ok(0);
     }
 
-    std::fs::create_dir_all(&dest)
+    std::fs::create_dir_all(dest)
         .with_context(|| format!("creating {}", dest.display()))?;
     let available = client.firmware().await?;
     let mut got = 0;
@@ -152,11 +151,6 @@ impl Summary {
         }
         s
     }
-}
-
-/// Where BIOS live locally.
-pub fn system_dir(library_root: &Path) -> PathBuf {
-    library_root.join("system")
 }
 
 /// Is this file already here and intact?
@@ -219,12 +213,11 @@ pub fn local_path(dest: &Path, file_path: Option<&str>, file_name: &str) -> Opti
 /// took, which reads as a control that does nothing. Asking first costs one
 /// request and answers the only questions worth asking: is this already done,
 /// and how much would it fetch.
-pub async fn status(client: &Client, library_root: &Path) -> Result<(usize, usize, u64)> {
+pub async fn status(client: &Client, dest: &Path) -> Result<(usize, usize, u64)> {
     let list = client
         .firmware()
         .await
         .context("listing BIOS files (does the token have firmware.read?)")?;
-    let dest = system_dir(library_root);
 
     let mut have = 0;
     let mut bytes = 0u64;
@@ -232,7 +225,7 @@ pub async fn status(client: &Client, library_root: &Path) -> Result<(usize, usiz
         if fw.file_name.is_empty() {
             continue;
         }
-        let Some(path) = local_path(&dest, fw.file_path.as_deref(), &fw.file_name) else {
+        let Some(path) = local_path(dest, fw.file_path.as_deref(), &fw.file_name) else {
             continue;
         };
         if already_have(&path, fw) {
@@ -251,16 +244,14 @@ pub async fn status(client: &Client, library_root: &Path) -> Result<(usize, usiz
 /// nothing about how far through it is.
 pub async fn sync(
     client: &Client,
-    library_root: &Path,
+    dest: &Path,
     mut progress: impl FnMut(usize, usize, &str),
 ) -> Result<Summary> {
     let list = client
         .firmware()
         .await
         .context("listing BIOS files (does the token have firmware.read?)")?;
-
-    let dest = system_dir(library_root);
-    std::fs::create_dir_all(&dest)
+    std::fs::create_dir_all(dest)
         .with_context(|| format!("creating {}", dest.display()))?;
 
     let mut summary = Summary::default();
@@ -271,7 +262,7 @@ pub async fn sync(
             continue;
         }
         // Neither the name nor the reported path is trusted; see `local_path`.
-        let Some(path) = local_path(&dest, fw.file_path.as_deref(), &fw.file_name) else {
+        let Some(path) = local_path(dest, fw.file_path.as_deref(), &fw.file_name) else {
             continue;
         };
         let leaf = path
@@ -346,15 +337,6 @@ mod tests {
             file_path: None,
             is_verified: true,
         }
-    }
-
-    /// Everything goes flat into one directory. RetroArch looks in exactly one
-    /// place and does not recurse, so reproducing the server's `bios/3do/`
-    /// grouping would hide every file from the emulator that needs it.
-    #[test]
-    fn bios_land_flat_in_the_system_directory() {
-        let root = Path::new("/lib");
-        assert_eq!(system_dir(root), Path::new("/lib/system"));
     }
 
     /// A file already here with the right size and hash is not fetched again —
