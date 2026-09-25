@@ -109,11 +109,15 @@ mod tests {
     use super::*;
     use crate::catalogue;
 
+    /// With KNULLI's own trigger file, which hotkey-app is written from.
     fn scratch(name: &str) -> Paths {
         let dir = std::env::temp_dir().join(format!("moose-profile-{name}"));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
-        Paths::new(dir)
+        let paths = Paths::new(dir);
+        fs::create_dir_all(paths.stock_triggers().parent().unwrap()).unwrap();
+        fs::write(paths.stock_triggers(), "KEY_POWER 1  /usr/bin/power-button\n").unwrap();
+        paths
     }
 
     #[test]

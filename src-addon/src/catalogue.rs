@@ -615,12 +615,21 @@ mod tests {
     use super::*;
     use crate::patch::State;
 
+    /// A bare device, as far as these patches can tell. It has KNULLI's own
+    /// trigger file, as every KNULLI does: hotkey-app is written from it and
+    /// refuses to write without it.
     fn scratch(name: &str) -> Paths {
         let dir = std::env::temp_dir().join(format!("moose-catalogue-{name}"));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
-        Paths::new(dir)
+        let paths = Paths::new(dir);
+        std::fs::create_dir_all(paths.stock_triggers().parent().unwrap()).unwrap();
+        std::fs::write(paths.stock_triggers(), STOCK_TRIGGERS).unwrap();
+        paths
     }
+
+    const STOCK_TRIGGERS: &str = "KEY_VOLUMEUP 1  /usr/bin/volume-button volup\n\
+                                  KEY_POWER 1  /usr/bin/power-button\n";
 
     #[test]
     fn a_fresh_device_reads_as_the_first_option_everywhere() {

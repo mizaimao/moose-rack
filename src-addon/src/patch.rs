@@ -16,8 +16,9 @@
 //! steps are "clear that block" and "put that file back", so the machinery
 //! that applies is the machinery that undoes.
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, anyhow, bail};
 use std::fs;
+use std::io::{ErrorKind, Write};
 use std::path::{Path, PathBuf};
 
 /// Where everything lives. A struct rather than constants so the tests can
@@ -218,6 +219,27 @@ fn key_of(line: &str) -> Option<&str> {
     (!key.is_empty()).then_some(key)
 }
 
+/// A text file, or `None` when there is no such file.
+///
+/// Anything else that goes wrong is an error, including a file that is not
+/// UTF-8. This used to be `read_to_string(..).unwrap_or_default()`, which made
+/// one stray byte in knulli.conf, or an EIO, into an empty file, and the write
+/// that followed left nothing in it but our block.
+pub fn read_text(path: &Path) -> Result<Option<String>> {
+    let bytes = match fs::read(path) {
+        Ok(bytes) => bytes,
+        Err(e) if e.kind() == ErrorKind::NotFound => return Ok(None),
+        Err(e) => return Err(e).with_context(|| format!("reading {}", path.display())),
+    };
+    String::from_utf8(bytes).map(Some).map_err(|e| {
+        anyhow!(
+            "{} is not UTF-8 (at byte {}); it was left as it is",
+            path.display(),
+            e.utf8_error().valid_up_to()
+        )
+    })
+}
+
 /// Comment out any earlier line setting a key this block also sets.
 ///
 /// **`knulli.conf` is first-wins, not last-wins.** `knulli-settings-get` scans
@@ -267,8 +289,8 @@ fn unhide(text: &str, id: &str) -> String {
 }
 
 /// Put a block in, replacing any previous one. Appends when there was none.
-pub fn set_block(text: &str, id: &str, body: &str) -> String {
-    let cleared = clear_block(text, id);
+pub fn set_block(text: &str, id: &str, body: &str) -> Result<String> {
+    let cleared = clear_block(text, id)?;
     // Hidden before the block is appended, so the block's own lines — which
     // set the very keys being hidden — are not swept up by it.
     let keys: Vec<&str> = body.lines().filter_map(key_of).collect();
@@ -283,11 +305,15 @@ pub fn set_block(text: &str, id: &str, body: &str) -> String {
     out.push('\n');
     out.push_str(&close_marker(id));
     out.push('\n');
-    out
+    Ok(out)
 }
 
 /// Take a block out, markers and all, leaving the rest of the file alone.
-pub fn clear_block(text: &str, id: &str) -> String {
+///
+/// An opening marker with no end marker after it is refused. Everything below
+/// it would otherwise count as the block and go with it, and in knulli.conf
+/// that can be most of the file.
+pub fn clear_block(text: &str, id: &str) -> Result<String> {
     // Whatever this block wrote over comes back first. Turning a patch off has
     // to leave the file as KNULLI had it, not merely without our lines.
     let text = &unhide(text, id);
@@ -308,6 +334,9 @@ pub fn clear_block(text: &str, id: &str) -> String {
             out.push(line);
         }
     }
+    if inside {
+        bail!("`{open}` has no `{close}` after it, so where the block ends is unknown");
+    }
     let mut text = out.join("\n");
     while text.ends_with("\n\n\n") {
         text.pop();
@@ -315,7 +344,7 @@ pub fn clear_block(text: &str, id: &str) -> String {
     if !text.ends_with('\n') {
         text.push('\n');
     }
-    text
+    Ok(text)
 }
 
 /// One thing a patch does.
@@ -342,17 +371,46 @@ pub enum Step {
 /// there because it is the only hook that runs before EmulationStation. So a
 /// patch that has to write there gets one retry with the mount flipped, and
 /// the mount is put back afterwards whatever happens.
-fn write_through(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
-    match fs::write(path, bytes) {
-        Err(e) if e.kind() == std::io::ErrorKind::ReadOnlyFilesystem => {}
+pub(crate) fn write_through(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
+    match write_whole(path, bytes) {
+        Err(e) if e.kind() == ErrorKind::ReadOnlyFilesystem => {}
         other => return other,
     }
     let Some(point) = mount_point_of(path) else {
-        return fs::write(path, bytes);
+        return write_whole(path, bytes);
     };
     let _ = remount(&point, "rw");
-    let result = fs::write(path, bytes);
+    let result = write_whole(path, bytes);
     let _ = remount(&point, "ro");
+    result
+}
+
+/// Write to a new file beside `path` and rename it over, so whatever reads the
+/// file, and whatever is left after a power cut, is the old one or the new
+/// one and never the first half of the new one.
+///
+/// The temporary name starts with a dot, so a folder something lists (the
+/// shader presets) does not show it for the moment it exists.
+fn write_whole(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
+    let name = path
+        .file_name()
+        .ok_or_else(|| std::io::Error::new(ErrorKind::InvalidInput, "no file name"))?;
+    let temp = path.with_file_name(format!(".{}.moose-tmp", name.to_string_lossy()));
+    let result = (|| {
+        let mut file = fs::File::create(&temp)?;
+        file.write_all(bytes)?;
+        file.sync_all()?;
+        drop(file);
+        // A script has to stay executable. exFAT and vfat may refuse a chmod,
+        // and they fix the mode at mount time anyway.
+        if let Ok(meta) = fs::metadata(path) {
+            let _ = fs::set_permissions(&temp, meta.permissions());
+        }
+        fs::rename(&temp, path)
+    })();
+    if result.is_err() {
+        let _ = fs::remove_file(&temp);
+    }
     result
 }
 
@@ -363,7 +421,7 @@ fn write_through(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
 /// returned `EROFS`, and the switch silently stayed where it was.
 fn remove_through(path: &Path) -> std::io::Result<()> {
     match fs::remove_file(path) {
-        Err(e) if e.kind() == std::io::ErrorKind::ReadOnlyFilesystem => {}
+        Err(e) if e.kind() == ErrorKind::ReadOnlyFilesystem => {}
         other => return other,
     }
     let Some(point) = mount_point_of(path) else {
@@ -394,12 +452,40 @@ fn mount_point_of(path: &Path) -> Option<String> {
         .map(str::to_string)
 }
 
+/// Put `bytes` at `path`, keeping whatever was there the first time.
+fn lay_down(path: &Path, bytes: &[u8], backup: &Path) -> Result<()> {
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).ok();
+    }
+    // Keep whatever was there the first time, and only the first time: a
+    // second apply must not back up our own copy over the real original. A
+    // backup that fails stops the apply; writing on without one would lose
+    // the original for good.
+    if path.exists() && !backup.exists() {
+        if let Some(parent) = backup.parent() {
+            fs::create_dir_all(parent).ok();
+        }
+        fs::copy(path, backup)
+            .with_context(|| format!("backing up {} to {}", path.display(), backup.display()))?;
+    }
+    write_through(path, bytes).with_context(|| format!("writing {}", path.display()))
+}
+
 impl Step {
     /// Is the device already like this?
+    ///
+    /// A file that cannot be read is never "already like this". It reads as
+    /// `changed`, and applying it stops with the reason.
     pub fn satisfied(&self) -> bool {
         match self {
             Step::Block { file, id, body, .. } => {
-                let text = fs::read_to_string(file).unwrap_or_default();
+                let Ok(text) = read_text(file) else { return false };
+                let text = text.unwrap_or_default();
+                // An unterminated block is not "absent", whatever read_block
+                // makes of it.
+                if clear_block(&text, id).is_err() {
+                    return false;
+                }
                 match (read_block(&text, id), body) {
                     (Some(found), Some(want)) => found.trim() == want.trim(),
                     (None, None) => true,
@@ -416,39 +502,41 @@ impl Step {
     pub fn apply(&self) -> Result<()> {
         match self {
             Step::Block { file, id, body, seed } => {
+                let current = read_text(file)?;
+                // What the block goes into. The seed only when there is no
+                // file yet, and a seed that cannot be read stops everything:
+                // the file it would be written as replaces the one in /etc,
+                // so our lines alone would take every key that one carries.
+                let base = match (&current, seed) {
+                    (Some(text), _) => text.clone(),
+                    (None, Some(seed)) => read_text(seed)?.with_context(|| {
+                        format!(
+                            "{} is missing, and {} replaces it rather than adding to it; \
+                             nothing was written",
+                            seed.display(),
+                            file.display()
+                        )
+                    })?,
+                    (None, None) => String::new(),
+                };
+                let next = match body {
+                    Some(body) => set_block(&base, id, body)?,
+                    // Nothing to take a block out of. Creating an empty file
+                    // here would be a change nobody asked for.
+                    None if current.is_none() => return Ok(()),
+                    None => clear_block(&base, id)?,
+                };
+                if current.as_deref() == Some(next.as_str()) {
+                    return Ok(());
+                }
                 if let Some(parent) = file.parent() {
                     fs::create_dir_all(parent).ok();
                 }
-                if let Some(seed) = seed
-                    && !file.exists()
-                {
-                    fs::copy(seed, file).ok();
-                }
-                let text = fs::read_to_string(file).unwrap_or_default();
-                let next = match body {
-                    Some(body) => set_block(&text, id, body),
-                    None => clear_block(&text, id),
-                };
                 write_through(file, next.as_bytes())
                     .with_context(|| format!("writing {}", file.display()))
             }
             Step::Place { path, bytes, backup } => match bytes {
-                Some(bytes) => {
-                    if let Some(parent) = path.parent() {
-                        fs::create_dir_all(parent).ok();
-                    }
-                    // Keep whatever was there the first time, and only the
-                    // first time — a second apply must not back up our own
-                    // copy over the real original.
-                    if path.exists() && !backup.exists() {
-                        if let Some(parent) = backup.parent() {
-                            fs::create_dir_all(parent).ok();
-                        }
-                        fs::copy(path, backup).ok();
-                    }
-                    write_through(path, bytes)
-                        .with_context(|| format!("writing {}", path.display()))
-                }
+                Some(bytes) => lay_down(path, bytes, backup),
                 None => {
                     if backup.exists() {
                         write_through(path, &fs::read(backup)?)
@@ -563,10 +651,10 @@ mod tests {
     #[test]
     fn a_block_round_trips() {
         let text = "keep=1\n";
-        let with = set_block(text, "hotkeys", "a=1\nb=2");
+        let with = set_block(text, "hotkeys", "a=1\nb=2").unwrap();
         assert_eq!(read_block(&with, "hotkeys").as_deref(), Some("a=1\nb=2"));
         assert!(with.contains("keep=1"), "the rest of the file must survive");
-        let without = clear_block(&with, "hotkeys");
+        let without = clear_block(&with, "hotkeys").unwrap();
         assert_eq!(read_block(&without, "hotkeys"), None);
         assert!(without.contains("keep=1"));
     }
@@ -589,7 +677,7 @@ mod tests {
         let before = "system.batterysaver.mode=dim\n\
                       system.batterysaver.extendedmode=suspend\n\
                       system.power.led=1\n";
-        let after = set_block(before, "power", "system.batterysaver.extendedmode=none\n");
+        let after = set_block(before, "power", "system.batterysaver.extendedmode=none\n").unwrap();
 
         // The old line is no longer a setting…
         let set: Vec<&str> = live(&after).into_iter().filter(|l| l.contains("extendedmode")).collect();
@@ -605,8 +693,8 @@ mod tests {
         // default is how a device ends up in a state its owner never chose.
         let before = "system.batterysaver.extendedmode=suspend\n\
                       system.batterysaver.chargingbypass=0\n";
-        let on = set_block(before, "power", "system.batterysaver.extendedmode=none\n");
-        let off = clear_block(&on, "power");
+        let on = set_block(before, "power", "system.batterysaver.extendedmode=none\n").unwrap();
+        let off = clear_block(&on, "power").unwrap();
         assert_eq!(off, before, "did not come back to what it was");
     }
 
@@ -618,10 +706,10 @@ mod tests {
         let before = "system.batterysaver.extendedmode=suspend\n";
         let mut text = before.to_owned();
         for _ in 0..3 {
-            text = set_block(&text, "power", "system.batterysaver.extendedmode=none\n");
+            text = set_block(&text, "power", "system.batterysaver.extendedmode=none\n").unwrap();
         }
         assert_eq!(text.matches("hid:").count(), 1, "stacked its own markers");
-        assert_eq!(clear_block(&text, "power"), before);
+        assert_eq!(clear_block(&text, "power").unwrap(), before);
     }
 
     #[test]
@@ -633,7 +721,8 @@ mod tests {
             "system.batterysaver.extendedmode=suspend\n",
             "power",
             "system.batterysaver.extendedmode=none\n",
-        );
+        )
+        .unwrap();
         assert_eq!(
             read_block(&text, "power").as_deref(),
             Some("system.batterysaver.extendedmode=none")
@@ -644,10 +733,10 @@ mod tests {
     fn one_block_does_not_disturb_what_another_hid() {
         let before = "system.batterysaver.extendedmode=suspend\n\
                       system.batterysaver.chargingbypass=0\n";
-        let a = set_block(before, "power", "system.batterysaver.extendedmode=none\n");
-        let b = set_block(&a, "charge", "system.batterysaver.chargingbypass=1\n");
+        let a = set_block(before, "power", "system.batterysaver.extendedmode=none\n").unwrap();
+        let b = set_block(&a, "charge", "system.batterysaver.chargingbypass=1\n").unwrap();
         // Taking one off leaves the other's work standing.
-        let off = clear_block(&b, "power");
+        let off = clear_block(&b, "power").unwrap();
         assert!(off.contains("system.batterysaver.extendedmode=suspend"), "did not restore");
         let set: Vec<&str> =
             live(&off).into_iter().filter(|l| l.contains("chargingbypass")).collect();
@@ -659,7 +748,7 @@ mod tests {
         // Comments and blanks are not settings. A body of pure commentary must
         // not silently disable a line somewhere above it.
         let before = "system.power.led=1\n";
-        let after = set_block(before, "note", "# just a comment\n\n");
+        let after = set_block(before, "note", "# just a comment\n\n").unwrap();
         assert!(live(&after).contains(&"system.power.led=1"), "hid a key it never set");
     }
 
@@ -667,23 +756,124 @@ mod tests {
     fn applying_twice_does_not_stack_blocks() {
         // knulli.conf is read by a parser that takes the last value it sees.
         // Two copies of a block is how a revert silently fails.
-        let once = set_block("keep=1\n", "shaders", "x=1");
-        let twice = set_block(&once, "shaders", "x=1");
+        let once = set_block("keep=1\n", "shaders", "x=1").unwrap();
+        let twice = set_block(&once, "shaders", "x=1").unwrap();
         assert_eq!(twice.matches("## moose-patch: shaders\n").count(), 1);
         assert_eq!(once, twice, "a second apply should change nothing");
     }
 
     #[test]
     fn changing_a_block_replaces_it_rather_than_appending() {
-        let once = set_block("keep=1\n", "shaders", "set=a");
-        let twice = set_block(&once, "shaders", "set=b");
+        let once = set_block("keep=1\n", "shaders", "set=a").unwrap();
+        let twice = set_block(&once, "shaders", "set=b").unwrap();
         assert_eq!(read_block(&twice, "shaders").as_deref(), Some("set=b"));
         assert!(!twice.contains("set=a"));
     }
 
     #[test]
     fn clearing_a_block_that_was_never_there_is_harmless() {
-        assert_eq!(clear_block("keep=1\n", "nope"), "keep=1\n");
+        assert_eq!(clear_block("keep=1\n", "nope").unwrap(), "keep=1\n");
+    }
+
+    #[test]
+    fn a_config_that_cannot_be_read_is_left_as_it_is() {
+        // One byte that is not UTF-8 used to read as an empty file, and the
+        // write after it left knulli.conf holding our block and nothing else:
+        // Wi-Fi, cores, every setting gone.
+        let dir = scratch("unreadable");
+        let file = dir.join("knulli.conf");
+        let before = b"wifi.ssid=home\ncaf\xe9=1\ngba=mgba\n".to_vec();
+        fs::write(&file, &before).unwrap();
+
+        let on = Step::Block {
+            file: file.clone(),
+            id: "power".into(),
+            body: Some("a=1".into()),
+            seed: None,
+        };
+        let err = on.apply().expect_err("applied over a file it could not read");
+        assert!(format!("{err:#}").contains("UTF-8"), "{err:#}");
+        assert_eq!(fs::read(&file).unwrap(), before, "the file was written");
+
+        // And it reads as at no option, rather than as "off".
+        let off = Step::Block { file, id: "power".into(), body: None, seed: None };
+        assert!(!off.satisfied());
+        assert!(!on.satisfied());
+    }
+
+    #[test]
+    fn a_missing_seed_writes_nothing() {
+        // The /userdata trigger file replaces the /etc one. Created with only
+        // our two lines, volume, power and the lid stop working.
+        let dir = scratch("no-seed");
+        let file = dir.join("userdata/multimedia_keys.conf");
+        let step = Step::Block {
+            file: file.clone(),
+            id: "hotkey".into(),
+            body: Some("BTN_TR2+BTN_TL2 1 /bin/true".into()),
+            seed: Some(dir.join("etc/multimedia_keys.conf")),
+        };
+        assert!(step.apply().is_err());
+        assert!(!file.exists(), "created the file with only our lines in it");
+    }
+
+    #[test]
+    fn a_block_with_no_end_marker_is_refused_not_cut_to_the_end_of_the_file() {
+        let text = "keep=1\n## moose-patch: power\nsystem.batterysaver.mode=dim\ngba=mgba\n";
+        assert!(clear_block(text, "power").is_err());
+        assert!(set_block(text, "power", "x=1").is_err());
+
+        let dir = scratch("no-end-marker");
+        let file = dir.join("knulli.conf");
+        fs::write(&file, text).unwrap();
+        let off = Step::Block { file: file.clone(), id: "power".into(), body: None, seed: None };
+        assert!(off.apply().is_err());
+        assert_eq!(fs::read_to_string(&file).unwrap(), text, "the lines below it went");
+        assert!(!off.satisfied(), "a broken block is not an absent one");
+    }
+
+    #[test]
+    fn a_write_replaces_the_file_rather_than_rewriting_it_in_place() {
+        // Written beside and renamed over, so a reader or a power cut sees the
+        // old file or the new one. A second link to the old file is how to
+        // tell from outside: rewritten in place, it would change too.
+        let dir = scratch("atomic");
+        let file = dir.join("knulli.conf");
+        let link = dir.join("old-link");
+        fs::write(&file, "keep=1\n").unwrap();
+        fs::hard_link(&file, &link).unwrap();
+
+        Step::Block { file: file.clone(), id: "x".into(), body: Some("a=1".into()), seed: None }
+            .apply()
+            .unwrap();
+
+        assert!(fs::read_to_string(&file).unwrap().contains("a=1"));
+        assert_eq!(fs::read_to_string(&link).unwrap(), "keep=1\n");
+        let names: Vec<String> = fs::read_dir(&dir)
+            .unwrap()
+            .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(names.len(), 2, "a temporary file was left behind: {names:?}");
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn a_backup_that_fails_stops_the_write() {
+        // Writing on without the backup would lose the original for good.
+        use std::os::unix::fs::PermissionsExt;
+        let dir = scratch("backup-fails");
+        let path = dir.join("es_input.cfg");
+        fs::write(&path, b"KNULLI's own").unwrap();
+        let backup = Paths::new(&dir).backup_for(&path);
+        let backups = backup.parent().unwrap().to_path_buf();
+        fs::create_dir_all(&backups).unwrap();
+        fs::set_permissions(&backups, fs::Permissions::from_mode(0o555)).unwrap();
+
+        let result = placed(&dir, path.clone(), Some(b"ours")).apply();
+        fs::set_permissions(&backups, fs::Permissions::from_mode(0o755)).unwrap();
+
+        assert!(result.is_err());
+        assert_eq!(fs::read(&path).unwrap(), b"KNULLI's own");
     }
 
     #[test]
@@ -842,7 +1032,7 @@ mod tests {
         // options. Overwriting silently would be the wrong answer.
         let dir = scratch("patch-changed");
         let file = dir.join("knulli.conf");
-        fs::write(&file, set_block("keep=1\n", "shaders", "set=SOMETHING ELSE")).unwrap();
+        fs::write(&file, set_block("keep=1\n", "shaders", "set=SOMETHING ELSE").unwrap()).unwrap();
 
         let patch = Patch {
             id: "shaders",
