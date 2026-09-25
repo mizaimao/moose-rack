@@ -154,6 +154,23 @@ fn escape(s: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+    /// The token is in the query string, so an error that names the URL
+    /// names the token. Port 1 on loopback refuses at once, everywhere.
+    #[tokio::test]
+    async fn a_failed_check_does_not_show_the_token() {
+        crate::util::install_tls();
+        let e = crate::util::tls_roots(reqwest::Client::builder())
+            .build()
+            .unwrap()
+            .get("http://127.0.0.1:1/dorequest.php?r=patch&u=someone&t=SECRETTOKEN&g=1")
+            .send()
+            .await
+            .expect_err("nothing listens on port 1");
+        let shown = super::unreachable(e);
+        assert!(!shown.contains("SECRETTOKEN"), "{shown}");
+        assert!(shown.starts_with("could not reach retroachievements.org"));
+    }
+
     use super::*;
 
     fn on(username: Option<&str>) -> Settings {
@@ -311,6 +328,15 @@ pub struct Verified {
 /// `retroachievements.org/API/` takes a different credential entirely, and
 /// checking that would prove the account exists while RetroArch's own login
 /// stayed broken.
+/// Why the check could not be made, without the URL.
+///
+/// A reqwest error prints the URL it was for, and this one carries the token
+/// in its query string: an offline check put the token on screen in Settings,
+/// and in anything the web UI shows, for as long as the site was unreachable.
+fn unreachable(e: reqwest::Error) -> String {
+    format!("could not reach retroachievements.org: {}", e.without_url())
+}
+
 pub async fn verify(username: &str, token: &str) -> Verified {
     fn q(s: &str) -> String {
         s.bytes()
@@ -359,7 +385,7 @@ pub async fn verify(username: &str, token: &str) -> Verified {
         Err(e) => Verified {
             ok: false,
             user: None,
-            error: Some(format!("could not reach retroachievements.org: {e}")),
+            error: Some(unreachable(e)),
         },
     }
 }
