@@ -1019,6 +1019,13 @@ pub fn run() {
     // that drift.
     let state = AppState::from_config().expect("building app state");
     tauri::Builder::default()
+        // The native folder picker behind every Browse button in Settings.
+        // Granted in capabilities/default.json, but a permission for a plugin
+        // that was never registered still fails at runtime: f47a312 dropped
+        // this line and every Browse button went dead with nothing at build
+        // time to say so. `the_plugins_granted_are_the_plugins_registered`
+        // below is what catches that now.
+        .plugin(tauri_plugin_dialog::init())
         .manage(state)
         // EmulatorJS and the ROM it plays, read off disk. See `ejs_serve`.
         .register_uri_scheme_protocol("moose", |ctx, req| ejs_serve(ctx.app_handle(), req))
@@ -1642,4 +1649,28 @@ async fn grid_uniform(count: usize, columns: usize) -> moose_rack::gridnav::Move
 #[tauri::command]
 fn set_grid(cards: Vec<[f64; 3]>) -> moose_rack::gridnav::Moves {
     moose_rack::commands::set_grid(cards)
+}
+
+#[cfg(test)]
+mod tests {
+    /// Every plugin a capability grants has to be registered on the builder.
+    ///
+    /// A capability naming an unregistered plugin builds cleanly and fails only
+    /// when the page calls it, so the Browse buttons in Settings were dead from
+    /// f47a312 until someone pressed one. Read from the source because the
+    /// builder cannot be run in a test without a window.
+    #[test]
+    fn the_plugins_granted_are_the_plugins_registered() {
+        let caps: serde_json::Value =
+            serde_json::from_str(include_str!("../capabilities/default.json")).unwrap();
+        let source = include_str!("lib.rs");
+        let granted = caps["permissions"].as_array().unwrap().iter().filter_map(|p| {
+            let (plugin, _) = p.as_str()?.split_once(':')?;
+            (plugin != "core").then_some(plugin)
+        });
+        for plugin in granted {
+            let init = format!(".plugin(tauri_plugin_{}::init())", plugin.replace('-', "_"));
+            assert!(source.contains(&init), "{plugin} is granted but `{init}` is not on the builder");
+        }
+    }
 }
