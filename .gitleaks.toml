@@ -1,0 +1,53 @@
+# Secret scanning, run by the `secrets` job in .github/workflows/ci.yml.
+#
+# gitleaks' own rules know provider tokens -- GitHub, AWS, Slack -- and not
+# the files this repo actually handles: frontend settings copied off a device.
+# The ScreenScraper login sat in plain text in
+# data/vendor/device-export/es_settings.xml from the first commit until
+# 2026-09-24, and the default rules pass that file without a word. The two
+# rules below are the ones that would have stopped it.
+#
+# Run it locally with: gitleaks git --config .gitleaks.toml --redact .
+
+[extend]
+useDefault = true
+
+# ES, ES-DE and Batocera settings: <string name="..." value="..." />.
+# Every frontend spells the key its own way (ScraperPasswordScreenScraper,
+# ScreenScraperPass), so the name is matched on what it contains.
+[[rules]]
+id = "frontend-settings-xml"
+description = "A password or token in an EmulationStation settings file"
+regex = '''(?i)<string\s+name="[^"]*(?:pass|token|secret|apikey)[^"]*"\s+value="([^"]+)"'''
+secretGroup = 1
+keywords = ["pass", "token", "secret", "apikey"]
+
+# ES-DE's kiosk-mode unlock, a button sequence, not a credential.
+[[rules.allowlists]]
+regexTarget = "match"
+regexes = ['''name="UIMode_passkey"''']
+
+# key=value config: knulli.conf and batocera.conf, retroarch.cfg, .env, and
+# this project's own config.toml. The key has to end in the word, after a dot
+# or underscore or at the start, so `chargingbypass=1` is not a password.
+#
+# Config files only. In source the same shape is code -- `token =
+# cfg["server"]["token"]` -- and test fixtures, and gitleaks' own entropy rule
+# covers a real key pasted into code.
+[[rules]]
+id = "frontend-conf"
+description = "A password or token in a key=value config file"
+path = '''(?i)(\.(conf|cfg|ini|toml|env|properties)$|(^|/)\.env)'''
+regex = '''(?im)^[ \t]*(?:[\w-]+[._])*(?:password|passwd|pass|pwd|token|secret|api_?key)[ \t]*=[ \t]*"?([^"\s#$][^"\s#]*)'''
+secretGroup = 1
+keywords = ["pass", "pwd", "token", "secret", "apikey", "api_key"]
+
+[[allowlists]]
+description = "Placeholders: what a redacted export says, and variable references"
+regexTarget = "secret"
+regexes = ['''^REDACTED$''', '''^\$''']
+
+[[allowlists]]
+description = "MAME device names: keycus_c442 and friends read as keys"
+targetRules = ["generic-api-key"]
+paths = ['''^data/arcade-names\.json$''']
