@@ -32,7 +32,6 @@ use moose_rack::util::human;
 /// — the one platform where nobody has a source checkout to supply it.
 const CORE_MAP: &str = "data/esde-core-map.json";
 
-/// `[retroarch] root` from config.toml, if set.
 /// Locate RetroArch using the configured boot order, with BIOS pointed at the
 /// library's synced system folder.
 fn locate_retroarch(cfg: &Config) -> Result<RetroArch> {
@@ -206,8 +205,7 @@ async fn cmd_launch(
     pad: Option<&str>,
 ) -> Result<()> {
     let cfg = Config::load()?;
-    let ra = RetroArch::locate(cfg.retroarch.root.as_deref())?
-        .with_system_dir(Some(cfg.system_dir()));
+    let ra = locate_retroarch(&cfg)?;
     let map = CoreMap::load_or_embedded(Path::new(CORE_MAP));
 
     // Ask the index first: it knows exactly where each game came from, which

@@ -235,8 +235,13 @@ mod tests {
     /// while their sections stay in the same relative order.
     #[test]
     fn the_two_files_stay_diffable() {
+        /// A run of `[[retroarch.installs]]` counts once: how many entries a
+        /// list has is content, not layout, and Settings adds one.
         fn sections(toml: &str) -> Vec<&str> {
-            toml.lines().map(str::trim_end).filter(|l| l.starts_with('[')).collect()
+            let mut out: Vec<&str> =
+                toml.lines().map(str::trim_end).filter(|l| l.starts_with('[')).collect();
+            out.dedup();
+            out
         }
         /// The example's sections, including ones it only offers commented out.
         ///

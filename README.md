@@ -73,7 +73,7 @@ rather than looking broken.
 
 RetroArch is found automatically in the usual places per OS. If yours lives
 somewhere else — a second drive, a portable install — set it in **Settings**, or
-as `[retroarch] root`. Missing cores and the slang shader pack are downloaded on
+list it under `[[retroarch.installs]]` in `config.toml`. Missing cores and the slang shader pack are downloaded on
 first launch of a game that needs them.
 
 ## Using it

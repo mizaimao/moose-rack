@@ -954,6 +954,87 @@ pub fn clear_table_entry(path: &str, table: &str, key: &str) -> Result<()> {
     write_entry(path, table, key, None)
 }
 
+/// The label on the `[[retroarch.installs]]` entry that Settings owns.
+const SETTINGS_INSTALL: &str = "Set in Settings";
+
+/// Put the RetroArch location chosen in Settings first in
+/// `[[retroarch.installs]]`, or take it out again with `None`.
+///
+/// Settings used to write `[retroarch] root`, which `ordered_paths` ignores as
+/// soon as the file has an installs list, and config.example.toml ships one. So
+/// Browse, Save and "Found RetroArch" all worked, and the next launch used
+/// something else. An entry of its own at the top of the list is what the rest
+/// of the app already reads; the entries written by hand stay, after it.
+pub fn set_settings_install(path: &str, install: Option<&str>) -> Result<()> {
+    let file = Path::new(path);
+    let original = std::fs::read_to_string(file).unwrap_or_default();
+    let updated = with_settings_install(&original, install);
+    if updated.trim_end() == original.trim_end() {
+        return Ok(());
+    }
+    // A text edit into a hand-edited file can meet a shape it does not expect,
+    // such as an inline `installs = [...]`, and a config that no longer parses
+    // stops the app starting. Refuse rather than write that.
+    toml::from_str::<Config>(&updated)
+        .with_context(|| format!("adding the RetroArch entry would break {}", file.display()))?;
+    std::fs::write(file, updated).with_context(|| format!("writing {}", file.display()))?;
+    Ok(())
+}
+
+fn with_settings_install(text: &str, install: Option<&str>) -> String {
+    const HEADER: &str = "[[retroarch.installs]]";
+    let label = format!("label = \"{SETTINGS_INSTALL}\"");
+    let mut lines: Vec<String> = text.lines().map(str::to_owned).collect();
+
+    // Drop the entry Settings wrote last time. Its extent is the key lines
+    // under the header, not everything up to the next header, so a comment
+    // introducing whatever follows is left alone.
+    let mut i = 0;
+    while i < lines.len() {
+        if lines[i].trim() != HEADER {
+            i += 1;
+            continue;
+        }
+        let mut end = i + 1;
+        while end < lines.len() {
+            let t = lines[end].trim();
+            if t.is_empty() || t.starts_with('#') || t.starts_with('[') {
+                break;
+            }
+            end += 1;
+        }
+        if lines[i + 1..end].iter().any(|l| l.trim() == label) {
+            if lines.get(end).is_some_and(|l| l.trim().is_empty()) {
+                end += 1;
+            }
+            lines.drain(i..end);
+        } else {
+            i = end;
+        }
+    }
+
+    if let Some(install) = install {
+        let block = [
+            HEADER.to_owned(),
+            label,
+            format!("path = \"{}\"", install.replace('\\', "\\\\").replace('"', "\\\"")),
+            "enabled = true".to_owned(),
+        ];
+        match lines.iter().position(|l| l.trim() == HEADER) {
+            Some(at) => {
+                lines.splice(at..at, block.into_iter().chain([String::new()]));
+            }
+            None => {
+                if lines.last().is_some_and(|l| !l.trim().is_empty()) {
+                    lines.push(String::new());
+                }
+                lines.extend(block);
+            }
+        }
+    }
+    lines.join("\n") + "\n"
+}
+
 /// TOML bare keys allow only letters, digits, `_` and `-`. Per-game keys are
 /// file paths, so they have to be quoted and escaped.
 fn toml_key(key: &str) -> String {
@@ -1340,6 +1421,63 @@ mod tests {
             ["/new"],
             "the list wins; the old key is not appended"
         );
+    }
+
+    /// The shape config.example.toml ships: a comment, then a list written by
+    /// hand, then more of the file.
+    const HAND_WRITTEN_INSTALLS: &str = "\
+[retroarch]
+autofire = \"off\"
+
+# Tried top to bottom like a boot order.
+[[retroarch.installs]]
+label = \"Portable\"
+path = \"~/Data/Games/Emulators/RetroArch\"
+enabled = true
+
+[[retroarch.installs]]
+label = \"Applications\"
+path = \"/Applications\"
+enabled = true
+
+# Defaults below
+[launch]
+";
+
+    /// What Settings saves is what the next launch tries first. Writing
+    /// `[retroarch] root` instead, as Settings used to, leaves this list
+    /// reading `["~/Data/...", "/Applications"]`: saved, and never used.
+    #[test]
+    fn the_path_saved_in_settings_is_tried_first() {
+        let text = with_settings_install(HAND_WRITTEN_INSTALLS, Some("/Games/RetroArch.app"));
+        let cfg: Config = toml::from_str(&text).unwrap();
+        assert_eq!(
+            cfg.retroarch.ordered_paths(),
+            ["/Games/RetroArch.app", "~/Data/Games/Emulators/RetroArch", "/Applications"]
+        );
+        assert!(text.contains("# Tried top to bottom like a boot order."));
+        assert!(text.contains("# Defaults below\n[launch]"));
+    }
+
+    /// Saving twice moves the one entry rather than stacking a second, and
+    /// clearing takes out only that entry, leaving the file as it was.
+    #[test]
+    fn saving_again_replaces_the_settings_entry_and_clearing_removes_it() {
+        let once = with_settings_install(HAND_WRITTEN_INSTALLS, Some("/a"));
+        let twice = with_settings_install(&once, Some("/b"));
+        let cfg: Config = toml::from_str(&twice).unwrap();
+        assert_eq!(cfg.retroarch.ordered_paths()[..2], ["/b", "~/Data/Games/Emulators/RetroArch"]);
+        assert_eq!(twice.matches(SETTINGS_INSTALL).count(), 1);
+
+        assert_eq!(with_settings_install(&twice, None), HAND_WRITTEN_INSTALLS);
+    }
+
+    /// A config with no list gets one, and a Windows path survives the quoting.
+    #[test]
+    fn a_config_with_no_installs_list_gets_one() {
+        let text = with_settings_install("[retroarch]\nautofire = \"off\"\n", Some(r"E:\Emu\RetroArch"));
+        let cfg: Config = toml::from_str(&text).unwrap();
+        assert_eq!(cfg.retroarch.ordered_paths(), [r"E:\Emu\RetroArch"]);
     }
 
     /// Nothing configured means "probe the usual places", which is an empty
