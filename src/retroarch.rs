@@ -535,7 +535,7 @@ impl RetroArch {
         }
 
         bail!(
-            "could not find RetroArch. Tried:\n{}\nSet [retroarch] root in config.toml.",
+            "could not find RetroArch. Tried:\n{}\nSet its location in Settings, or list it under [[retroarch.installs]] in config.toml.",
             tried
                 .iter()
                 .map(|p| format!("  {}", p.display()))

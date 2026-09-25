@@ -2833,16 +2833,20 @@ pub async fn disk_usage(state: &AppState) -> CmdResult<u64> {
 pub fn set_retroarch_root(path: String) -> CmdResult<String> {
     let path = path.trim().to_owned();
 
+    let config = crate::config::path_str();
     if path.is_empty() {
-        // Empty means "go back to probing the usual places".
-        crate::config::clear_table_entry(&crate::config::path_str(), "retroarch", "root").map_err(err)?;
-        return Ok("Cleared. The usual locations will be searched again after a restart.".into());
+        // Empty means "go back to what config.toml lists, or the usual places".
+        crate::config::set_settings_install(&config, None).map_err(err)?;
+        crate::config::clear_table_entry(&config, "retroarch", "root").map_err(err)?;
+        return Ok("Cleared. RetroArch will be searched for again after a restart.".into());
     }
 
     // Verify before writing, so a typo fails here rather than at the next launch.
     let found = RetroArch::locate(Some(&path)).map_err(|e| e.to_string())?;
-    crate::config::set_table_entry(&crate::config::path_str(), "retroarch", "root", &path)
-        .map_err(err)?;
+    crate::config::set_settings_install(&config, Some(&path)).map_err(err)?;
+    // The single `root` this used to write is ignored beside an installs list,
+    // and config_findings reports it as stale; the entry above replaces it.
+    crate::config::clear_table_entry(&config, "retroarch", "root").map_err(err)?;
 
     Ok(format!(
         "Found {} with {} cores. Restart to use it.",

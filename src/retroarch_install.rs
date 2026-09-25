@@ -49,7 +49,7 @@ fn artifact(version: &str) -> Result<(String, &'static str)> {
         "linux" => bail!(
             "RetroArch is not downloaded automatically on Linux — install it with your \n\
              package manager, Flatpak (`flatpak install flathub org.libretro.RetroArch`),\n\
-             or an AppImage, then set [retroarch] root in config.toml if it is not found."
+             or an AppImage, then set its location in Settings if it is not found."
         ),
         os => bail!("no RetroArch download configured for {os}; install it manually"),
     })
