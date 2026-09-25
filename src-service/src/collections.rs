@@ -74,39 +74,12 @@ pub fn load(
             }
         }
         for line in text.lines() {
-            let line = line.trim();
-            if line.is_empty() || line.starts_with('#') {
-                continue;
-            }
-            // A trailing `    # title` is the human-readable name, kept beside
-            // the matchable one. Split on the run of spaces before the hash, not
-            // on a bare `#`, because a game may legitimately contain one --
-            // `Vs. Super Mario Bros.` does not, but `#1 Club` would.
-            let (key, alt) = match line.find("    #") {
-                Some(i) => (line[..i].trim_end(), Some(line[i + 5..].trim())),
-                None => (line, None),
-            };
-            // `platform/name`. The platform is not decoration: without it
-            // `Arcade Classics` resolved "Contra" to the *Famicom* Contra,
-            // because a name alone is not unique across a library that holds
-            // both the arcade original and its home port.
-            let (plat, key) = match key.split_once('/') {
-                Some((p, n)) => (p.trim().to_lowercase(), n.trim()),
-                None => (String::new(), key),
-            };
-            // Both halves are tried, because neither side names games one way.
-            // ES-DE takes `<name>` from the gamelist when a scraper filled it in
-            // and falls back to the file stem when it did not, so a list keyed
-            // on either alone matches part of the library and misses the rest --
-            // measured at 466 of 2,662 one way and 103 the other.
-            let hit = by_name
-                .get(&(plat.clone(), key.to_lowercase()))
-                .or_else(|| alt.and_then(|a| by_name.get(&(plat.clone(), a.to_lowercase()))));
-            match hit {
-                Some(id) => ids.push(*id),
+            let Some(entry) = Entry::parse(line) else { continue };
+            match entry.resolve(by_name) {
+                Some(id) => ids.push(id),
                 None => missing.push(Unmatched {
                     collection: name.clone(),
-                    name: key.to_owned(),
+                    name: entry.key.to_owned(),
                 }),
             }
         }
@@ -128,6 +101,72 @@ pub fn load(
     (out, missing)
 }
 
+/// One game line of a list file, split into what is matched on.
+struct Entry<'a> {
+    platform: String,
+    key: &'a str,
+    title: Option<&'a str>,
+}
+
+impl<'a> Entry<'a> {
+    /// `None` for a blank line or a comment.
+    fn parse(line: &'a str) -> Option<Self> {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            return None;
+        }
+        // A trailing `    # title` is the human-readable name, kept beside
+        // the matchable one. Split on the run of spaces before the hash, not
+        // on a bare `#`, because a game may legitimately contain one --
+        // `Vs. Super Mario Bros.` does not, but `#1 Club` would.
+        let (key, title) = match line.find("    #") {
+            Some(i) => (line[..i].trim_end(), Some(line[i + 5..].trim())),
+            None => (line, None),
+        };
+        // `platform/name`. The platform is not decoration: without it
+        // `Arcade Classics` resolved "Contra" to the *Famicom* Contra,
+        // because a name alone is not unique across a library that holds
+        // both the arcade original and its home port.
+        let (platform, key) = match key.split_once('/') {
+            Some((p, n)) => (p.trim().to_lowercase(), n.trim()),
+            None => (String::new(), key),
+        };
+        Some(Self { platform, key, title })
+    }
+
+    /// Both halves are tried, because neither side names games one way.
+    /// ES-DE takes `<name>` from the gamelist when a scraper filled it in and
+    /// falls back to the file stem when it did not, so a list keyed on either
+    /// alone matches part of the library and misses the rest -- measured at
+    /// 466 of 2,662 one way and 103 the other.
+    fn resolve(&self, by_name: &std::collections::HashMap<(String, String), i64>) -> Option<i64> {
+        let p = &self.platform;
+        by_name
+            .get(&(p.clone(), self.key.to_lowercase()))
+            .or_else(|| self.title.and_then(|t| by_name.get(&(p.clone(), t.to_lowercase()))))
+            .copied()
+    }
+}
+
+/// A game, as the name table and a list line see it.
+pub struct Named<'a> {
+    pub platform: &'a str,
+    /// The folder inside the system directory, `""` at the top.
+    pub rel_dir: &'a str,
+    pub name: &'a str,
+    pub fs_name: &'a str,
+    pub id: i64,
+}
+
+fn stem(fs_name: &str) -> &str {
+    fs_name.rsplit_once('.').map(|(s, _)| s).unwrap_or(fs_name)
+}
+
+fn under(rel_dir: &str, name: &str) -> String {
+    let rel_dir = rel_dir.trim_matches('/');
+    if rel_dir.is_empty() { name.to_owned() } else { format!("{rel_dir}/{name}") }
+}
+
 /// Name -> id, from whatever rows are given.
 ///
 /// Keyed on both the display name and the file stem, because ES-DE uses the
@@ -136,17 +175,111 @@ pub fn load(
 /// 103. The platform is part of the key because a name is not unique across a
 /// library holding arcade *Contra* and Famicom *Contra* -- un-prefixed,
 /// `Arcade Classics` resolved to the Famicom one and looked entirely plausible.
+///
+/// Then, in a second pass so they never take a key the first pass gave out,
+/// the forms a written line falls back to when the stem is ambiguous: the
+/// folder and stem (`Aftermarket/Foo`), the file name with its extension, and
+/// both. `snes/` and `snes/Aftermarket/` can hold a file of the same name, and
+/// a list written from the Flip has to be able to say which one it meant.
 pub fn name_table<'a>(
-    rows: impl IntoIterator<Item = (&'a str, &'a str, &'a str, i64)>,
+    rows: impl IntoIterator<Item = Named<'a>>,
 ) -> std::collections::HashMap<(String, String), i64> {
+    let rows: Vec<Named<'a>> = rows.into_iter().collect();
     let mut out = std::collections::HashMap::new();
-    for (platform, name, fs_name, id) in rows {
-        let p = platform.to_lowercase();
-        out.entry((p.clone(), name.to_lowercase())).or_insert(id);
-        let stem = fs_name.rsplit_once('.').map(|(s, _)| s).unwrap_or(fs_name);
-        out.entry((p, stem.to_lowercase())).or_insert(id);
+    for g in &rows {
+        let p = g.platform.to_lowercase();
+        out.entry((p.clone(), g.name.to_lowercase())).or_insert(g.id);
+        out.entry((p, stem(g.fs_name).to_lowercase())).or_insert(g.id);
+    }
+    for g in &rows {
+        let p = g.platform.to_lowercase();
+        for key in [under(g.rel_dir, stem(g.fs_name)), g.fs_name.to_owned(), under(g.rel_dir, g.fs_name)] {
+            out.entry((p.clone(), key.to_lowercase())).or_insert(g.id);
+        }
     }
     out
+}
+
+/// The line that puts `g` in a list: `platform/key    # Title`.
+///
+/// The key is the plainest one that reads back as this game and no other --
+/// the stem, as the export wrote them, unless a game of the same name elsewhere
+/// in the system already answers to it. `None` when nothing names it uniquely,
+/// which takes two systems sharing a platform and holding the same file.
+pub fn line_for(g: &Named, by_name: &std::collections::HashMap<(String, String), i64>) -> Option<String> {
+    let p = g.platform.to_lowercase();
+    let candidates = [
+        stem(g.fs_name).to_owned(),
+        under(g.rel_dir, stem(g.fs_name)),
+        g.fs_name.to_owned(),
+        under(g.rel_dir, g.fs_name),
+    ];
+    let key = candidates
+        .into_iter()
+        .find(|k| by_name.get(&(p.clone(), k.to_lowercase())) == Some(&g.id))?;
+    Some(format!("{}/{key}    # {}", g.platform, g.name))
+}
+
+/// What to do to a list's membership.
+pub enum Change {
+    /// Lines to append for games not already in it, keyed by game id.
+    Add(Vec<(i64, String)>),
+    /// Every line naming one of these games goes.
+    Remove(std::collections::BTreeSet<i64>),
+}
+
+/// Rewrite one list file so its next load has the membership asked for.
+///
+/// Comments, blank lines, lines that no longer resolve and the order of what
+/// stays are all kept as they were; new games go at the end. A list is
+/// something a person edits by hand, and a write from a handheld should read in
+/// a diff as the one or two lines it changed. Written through a temporary file
+/// beside it, named so `load` never takes a half-written one for a list.
+///
+/// Returns whether the file changed.
+pub fn edit(
+    path: &std::path::Path,
+    change: &Change,
+    by_name: &std::collections::HashMap<(String, String), i64>,
+) -> anyhow::Result<bool> {
+    use anyhow::Context as _;
+    let text = std::fs::read_to_string(path).with_context(|| format!("reading {}", path.display()))?;
+    let crlf = text.contains("\r\n");
+    let mut lines: Vec<String> = text.lines().map(str::to_owned).collect();
+    let present: std::collections::BTreeSet<i64> =
+        lines.iter().filter_map(|l| Entry::parse(l)?.resolve(by_name)).collect();
+    let before = lines.len();
+    match change {
+        Change::Add(new) => {
+            let mut added = std::collections::BTreeSet::new();
+            for (id, line) in new {
+                if !present.contains(id) && added.insert(*id) {
+                    lines.push(line.clone());
+                }
+            }
+            if lines.len() == before {
+                return Ok(false);
+            }
+        }
+        Change::Remove(gone) => {
+            lines.retain(|l| {
+                Entry::parse(l).and_then(|e| e.resolve(by_name)).is_none_or(|id| !gone.contains(&id))
+            });
+            if lines.len() == before {
+                return Ok(false);
+            }
+        }
+    }
+    let nl = if crlf { "\r\n" } else { "\n" };
+    let mut body = lines.join(nl);
+    body.push_str(nl);
+    let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+    // `.name.txt.tmp`: not a `.txt`, so a crash between the two steps leaves
+    // nothing `load` would read as a second copy of the list.
+    let tmp = path.with_file_name(format!(".{name}.tmp"));
+    std::fs::write(&tmp, body).with_context(|| format!("writing {}", tmp.display()))?;
+    std::fs::rename(&tmp, path).with_context(|| format!("replacing {}", path.display()))?;
+    Ok(true)
 }
 
 /// Put the curated lists into the metadata cache the web UI reads.
@@ -165,9 +298,13 @@ pub fn into_cache(
     dir: &std::path::Path,
 ) -> anyhow::Result<(usize, usize)> {
     let rows = store.all_roms()?;
-    let table = name_table(
-        rows.iter().map(|r| (r.platform_slug.as_str(), r.name.as_str(), r.fs_name.as_str(), r.id)),
-    );
+    let table = name_table(rows.iter().map(|r| Named {
+        platform: &r.platform_slug,
+        rel_dir: &r.rel_dir,
+        name: &r.name,
+        fs_name: &r.fs_name,
+        id: r.id,
+    }));
     let (cols, unmatched) = load(dir, &table);
     let items: Vec<moose_rack::api::Collection> = cols
         .into_iter()
@@ -442,10 +579,111 @@ mod cache_tests {
     /// files against different ids.
     #[test]
     fn the_name_table_keys_on_platform_name_and_stem() {
-        let t = name_table([("NES", "Contra", "Contra (USA).zip", 7i64)]);
+        let t = name_table([Named {
+            platform: "NES",
+            rel_dir: "",
+            name: "Contra",
+            fs_name: "Contra (USA).zip",
+            id: 7,
+        }]);
         assert_eq!(t.get(&("nes".into(), "contra".into())), Some(&7));
         assert_eq!(t.get(&("nes".into(), "contra (usa)".into())), Some(&7));
         // The platform is part of the key: arcade Contra is not this one.
         assert_eq!(t.get(&("arcade".into(), "contra".into())), None);
+    }
+}
+
+#[cfg(test)]
+mod edit_tests {
+    use super::*;
+
+    fn g<'a>(rel_dir: &'a str, fs_name: &'a str, name: &'a str, id: i64) -> Named<'a> {
+        Named { platform: "snes", rel_dir, name, fs_name, id }
+    }
+
+    /// Two games with one file name, one at the top and one in a subfolder,
+    /// the way `snes/Aftermarket/` sits beside `snes/` on the SSD.
+    fn twins() -> Vec<Named<'static>> {
+        vec![
+            g("", "Foo (USA).sfc", "Foo", 1),
+            g("Aftermarket", "Foo (USA).sfc", "Foo", 2),
+            g("", "Bar (USA).sfc", "Bar", 3),
+        ]
+    }
+
+    /// A line written for a game has to read back as that game. The stem is
+    /// what the export used; a twin in a subfolder needs its folder in front,
+    /// or the list names the other one.
+    #[test]
+    fn a_written_line_reads_back_as_the_game_it_was_written_for() {
+        let t = name_table(twins());
+        for game in twins() {
+            let line = line_for(&game, &t).unwrap();
+            let back = Entry::parse(&line).unwrap().resolve(&t);
+            assert_eq!(back, Some(game.id), "{line} reads as another game");
+        }
+        assert_eq!(line_for(&twins()[2], &t).unwrap(), "snes/Bar (USA)    # Bar");
+        assert_eq!(line_for(&twins()[1], &t).unwrap(), "snes/Aftermarket/Foo (USA)    # Foo");
+    }
+
+    /// The second pass must not take a key the first pass would have given
+    /// out, or a list that resolved before this change resolves differently.
+    #[test]
+    fn the_extra_keys_never_change_what_an_existing_line_means() {
+        // Game 1's file name, with its extension, is game 2's display name.
+        let t = name_table([
+            g("", "Odd.Name.sfc", "Odd", 1),
+            g("", "Other (USA).sfc", "Odd.Name.sfc", 2),
+        ]);
+        assert_eq!(t.get(&("snes".into(), "odd.name.sfc".into())), Some(&2));
+    }
+
+    #[test]
+    fn adding_appends_and_keeps_every_comment_and_the_order() {
+        let d = tempdir::TempDir::new("e").unwrap();
+        let p = d.path().join("best.txt");
+        let t = name_table(twins());
+        std::fs::write(&p, "# ★ Best of snes\n# 1 game\nsnes/Bar (USA)    # Bar\n\nsnes/Gone (USA)\n").unwrap();
+        let add = Change::Add(vec![
+            (3, line_for(&twins()[2], &t).unwrap()),
+            (2, line_for(&twins()[1], &t).unwrap()),
+            (2, line_for(&twins()[1], &t).unwrap()),
+        ]);
+        assert!(edit(&p, &add, &t).unwrap());
+        assert_eq!(
+            std::fs::read_to_string(&p).unwrap(),
+            "# ★ Best of snes\n# 1 game\nsnes/Bar (USA)    # Bar\n\nsnes/Gone (USA)\n\
+             snes/Aftermarket/Foo (USA)    # Foo\n",
+            "already there once, asked for twice: one new line, at the end"
+        );
+        assert!(!edit(&p, &add, &t).unwrap(), "rewrote a list that already said this");
+        assert!(!d.path().join(".best.txt.tmp").exists(), "left its temporary behind");
+    }
+
+    #[test]
+    fn removing_takes_only_the_lines_for_those_games() {
+        let d = tempdir::TempDir::new("e").unwrap();
+        let p = d.path().join("best.txt");
+        let t = name_table(twins());
+        std::fs::write(&p, "# x\nsnes/Foo (USA)\nsnes/Aftermarket/Foo (USA)\r\nsnes/Bar (USA)    # Bar\n").unwrap();
+        assert!(edit(&p, &Change::Remove([2].into()), &t).unwrap());
+        assert_eq!(
+            std::fs::read_to_string(&p).unwrap(),
+            "# x\r\nsnes/Foo (USA)\r\nsnes/Bar (USA)    # Bar\r\n",
+            "the twin at the top stays; a file that used CRLF keeps it"
+        );
+        assert!(!edit(&p, &Change::Remove([2].into()), &t).unwrap());
+    }
+
+    /// A list that cannot be read is an error, never an empty list to write
+    /// over.
+    #[test]
+    fn a_list_that_cannot_be_read_is_not_rewritten() {
+        let d = tempdir::TempDir::new("e").unwrap();
+        let p = d.path().join("bad.txt");
+        std::fs::write(&p, b"# x\nsnes/Bar (USA)\n\xff\xfe\n").unwrap();
+        let t = name_table(twins());
+        assert!(edit(&p, &Change::Add(vec![(1, "snes/Foo (USA)".into())]), &t).is_err());
+        assert_eq!(std::fs::read(&p).unwrap(), b"# x\nsnes/Bar (USA)\n\xff\xfe\n");
     }
 }

@@ -84,6 +84,10 @@ pub enum Identity {
     Owner,
     /// A named user, by password.
     User(String),
+    /// The shared account behind the guest button. Its own variant rather
+    /// than a user called "guest", because `[[auth.users]]` may hold a real
+    /// account of that name, and only the shared one is kept from the lists.
+    Guest,
 }
 
 impl Identity {
@@ -94,8 +98,20 @@ impl Identity {
         match self {
             Identity::Owner => "owner",
             Identity::User(n) => n,
+            Identity::Guest => AuthConfig::GUEST,
         }
     }
+}
+
+/// True for a request the shared guest account may not make.
+///
+/// Changing a list is changing what the next person sees, and everyone using
+/// the guest account is the same person to the library. Named accounts and the
+/// owner may; saves and states stay shared, as `READ_ONLY` says.
+pub fn guest_refused(method: &axum::http::Method, path: &str) -> bool {
+    method != axum::http::Method::GET
+        && method != axum::http::Method::HEAD
+        && path.starts_with("/api/collections")
 }
 
 fn b64() -> base64::engine::general_purpose::GeneralPurpose {
