@@ -231,11 +231,13 @@ games offline.
 
 ## Favourites and collections
 
-RomM has no per-game favourite. A favourite there is a **collection**, either
-one the server flags `is_favorite` or one somebody named with a star — which is
-what the nine `★ Best of …` lists on this library are. So "star this game"
-means "put it in that collection", and the star reaches every device for free,
-because the collection lives on the server.
+The server has no per-game favourite. A favourite there is membership of a
+**collection**, a text file in `collections/` — which is what the nine
+`★ Best of …` lists on this library are. So "star this game" means "put it in
+that collection", and the star reaches every device for free, because the
+collection lives on the server. The Flip sends a change with
+`POST`/`DELETE /api/collections/{id}/roms`, and the server edits the list's
+`.txt` (docs/service-api.md).
 
 EmulationStation keeps the same two ideas in two different places, neither of
 which is the server:
@@ -243,12 +245,24 @@ which is the server:
 | Server | On the card |
 | --- | --- |
 | `★ Best of snes` | `<favorite>true</favorite>` in `/userdata/roms/snes/gamelist.xml` |
+| `★ Favourites` | the stars in every gamelist on the card |
 | `Arcade Fighting` | `collections/custom-Arcade Fighting.cfg`, one absolute path per line |
 
-`favrun::held_as` decides which by the name. A `custom-*.cfg` is invisible until
-its name is also in `CollectionSystemsCustom` in `es_settings.cfg`, so the sync
-writes that too — it is the step that gets forgotten and makes a correct file
-look like a broken one.
+`favrun::held_as` decides which by the name, and `★ Favourites` only by that
+exact name. It used to be any list the server flags `is_favorite`, and
+moose-service flags every list starting with ★, so a new `★ Shmups` would have
+been synced against every star on the card. Any other name is a collection file.
+
+A `custom-*.cfg` is invisible until its name is also in
+`CollectionSystemsCustom` in `es_settings.cfg`, so the sync writes that too —
+it is the step that gets forgotten and makes a correct file look like a broken
+one. ES splits that setting on commas and names a collection after its file,
+with no escaping for either, so `,` and `/` in a server name become `-` in both
+places.
+
+A game is matched by its system folder and its path inside it, so
+`snes/Aftermarket/Foo.sfc` is found, and is not taken for a `snes/Foo.sfc`
+of the same name.
 
 ### Why there is a baseline
 
@@ -267,9 +281,14 @@ only two values: if both sides moved away from the baseline they moved to the
 same place, and they already agree. Nothing here ever needs to ask a person.
 
 Lists that already agree are written into the baseline as well, even though
-nothing moves. Otherwise it only ever learns about lists that happened to
-differ, and the first star taken off an agreeing list looks like a list that
-has never been synced.
+nothing moves, on every look and every run. Otherwise it only ever learns about
+lists that happened to differ, and the first star taken off an agreeing list
+looks like a list that has never been synced; and a baseline from before stable
+game ids, full of numbers that name nothing now, would never be replaced.
+
+The baseline holds only games on this card. A server star for a game the card
+does not have was never agreed with anything, and recording it made that game,
+copied on later, read as unstarred here and lose its star on the server.
 
 ### Two things that are not the same name
 
@@ -283,8 +302,12 @@ has never been synced.
 
 ### Looking before moving
 
-    moose-patch --stars          what it would do, and both sides' counts
-    moose-patch --stars-apply    do it
+    moose-patch --stars                   what it would do, and both sides' counts
+    moose-patch --stars-apply             do it
+    moose-patch --stars-apply --anyway    do it, even if it takes many stars off
+
+On screen, the second press carries out the plan the first press showed. It is
+not worked out again.
 
 `--stars` prints a line per collection with how many are starred on the card,
 how many on the server, and how many of the server's are on this card at all.
@@ -295,6 +318,32 @@ handheld does not carry.
 
 Print the counts even when everything agrees. A matcher that finds nothing on
 either side reports agreement exactly as loudly as one that works.
+
+### Writing the card
+
+**EmulationStation writes its gamelists back from memory when it exits**, so a
+star written while it runs is undone the next time it stops. `--stars-apply`
+over ssh stops it with `S31emulationstation stop` first, which also puts
+anything starred on screen since it started onto the card, and starts it again
+afterwards with `setsid`, whether the run worked or not. It refuses while
+RetroArch or anything `emulatorlauncher` started is running. Opened with L2+R2
+the app already has ES stopped. Opened as a Port, ES is running and waiting on
+the app, so a plan that writes the card is refused there with a message saying
+to use L2+R2 or ssh; a plan that only sends goes ahead.
+
+Every gamelist, collection file and `es_settings.cfg` is copied before it is
+rewritten, to `es-backup/<folder>/<mtime>-<name>` beside the addon, ten per
+file.
+
+A plan that takes more than 20 stars off, or more than half of one list once
+that is more than two games, is refused: nothing sent, nothing written. That is
+what an unreadable gamelist or a swapped card looks like. `--anyway` over ssh
+is the only way past it.
+
+A gamelist or `custom-*.cfg` that cannot be read leaves its list out of the
+plan, named with the reason. It is never read as empty, which would be every
+star in it taken off. Every list that did not sync is named on screen and in
+the log, and `--stars` or `--stars-apply` exits 1.
 
 
 ## knulli.conf is first-wins
