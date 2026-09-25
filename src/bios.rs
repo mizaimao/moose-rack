@@ -80,6 +80,7 @@ pub fn required_for(core: &str, platform: &str) -> Vec<String> {
 pub async fn ensure(
     client: &Client,
     dest: &Path,
+    legacy: &[PathBuf],
     core: &str,
     platform: &str,
 ) -> Result<usize> {
@@ -109,6 +110,10 @@ pub async fn ensure(
         }) else {
             continue;
         };
+        if adopt(&dest.join(name), legacy, fw) {
+            got += 1;
+            continue;
+        }
         if let Ok(bytes) = client.firmware_content(fw.id, &fw.file_name).await {
             // This one stays flat on purpose: it fetches a *named* BIOS a core
             // asked for, and RetroArch looks for that name in `system/` itself.
@@ -129,6 +134,8 @@ pub async fn ensure(
 #[derive(Debug, Default)]
 pub struct Summary {
     pub downloaded: usize,
+    /// Taken from a folder an earlier version downloaded into; see [`adopt`].
+    pub adopted: usize,
     pub already_had: usize,
     pub failed: usize,
     pub bytes: u64,
@@ -137,7 +144,7 @@ pub struct Summary {
 
 impl Summary {
     pub fn headline(&self) -> String {
-        if self.downloaded == 0 && self.failed == 0 {
+        if self.downloaded == 0 && self.adopted == 0 && self.failed == 0 {
             return format!("BIOS already complete ({} files)", self.already_had);
         }
         let mut s = format!(
@@ -146,11 +153,55 @@ impl Summary {
             crate::util::human(self.bytes),
             self.already_had
         );
+        if self.adopted > 0 {
+            s.push_str(&format!(", {} taken from the old BIOS folder", self.adopted));
+        }
         if self.failed > 0 {
             s.push_str(&format!(", {} failed", self.failed));
         }
         s
     }
+}
+
+/// Put a BIOS an earlier version downloaded elsewhere where it belongs now.
+///
+/// Before everything agreed on `Config::system_dir`, the desktop's sync wrote
+/// to `<roms>/../system` and the CLI's to `<library>/system`. A machine
+/// updated from either has the set on disk in a folder RetroArch is no longer
+/// pointed at, and fetching 800 MB again is the wrong way to fix that.
+///
+/// Only a file whose size and hash match the server's is taken, so a folder
+/// that merely shares the name gives up nothing: on KNULLI `/userdata/system`
+/// is its settings. Hard-linked on one volume, copied across two, never moved,
+/// because the old folder may be one something else reads, such as a portable
+/// RetroArch's own `system/`. Both layouts are looked for, the tree `sync`
+/// writes and the flat names `ensure` writes.
+fn adopt(to: &Path, legacy: &[PathBuf], want: &Firmware) -> bool {
+    let Some(leaf) = to.file_name().map(|n| n.to_string_lossy().into_owned()) else {
+        return false;
+    };
+    let candidates = legacy.iter().flat_map(|dir| {
+        [local_path(dir, want.file_path.as_deref(), &want.file_name), Some(dir.join(&leaf))]
+    });
+    for from in candidates.flatten() {
+        if from == to || !already_have(&from, want) {
+            continue;
+        }
+        if let Some(parent) = to.parent()
+            && std::fs::create_dir_all(parent).is_err()
+        {
+            return false;
+        }
+        let part = to.with_file_name(format!("{leaf}.part"));
+        std::fs::remove_file(&part).ok();
+        if (std::fs::hard_link(&from, &part).is_ok() || std::fs::copy(&from, &part).is_ok())
+            && std::fs::rename(&part, to).is_ok()
+        {
+            return true;
+        }
+        std::fs::remove_file(&part).ok();
+    }
+    false
 }
 
 /// Is this file already here and intact?
@@ -245,6 +296,7 @@ pub async fn status(client: &Client, dest: &Path) -> Result<(usize, usize, u64)>
 pub async fn sync(
     client: &Client,
     dest: &Path,
+    legacy: &[PathBuf],
     mut progress: impl FnMut(usize, usize, &str),
 ) -> Result<Summary> {
     let list = client
@@ -278,6 +330,10 @@ pub async fn sync(
 
         if already_have(&path, fw) {
             summary.already_had += 1;
+            continue;
+        }
+        if adopt(&path, legacy, fw) {
+            summary.adopted += 1;
             continue;
         }
 
@@ -379,6 +435,55 @@ mod tests {
     fn a_missing_file_is_not_mistaken_for_a_present_one() {
         let dir = scratch("absent");
         assert!(!already_have(&dir.join("nope.bin"), &fw("nope.bin", 5, None)));
+    }
+
+    /// A machine that synced with an older version has the set in the old
+    /// folder. It is taken from there rather than downloaded, and left there.
+    #[test]
+    fn a_bios_in_the_old_folder_is_taken_rather_than_fetched() {
+        let dir = scratch("adopt");
+        let (old, now) = (dir.join("system"), dir.join("Roms/0_BIOS"));
+        std::fs::create_dir_all(old.join("mame")).unwrap();
+        std::fs::write(old.join("mame/neogeo.zip"), b"hello").unwrap();
+        std::fs::write(old.join("aes.zip"), b"hello").unwrap();
+        let md5 = "5d41402abc4b2a76b9719d911017c592";
+
+        // The tree `sync` writes.
+        let mut tree = fw("neogeo.zip", 5, Some(md5));
+        tree.file_path = Some("mame".into());
+        let to = local_path(&now, tree.file_path.as_deref(), &tree.file_name).unwrap();
+        assert!(adopt(&to, std::slice::from_ref(&old), &tree));
+        assert!(already_have(&to, &tree));
+        assert!(old.join("mame/neogeo.zip").is_file(), "the old copy has to stay");
+
+        // The flat names `ensure` writes.
+        assert!(adopt(&now.join("aes.zip"), &[old], &fw("aes.zip", 5, Some(md5))));
+        assert!(now.join("aes.zip").is_file());
+    }
+
+    /// A file that only shares the name is not a BIOS. KNULLI keeps its
+    /// settings in `/userdata/system`, which is `<roms>/../system` there.
+    #[test]
+    fn a_file_that_does_not_match_the_server_is_left_alone() {
+        let dir = scratch("adopt-mismatch");
+        let (old, now) = (dir.join("system"), dir.join("Roms/0_BIOS"));
+        std::fs::create_dir_all(&old).unwrap();
+        std::fs::write(old.join("bios.bin"), b"hello").unwrap();
+
+        let other = fw("bios.bin", 5, Some(&"0".repeat(32)));
+        assert!(!adopt(&now.join("bios.bin"), &[old], &other));
+        assert!(!now.join("bios.bin").exists());
+    }
+
+    #[test]
+    fn the_old_bios_folders_are_both_looked_in() {
+        let cfg: crate::config::Config =
+            toml::from_str("[esde]\nroot = \"/es\"\nroms = \"/games/Roms\"\n").unwrap();
+        assert_eq!(cfg.system_dir(), Path::new("/games/Roms/0_BIOS"));
+        assert_eq!(
+            cfg.legacy_bios_dirs(),
+            [PathBuf::from("/games/system"), PathBuf::from("./library/system")]
+        );
     }
 
     #[test]

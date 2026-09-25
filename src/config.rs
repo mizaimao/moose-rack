@@ -912,6 +912,24 @@ impl Config {
         bios_dir(&self.esde_layout().roms)
     }
 
+    /// Where earlier versions put BIOS: the desktop's `<roms>/../system` and
+    /// the CLI's `<library>/system`. Only ever read from; see `bios::adopt`.
+    pub fn legacy_bios_dirs(&self) -> Vec<PathBuf> {
+        let now = self.system_dir();
+        let roms = self.esde_layout().roms;
+        let mut out: Vec<PathBuf> = Vec::new();
+        let old = [
+            roms.parent().map(|p| p.join("system")),
+            Some(PathBuf::from(&self.library.local_root).join("system")),
+        ];
+        for dir in old.into_iter().flatten() {
+            if dir != now && !out.contains(&dir) {
+                out.push(dir);
+            }
+        }
+        out
+    }
+
     /// ES-DE themes, read from where ES-DE downloads them.
     ///
     /// `<esde root>/themes`. ES-DE puts its themes there and this app draws

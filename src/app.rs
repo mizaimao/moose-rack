@@ -35,6 +35,8 @@ pub struct AppState {
     /// name rather than RomM slug, so it needs its own lookup rather than
     /// being folded into `media_dir`.
     pub esde_media: Option<PathBuf>,
+    /// Folders earlier versions downloaded BIOS into. See `bios::adopt`.
+    pub legacy_bios: Vec<PathBuf>,
     pub theme_root: Option<String>,
     pub themes_dir: PathBuf,
     /// Bind players 2-4 like player 1. See config::ControllersCfg.
@@ -250,6 +252,7 @@ impl AppState {
         roms_dir,
         media_dir,
         esde_media: cfg.esde.media_dir(),
+        legacy_bios: cfg.legacy_bios_dirs(),
         theme_root: cfg.theme.root.clone(),
         themes_dir: cfg.themes_dir(),
         mirror_players: cfg.controllers.mirror_player_one,
