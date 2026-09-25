@@ -215,7 +215,7 @@ pub fn stars_apply(
     es: crate::favmap::EsPaths,
     plan: crate::favrun::Plan,
 ) -> Job {
-    use crate::esctl::Frontend as _;
+    use crate::es::Frontend as _;
     let (tx, rx) = channel();
     let server = cfg.server.url.clone();
     let username = cfg.server.username.clone();
@@ -229,7 +229,7 @@ pub fn stars_apply(
             let _ = tx2.send(m);
         };
         match plan.writes_card(&es) {
-            Ok(true) if crate::esctl::Knulli::default().es_running() => {
+            Ok(true) if crate::es::Device::default().es_running() => {
                 return say(Message::Failed(
                     "EmulationStation is running and would write its own copy over this — \
                      open moose-patch with L2+R2, or run moose-patch --stars-apply over ssh"
@@ -482,7 +482,7 @@ pub fn pull_all(cfg: &Config, ra_root: &Path, app_dir: &Path, library_root: &Pat
                 // device does not hold the save, and the very next negotiate
                 // offers to *push* all of them back — which is exactly what
                 // happened the first time this ran.
-                if let Err(e) = client.confirm_download(save.id).await {
+                if let Err(e) = client.confirm_download(save.id, &identity.device_id).await {
                     eprintln!("could not confirm {}: {e:#}", save.file_name);
                 }
                 done += 1;
