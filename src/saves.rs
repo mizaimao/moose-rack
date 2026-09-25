@@ -98,6 +98,20 @@ fn is_ignorable(rel: &Path, file_name: &str) -> bool {
     if rel.components().any(|c| c.as_os_str() == "cfg") {
         return true;
     }
+    // A copy kept by hand, like `gba-backup-vbam-20260828/`, is not a system.
+    // Scanned as one it reported fourteen saves under an unknown core.
+    if rel
+        .components()
+        .next()
+        .is_some_and(|c| c.as_os_str().to_string_lossy().to_ascii_lowercase().contains("backup"))
+    {
+        return true;
+    }
+    // Syncthing's copies of a file it could not reconcile:
+    // `Game.sync-conflict-20250218-134225-O7PPDDW.srm`. Not a save of anything.
+    if file_name.contains(".sync-conflict-") {
+        return true;
+    }
     // PCSX2 memory-card internals.
     if file_name.starts_with("_pcsx2") || file_name.starts_with('.') {
         return true;
@@ -144,6 +158,20 @@ fn split_slot(file_name: &str) -> Option<(String, String)> {
             return None;
         };
         return Some((file_name[..pos].to_owned(), slot));
+    }
+    // Neo Geo under geolith: the memory card and the NVRAM are named after
+    // the archive, `Blazing Star.zip#Blazing Star.mcr`. They were never
+    // counted, so no Neo Geo game's progress ever synced.
+    for (ext, slot) in [(".mcr", "memcard"), (".nv", "nvram")] {
+        if let Some(stem) = lower.strip_suffix(ext) {
+            let base = &file_name[..stem.len()];
+            let base = match base.split_once('#') {
+                Some((archive, _)) => archive,
+                None => base,
+            };
+            let base = Path::new(base).file_stem().and_then(|s| s.to_str()).unwrap_or(base);
+            return Some((base.to_owned(), slot.into()));
+        }
     }
     for ext in [".srm", ".sav"] {
         if let Some(stem) = lower.strip_suffix(ext) {
@@ -441,6 +469,32 @@ fn collect(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_neo_geo_card_is_a_save_of_its_game() {
+        assert_eq!(
+            split_slot("Blazing Star.zip#Blazing Star.mcr"),
+            Some(("Blazing Star".into(), "memcard".into()))
+        );
+        assert_eq!(
+            split_slot("Metal Slug 3 (NGM-2560).zip#Metal Slug 3 (NGM-2560).mcr"),
+            Some(("Metal Slug 3 (NGM-2560)".into(), "memcard".into()))
+        );
+        assert_eq!(split_slot("Last Resort.nv"), Some(("Last Resort".into(), "nvram".into())));
+    }
+
+    #[test]
+    fn syncthing_copies_and_hand_backups_are_not_saves() {
+        assert!(is_ignorable(
+            Path::new("gba/Metroid Fusion (USA).sync-conflict-20250218-134226-O7PPDDW.srm"),
+            "Metroid Fusion (USA).sync-conflict-20250218-134226-O7PPDDW.srm"
+        ));
+        assert!(is_ignorable(
+            Path::new("gba-backup-vbam-20260828/Apotris.srm"),
+            "Apotris.srm"
+        ));
+        assert!(!is_ignorable(Path::new("gba/Apotris.srm"), "Apotris.srm"));
+    }
 
     /// Game saves. The slot is a constant because a `.srm` has no slot of
     /// its own, and it must still never be empty — see the module docs on what
