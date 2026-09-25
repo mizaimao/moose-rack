@@ -10,7 +10,7 @@
 //! not the obvious one. Every one of these was placed by hand first, and the
 //! hard part was never the change.
 
-use crate::patch::{Choice, Form, Patch, Paths, Step};
+use crate::patch::{Choice, Form, NamedIn, Patch, Paths, Step};
 
 const HOTKEYS: &str = include_str!("../assets/hotkeys.conf");
 const SHADERS_LCD: &str = include_str!("../assets/shaders.conf");
@@ -80,35 +80,39 @@ fn cover(paths: &Paths, path: std::path::PathBuf, ours: &'static [u8], on: bool)
     Step::Cover { path, ours, on, backup }
 }
 
-/// The four presets, plus whichever set is being chosen. Every option lays
-/// down all four, so the cycle is the same list whichever one you start from.
-fn shader_files(paths: &Paths, set: Option<(&str, &'static [u8])>) -> Vec<Step> {
-    let presets: [(&str, Option<&'static [u8]>); 4] = match set {
-        Some(_) => [
-            ("1-sharp-shimmerless.glslp", Some(SHADER_1)),
-            ("2-sharp-shimmerless-scanlines.glslp", Some(SHADER_2)),
-            ("3-sharp-shimmerless-lcd.glslp", Some(SHADER_3)),
-            ("4-zfast-crt.glslp", Some(SHADER_4)),
-        ],
-        None => [
-            ("1-sharp-shimmerless.glslp", None),
-            ("2-sharp-shimmerless-scanlines.glslp", None),
-            ("3-sharp-shimmerless-lcd.glslp", None),
-            ("4-zfast-crt.glslp", None),
-        ],
+/// The four presets and our three sets.
+///
+/// Every option that names one of our sets, global or per system, lays all of
+/// them down, so the cycle is the same list whichever one you start from.
+/// Every other option takes them away, but only once no `*.shaderset` line in
+/// knulli.conf names one of ours any more. `shaders=off` used to delete them
+/// outright while `shader-gba` could still be pointing at `moose-lcd`.
+fn shader_files(paths: &Paths, want: bool) -> Vec<Step> {
+    let named = NamedIn {
+        conf: paths.knulli_conf(),
+        key_suffix: ".shaderset",
+        value_prefix: "moose-",
     };
-    let mut steps: Vec<Step> = presets
-        .iter()
-        .map(|(name, bytes)| place(paths, paths.shader(name), *bytes))
-        .collect();
-    for (name, body) in [
-        ("moose-lcd", SET_LCD),
-        ("moose-plain", SET_PLAIN),
-        ("moose-zfast", SET_ZFAST),
-    ] {
-        steps.push(place(paths, paths.shaderset(name), set.map(|_| body)));
-    }
-    steps
+    [
+        (paths.shader("1-sharp-shimmerless.glslp"), SHADER_1),
+        (paths.shader("2-sharp-shimmerless-scanlines.glslp"), SHADER_2),
+        (paths.shader("3-sharp-shimmerless-lcd.glslp"), SHADER_3),
+        (paths.shader("4-zfast-crt.glslp"), SHADER_4),
+        (paths.shaderset("moose-lcd"), SET_LCD),
+        (paths.shaderset("moose-plain"), SET_PLAIN),
+        (paths.shaderset("moose-zfast"), SET_ZFAST),
+    ]
+    .into_iter()
+    .map(|(path, bytes)| Step::Shared { path, bytes, want, named: named.clone() })
+    .collect()
+}
+
+/// A shader option: its line in knulli.conf, then the files it needs.
+fn shader_choice(paths: &Paths, name: &str, id: &str, body: Option<&str>) -> Choice {
+    let ours = body.is_some_and(|b| b.contains("shaderset=moose-"));
+    let mut steps = vec![block(paths, id, body)];
+    steps.extend(shader_files(paths, ours));
+    Choice { name: name.into(), steps }
 }
 
 fn on_off(name_on: &str, on: Vec<Step>, off: Vec<Step>) -> Vec<Choice> {
@@ -176,39 +180,19 @@ fn shader(paths: &Paths, slug: &'static str, name: &'static str) -> Patch {
         )
         .into_boxed_str(),
     );
+    let block_id = format!("shader-{slug}");
+    let set = |name: &str, set: &str| {
+        shader_choice(paths, name, &block_id, Some(&format!("{slug}.shaderset={set}")))
+    };
     Patch {
         id,
         title,
         detail,
         choices: vec![
-            Choice {
-                name: "follow global".into(),
-                steps: vec![block(paths, &format!("shader-{slug}"), None)],
-            },
-            Choice {
-                name: "shimmerless plain".into(),
-                steps: vec![block(
-                    paths,
-                    &format!("shader-{slug}"),
-                    Some(&format!("{slug}.shaderset=moose-plain")),
-                )],
-            },
-            Choice {
-                name: "shimmerless + LCD".into(),
-                steps: vec![block(
-                    paths,
-                    &format!("shader-{slug}"),
-                    Some(&format!("{slug}.shaderset=moose-lcd")),
-                )],
-            },
-            Choice {
-                name: "none".into(),
-                steps: vec![block(
-                    paths,
-                    &format!("shader-{slug}"),
-                    Some(&format!("{slug}.shaderset=none")),
-                )],
-            },
+            shader_choice(paths, "follow global", &block_id, None),
+            set("shimmerless plain", "moose-plain"),
+            set("shimmerless + LCD", "moose-lcd"),
+            set("none", "none"),
         ],
     }
 }
@@ -395,38 +379,10 @@ pub fn all(paths: &Paths) -> Vec<Patch> {
                      seven hundred presets in the library, most of which this handheld \
                      cannot afford. Ours holds four, all cheap.",
             choices: vec![
-                Choice {
-                    name: "off".into(),
-                    steps: {
-                        let mut s = vec![block(paths, "shaders", None)];
-                        s.extend(shader_files(paths, None));
-                        s
-                    },
-                },
-                Choice {
-                    name: "shimmerless + LCD/CRT".into(),
-                    steps: {
-                        let mut s = vec![block(paths, "shaders", Some(SHADERS_LCD))];
-                        s.extend(shader_files(paths, Some(("moose-lcd", SET_LCD))));
-                        s
-                    },
-                },
-                Choice {
-                    name: "shimmerless plain".into(),
-                    steps: {
-                        let mut s = vec![block(paths, "shaders", Some(SHADERS_PLAIN))];
-                        s.extend(shader_files(paths, Some(("moose-plain", SET_PLAIN))));
-                        s
-                    },
-                },
-                Choice {
-                    name: "zfast".into(),
-                    steps: {
-                        let mut s = vec![block(paths, "shaders", Some(SHADERS_ZFAST))];
-                        s.extend(shader_files(paths, Some(("moose-zfast", SET_ZFAST))));
-                        s
-                    },
-                },
+                shader_choice(paths, "off", "shaders", None),
+                shader_choice(paths, "shimmerless + LCD/CRT", "shaders", Some(SHADERS_LCD)),
+                shader_choice(paths, "shimmerless plain", "shaders", Some(SHADERS_PLAIN)),
+                shader_choice(paths, "zfast", "shaders", Some(SHADERS_ZFAST)),
             ],
         },
         // Bezels, one system at a time.
@@ -968,6 +924,54 @@ mod tests {
         shaders.apply(0).unwrap();
         assert!(!present("1-sharp-shimmerless.glslp"), "off leaves nothing behind");
         assert!(!paths.shaderset("moose-lcd").exists());
+    }
+
+    /// Turn one patch to the option with this name.
+    fn choose(patches: &[Patch], id: &str, option: &str) {
+        let patch = patches.iter().find(|p| p.id == id).unwrap();
+        let i = patch.choices.iter().position(|c| c.name == option).unwrap();
+        patch.apply(i).unwrap();
+    }
+
+    fn state(patches: &[Patch], id: &str) -> String {
+        let patch = patches.iter().find(|p| p.id == id).unwrap();
+        match patch.state() {
+            State::At(i) => patch.choices[i].name.clone(),
+            State::Changed => "changed".into(),
+        }
+    }
+
+    #[test]
+    fn turning_the_global_shader_off_keeps_a_set_a_system_still_names() {
+        // shaders=off deleted every set, while shader-gba could still say
+        // gba.shaderset=moose-lcd. The files now stay until nothing names one.
+        let paths = scratch("shader-sets-shared");
+        let patches = all(&paths);
+        choose(&patches, "shaders", "shimmerless + LCD/CRT");
+        choose(&patches, "shader-gba", "shimmerless + LCD");
+
+        choose(&patches, "shaders", "off");
+        assert!(paths.shaderset("moose-lcd").exists(), "deleted the set gba names");
+        assert!(paths.shader("3-sharp-shimmerless-lcd.glslp").exists());
+        assert_eq!(state(&patches, "shaders"), "off");
+        assert_eq!(state(&patches, "shader-gba"), "shimmerless + LCD");
+
+        // The last one to stop naming our sets takes the files with it.
+        choose(&patches, "shader-gba", "follow global");
+        assert!(!paths.shaderset("moose-lcd").exists());
+        assert!(!paths.shader("1-sharp-shimmerless.glslp").exists());
+        assert_eq!(state(&patches, "shaders"), "off");
+    }
+
+    #[test]
+    fn a_system_shader_lays_down_the_set_it_names() {
+        // With the global shader off there was no set on the card for
+        // gba.shaderset=moose-lcd to find at all.
+        let paths = scratch("shader-per-system-alone");
+        let patches = all(&paths);
+        choose(&patches, "shader-gba", "shimmerless + LCD");
+        assert!(paths.shaderset("moose-lcd").exists());
+        assert!(paths.shader("4-zfast-crt.glslp").exists(), "the cycle is all four");
     }
 
     #[test]
