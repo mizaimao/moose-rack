@@ -736,21 +736,59 @@ fn window(paths: &Paths, patches: &[Patch]) -> Result<()> {
     Ok(())
 }
 
-/// Carry out the queue. Everything that failed is left showing as still
-/// pending, which is the honest thing for the menu to say afterwards.
+/// Carry out the queue, then read every row back off the device.
+///
+/// Refused outright on a KNULLI this build was not checked against, the same
+/// gate `--apply` has, and the queue is left as it was. After an apply a row
+/// shows what the device reads, not the option that was picked; one that
+/// failed stays queued. Anything that failed or read back as something else
+/// is put on screen as well as in the log.
 fn run_queue(app: &mut App, paths: &Paths, patches: &[Patch]) {
+    let verdict = knulli::check(paths);
+    if !verdict.safe_to_apply() {
+        eprintln!("apply refused: knulli {}", verdict.line());
+        app.overlay = Overlay::Notice {
+            title: "Nothing was applied".into(),
+            text: verdict.refusal_on_screen(),
+        };
+        return;
+    }
+    let mut trouble = Vec::new();
     for (id, index) in app.orders() {
         let Some(patch) = patches.iter().find(|p| p.id == id) else { continue };
-        match patch.apply(index) {
-            Ok(()) => {
-                for page in [&mut app.sync, &mut app.patches] {
-                    if let Some(row) = page.rows.iter_mut().find(|r| r.id == id) {
-                        row.settle();
-                    }
+        let done = patch.apply(index);
+        let now = match patch.state() {
+            State::At(i) => Some(i),
+            State::Changed => None,
+        };
+        let asked = &patch.choices[index].name;
+        match &done {
+            Ok(()) if now == Some(index) => {}
+            Ok(()) => trouble.push(format!(
+                "{}: reads {} after applying {asked}",
+                patch.title,
+                now.map_or("changed", |i| patch.choices[i].name.as_str())
+            )),
+            Err(e) => trouble.push(format!("{}: {e:#}", patch.title)),
+        }
+        for page in [&mut app.sync, &mut app.patches] {
+            if let Some(row) = page.rows.iter_mut().find(|r| r.id == id) {
+                if done.is_ok() {
+                    row.read_back(now);
+                } else {
+                    row.still_wanted(now);
                 }
             }
-            Err(e) => eprintln!("{id}: {e:#}"),
         }
+    }
+    if !trouble.is_empty() {
+        for line in &trouble {
+            eprintln!("{line}");
+        }
+        app.overlay = Overlay::Notice {
+            title: "Not everything took".into(),
+            text: trouble.join("\n"),
+        };
     }
     match profile::save(paths, patches) {
         Ok(saved) => print_saved(&saved),
@@ -819,7 +857,7 @@ fn act(
     match app.overlay {
         Overlay::Applying { .. } => {}
 
-        Overlay::Detail => {
+        Overlay::Detail | Overlay::Notice { .. } => {
             if matches!(press, Press::Back | Press::Accept | Press::Detail) {
                 app.overlay = Overlay::None;
             }
@@ -883,8 +921,9 @@ fn act(
 
         Overlay::ConfirmApply => match press {
             Press::Accept => {
-                run_queue(app, paths, patches);
+                // Closed first: what the apply has to say comes up in its place.
                 app.overlay = Overlay::None;
+                run_queue(app, paths, patches);
             }
             Press::Back => app.overlay = Overlay::None,
             _ => {}
@@ -1274,6 +1313,63 @@ mod tests {
         let mut es = FakeEs::new(conf, false, None);
         let err = apply_one(&f.2, &[odd], "odd=ON", false, &mut es).unwrap_err();
         assert!(format!("{err:#}").contains("changed"), "{err:#}");
+    }
+
+    #[test]
+    fn the_screen_will_not_apply_on_a_knulli_it_was_not_checked_against() {
+        // Only --apply and --restore had the version gate. The window applied
+        // on any image.
+        let mut f = fixture("screen-moved");
+        let version = f.2.knulli_version();
+        std::fs::create_dir_all(version.parent().unwrap()).unwrap();
+        std::fs::write(&version, "scarab 2026/11/01 09:00\n").unwrap();
+
+        press(&mut f, Press::Right);
+        press(&mut f, Press::Accept);
+        press(&mut f, Press::Accept);
+
+        assert!(!f.2.knulli_conf().exists(), "applied on an image it was not checked against");
+        match &f.0.overlay {
+            Overlay::Notice { text, .. } => assert!(text.contains("2026/11/01"), "{text}"),
+            other => panic!("the refusal is not on screen: {other:?}"),
+        }
+        assert_eq!(f.0.queue().len(), 1, "the queue is still there for after the update");
+        press(&mut f, Press::Accept);
+        assert_eq!(f.0.overlay, Overlay::None);
+    }
+
+    #[test]
+    fn after_applying_a_row_shows_what_the_device_reads() {
+        // The row used to show the option picked, whether or not the device
+        // ended up there.
+        use moose_patch::patch::{Choice, Form, Step};
+        let mut f = fixture("screen-read-back");
+        let conf = f.2.knulli_conf();
+        let block = |body: Option<&str>| Step::Block {
+            file: conf.clone(),
+            id: "odd".into(),
+            body: body.map(str::to_string),
+            form: Form::Settings,
+        };
+        f.3 = vec![Patch {
+            id: "odd",
+            title: "Odd",
+            detail: "",
+            choices: vec![
+                Choice { name: "off".into(), steps: vec![block(None)] },
+                Choice { name: "ON".into(), steps: vec![block(Some("a=1")), block(Some("a=2"))] },
+            ],
+        }];
+        f.0.patches = rows::patches(&f.3, "test image");
+
+        press(&mut f, Press::Right);
+        press(&mut f, Press::Accept);
+        press(&mut f, Press::Accept);
+
+        let row = f.0.patches.rows.iter().find(|r| r.id == "odd").unwrap();
+        assert_eq!(row.value(), "changed");
+        assert!(!row.pending());
+        assert!(matches!(&f.0.overlay, Overlay::Notice { text, .. } if text.contains("changed")));
     }
 
     #[test]

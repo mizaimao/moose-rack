@@ -197,6 +197,26 @@ impl Row {
         }
     }
 
+    /// After an apply that worked: the dial goes to what the device reads
+    /// now, `None` being "changed". `settle` took the request on trust and
+    /// showed the option picked, whatever the device had done.
+    pub fn read_back(&mut self, now: Option<usize>) {
+        if let Kind::Choice { live, picked, touched, .. } = &mut self.kind {
+            *live = now;
+            *picked = now.unwrap_or(0);
+            *touched = false;
+        }
+    }
+
+    /// After an apply that failed: what the device reads now, with the pick
+    /// kept, so the row goes on showing the change as not done.
+    pub fn still_wanted(&mut self, now: Option<usize>) {
+        if let Kind::Choice { live, touched, .. } = &mut self.kind {
+            *live = now;
+            *touched = true;
+        }
+    }
+
     /// Put the dial back where the device is.
     pub fn revert(&mut self) {
         if let Kind::Choice { live, picked, touched, .. } = &mut self.kind {
@@ -304,6 +324,9 @@ pub enum Overlay {
     ConfirmAction { title: String },
     /// X on a row.
     Detail,
+    /// Something the person has to be told before going on: an apply that
+    /// was refused, or changes that did not take. A or B closes it.
+    Notice { title: String, text: String },
     /// The scripts are running, one after another.
     Applying { done: usize, total: usize },
 }
