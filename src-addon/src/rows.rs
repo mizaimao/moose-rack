@@ -46,13 +46,10 @@ pub fn sync(server: Option<&str>, status: &str, stars: &str) -> Page {
              straight back. Shows what it would do before it does anything.",
             stars,
         ),
-        Row::action(
-            "offline",
-            "Take games offline",
-            "Downloads chosen games from the server onto the card so they play with no \
-             network. Not wired up yet.",
-            "—",
-        ),
+        // No "take games offline" here, on purpose. Pulling ROMs down is too
+        // heavy for this device -- a quad A55 on Wi-Fi filling an exFAT card --
+        // and the card is filled from the SSD instead (docs/card-prep.md). The
+        // row sat here unwired for weeks and was pressed eight times.
     ])
 }
 
@@ -145,6 +142,15 @@ mod tests {
                 row.id
             );
         }
+    }
+
+    #[test]
+    fn the_flip_is_never_offered_game_downloads() {
+        let page = sync(None, "not synced yet", "not checked yet");
+        assert!(
+            page.rows.iter().all(|r| r.id != "offline"),
+            "taking games offline is too heavy for the handheld"
+        );
     }
 
     #[test]
