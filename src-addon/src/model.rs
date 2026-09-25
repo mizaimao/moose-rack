@@ -329,6 +329,10 @@ pub enum Overlay {
     Notice { title: String, text: String },
     /// The scripts are running, one after another.
     Applying { done: usize, total: usize },
+    /// Saves that changed on both sides, each waiting for a side to be
+    /// picked. `keep[i]` is the choice for `App::conflicts[i]`; `None` leaves
+    /// that one alone this time.
+    Conflicts { cursor: usize, keep: Vec<Option<moose_rack::savesync::Keep>> },
 }
 
 /// The whole app, minus the drawing.
@@ -347,6 +351,9 @@ pub struct App {
     /// The favourites plan a person is being shown, held beside the stage for
     /// the same reason the conflicts are: the stage is compared every frame.
     pub star_plan: Option<crate::favrun::Plan>,
+    /// Conflicts a person has decided, waiting to be handed to the worker.
+    /// Here rather than inside the request, which is kept `Copy`.
+    pub settle: Vec<(moose_rack::savesync::SaveConflict, moose_rack::savesync::Keep)>,
     pub sync: Page,
     pub patches: Page,
     pub overlay: Overlay,
@@ -354,6 +361,22 @@ pub struct App {
 }
 
 impl App {
+    /// The save plan to put in a confirm prompt, when there is one to put.
+    ///
+    /// Only on the row that asked for it. The prompt used to show the held
+    /// plan whatever row it was opened from, with "A do all this" under it,
+    /// and A on "Refresh the game list" then rebuilt the index instead.
+    pub fn plan_to_confirm(&self) -> Option<&moose_rack::syncplan::Review> {
+        match &self.stage {
+            crate::sync::Stage::Ready(review)
+                if !review.is_empty() && self.page().selected().is_some_and(|r| r.id == "check") =>
+            {
+                Some(review)
+            }
+            _ => None,
+        }
+    }
+
     pub fn page(&self) -> &Page {
         match self.tab {
             Tab::Sync => &self.sync,

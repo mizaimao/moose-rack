@@ -11,7 +11,7 @@ use moose_sdl::gfx::Gfx;
 use moose_sdl::text::{Painter, Spec};
 
 use crate::model::{App, Kind, Overlay, Row, Tab};
-use crate::sync::{Action, Review, Stage};
+use crate::sync::{Action, Review};
 
 pub const PANEL: (u32, u32) = (640, 480);
 
@@ -100,6 +100,7 @@ impl Ui {
             Overlay::ConfirmDiscard => self.confirm_discard(gfx, painter, app),
             Overlay::ConfirmAction { title } => self.confirm_action(gfx, painter, app, title),
             Overlay::Applying { done, total } => self.applying(gfx, painter, *done, *total),
+            Overlay::Conflicts { cursor, keep } => self.conflicts(gfx, painter, app, *cursor, keep),
         }
     }
 
@@ -229,10 +230,11 @@ impl Ui {
             (Overlay::Notice { .. }, _) => "A or B close",
             (Overlay::ConfirmApply, _) => "A confirm   B cancel",
             (Overlay::ConfirmDiscard, _) => "A discard   B stay",
-            (Overlay::ConfirmAction { .. }, _) => match &app.stage {
-                Stage::Ready(r) if !r.is_empty() => "A do all this   B cancel",
-                _ => "A run it   B cancel",
+            (Overlay::ConfirmAction { .. }, _) => match app.plan_to_confirm() {
+                Some(_) => "A do all this   B cancel",
+                None => "A run it   B cancel",
             },
+            (Overlay::Conflicts { .. }, _) => "← this device   → server   X skip   A settle   B back",
             (Overlay::Applying { .. }, _) => "working…",
         };
         painter.put(
@@ -362,9 +364,7 @@ impl Ui {
         // description instead would be asking someone to accept something
         // they have not been shown, which is the one thing this flow exists
         // to avoid.
-        if let Stage::Ready(review) = &app.stage
-            && !review.is_empty()
-        {
+        if let Some(review) = app.plan_to_confirm() {
             return self.plan(gfx, painter, review);
         }
         let at = self.panel(gfx, title, painter, 4);
@@ -385,6 +385,42 @@ impl Ui {
             ),
             ink::DIM,
         );
+    }
+
+    /// Each conflicting save, and which side it will keep.
+    fn conflicts(
+        &self,
+        gfx: &Gfx,
+        painter: &mut Painter,
+        app: &App,
+        cursor: usize,
+        keep: &[Option<moose_rack::savesync::Keep>],
+    ) {
+        let rows = app.conflicts.len().min(9);
+        // Keep the cursor on screen: a window of nine that follows it.
+        let first = cursor.saturating_sub(rows.saturating_sub(1));
+        let at = self.panel(gfx, &format!("{} conflicts", app.conflicts.len()), painter, rows + 1);
+        for (i, (c, k)) in app.conflicts.iter().zip(keep).enumerate().skip(first).take(rows) {
+            let y = at.y + self.px(28.0 + (i - first) as f32 * 13.0);
+            let (side, ink) = match k {
+                Some(moose_rack::savesync::Keep::Local) => ("this device", ink::TEXT),
+                Some(moose_rack::savesync::Keep::Server) => ("server", ink::TEXT),
+                None => ("—", ink::DIM),
+            };
+            let name_ink = if i == cursor { ink::QUEUED } else { ink::DIM };
+            painter.put(
+                gfx,
+                &self.spec(&c.file_name, size::SMALL),
+                Rect::new(at.x + self.px(10.0), y, at.w * 0.62, self.px(11.0)),
+                name_ink,
+            );
+            painter.put_right(
+                gfx,
+                &self.spec(side, size::SMALL),
+                Rect::new(at.x, y, at.w - self.px(10.0), self.px(11.0)),
+                ink,
+            );
+        }
     }
 
     /// What the server said it would do, line by line.

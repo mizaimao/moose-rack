@@ -253,12 +253,19 @@ fn sync_cli(carry_out: bool) -> Result<()> {
         worker::negotiate(&cfg, &ra_root, &app_dir)
     };
     let conflicts = drain_to_end(job)?;
-    match keep {
+    let exit_after = |r: Result<()>| -> Result<()> {
+        r?;
+        if FAILED.load(std::sync::atomic::Ordering::Relaxed) {
+            std::process::exit(1);
+        }
+        Ok(())
+    };
+    exit_after(match keep {
         Some(keep) if !conflicts.is_empty() => {
             resolve_all(&cfg, &conflicts, keep, &ra_root, &library_root, &app_dir)
         }
         _ => Ok(()),
-    }
+    })
 }
 
 /// `--sync --keep local|server`: answer every conflict the run turned up.
@@ -271,10 +278,15 @@ fn sync_cli(carry_out: bool) -> Result<()> {
 /// are touched, so nothing that agreed is rewritten.
 fn keep_arg(args: &[String]) -> Result<Option<moose_rack::savesync::Keep>> {
     use moose_rack::savesync::Keep;
-    let Some(at) = args.iter().position(|a| a == "--keep") else {
-        return Ok(None);
+    // `--keep=local` too. It used to fall through to "no --keep" without a
+    // word, and a plain sync ran and exited 0 with every conflict standing.
+    let joined = args.iter().find_map(|a| a.strip_prefix("--keep="));
+    let side = match (joined, args.iter().position(|a| a == "--keep")) {
+        (Some(side), _) => Some(side),
+        (None, Some(at)) => args.get(at + 1).map(String::as_str),
+        (None, None) => return Ok(None),
     };
-    match args.get(at + 1).map(String::as_str) {
+    match side {
         Some("local" | "mine") => Ok(Some(Keep::Local)),
         Some("server" | "remote") => Ok(Some(Keep::Server)),
         Some(other) => anyhow::bail!("--keep takes `local` or `server`, not {other:?}"),
@@ -521,12 +533,25 @@ fn stars_run(carry_out: bool, anyway: bool) -> Result<usize> {
 /// Follow one job to its end, printing each new thing it says.
 /// Run a job to the end, printing as it goes. Returns the conflicts it was
 /// left holding, so a caller that was told how to answer them can.
+/// Set when a run reported failures, so the CLI can exit non-zero at the end.
+static FAILED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
 fn drain_to_end(job: worker::Job) -> Result<Vec<moose_rack::savesync::SaveConflict>> {
     let mut stage = Stage::default();
     let mut conflicts = Vec::new();
     let mut last = String::new();
+    let mut failed = false;
     loop {
-        worker::apply(&mut stage, &mut conflicts, job.drain());
+        let messages = job.drain();
+        for m in &messages {
+            if let worker::Message::Report(problems) = m {
+                failed = true;
+                for p in problems {
+                    eprintln!("  FAILED  {p}");
+                }
+            }
+        }
+        worker::apply(&mut stage, &mut conflicts, messages);
         let note = stage.note();
         if note != last {
             println!("{note}");
@@ -544,6 +569,11 @@ fn drain_to_end(job: worker::Job) -> Result<Vec<moose_rack::savesync::SaveConfli
                 println!("moved {moved}, {n} conflict(s)");
                 for c in &conflicts {
                     println!("  conflict  {}  {}", c.file_name, c.reason.as_deref().unwrap_or("both sides changed"));
+                }
+                // Something that should have moved did not. Exits non-zero
+                // after any conflicts are answered, so a script can tell.
+                if failed {
+                    FAILED.store(true, std::sync::atomic::Ordering::Relaxed);
                 }
                 return Ok(conflicts);
             }
@@ -682,6 +712,7 @@ fn window(paths: &Paths, patches: &[Patch]) -> Result<()> {
         stage,
         stars,
         star_plan: None,
+        settle: Vec::new(),
         conflicts: Vec::new(),
         patches: rows::patches(patches, &knulli::check(&Paths::default()).line()),
         overlay: Overlay::None,
@@ -689,7 +720,11 @@ fn window(paths: &Paths, patches: &[Patch]) -> Result<()> {
     };
     let mut view = ui::Ui::default();
     let mut events = sdl.event_pump().map_err(anyhow::Error::msg)?;
-    let mut job: Option<Running> = None;
+    // One slot per sync. They were one slot between them, so starting the
+    // favourites while saves were syncing dropped the save job on the floor:
+    // its result never arrived and Status said "syncing" until the app closed.
+    let mut saves_job: Option<worker::Job> = None;
+    let mut stars_job: Option<worker::Job> = None;
 
     // Where the saves are and where our own files live. Both are wanted only
     // when a sync starts, but reading them once keeps the loop free of it.
@@ -721,27 +756,35 @@ fn window(paths: &Paths, patches: &[Patch]) -> Result<()> {
             // and one line settles that without a second trip to the device.
             eprintln!("press {press:?}");
             if let Some(request) = act(&mut app, &mut view, press, paths, patches) {
-                job = Some(match request {
+                match request {
                     Request::Negotiate => {
-                        Running::Saves(worker::negotiate(&cfg, &ra_root, &app_dir))
+                        saves_job = Some(worker::negotiate(&cfg, &ra_root, &app_dir))
                     }
-                    Request::CarryOut => Running::Saves(worker::carry_out(
-                        &cfg,
-                        &ra_root,
-                        &app_dir,
-                        &library_root,
-                    )),
-                    Request::Refresh => Running::Saves(worker::refresh_index(&cfg, &app_dir)),
-                    Request::Stars => Running::Stars(worker::stars(&cfg, &app_dir)),
+                    Request::CarryOut => {
+                        saves_job = Some(worker::carry_out(&cfg, &ra_root, &app_dir, &library_root))
+                    }
+                    Request::Refresh => saves_job = Some(worker::refresh_index(&cfg, &app_dir)),
+                    Request::Resolve => {
+                        saves_job = Some(worker::resolve(
+                            &cfg,
+                            &ra_root,
+                            &app_dir,
+                            &library_root,
+                            std::mem::take(&mut app.settle),
+                        ))
+                    }
+                    Request::Stars => stars_job = Some(worker::stars(&cfg, &app_dir)),
                     // The plan that was shown, not a new one. `act` only asks
                     // for this while one is held.
-                    Request::StarsApply => Running::Stars(worker::stars_apply(
-                        &cfg,
-                        &app_dir,
-                        moose_patch::favmap::EsPaths::knulli(),
-                        app.star_plan.take().unwrap_or_default(),
-                    )),
-                });
+                    Request::StarsApply => {
+                        stars_job = Some(worker::stars_apply(
+                            &cfg,
+                            &app_dir,
+                            moose_patch::favmap::EsPaths::knulli(),
+                            app.star_plan.take().unwrap_or_default(),
+                        ))
+                    }
+                }
             }
         }
 
@@ -749,22 +792,49 @@ fn window(paths: &Paths, patches: &[Patch]) -> Result<()> {
         // goes through is decided by which job is running, not by the message:
         // the two syncs report the same kinds of thing and only the caller
         // knows whose news it is.
-        if let Some(running) = &job {
-            let messages = running.job().drain();
-            if !messages.is_empty() {
-                match running {
-                    Running::Saves(_) => {
-                        worker::apply(&mut app.stage, &mut app.conflicts, messages);
-                        if !app.stage.is_busy() {
-                            job = None;
-                        }
-                    }
-                    Running::Stars(_) => {
-                        worker::apply_stars(&mut app.stars, &mut app.star_plan, messages);
-                        if !app.stars.is_busy() {
-                            job = None;
-                        }
-                    }
+        for (slot, saves) in [(&mut saves_job, true), (&mut stars_job, false)] {
+            let Some(job) = slot.as_ref() else { continue };
+            let mut messages = job.drain();
+            // What did not move, in front of the person rather than only in
+            // the headline's count.
+            let problems: Vec<String> = messages
+                .iter()
+                .filter_map(|m| match m {
+                    worker::Message::Report(p) => Some(p.clone()),
+                    _ => None,
+                })
+                .flatten()
+                .collect();
+            messages.retain(|m| !matches!(m, worker::Message::Report(_)));
+            if !problems.is_empty() {
+                for p in &problems {
+                    eprintln!("  FAILED  {p}");
+                }
+                let shown: Vec<&str> = problems.iter().take(8).map(String::as_str).collect();
+                let more = problems.len().saturating_sub(shown.len());
+                app.overlay = Overlay::Notice {
+                    title: format!("{} did not sync", problems.len()),
+                    text: if more > 0 {
+                        format!("{}\nand {more} more, in moose-patch.log", shown.join("\n"))
+                    } else {
+                        shown.join("\n")
+                    },
+                };
+            }
+            if messages.is_empty() {
+                continue;
+            }
+            if saves {
+                worker::apply(&mut app.stage, &mut app.conflicts, messages);
+                if !app.stage.is_busy() {
+                    eprintln!("saves: {}", app.stage.note());
+                    *slot = None;
+                }
+            } else {
+                worker::apply_stars(&mut app.stars, &mut app.star_plan, messages);
+                if !app.stars.is_busy() {
+                    eprintln!("favourites: {}", app.stars.note());
+                    *slot = None;
                 }
             }
         }
@@ -772,6 +842,11 @@ fn window(paths: &Paths, patches: &[Patch]) -> Result<()> {
         app.sync.set_fact("status", &note);
         let stars_note = app.stars.note();
         app.sync.set_note("stars", &stars_note);
+        let waiting = match app.conflicts.len() {
+            0 => "none".to_string(),
+            n => format!("{n} waiting"),
+        };
+        app.sync.set_note("conflicts", &waiting);
 
         gfx.resize(ui::PANEL.0 as f32, ui::PANEL.1 as f32);
         view.draw(&gfx, &mut painter, &app);
@@ -794,6 +869,29 @@ fn run_queue(app: &mut App, paths: &Paths, patches: &[Patch]) {
         app.overlay = Overlay::Notice {
             title: "Nothing was applied".into(),
             text: verdict.refusal_on_screen(),
+        };
+        return;
+    }
+    // Opened from Ports, ES is still running underneath and rewrites
+    // knulli.conf and its own settings from memory when it next saves. L2+R2
+    // stops it first; ssh --apply stops it and starts it again.
+    use moose_patch::es::Frontend as _;
+    let held: Vec<String> = app
+        .orders()
+        .into_iter()
+        .filter_map(|(id, index)| patches.iter().find(|p| p.id == id).map(|p| (p, index)))
+        .filter(|(p, index)| p.writes_what_es_holds(*index, paths))
+        .map(|(p, _)| p.title.to_string())
+        .collect();
+    if !held.is_empty() && moose_patch::es::Device::default().es_running() {
+        eprintln!("apply refused: EmulationStation is running ({})", held.join(", "));
+        app.overlay = Overlay::Notice {
+            title: "Nothing was applied".into(),
+            text: format!(
+                "EmulationStation is running, and would write its own copy over {} the next \
+                 time it saves. Open moose-patch with L2+R2, which stops it first.",
+                held.join(", ")
+            ),
         };
         return;
     }
@@ -851,24 +949,6 @@ fn print_saved(saved: &profile::Saved) {
     }
 }
 
-/// Which sync the running job belongs to.
-///
-/// Both report through the same channel, and both say "Note" and "Failed", so
-/// nothing in a message identifies whose it is. The caller started it and is
-/// the only one that knows.
-enum Running {
-    Saves(worker::Job),
-    Stars(worker::Job),
-}
-
-impl Running {
-    fn job(&self) -> &worker::Job {
-        match self {
-            Running::Saves(j) | Running::Stars(j) => j,
-        }
-    }
-}
-
 /// Something only the outside world can do. Returned rather than performed,
 /// so every button press stays testable without a network or a window.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
@@ -883,6 +963,8 @@ enum Request {
     Stars,
     /// Do it.
     StarsApply,
+    /// Settle the conflicts waiting in `App::settle`.
+    Resolve,
 }
 
 /// One press. Split out so the whole of the app's behaviour can be exercised
@@ -911,6 +993,33 @@ fn act(
             Press::Accept => {
                 let id = app.page().selected().map(|r| r.id.clone()).unwrap_or_default();
                 app.overlay = Overlay::None;
+                if id == "conflicts" {
+                    app.overlay = if app.conflicts.is_empty() {
+                        Overlay::Notice {
+                            title: "Nothing to settle".into(),
+                            text: "No save is waiting on a decision. Conflicts show up here after \
+                                   a sync that found some."
+                                .into(),
+                        }
+                    } else {
+                        Overlay::Conflicts { cursor: 0, keep: vec![None; app.conflicts.len()] }
+                    };
+                    return None;
+                }
+                // The same sync twice at once would race on the same files.
+                // Saying so beats a press that does nothing.
+                let already = match id.as_str() {
+                    "refresh" | "check" => app.stage.is_busy(),
+                    "stars" => app.stars.is_busy(),
+                    _ => false,
+                };
+                if already {
+                    app.overlay = Overlay::Notice {
+                        title: "Still working".into(),
+                        text: "That one is already running. It can start again when it finishes.".into(),
+                    };
+                    return None;
+                }
                 if id == "refresh" {
                     if app.stage.is_busy() {
                         return None;
@@ -963,6 +1072,35 @@ fn act(
             Press::Back => app.overlay = Overlay::None,
             _ => {}
         },
+
+        Overlay::Conflicts { .. } => {
+            let Overlay::Conflicts { cursor, keep } = &mut app.overlay else { return None };
+            let n = keep.len();
+            match press {
+                Press::Up => *cursor = cursor.saturating_sub(1),
+                Press::Down => *cursor = (*cursor + 1).min(n.saturating_sub(1)),
+                Press::Left => keep[*cursor] = Some(moose_rack::savesync::Keep::Local),
+                Press::Right => keep[*cursor] = Some(moose_rack::savesync::Keep::Server),
+                Press::Detail => keep[*cursor] = None,
+                Press::Back => app.overlay = Overlay::None,
+                Press::Accept => {
+                    let decided: Vec<_> = app
+                        .conflicts
+                        .iter()
+                        .zip(keep.iter())
+                        .filter_map(|(c, k)| k.map(|k| (c.clone(), k)))
+                        .collect();
+                    if decided.is_empty() || app.stage.is_busy() {
+                        return None;
+                    }
+                    app.overlay = Overlay::None;
+                    app.settle = decided;
+                    app.stage = Stage::Asking { note: "starting".into() };
+                    return Some(Request::Resolve);
+                }
+                _ => {}
+            }
+        }
 
         Overlay::ConfirmApply => match press {
             Press::Accept => {
@@ -1047,6 +1185,8 @@ mod tests {
         // answered the conflicts when it left every one of them standing.
         assert!(keep_arg(&args("moose-patch --sync --keep lcoal")).is_err());
         assert!(keep_arg(&args("moose-patch --sync --keep")).is_err());
+        assert_eq!(keep_arg(&args("moose-patch --sync --keep=local")).unwrap(), Some(Keep::Local));
+        assert!(keep_arg(&args("moose-patch --sync --keep=lcoal")).is_err());
     }
     use super::*;
 
@@ -1064,6 +1204,7 @@ mod tests {
             stage: Stage::default(),
             stars: moose_patch::sync::Stars::default(),
             star_plan: None,
+            settle: Vec::new(),
             conflicts: Vec::new(),
             patches: rows::patches(&patches, &knulli::check(&Paths::default()).line()),
             overlay: Overlay::None,
@@ -1103,6 +1244,94 @@ mod tests {
         // treating it as one is what broke A.
         let cfg = moose_rack::config::Config::default();
         assert!(!buttons_swapped(&cfg));
+    }
+
+    fn conflict(name: &str) -> moose_rack::savesync::SaveConflict {
+        moose_rack::savesync::SaveConflict {
+            rom_id: 7,
+            save_id: Some(1),
+            file_name: name.into(),
+            slot: None,
+            emulator: None,
+            reason: None,
+            local_path: None,
+            local_updated: None,
+            local_bytes: 0,
+            server_updated: None,
+        }
+    }
+
+    /// Onto the sync tab's "Settle conflicts" row and through its prompt.
+    fn open_conflicts(f: &mut (App, ui::Ui, Paths, Vec<Patch>)) {
+        press(f, Press::TabLeft);
+        press(f, Press::Down); // see what would sync
+        press(f, Press::Down); // settle conflicts
+        press(f, Press::Accept);
+        press(f, Press::Accept);
+    }
+
+    /// A conflict could only be answered over ssh. On screen: one side each,
+    /// and anything left undecided is left alone.
+    #[test]
+    fn conflicts_are_settled_on_screen_one_side_each() {
+        use moose_rack::savesync::Keep;
+        let mut f = fixture("settle");
+        f.0.conflicts = vec![conflict("Chrono Trigger (USA).srm"), conflict("F-Zero.srm"), conflict("Kirby.srm")];
+        open_conflicts(&mut f);
+        assert!(matches!(f.0.overlay, Overlay::Conflicts { .. }), "{:?}", f.0.overlay);
+        press(&mut f, Press::Left);
+        press(&mut f, Press::Down);
+        press(&mut f, Press::Right);
+        assert_eq!(press(&mut f, Press::Accept), Some(Request::Resolve));
+        let decided: Vec<_> = f.0.settle.iter().map(|(c, k)| (c.file_name.as_str(), *k)).collect();
+        assert_eq!(
+            decided,
+            vec![("Chrono Trigger (USA).srm", Keep::Local), ("F-Zero.srm", Keep::Server)]
+        );
+    }
+
+    #[test]
+    fn with_nothing_picked_nothing_is_settled() {
+        let mut f = fixture("settle-none");
+        f.0.conflicts = vec![conflict("Chrono Trigger (USA).srm")];
+        open_conflicts(&mut f);
+        assert_eq!(press(&mut f, Press::Accept), None);
+        assert!(f.0.settle.is_empty());
+    }
+
+    #[test]
+    fn no_conflicts_says_so_instead_of_opening_an_empty_list() {
+        let mut f = fixture("settle-empty");
+        open_conflicts(&mut f);
+        assert!(matches!(&f.0.overlay, Overlay::Notice { title, .. } if title == "Nothing to settle"));
+    }
+
+    /// The same sync twice at once is refused out loud. It used to be a press
+    /// that did nothing.
+    #[test]
+    fn the_same_sync_twice_is_refused_with_a_reason() {
+        let mut f = fixture("busy");
+        f.0.stage = Stage::Asking { note: "syncing".into() };
+        press(&mut f, Press::TabLeft);
+        press(&mut f, Press::Down); // see what would sync
+        press(&mut f, Press::Accept);
+        assert_eq!(press(&mut f, Press::Accept), None);
+        assert!(matches!(&f.0.overlay, Overlay::Notice { title, .. } if title == "Still working"));
+    }
+
+    /// The plan goes in the prompt for the row that made it, and no other.
+    #[test]
+    fn only_the_sync_row_offers_the_held_plan() {
+        use moose_rack::syncplan::{Action as A, Line, Review};
+        let mut f = fixture("plan-row");
+        f.0.stage = Stage::Ready(Review {
+            lines: vec![Line { action: A::Upload, title: "a.srm".into(), reason: None, rom_id: 1, save_id: None }],
+            agreed: 0,
+        });
+        press(&mut f, Press::TabLeft); // refresh
+        assert!(f.0.plan_to_confirm().is_none());
+        press(&mut f, Press::Down); // see what would sync
+        assert!(f.0.plan_to_confirm().is_some());
     }
 
     #[test]
@@ -1178,8 +1407,8 @@ mod tests {
 
     #[test]
     fn the_game_list_can_be_rebuilt_from_its_own_row() {
-        // The row that unblocks everything else: saves are matched to games by
-        // the server's id, and a rescan there renumbers them all.
+        // The row that unblocks everything else: saves are matched to games
+        // through the list it rebuilds.
         let mut f = fixture("refresh");
         press(&mut f, Press::TabLeft);
         assert_eq!(
@@ -1214,6 +1443,7 @@ mod tests {
         press(&mut f, Press::TabLeft);
         press(&mut f, Press::Down);
         press(&mut f, Press::Down); // onto "Sync favourites and collections"
+        press(&mut f, Press::Down); // past "Settle conflicts"
         assert_eq!(
             f.0.page().selected().map(|r| r.id.as_str()),
             Some("stars"),
@@ -1234,6 +1464,7 @@ mod tests {
         press(&mut f, Press::TabLeft);
         press(&mut f, Press::Down);
         press(&mut f, Press::Down);
+        press(&mut f, Press::Down); // past "Settle conflicts"
         press(&mut f, Press::Accept);
         assert_eq!(press(&mut f, Press::Accept), Some(Request::StarsApply));
         assert!(f.0.star_plan.is_some(), "the plan shown is what the loop hands the worker");
@@ -1244,6 +1475,7 @@ mod tests {
         press(&mut f, Press::TabLeft);
         press(&mut f, Press::Down);
         press(&mut f, Press::Down);
+        press(&mut f, Press::Down); // past "Settle conflicts"
         press(&mut f, Press::Accept);
         assert_eq!(press(&mut f, Press::Accept), Some(Request::Stars));
 
@@ -1254,6 +1486,7 @@ mod tests {
         press(&mut f, Press::TabLeft);
         press(&mut f, Press::Down);
         press(&mut f, Press::Down);
+        press(&mut f, Press::Down); // past "Settle conflicts"
         press(&mut f, Press::Accept);
         assert_eq!(press(&mut f, Press::Accept), Some(Request::Stars));
     }
@@ -1267,6 +1500,7 @@ mod tests {
         press(&mut f, Press::TabLeft);
         press(&mut f, Press::Down);
         press(&mut f, Press::Down);
+        press(&mut f, Press::Down); // past "Settle conflicts"
         press(&mut f, Press::Accept);
         assert_eq!(press(&mut f, Press::Accept), Some(Request::Stars));
     }

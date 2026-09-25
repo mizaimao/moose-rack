@@ -109,6 +109,18 @@ pub struct Summary {
     pub failed: usize,
     /// One line each, in the order they happened.
     pub notes: Vec<String>,
+    /// The failures among `notes`, on their own, to be put in front of the
+    /// person rather than left in a log.
+    pub problems: Vec<String>,
+}
+
+impl Summary {
+    /// Something that should have moved and did not.
+    pub fn fail(&mut self, what: String) {
+        self.failed += 1;
+        self.notes.push(what.clone());
+        self.problems.push(what);
+    }
 }
 
 /// A save that changed on both sides, described well enough to choose between.
@@ -639,16 +651,14 @@ pub async fn run(
                         });
                     }
                     Err(e) => {
-                        summary.failed += 1;
-                        summary.notes.push(format!("could not download {name}: {e:#}"));
+                                                summary.fail(format!("could not download {name}: {e:#}"));
                     }
                 }
             }
             "upload" => {
                 let name = op.file_name.clone().unwrap_or_default();
                 let Some(c) = local_for(candidates, op.rom_id, &name) else {
-                    summary.failed += 1;
-                    summary.notes.push(format!("server asked to upload {name}, which is not here"));
+                                        summary.fail(format!("server asked to upload {name}, which is not here"));
                     continue;
                 };
                 if paired.contains(&c.path) {
@@ -679,8 +689,7 @@ pub async fn run(
                         summary.notes.push(format!("{name}: server copy moved on, left alone"));
                     }
                     Err(e) => {
-                        summary.failed += 1;
-                        summary.notes.push(format!("could not upload {name}: {e:#}"));
+                                                summary.fail(format!("could not upload {name}: {e:#}"));
                     }
                 }
             }
@@ -702,8 +711,7 @@ pub async fn run(
             }
             "no_op" => summary.unchanged += 1,
             other => {
-                summary.failed += 1;
-                summary.notes.push(format!("unknown action {other:?} from the server"));
+                                summary.fail(format!("unknown action {other:?} from the server"));
             }
         }
     }
@@ -960,6 +968,57 @@ pub fn write_atomically(path: &Path, bytes: &[u8]) -> Result<()> {
     Ok(())
 }
 
+/// Take every save the server holds, over whatever is here.
+///
+/// For a device being set up again: a card that was wiped, or a new one. The
+/// ordinary sync is the wrong tool there, because it only moves what changed
+/// since this device last agreed with the server. Everything replaced is
+/// backed up first, and a save whose system the server cannot name is
+/// reported rather than written where nothing reads it.
+pub async fn pull_all(
+    client: &Client,
+    ra_root: &Path,
+    data_dir: &Path,
+    library_root: &Path,
+) -> Result<Summary> {
+    let identity = DeviceIdentity::ensure(client, data_dir).await?;
+    let mut summary = Summary::default();
+    for save in client.saves(None).await? {
+        match download_one(
+            client,
+            ra_root,
+            save.id,
+            &save.file_name,
+            save.emulator.as_deref(),
+            &identity,
+            library_root,
+            save.rom_id,
+            save.slot.as_deref(),
+            Guard::Overwrite,
+        )
+        .await
+        {
+            Ok(Landed::Written { path, note }) => {
+                summary.downloaded += 1;
+                summary.notes.push(format!("downloaded {}", path.display()));
+                summary.notes.extend(note);
+            }
+            Ok(Landed::Occupied { .. }) => summary.unchanged += 1,
+            Err(e) => summary.fail(format!("could not download {}: {e:#}", save.file_name)),
+        }
+    }
+    match crate::statesync::pull_all(client, ra_root, library_root, data_dir).await {
+        Ok(states) => {
+            summary.downloaded += states.downloaded;
+            summary.failed += states.failed;
+            summary.notes.extend(states.notes);
+            summary.problems.extend(states.problems);
+        }
+        Err(e) => summary.fail(format!("save states did not come down: {e:#}")),
+    }
+    Ok(summary)
+}
+
 /// Returns false when the server refused because its copy moved on.
 async fn upload_one(
     client: &Client,
@@ -1054,10 +1113,10 @@ pub async fn run_all(
             summary.failed += states.failed;
             summary.conflicts.extend(states.conflicts);
             summary.notes.extend(states.notes);
+            summary.problems.extend(states.problems);
         }
         Err(e) => {
-            summary.failed += 1;
-            summary.notes.push(format!("save states did not sync: {e:#}"));
+                        summary.fail(format!("save states did not sync: {e:#}"));
         }
     }
     Ok(summary)

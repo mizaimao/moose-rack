@@ -24,9 +24,9 @@ pub fn sync(server: Option<&str>, status: &str, stars: &str) -> Page {
             "refresh",
             "Refresh the game list",
             "Rebuilds this device's list of your games from the server. Saves are matched to \
-             games by the server's own id, and a rescan there renumbers everything — so a \
-             stale list makes every save look like a game the server has never heard of. \
-             Do this first on a new device, and again if syncing claims everything is new.",
+             games through it, so a game missing from the list is a save that cannot sync. \
+             Do this first on a new device, and again after games are added to the server. \
+             The old list is kept until the new one is complete.",
             "—",
         ),
         Row::action(
@@ -36,6 +36,14 @@ pub fn sync(server: Option<&str>, status: &str, stars: &str) -> Page {
              would do — which way each save would move, and where both sides changed since \
              the last sync. Nothing is transferred until you accept the plan.",
             "—",
+        ),
+        Row::action(
+            "conflicts",
+            "Settle conflicts",
+            "Saves changed here and on the server since they last agreed. Nothing was written \
+             for these. Pick a side for each: ← keeps this device's, → keeps the server's. \
+             Whichever copy is replaced is backed up first.",
+            "none",
         ),
         Row::action(
             "stars",

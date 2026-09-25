@@ -57,7 +57,20 @@ pub enum Message {
         note: String,
         conflicts: Vec<moose_rack::savesync::SaveConflict>,
     },
+    /// What went wrong in a run that otherwise finished: transfers that did
+    /// not happen. Sent before `Finished`, so it can be put in front of the
+    /// person instead of shrinking to a count in the headline.
+    Report(Vec<String>),
     Failed(String),
+}
+
+/// Every note of a run, into the log. moose-patch.log recorded each button
+/// press and nothing about what a press did; now a sync says what moved.
+fn log(summary: &moose_rack::savesync::Summary) {
+    for note in &summary.notes {
+        eprintln!("  {note}");
+    }
+    eprintln!("sync: {}", summary.headline());
 }
 
 /// A running job. Dropping it does not cancel the thread; the channel simply
@@ -335,13 +348,95 @@ pub fn carry_out(cfg: &Config, ra_root: &Path, app_dir: &Path, library_root: &Pa
             .await
         });
         match result {
-            Ok(summary) => say(Message::Finished {
-                moved: summary.uploaded + summary.downloaded,
-                note: summary.headline(),
-                conflicts: summary.conflicts,
-            }),
-            Err(e) => say(Message::Failed(format!("{e:#}"))),
+            Ok(summary) => {
+                log(&summary);
+                if !summary.problems.is_empty() {
+                    say(Message::Report(summary.problems.clone()));
+                }
+                say(Message::Finished {
+                    moved: summary.uploaded + summary.downloaded,
+                    note: summary.headline(),
+                    conflicts: summary.conflicts,
+                })
+            }
+            Err(e) => {
+                eprintln!("sync failed: {e:#}");
+                say(Message::Failed(format!("{e:#}")))
+            }
         }
+    });
+
+    Job { rx }
+}
+
+/// Settle conflicts the person has decided, one way or the other.
+///
+/// The on-screen half of `--sync --keep`: the same `savesync::resolve`, which
+/// backs up whatever it replaces and is the only path that sends `overwrite`.
+pub fn resolve(
+    cfg: &Config,
+    ra_root: &Path,
+    app_dir: &Path,
+    library_root: &Path,
+    decided: Vec<(moose_rack::savesync::SaveConflict, moose_rack::savesync::Keep)>,
+) -> Job {
+    let (tx, rx) = channel();
+    let server = cfg.server.url.clone();
+    let username = cfg.server.username.clone();
+    let password = cfg.server.password.clone();
+    let token = cfg.server.token.clone();
+    let ra_root = ra_root.to_path_buf();
+    let app_dir = app_dir.to_path_buf();
+    let library_root = library_root.to_path_buf();
+
+    std::thread::spawn(move || {
+        let say = move |m: Message| {
+            let _ = tx.send(m);
+        };
+        say(Message::Note(format!("settling {} conflict(s)", decided.len())));
+        let runtime = match tokio::runtime::Builder::new_current_thread().enable_all().build() {
+            Ok(r) => r,
+            Err(e) => return say(Message::Failed(format!("starting the network: {e}"))),
+        };
+        let client = match moose_rack::api::Client::with_auth(&server, &username, &password, token.as_deref()) {
+            Ok(c) => c,
+            Err(e) => return say(Message::Failed(format!("{e:#}"))),
+        };
+        let mut problems = Vec::new();
+        let mut settled = 0;
+        for (conflict, keep) in &decided {
+            let done = runtime.block_on(moose_rack::savesync::resolve(
+                &client,
+                conflict,
+                *keep,
+                &ra_root,
+                &library_root,
+                &app_dir,
+            ));
+            match done {
+                Ok(message) => {
+                    eprintln!("  {message}");
+                    settled += 1;
+                }
+                Err(e) => {
+                    eprintln!("  {}: FAILED -- {e:#}", conflict.file_name);
+                    problems.push(format!("{}: {e:#}", conflict.file_name));
+                }
+            }
+        }
+        eprintln!("conflicts: {settled} settled, {} failed", problems.len());
+        if !problems.is_empty() {
+            say(Message::Report(problems.clone()));
+        }
+        say(Message::Finished {
+            moved: settled,
+            note: format!("{settled} conflict(s) settled{}", if problems.is_empty() {
+                String::new()
+            } else {
+                format!(", {} failed", problems.len())
+            }),
+            conflicts: Vec::new(),
+        });
     });
 
     Job { rx }
@@ -349,12 +444,12 @@ pub fn carry_out(cfg: &Config, ra_root: &Path, app_dir: &Path, library_root: &Pa
 
 /// Rebuild this device's list of games from the server.
 ///
-/// Matching a save to a server save is done by rom id, and ids are the
-/// server's to change: a rescan there renumbers everything. The index this
-/// device inherited from the archived front end had Chrono Trigger as 6985
-/// where the server now says 9272, so every save the Flip described was a
-/// game the server did not recognise and every one came back "upload this,
-/// it is new".
+/// Matching a save to a server save is done by game id. Ids are stable now,
+/// derived from where the game's file is, so a rescan no longer renumbers
+/// them; what the index goes stale on is games added to or moved on the
+/// server. Before stable ids it was worse: the index this device inherited
+/// had Chrono Trigger as 6985 where the server said 9272, and every save came
+/// back "upload this, it is new".
 ///
 /// A **full** pull, into our own file. An incremental one keys on id, so the
 /// stale rows would survive alongside the new ones and a save could match
@@ -374,9 +469,13 @@ pub fn refresh_index(cfg: &Config, app_dir: &Path) -> Job {
         if server.trim().is_empty() {
             return say(Message::Failed("no server in config.toml".into()));
         }
-        // Start clean. Anything left from a previous index is by definition
-        // numbered the old way.
-        let _ = std::fs::remove_file(&path);
+        // Built beside the old one and swapped in only when complete. It used
+        // to delete the old index first, so a Wi-Fi drop part way left a
+        // partial one, and every save in the systems it was missing went
+        // unreported -- which the server reads as "this device does not have
+        // it" and offers to overwrite.
+        let building = path.with_file_name("cache.sqlite3.building");
+        let _ = std::fs::remove_file(&building);
         say(Message::Note("rebuilding the game list".into()));
 
         let runtime = match tokio::runtime::Builder::new_current_thread().enable_all().build() {
@@ -394,10 +493,15 @@ pub fn refresh_index(cfg: &Config, app_dir: &Path) -> Job {
                 &password,
                 token.as_deref(),
             )?;
-            let mut cache = Cache::open(&path)?;
+            let mut cache = Cache::open(&building)?;
             let (platforms, roms, _) = cache.sync(&client, true).await?;
+            drop(cache);
+            std::fs::rename(&building, &path)?;
             Ok((platforms, roms))
         });
+        if result.is_err() {
+            let _ = std::fs::remove_file(&building);
+        }
 
         match result {
             Ok((platforms, roms)) => say(Message::Finished {
@@ -412,15 +516,12 @@ pub fn refresh_index(cfg: &Config, app_dir: &Path) -> Job {
     Job { rx }
 }
 
-/// Take everything the server holds, whatever it thinks this device has.
+/// Take everything the server holds, saves and states, over whatever is here.
 ///
-/// `negotiate` will not offer a save this device already took — correctly, and
-/// that is the same rule that stops a deleted save coming back. So a device
-/// being set up from scratch, or one whose card was wiped, has no way in
-/// through the ordinary path. This is that way in: list, fetch, place.
-///
-/// It overwrites. Everything it replaces goes through `savebackup` first, the
-/// same as any download.
+/// For a card set up again, where the ordinary sync -- which moves only what
+/// changed since this device last agreed with the server -- has nothing to go
+/// on. It overwrites; everything replaced is backed up first. The work is
+/// `savesync::pull_all`, the same download path the sync uses.
 pub fn pull_all(cfg: &Config, ra_root: &Path, app_dir: &Path, library_root: &Path) -> Job {
     let (tx, rx) = channel();
     let server = cfg.server.url.clone();
@@ -432,71 +533,30 @@ pub fn pull_all(cfg: &Config, ra_root: &Path, app_dir: &Path, library_root: &Pat
     let library_root = library_root.to_path_buf();
 
     std::thread::spawn(move || {
-        let tx2 = tx.clone();
         let say = move |m: Message| {
-            let _ = tx2.send(m);
+            let _ = tx.send(m);
         };
+        say(Message::Note("taking everything the server holds".into()));
         let runtime = match tokio::runtime::Builder::new_current_thread().enable_all().build() {
             Ok(r) => r,
             Err(e) => return say(Message::Failed(format!("starting the network: {e}"))),
         };
-        say(Message::Note("listing what the server holds".into()));
-
-        let result: anyhow::Result<usize> = runtime.block_on(async {
-            let client = moose_rack::api::Client::with_auth(
-                &server,
-                &username,
-                &password,
-                token.as_deref(),
-            )?;
-            let identity =
-                moose_rack::savesync::DeviceIdentity::ensure(&client, &app_dir).await?;
-            let saves = client.saves(None).await?;
-            let total = saves.len();
-            let mut done = 0;
-            for save in saves {
-                let platform = client
-                    .rom_with_files(save.rom_id)
-                    .await
-                    .ok()
-                    .and_then(|r| r.platform_fs_slug)
-                    .filter(|s| !s.is_empty());
-                let dest = moose_rack::savesync::download_path(
-                    &ra_root,
-                    &save.file_name,
-                    moose_rack::savesync::destination(
-                        save.emulator.as_deref(),
-                        platform.as_deref(),
-                    ),
-                );
-                let bytes = client.save_content(save.id, &identity.device_id).await?;
-                if let Some(dir) = dest.parent() {
-                    std::fs::create_dir_all(dir)?;
-                }
-                let slot = save.slot.as_deref().unwrap_or("unslotted");
-                let _ = moose_rack::savebackup::keep(&library_root, save.rom_id, slot, &dest);
-                std::fs::write(&dest, bytes)?;
-                // Tell the server it landed.
-                //
-                // Without this its per-device bookkeeping still says this
-                // device does not hold the save, and the very next negotiate
-                // offers to *push* all of them back — which is exactly what
-                // happened the first time this ran.
-                if let Err(e) = client.confirm_download(save.id, &identity.device_id).await {
-                    eprintln!("could not confirm {}: {e:#}", save.file_name);
-                }
-                done += 1;
-                say(Message::Note(format!("{done} of {total}")));
-            }
-            Ok(done)
+        let result = runtime.block_on(async {
+            let client = moose_rack::api::Client::with_auth(&server, &username, &password, token.as_deref())?;
+            moose_rack::savesync::pull_all(&client, &ra_root, &app_dir, &library_root).await
         });
-
         match result {
-            Ok(moved) => say(Message::Finished {
-                moved,
-                note: format!("{moved} pulled"),
-                conflicts: Vec::new(),
-            }),
+            Ok(summary) => {
+                log(&summary);
+                if !summary.problems.is_empty() {
+                    say(Message::Report(summary.problems.clone()));
+                }
+                say(Message::Finished {
+                    moved: summary.downloaded,
+                    note: summary.headline(),
+                    conflicts: Vec::new(),
+                })
+            }
             Err(e) => say(Message::Failed(format!("{e:#}"))),
         }
     });
@@ -553,11 +613,18 @@ pub fn negotiate(cfg: &Config, ra_root: &Path, app_dir: &Path) -> Job {
             )?;
             let identity =
                 moose_rack::savesync::DeviceIdentity::ensure(&client, &app_dir).await?;
-            client.negotiate(&identity.device_id, &states).await
+            let plan = client.negotiate(&identity.device_id, &states).await?;
+            let mut review = Review::from_plan(&plan);
+            // States too: the server's plan covers saves only, so a plan built
+            // from it alone said "nothing to do" while states differed.
+            let (lines, agreed) =
+                moose_rack::statesync::preview(&client, &ready.candidates, &app_dir).await?;
+            review.add_states(lines, agreed);
+            anyhow::Ok(review)
         });
 
         match result {
-            Ok(plan) => say(Message::Plan(Box::new(Review::from_plan(&plan)))),
+            Ok(review) => say(Message::Plan(Box::new(review))),
             Err(e) => say(Message::Failed(format!("{e:#}"))),
         }
     });
@@ -593,6 +660,8 @@ pub fn apply(
             // draining and routes it to `apply_stars`; reaching here means a
             // stars message arrived on the save channel, which nothing sends.
             Message::Stars(_) => continue,
+            // Taken out by the caller before the fold, and shown.
+            Message::Report(_) => continue,
         };
     }
 }
@@ -622,7 +691,7 @@ pub fn apply_stars(
                 *held = None;
                 Stars::Done(note)
             }
-            Message::Plan(_) => continue,
+            Message::Plan(_) | Message::Report(_) => continue,
         };
     }
 }

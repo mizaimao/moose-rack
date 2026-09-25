@@ -731,6 +731,25 @@ pub struct Patch {
 }
 
 impl Patch {
+    /// Whether applying `index` writes a file EmulationStation keeps in memory
+    /// and writes back: knulli.conf, or anything under its own config folder.
+    ///
+    /// Opened as a Port, the window runs with ES still up underneath it, and a
+    /// change to one of these lasts only until ES next saves.
+    pub fn writes_what_es_holds(&self, index: usize, paths: &Paths) -> bool {
+        let es_dir = paths.es_settings();
+        let es_dir = es_dir.parent();
+        self.choices.get(index).is_some_and(|choice| {
+            choice.steps.iter().any(|step| {
+                let target = match step {
+                    Step::Block { file, .. } => file,
+                    Step::Place { path, .. } | Step::Cover { path, .. } | Step::Shared { path, .. } => path,
+                };
+                *target == paths.knulli_conf() || es_dir.is_some_and(|d| target.starts_with(d))
+            })
+        })
+    }
+
     pub fn state(&self) -> State {
         self.choices
             .iter()

@@ -106,6 +106,17 @@ impl Review {
         })
     }
 
+    /// Save states, into the same list.
+    ///
+    /// The server's plan covers saves only, so a plan built from it alone
+    /// showed "nothing to do" while states differed, and carrying out a plan
+    /// then moved states it had never shown.
+    pub fn add_states(&mut self, lines: Vec<Line>, agreed: usize) {
+        self.lines.extend(lines);
+        self.lines.sort_by(|a, b| a.action.cmp(&b.action).then(a.title.cmp(&b.title)));
+        self.agreed += agreed;
+    }
+
     pub fn count(&self, action: Action) -> usize {
         self.lines.iter().filter(|l| l.action == action).count()
     }

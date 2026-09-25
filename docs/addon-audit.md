@@ -21,52 +21,52 @@ code path was followed end to end or reproduced; "suspicion" means it was not.
 2. ~~**The on-screen apply skips the KNULLI version check.** Only `--apply` and
    `--restore` are gated (main.rs:334, 517); `run_queue` (main.rs:705-721)
    applies on any image. Confirmed.~~
-3. **"I took this save" goes nowhere.** `confirm_download` posts to
+3. ~~**"I took this save" goes nowhere.** `confirm_download` posts to~~
    `/api/saves/{id}/downloaded`, which moose-service does not have, and ignores
    the status (api.rs:931-940). The server records agreement only on upload.
    After any pulled save changes, the next sync calls it a conflict;
    `--keep server` never sticks; a save deleted on the Flip comes back every
    sync. worker.rs:347 and main.rs:223 still describe RomM's rule. Confirmed.
-4. **Sync failures are swallowed.** `carry_out` passes on only the headline
+4. ~~**Sync failures are swallowed.** `carry_out` passes on only the headline~~
    (worker.rs:268-272): failed transfers, "save states did not sync" and rename
    failures are dropped. A run where everything failed reads "in sync" and
    exits 0. Confirmed.
-5. **Conflicts are never drawn on screen.** `app.conflicts` is held and not
+5. ~~**Conflicts are never drawn on screen.** `app.conflicts` is held and not~~
    shown, so `--sync --keep` over ssh is the only way to answer one. Confirmed.
-6. **States only go up.** `statesync::run` walks local files only
+6. ~~**States only go up.** `statesync::run` walks local files only~~
    (statesync.rs:201-208), so a state the Flip lacks never comes down; the plan
    covers saves only (worker.rs:441-496), so when saves agree states cannot be
    synced from the screen, and when they differ states move without being
    shown. `--pull-all` is saves only. Confirmed.
-7. **Neo Geo saves never sync.** `split_slot` accepts `.srm`, `.sav` and
+7. ~~**Neo Geo saves never sync.** `split_slot` accepts `.srm`, `.sav` and~~
    `.state` only (saves.rs:131-161); geolith's `Game.zip#Game.mcr` cards and
    `.nv` files are never seen. Confirmed.
 8. **Games the server does not hold have no backup.** Tintin: a save and 12+
    states exist only on the Flip. It is on the SSD and the card, not in the
    server's library. Device.
-9. **The log records presses, not outcomes.** moose-patch.log has 279 "press
+9. ~~**The log records presses, not outcomes.** moose-patch.log has 279 "press~~
    Down" and no line saying what a sync, apply or refresh did. Device.
 10. **The Flip logs in with the token**, against the standing rule, because the
     server has no `[[auth.users]]` account to use instead. Device.
 
 ## Latent, and each one loses data
 
-11. **A partial game index overwrites saves.** A save the Flip cannot match is
+11. ~~**A partial game index overwrites saves.** A save the Flip cannot match is
     not reported (savesync.rs:174-181); the server then offers its copy as
     "this device does not have this save" (src-service/src/saves.rs:139) and
     the download lands on the local file with a backup but no conflict.
     `--refresh` deletes the index before it has the new one (worker.rs:309),
     the pull commits page by page, and `prepare` never checks the index is
     complete. A Wi-Fi drop during a refresh, then a sync, overwrites every save
-    in the missing systems. Confirmed.
-12. **A save name in two system folders uploads the wrong bytes.** The upload
+    in the missing systems. Confirmed.~~
+12. ~~**A save name in two system folders uploads the wrong bytes.** The upload
     and conflict branches find the local file by bare name across all folders
     (savesync.rs:591, 629). 374 names exist in more than one system on the
-    server. None collide on the Flip today. Confirmed.
-13. **`--keep server` on a state conflict loses the state.** It writes to
+    server. None collide on the Flip today. Confirmed.~~
+13. ~~**`--keep server` on a state conflict loses the state.** It writes to
     `destination(emu, None)` (statesync.rs:398-402), which on KNULLI is a folder
     nothing reads, then re-uploads the rejected local state over the server's,
-    which keeps no old version. Confirmed.
+    which keeps no old version. Confirmed.~~
 14. ~~**One unreadable byte wipes a config.** `fs::read_to_string(file)
     .unwrap_or_default()` (patch.rs:427) turns any read error — one non-UTF-8
     byte, an EIO — into an empty file, and the write leaves only our block:
@@ -106,32 +106,42 @@ code path was followed end to end or reproduced; "suspicion" means it was not.
 
 ## Wrong or misleading, no data at stake
 
-22. One job slot: starting favourites during a save sync orphans the save job
-    and Status sticks on "syncing" (main.rs:650-665).
-23. With a save plan held, the confirm dialog shows it on any row; A on
-    "Refresh the game list" rebuilds the index instead (ui.rs:230, 345).
+22. ~~One job slot: starting favourites during a save sync orphans the save job
+    and Status sticks on "syncing" (main.rs:650-665).~~
+23. ~~With a save plan held, the confirm dialog shows it on any row; A on
+    "Refresh the game list" rebuilds the index instead (ui.rs:230, 345).~~
 24. ~~The favourites second press re-plans instead of running the plan shown
     (main.rs:663).~~
-25. A failed `rom_with_files` is dropped (savesync.rs:775-787), so a pulled
-    save lands at the top of /userdata/saves where nothing reads it.
-26. `--keep=local` is ignored without a word (main.rs:270).
+25. ~~A failed `rom_with_files` is dropped (savesync.rs:775-787), so a pulled
+    save lands at the top of /userdata/saves where nothing reads it.~~
+26. ~~`--keep=local` is ignored without a word (main.rs:270).~~
 27. ~~After an on-screen apply the row shows the option picked, not a read-back
     (model.rs:193); `--apply` exits 0 on "changed".~~
 28. ~~`shaders=off` deletes sets that `shader-gba/gb/gbc` still name.~~
-29. Stale text: "a rescan renumbers ids" (rows.rs:26-29, worker.rs:282-291).
+29. ~~Stale text: "a rescan renumbers ids" (rows.rs:26-29, worker.rs:282-291).~~
 
 ## Saves the Flip no longer loads, or cannot match
 
-- Stranded by ROM renames: Apotris (save v4.0.2, ROM v4.1.0), Goodboy Galaxy
-  (v1.2 vs v1.3), Skyland (`(Proto)` vs `(Proto 5)`). RetroArch reads the name
-  the current ROM gives, so this progress is not loaded in game. Renaming the
-  save to the ROM's stem restores it and makes it syncable.
-- No ROM on the card: the two Super Mario World hacks.
-- Live but unmatched: `Inky and the Alien Aquarium …(Unl).gba.srm` (ROM is
-  `….gba.zip`; the server's name differs). `Metroid Fusion (USA, Australia)`:
-  the server only has `(USA)`; matching by ROM hash would find it.
-- Syncthing `*.sync-conflict-*.srm` leftovers: should be ignored, not counted.
-- The `gba-backup-vbam-20260828` folder is scanned as a system.
+Corrected 2026-09-24 after checking each file against the ROMs on the card.
+
+- ~~Apotris and Goodboy Galaxy~~: not stranded. Both already have newer saves
+  under their current ROM names (Sep 4, Sep 3); the old-version files were
+  leftovers, moved to `library/saves-backup/stranded-20260924/` on the Flip.
+- ~~Skyland~~: its only save sat under the ROM's old name. Copied to the
+  current name, which the emulator reads; the original is in the same backup
+  folder.
+- **Metroid Fusion: open.** The Flip loads `Metroid Fusion (USA).srm` (dated
+  2025-03-05); `Metroid Fusion (USA, Australia).srm` (2026-08-28) holds
+  different bytes. Both dates look like card copies, so which is the real
+  progress is Frank's call.
+- No ROM on the card: the two Super Mario World hacks. Left alone.
+- ~~Inky~~: matches exactly and synced; it was listed here by mistake.
+- ~~Syncthing `*.sync-conflict-*.srm` leftovers~~: skipped by the scanner now.
+- ~~The `gba-backup-vbam-20260828` folder~~: skipped by the scanner now.
+- Games on the Flip that the server's library does not hold — WarioWare,
+  Inc., Castlevania Double Pack, New Super Mario Bros., Tetris DS, Final
+  Fantasy IX (Rev 1), Tony Hawk's Pro Skater 2, Tintin and others — still
+  cannot sync until they are added to the server. Item 8.
 
 ## Checked on the device and fine
 

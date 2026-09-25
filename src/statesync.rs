@@ -218,8 +218,7 @@ pub async fn run(
                 remote.insert(*id, list);
             }
             Err(e) => {
-                summary.failed += 1;
-                summary.notes.push(format!("could not list states for rom {id}: {e:#}"));
+                                summary.fail(format!("could not list states for rom {id}: {e:#}"));
             }
         }
     }
@@ -247,8 +246,7 @@ pub async fn run(
                 let bytes = match std::fs::read(&c.path) {
                     Ok(b) => b,
                     Err(e) => {
-                        summary.failed += 1;
-                        summary.notes.push(format!("could not read {file_name}: {e}"));
+                                                summary.fail(format!("could not read {file_name}: {e}"));
                         continue;
                     }
                 };
@@ -275,8 +273,7 @@ pub async fn run(
                         ledger.record(*rom_id, &file_name, &c.content_hash, Some(&print));
                     }
                     Err(e) => {
-                        summary.failed += 1;
-                        summary.notes.push(format!("could not upload {file_name}: {e:#}"));
+                                                summary.fail(format!("could not upload {file_name}: {e:#}"));
                     }
                 }
             }
@@ -304,14 +301,12 @@ pub async fn run(
                                 ledger.record(*rom_id, &file_name, &hash, Some(&fingerprint(server)));
                             }
                             Err(e) => {
-                                summary.failed += 1;
-                                summary.notes.push(format!("could not write {}: {e:#}", dest.display()));
+                                                                summary.fail(format!("could not write {}: {e:#}", dest.display()));
                             }
                         }
                     }
                     Err(e) => {
-                        summary.failed += 1;
-                        summary.notes.push(format!("could not download {file_name}: {e:#}"));
+                                                summary.fail(format!("could not download {file_name}: {e:#}"));
                     }
                 }
             }
@@ -348,20 +343,17 @@ pub async fn run(
                             ledger.record(s.rom_id, &s.file_name, &hash, Some(&fingerprint(s)));
                         }
                         Err(e) => {
-                            summary.failed += 1;
-                            summary.notes.push(format!("could not write {}: {e:#}", dest.display()));
+                                                        summary.fail(format!("could not write {}: {e:#}", dest.display()));
                         }
                     },
                     Err(e) => {
-                        summary.failed += 1;
-                        summary.notes.push(format!("could not download {}: {e:#}", s.file_name));
+                                                summary.fail(format!("could not download {}: {e:#}", s.file_name));
                     }
                 }
             }
         }
         Err(e) => {
-            summary.failed += 1;
-            summary.notes.push(format!("could not list the server's states: {e:#}"));
+                        summary.fail(format!("could not list the server's states: {e:#}"));
         }
     }
 
@@ -371,6 +363,114 @@ pub async fn run(
         summary.notes.push(format!("could not record state sync: {e}"));
     }
     Ok(summary)
+}
+
+/// Take every state the server holds, over whatever is here.
+///
+/// The states half of [`crate::savesync::pull_all`]. A state goes where this
+/// device keeps that system's states, worked out from the server's platform
+/// for the game; one the server cannot place is reported, not guessed at.
+pub async fn pull_all(
+    client: &Client,
+    ra_root: &Path,
+    library_root: &Path,
+    data_dir: &Path,
+) -> Result<Summary> {
+    let mut summary = Summary::default();
+    let mut ledger = Ledger::load(data_dir);
+    for s in client.all_states().await? {
+        let platform = match crate::platform::current().save_layout() {
+            crate::platform::SaveLayout::ByCore => None,
+            crate::platform::SaveLayout::BySystem => {
+                match client.rom_with_files(s.rom_id).await.ok().and_then(|r| r.platform_fs_slug) {
+                    Some(p) if !p.is_empty() => Some(p),
+                    _ => {
+                        summary.fail(format!("{}: the server did not say which system it is", s.file_name));
+                        continue;
+                    }
+                }
+            }
+        };
+        let dest = crate::savesync::download_path(
+            ra_root,
+            &s.file_name,
+            crate::savesync::destination(s.emulator.as_deref(), platform.as_deref()),
+        );
+        let bytes = match client.state_content(s.id).await {
+            Ok(b) => b,
+            Err(e) => {
+                summary.fail(format!("could not download {}: {e:#}", s.file_name));
+                continue;
+            }
+        };
+        if let Some(dir) = dest.parent() {
+            std::fs::create_dir_all(dir).ok();
+        }
+        if let Err(e) = crate::savebackup::keep(library_root, s.rom_id, "unslotted", &dest) {
+            summary.notes.push(format!("could not back up {}: {e:#}", dest.display()));
+        }
+        match crate::savesync::write_atomically(&dest, &bytes) {
+            Ok(()) => {
+                summary.downloaded += 1;
+                summary.notes.push(format!("downloaded state {}", dest.display()));
+                let hash = crate::savehash::compute(&dest).unwrap_or_default();
+                ledger.record(s.rom_id, &s.file_name, &hash, Some(&fingerprint(&s)));
+            }
+            Err(e) => summary.fail(format!("could not write {}: {e:#}", dest.display())),
+        }
+    }
+    if let Err(e) = ledger.save(data_dir) {
+        summary.notes.push(format!("could not record state sync: {e}"));
+    }
+    Ok(summary)
+}
+
+/// What a state sync would do, without doing any of it.
+///
+/// The same decision `run` makes, from one listing of the server's states.
+/// Returns the lines worth showing and how many states already agree.
+pub async fn preview(
+    client: &Client,
+    candidates: &[Candidate],
+    data_dir: &Path,
+) -> Result<(Vec<crate::syncplan::Line>, usize)> {
+    use crate::syncplan::{Action as Shown, Line};
+    let ledger = Ledger::load(data_dir);
+    let all = client.all_states().await?;
+    let mut lines = Vec::new();
+    let mut agreed = 0;
+    for c in candidates.iter().filter(|c| c.kind == Kind::State && c.canonical) {
+        let Resolution::Resolved { rom_id, .. } = &c.resolution else { continue };
+        let file_name = c.path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+        let k = key(*rom_id, &file_name);
+        let server = all.iter().find(|s| s.rom_id == *rom_id && s.file_name == file_name);
+        let print = server.map(fingerprint);
+        let shown = match decide(
+            Some(&c.content_hash),
+            print.as_deref(),
+            ledger.seen.get(&k).map(String::as_str),
+            ledger.server.get(&k).map(String::as_str),
+        ) {
+            Action::Nothing => {
+                agreed += 1;
+                continue;
+            }
+            Action::Upload => Shown::Upload,
+            Action::Download => Shown::Download,
+            Action::Conflict => Shown::Conflict,
+        };
+        lines.push(Line { action: shown, title: file_name, reason: None, rom_id: *rom_id, save_id: server.map(|s| s.id) });
+    }
+    for (s, _) in incoming(&all, candidates, &ledger) {
+        lines.push(Line {
+            action: Shown::Download,
+            title: s.file_name.clone(),
+            reason: Some("only on the server".into()),
+            rom_id: s.rom_id,
+            save_id: Some(s.id),
+        });
+    }
+    Ok((lines, agreed))
 }
 
 /// Server states to bring down, and where each one goes.
