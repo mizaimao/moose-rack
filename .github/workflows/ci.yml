@@ -122,3 +122,54 @@ jobs:
       # catches the class of break that is invisible in the app itself: a throw
       # inside requestAnimationFrame leaves the loop running and says nothing.
       - run: npm test
+
+  # No credential gets into a commit. The ScreenScraper login went public in a
+  # device settings export and stayed for three weeks; the rules for that kind
+  # of file are in .gitleaks.toml.
+  #
+  # Every commit, not only the ones pushed: a history rewrite is undone by one
+  # clone that pulls instead of resetting, and it would come back as an old
+  # commit a push-range scan never looks at.
+  secrets:
+    name: secrets
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # The binary, pinned and checked, rather than gitleaks-action: the action
+      # only scans the pushed range and wants a licence key on organisations.
+      - name: Install gitleaks
+        env:
+          VERSION: 8.30.1
+          SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+        run: |
+          curl -sSfL -o gitleaks.tgz "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz"
+          echo "${SHA256}  gitleaks.tgz" | sha256sum -c -
+          tar xzf gitleaks.tgz gitleaks
+          sudo mv gitleaks /usr/local/bin/
+          rm gitleaks.tgz
+
+      # A rule that stops matching passes every scan. Each file is the shape of
+      # something that leaked or could, under the name it would have, with a
+      # fresh random value, and each has to be caught. Real files rather than
+      # stdin, because the key=value rule only looks at config file names.
+      - name: The rules still catch what they are for
+        run: |
+          v=$(openssl rand -hex 8)
+          check() {
+            dir=$(mktemp -d)
+            printf '%s\n' "$2" > "$dir/$1"
+            if gitleaks dir --config .gitleaks.toml --no-banner --log-level error "$dir"; then
+              echo "::error::.gitleaks.toml no longer catches a password in $1"
+              exit 1
+            fi
+          }
+          check es_settings.xml "<string name=\"ScraperPasswordScreenScraper\" value=\"$v\" />"
+          check knulli.conf "global.retroachievements.password=$v"
+          check retroarch.cfg "cheevos_token = \"$v\""
+          check config.toml "password = \"$v\""
+
+      - name: Scan every commit
+        run: gitleaks git --config .gitleaks.toml --redact --no-banner --verbose .
