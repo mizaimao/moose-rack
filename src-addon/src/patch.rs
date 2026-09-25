@@ -219,6 +219,25 @@ fn key_of(line: &str) -> Option<&str> {
     (!key.is_empty()).then_some(key)
 }
 
+/// The value KNULLI's reader takes for `key`: the first live `key=value` line
+/// from the top of the file. See `hide_keys` for why it is the first.
+pub fn effective<'a>(text: &'a str, key: &str) -> Option<&'a str> {
+    text.lines()
+        .find(|line| key_of(line) == Some(key))
+        .and_then(|line| line.split_once('='))
+        .map(|(_, value)| value.trim())
+}
+
+/// Every key in `body` reads, in `text`, as the value `body` gives it.
+///
+/// The block being in the file is not enough. ES keeps knulli.conf in memory
+/// and writes the whole thing back, and a line it puts above ours wins.
+fn in_force(text: &str, body: &str) -> bool {
+    body.lines()
+        .filter_map(key_of)
+        .all(|key| effective(text, key) == effective(body, key))
+}
+
 /// A text file, or `None` when there is no such file.
 ///
 /// Anything else that goes wrong is an error, including a file that is not
@@ -347,6 +366,18 @@ pub fn clear_block(text: &str, id: &str) -> Result<String> {
     Ok(text)
 }
 
+/// What kind of file a block lives in. It decides what "the block is there"
+/// has to mean before a patch can call itself on.
+#[derive(Clone, Debug)]
+pub enum Form {
+    /// A script, such as custom.sh. The block is the whole of the change.
+    Script,
+    /// knulli.conf: `key=value` lines, read first-wins. On means every key in
+    /// the block is the value KNULLI's reader would find, not only that the
+    /// block is in the file.
+    Settings,
+}
+
 /// One thing a patch does.
 #[derive(Clone, Debug)]
 pub enum Step {
@@ -358,7 +389,13 @@ pub enum Step {
     /// `multimedia_keys.conf` in `/userdata` *replaces* the one in `/etc`
     /// rather than adding to it, so creating it with only our block in it
     /// would take the volume, power and lid keys away.
-    Block { file: PathBuf, id: String, body: Option<String>, seed: Option<PathBuf> },
+    Block {
+        file: PathBuf,
+        id: String,
+        body: Option<String>,
+        seed: Option<PathBuf>,
+        form: Form,
+    },
     /// A file this app owns. `None` means it should not be there, and
     /// whatever was there before comes back — from `backup`, which is
     /// deliberately not inside the directory `path` lives in.
@@ -478,7 +515,7 @@ impl Step {
     /// `changed`, and applying it stops with the reason.
     pub fn satisfied(&self) -> bool {
         match self {
-            Step::Block { file, id, body, .. } => {
+            Step::Block { file, id, body, form, .. } => {
                 let Ok(text) = read_text(file) else { return false };
                 let text = text.unwrap_or_default();
                 // An unterminated block is not "absent", whatever read_block
@@ -487,8 +524,11 @@ impl Step {
                     return false;
                 }
                 match (read_block(&text, id), body) {
-                    (Some(found), Some(want)) => found.trim() == want.trim(),
                     (None, None) => true,
+                    (Some(found), Some(want)) if found.trim() == want.trim() => match form {
+                        Form::Script => true,
+                        Form::Settings => in_force(&text, want),
+                    },
                     _ => false,
                 }
             }
@@ -501,7 +541,7 @@ impl Step {
 
     pub fn apply(&self) -> Result<()> {
         match self {
-            Step::Block { file, id, body, seed } => {
+            Step::Block { file, id, body, seed, .. } => {
                 let current = read_text(file)?;
                 // What the block goes into. The seed only when there is no
                 // file yet, and a seed that cannot be read stops everything:
@@ -617,6 +657,17 @@ mod tests {
     fn placed(root: &Path, path: PathBuf, bytes: Option<&'static [u8]>) -> Step {
         let backup = Paths::new(root).backup_for(&path);
         Step::Place { path, bytes, backup }
+    }
+
+    /// A block in knulli.conf, as the catalogue builds them.
+    fn conf_block(file: &Path, id: &str, body: Option<&str>) -> Step {
+        Step::Block {
+            file: file.to_path_buf(),
+            id: id.into(),
+            body: body.map(str::to_string),
+            seed: None,
+            form: Form::Settings,
+        }
     }
 
     fn scratch(name: &str) -> PathBuf {
@@ -790,13 +841,14 @@ mod tests {
             id: "power".into(),
             body: Some("a=1".into()),
             seed: None,
+            form: Form::Settings,
         };
         let err = on.apply().expect_err("applied over a file it could not read");
         assert!(format!("{err:#}").contains("UTF-8"), "{err:#}");
         assert_eq!(fs::read(&file).unwrap(), before, "the file was written");
 
         // And it reads as at no option, rather than as "off".
-        let off = Step::Block { file, id: "power".into(), body: None, seed: None };
+        let off = conf_block(&file, "power", None);
         assert!(!off.satisfied());
         assert!(!on.satisfied());
     }
@@ -812,6 +864,7 @@ mod tests {
             id: "hotkey".into(),
             body: Some("BTN_TR2+BTN_TL2 1 /bin/true".into()),
             seed: Some(dir.join("etc/multimedia_keys.conf")),
+            form: Form::Script,
         };
         assert!(step.apply().is_err());
         assert!(!file.exists(), "created the file with only our lines in it");
@@ -826,7 +879,7 @@ mod tests {
         let dir = scratch("no-end-marker");
         let file = dir.join("knulli.conf");
         fs::write(&file, text).unwrap();
-        let off = Step::Block { file: file.clone(), id: "power".into(), body: None, seed: None };
+        let off = conf_block(&file, "power", None);
         assert!(off.apply().is_err());
         assert_eq!(fs::read_to_string(&file).unwrap(), text, "the lines below it went");
         assert!(!off.satisfied(), "a broken block is not an absent one");
@@ -843,9 +896,7 @@ mod tests {
         fs::write(&file, "keep=1\n").unwrap();
         fs::hard_link(&file, &link).unwrap();
 
-        Step::Block { file: file.clone(), id: "x".into(), body: Some("a=1".into()), seed: None }
-            .apply()
-            .unwrap();
+        conf_block(&file, "x", Some("a=1")).apply().unwrap();
 
         assert!(fs::read_to_string(&file).unwrap().contains("a=1"));
         assert_eq!(fs::read_to_string(&link).unwrap(), "keep=1\n");
@@ -882,13 +933,8 @@ mod tests {
         let file = dir.join("knulli.conf");
         fs::write(&file, "keep=1\n").unwrap();
 
-        let on = Step::Block {
-            file: file.clone(),
-            id: "hotkeys".into(),
-            body: Some("a=1".into()),
-            seed: None,
-        };
-        let off = Step::Block { file, id: "hotkeys".into(), body: None, seed: None };
+        let on = conf_block(&file, "hotkeys", Some("a=1"));
+        let off = conf_block(&file, "hotkeys", None);
 
         assert!(off.satisfied(), "no block means off is already true");
         assert!(!on.satisfied());
@@ -897,6 +943,49 @@ mod tests {
         assert!(!off.satisfied());
         off.apply().unwrap();
         assert!(off.satisfied(), "off has to be able to undo on");
+    }
+
+    #[test]
+    fn the_reader_takes_the_first_live_line() {
+        let text = "# system.power.led=9\n\
+                    ## moose-patch: power hid: system.power.led=8\n\
+                    system.power.led = 1\n\
+                    system.power.led=2\n";
+        assert_eq!(effective(text, "system.power.led"), Some("1"));
+        assert_eq!(effective(text, "system.lid"), None);
+    }
+
+    #[test]
+    fn a_block_is_on_only_while_the_reader_would_find_its_values() {
+        // ES holds knulli.conf in memory and writes all of it back. A line it
+        // puts above our block wins, first-wins, while the block itself is
+        // untouched. Reading only the block called that on.
+        let dir = scratch("in-force");
+        let file = dir.join("knulli.conf");
+        fs::write(&file, "system.batterysaver.extendedmode=suspend\ngba=mgba\n").unwrap();
+        let on = conf_block(&file, "power", Some("system.batterysaver.extendedmode=none"));
+        let off = conf_block(&file, "power", None);
+        on.apply().unwrap();
+        assert!(on.satisfied());
+
+        let text = fs::read_to_string(&file).unwrap();
+        fs::write(&file, format!("system.batterysaver.extendedmode=suspend\n{text}")).unwrap();
+        assert!(!on.satisfied(), "the reader finds =suspend first");
+        assert!(!off.satisfied(), "and the block is still there, so it is not off either");
+
+        // A script is not a settings file: there the block is the change.
+        let script = dir.join("custom.sh");
+        let step = Step::Block {
+            file: script.clone(),
+            id: "wifi".into(),
+            body: Some("X=1".into()),
+            seed: None,
+            form: Form::Script,
+        };
+        step.apply().unwrap();
+        let text = fs::read_to_string(&script).unwrap();
+        fs::write(&script, format!("X=2\n{text}")).unwrap();
+        assert!(step.satisfied());
     }
 
     #[test]
@@ -1004,6 +1093,7 @@ mod tests {
                         id: "shaders".into(),
                         body: None,
                         seed: None,
+                        form: Form::Settings,
                     }],
                 },
                 Choice {
@@ -1013,6 +1103,7 @@ mod tests {
                         id: "shaders".into(),
                         body: Some("set=a".into()),
                         seed: None,
+                        form: Form::Settings,
                     }],
                 },
             ],
@@ -1045,6 +1136,7 @@ mod tests {
                     id: "shaders".into(),
                     body: Some("set=a".into()),
                     seed: None,
+                    form: Form::Settings,
                 }],
             }],
         };

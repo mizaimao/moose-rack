@@ -10,7 +10,7 @@
 //! not the obvious one. Every one of these was placed by hand first, and the
 //! hard part was never the change.
 
-use crate::patch::{Choice, Patch, Paths, Step};
+use crate::patch::{Choice, Form, Patch, Paths, Step};
 
 const HOTKEYS: &str = include_str!("../assets/hotkeys.conf");
 const SHADERS_LCD: &str = include_str!("../assets/shaders.conf");
@@ -57,6 +57,7 @@ fn block(paths: &Paths, id: &str, body: Option<&str>) -> Step {
         id: id.into(),
         body: body.map(str::to_string),
         seed: None,
+        form: Form::Settings,
     }
 }
 
@@ -66,6 +67,7 @@ fn startup(paths: &Paths, id: &str, body: Option<&str>) -> Step {
         id: id.into(),
         body: body.map(str::to_string),
         seed: None,
+        form: Form::Script,
     }
 }
 
@@ -460,12 +462,14 @@ pub fn all(paths: &Paths) -> Vec<Patch> {
                     id: "hotkey".into(),
                     body: Some(TRIGGERS.to_string()),
                     seed: Some(paths.stock_triggers()),
+                    form: Form::Script,
                 }],
                 vec![Step::Block {
                     file: paths.trigger_conf(),
                     id: "hotkey".into(),
                     body: None,
                     seed: Some(paths.stock_triggers()),
+                    form: Form::Script,
                 }],
             ),
         },
