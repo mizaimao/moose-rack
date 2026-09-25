@@ -903,8 +903,13 @@ impl Config {
     /// than sharing a BIOS folder with the emulator that reads it: the files
     /// are large, they are the same files, and two copies is the arrangement
     /// this whole change exists to end.
+    ///
+    /// The launcher moved and the BIOS sync did not: it went on downloading
+    /// into `<roms>/../system`, where RetroArch was never pointed, so Neo Geo
+    /// failed on an `aes.zip` that had been fetched. Every reader and writer
+    /// now goes through [`bios_dir`].
     pub fn system_dir(&self) -> PathBuf {
-        self.esde_layout().roms.join("0_BIOS")
+        bios_dir(&self.esde_layout().roms)
     }
 
     /// ES-DE themes, read from where ES-DE downloads them.
@@ -952,6 +957,11 @@ pub fn set_table_number(path: &str, table: &str, key: &str, value: i64) -> Resul
 /// Remove `key` from `[table]` if present.
 pub fn clear_table_entry(path: &str, table: &str, key: &str) -> Result<()> {
     write_entry(path, table, key, None)
+}
+
+/// The BIOS folder for a ROMs folder. See [`Config::system_dir`].
+pub fn bios_dir(roms: &Path) -> PathBuf {
+    roms.join("0_BIOS")
 }
 
 /// The label on the `[[retroarch.installs]]` entry that Settings owns.

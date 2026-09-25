@@ -361,8 +361,7 @@ pub async fn verify_server(
 
 pub async fn bios_status(state: &AppState) -> CmdResult<(usize, usize, u64)> {
     let client = state.client.clone().ok_or("not connected to a server")?;
-    let library_root = state.roms_dir.parent().unwrap_or(Path::new(".")).to_path_buf();
-    crate::bios::status(&client, &library_root).await.map_err(err)
+    crate::bios::status(&client, &state.system_dir()).await.map_err(err)
 }
 
 /// The year a game came out, from whichever of the two shapes is present.
@@ -684,19 +683,17 @@ pub async fn download_estimate(
     // Asked of the server rather than averaged, because unlike artwork there is
     // a fixed set of these and it already knows which are here.
     let mut summary = est.describe();
-    if choice.bios {
-        let library_root = state.roms_dir.parent().unwrap_or(Path::new(".")).to_path_buf();
-        if let Some(client) = state.client.clone()
-            && let Ok((total, here, bytes)) = crate::bios::status(&client, &library_root).await
-        {
-            est.media_bytes += bytes;
-            summary = format!(
-                "{}; plus {} BIOS file(s), {} already here",
-                est.describe(),
-                total - here,
-                here
-            );
-        }
+    if choice.bios
+        && let Some(client) = state.client.clone()
+        && let Ok((total, here, bytes)) = crate::bios::status(&client, &state.system_dir()).await
+    {
+        est.media_bytes += bytes;
+        summary = format!(
+            "{}; plus {} BIOS file(s), {} already here",
+            est.describe(),
+            total - here,
+            here
+        );
     }
     let (fits, note) = match diskspace::fits(&state.roms_dir, est.total()) {
         diskspace::Fit::Yes { available } => {
