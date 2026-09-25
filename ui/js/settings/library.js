@@ -56,6 +56,18 @@ export const html = `      <h4>Library</h4>
         <code>/storage/emulated/0/ROMs</code>.</p>
 
       <div class="srow">
+        <label>Artwork folder</label>
+        <div class="ctl"><input class="cf-text" data-field="esde_media"
+          type="text" spellcheck="false" placeholder="(downloaded_media, inside the ES-DE folder)" />
+          <button class="set-pick" data-pick="esde_media"
+                  title="Choose a folder">Browse…</button></div>
+      </div>
+      <p class="hint">Game artwork and console icons. Empty means
+        <code>downloaded_media</code> inside the ES-DE folder, which is where
+        ES-DE keeps it. Set it when the artwork lives on another drive, such as
+        a portable ES-DE's <code>support/downloaded_media</code>.</p>
+
+      <div class="srow">
         <label>Fetch game list</label>
         <div class="ctl">
           <button class="set-libsync">Sync library</button>
@@ -277,13 +289,13 @@ export function wire(box) {
   window.__folderPicked = (field, path) => {
     if (!path) return toast("That folder could not be read", 6000);
     saveField(field, path).then(() => {
-      // Neither takes effect on its own. The artwork root is read once when
+      // None takes effect on its own. The artwork root is read once when
       // the app starts, and the ES-DE system name that decides which artwork
       // folder each game reads is written only by the local scan — which is
       // the first half of Sync library. Without both, every game falls back to
       // this app's own downloads and the ES-DE library looks like it was never
       // found.
-      if (field === "esde_root" || field === "esde_roms") {
+      if (field === "esde_root" || field === "esde_roms" || field === "esde_media") {
         toast("Saved. Restart the app, then Sync library, to read it.", 9000);
       }
     });
@@ -316,7 +328,7 @@ export function wire(box) {
     });
   }
 
-  // The text fields: the library folder and the two ES-DE paths.
+  // The text fields: the library folder and the three ES-DE paths.
   //
   // This call was missing. `wireConfigFields` was imported at the top of this
   // file and never invoked, so every `data-field` control on this tab rendered

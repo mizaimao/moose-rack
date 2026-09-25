@@ -159,6 +159,8 @@ pub struct ConfigFields {
     /// than a second copy hidden in its own private storage.
     pub esde_root: String,
     pub esde_roms: String,
+    /// Artwork, when it is not `downloaded_media` inside the ES-DE folder.
+    pub esde_media: String,
     /// Where RetroArch is told to put battery saves and save states. Written
     /// into the per-launch config, so the folder chosen here is the folder the
     /// emulator actually uses.
@@ -196,6 +198,7 @@ pub fn config_fields() -> CmdResult<ConfigFields> {
         library_root: cfg.library.local_root.clone(),
         esde_root: cfg.esde.root.clone().unwrap_or_default(),
         esde_roms: cfg.esde.roms.clone().unwrap_or_default(),
+        esde_media: cfg.esde.media.clone().unwrap_or_default(),
         saves_root: cfg.saves.root.clone(),
         server_url: cfg.server.url.clone(),
         server_username: cfg.server.username.clone(),
@@ -232,6 +235,7 @@ pub fn set_config_field(field: String, value: String) -> CmdResult<String> {
         // this app's own downloads.
         "esde_root" => ("esde", "root"),
         "esde_roms" => ("esde", "roms"),
+        "esde_media" => ("esde", "media"),
         "saves_root" => ("saves", "root"),
         "server_url" => ("server", "url"),
         "server_token" => ("server", "token"),
@@ -397,8 +401,12 @@ pub fn meta_strings(meta: &Option<serde_json::Value>, key: &str) -> Vec<String> 
 
 pub type CmdResult<T> = Result<T, String>;
 
+/// The whole chain, not just the outermost context. `to_string()` on an
+/// anyhow error is the last `.context()` alone, so a sync that could not
+/// reach the server said only "GET http://dev.lan/api/platforms" and never
+/// why. `{:#}` appends every cause; types that are not anyhow ignore it.
 pub fn err<E: std::fmt::Display>(e: E) -> String {
-    e.to_string()
+    format!("{e:#}")
 }
 
 pub fn versions(state: &AppState) -> CmdResult<(String, Option<String>)> {

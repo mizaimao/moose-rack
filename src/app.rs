@@ -202,12 +202,21 @@ impl AppState {
     }
     .map(|ra| ra.with_system_dir(Some(cfg.system_dir())));
     let roms_dir = cfg.local_roms_dir();
-    let media_dir = PathBuf::from(&cfg.library.local_root).join("downloaded_media");
+    // Icons and artwork from the ES-DE folder, as the CLI and the handheld
+    // already did: `[esde] media`, else `<esde root>/downloaded_media`, else
+    // `<library>/downloaded_media`. This was hardwired to the last of those,
+    // so the desktop kept its own copy while the other two front ends read
+    // ES-DE's.
+    let media_dir = cfg.media_dir();
 
     // Artwork now comes from ES-DE alone. Anything fetched from RomM before
     // that goes, once, or the art chain would keep finding it and only the
     // games nobody had browsed yet would look consistent.
-    match crate::media::drop_server_covers(&media_dir) {
+    //
+    // Only ever in this app's own folder. It empties every `covers/` and
+    // `screenshots/` it finds, which in ES-DE's folder are ES-DE's own art.
+    let own_media = PathBuf::from(&cfg.library.local_root).join("downloaded_media");
+    match crate::media::drop_server_covers(&own_media) {
         0 => {}
         n => eprintln!("cleared {n} cover(s) fetched from RomM; artwork now comes from ES-DE"),
     }
