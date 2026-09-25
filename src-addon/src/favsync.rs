@@ -93,8 +93,20 @@ pub fn reconcile(
 /// old baseline, and the next run works out the same moves again. Saving it
 /// first would record agreement that never happened, and the half that did not
 /// run would look like a deliberate unstarring next time — which deletes.
-pub fn settled(here: &BTreeSet<i64>, server: &BTreeSet<i64>, moves: &[Move]) -> BTreeSet<i64> {
-    let mut out: BTreeSet<i64> = here.union(server).copied().collect();
+///
+/// Only games on this card (`known`). The server's stars for games that are
+/// not here were never agreed with anything: record one, copy the game on
+/// later, and the next sync reads "in the baseline, starred on the server, not
+/// starred here" as an unstar made on this device, and takes it off the
+/// server.
+pub fn settled(
+    here: &BTreeSet<i64>,
+    server: &BTreeSet<i64>,
+    moves: &[Move],
+    known: &BTreeSet<i64>,
+) -> BTreeSet<i64> {
+    let mut out: BTreeSet<i64> =
+        here.union(server).filter(|id| known.contains(id)).copied().collect();
     for m in moves {
         match m {
             Move::StarHere(_) | Move::StarOnServer(_) => {}
@@ -229,13 +241,33 @@ mod tests {
         let here = set(&[1, 2]);
         let server = set(&[2, 3]);
         let moves = reconcile(&here, &server, &set(&[]), &all());
-        assert_eq!(settled(&here, &server, &moves), set(&[1, 2, 3]));
+        assert_eq!(settled(&here, &server, &moves, &all()), set(&[1, 2, 3]));
 
         // and a run that removed things records the removal
         let here = set(&[1]);
         let server = set(&[1, 2]);
         let moves = reconcile(&here, &server, &set(&[1, 2]), &all());
-        assert_eq!(settled(&here, &server, &moves), set(&[1]));
+        assert_eq!(settled(&here, &server, &moves, &all()), set(&[1]));
+    }
+
+    /// Audit item 18. The baseline recorded the server's stars for games not
+    /// on the card. Copy one of them on later and the next sync saw it in the
+    /// baseline, starred on the server and not here, and took the star off
+    /// the server as if it had been removed on the handheld.
+    #[test]
+    fn a_game_copied_onto_the_card_later_is_starred_here_not_unstarred_there() {
+        let on_card = set(&[1]);
+        let here = set(&[1]);
+        let server = set(&[1, 500]);
+        let moves = reconcile(&here, &server, &set(&[]), &on_card);
+        assert!(moves.is_empty());
+        let agreed = settled(&here, &server, &moves, &on_card);
+        assert_eq!(agreed, set(&[1]), "recorded a game that is not on the card");
+
+        // 500 arrives, unstarred in ES because nobody has touched it here.
+        let on_card = set(&[1, 500]);
+        let moves = reconcile(&here, &server, &agreed, &on_card);
+        assert_eq!(moves, vec![Move::StarHere(500)]);
     }
 
     #[test]
