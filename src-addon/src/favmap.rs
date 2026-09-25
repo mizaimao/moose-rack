@@ -4,11 +4,13 @@
 //! Everything in [`crate::favsync`] works in numbers, so something has to hold
 //! the two together, and this is it.
 //!
-//! The join is the file name, which is safe here for the same reason it is
-//! safe for saves: these ROMs were copied from one source, so the same game
-//! has the same file name everywhere. What is *not* the same is the folder —
-//! the server files SNES under `sfc` and the handheld under `snes` — so the
-//! platform's own folder mapping does that half.
+//! The join is the path inside the system folder, which is safe here for the
+//! same reason it is safe for saves: these ROMs were copied from one source,
+//! so the same game has the same file name and the same subfolder everywhere.
+//! The subfolder matters: `snes/Aftermarket/` sits beside `snes/`, and the
+//! library holds files of one name in both. What is *not* the same is the
+//! system folder — the server files SNES under `sfc` and the handheld under
+//! `snes` — so the platform's own folder mapping does that half.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
@@ -22,14 +24,39 @@ pub struct Known {
     pub rom_id: i64,
     /// The folder under the ROMs root — `snes`, not `sfc`.
     pub folder: String,
-    /// The file inside it, as ES writes it in `<path>`.
+    /// The folder inside that, `""` at the top: `Aftermarket`.
+    pub rel_dir: String,
+    /// The file in it, as ES names it.
     pub file: String,
 }
 
 impl Known {
-    pub fn full_path(&self, roms_root: &Path) -> PathBuf {
-        roms_root.join(&self.folder).join(&self.file)
+    /// Where the game is inside its system folder, as ES writes it in a
+    /// gamelist's `<path>` (without the `./`).
+    pub fn rel_path(&self) -> String {
+        if self.rel_dir.is_empty() {
+            self.file.clone()
+        } else {
+            format!("{}/{}", self.rel_dir, self.file)
+        }
     }
+
+    pub fn full_path(&self, roms_root: &Path) -> PathBuf {
+        roms_root.join(&self.folder).join(self.rel_path())
+    }
+}
+
+/// A server's `rel_dir`, if it is a plain path of folder names.
+///
+/// It is joined onto the card, so `..`, a root or a drive would reach outside
+/// the system folder. A row carrying one is left off the card rather than
+/// followed there.
+fn plain_rel_dir(rel_dir: &str) -> Option<String> {
+    let parts: Vec<&str> = rel_dir.split(['/', '\\']).filter(|p| !p.is_empty()).collect();
+    parts
+        .iter()
+        .all(|p| *p != "." && *p != ".." && !p.contains(':'))
+        .then(|| parts.join("/"))
 }
 
 /// Every game the cache knows that is actually sitting on this card.
@@ -43,11 +70,12 @@ pub fn on_card(cache: &Cache, platform: &dyn Platform, roms_root: &Path) -> anyh
     let mut out = Vec::new();
     // One directory listing per folder, not one `exists()` per game: an exFAT
     // card with nine thousand arcade ROMs makes the second unbearable.
-    let mut listed: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+    let mut listed: BTreeMap<(String, String), BTreeSet<String>> = BTreeMap::new();
     for rom in cache.all_roms()? {
         let folder = platform.save_folder(&rom.platform_slug);
-        let here = listed.entry(folder.clone()).or_insert_with(|| {
-            std::fs::read_dir(roms_root.join(&folder))
+        let Some(rel_dir) = plain_rel_dir(&rom.rel_dir) else { continue };
+        let here = listed.entry((folder.clone(), rel_dir.clone())).or_insert_with(|| {
+            std::fs::read_dir(roms_root.join(&folder).join(&rel_dir))
                 .map(|d| {
                     d.filter_map(Result::ok)
                         .map(|e| e.file_name().to_string_lossy().into_owned())
@@ -56,7 +84,7 @@ pub fn on_card(cache: &Cache, platform: &dyn Platform, roms_root: &Path) -> anyh
                 .unwrap_or_default()
         });
         if let Some(file) = as_named_on_card(here, &rom.fs_name) {
-            out.push(Known { rom_id: rom.id, folder, file });
+            out.push(Known { rom_id: rom.id, folder, rel_dir, file });
         }
     }
     Ok(out)
@@ -94,11 +122,13 @@ pub fn by_folder(known: &[Known]) -> BTreeMap<String, Vec<Known>> {
     out
 }
 
-/// Look a game up by the folder and file ES named it with.
+/// Look a game up by the system folder and the path inside it that ES named
+/// it with. Two games of one file name in `snes/` and `snes/Aftermarket/` are
+/// two keys.
 pub fn by_file(known: &[Known]) -> BTreeMap<(String, String), i64> {
     known
         .iter()
-        .map(|k| ((k.folder.clone(), k.file.clone()), k.rom_id))
+        .map(|k| ((k.folder.clone(), k.rel_path()), k.rom_id))
         .collect()
 }
 
@@ -134,6 +164,16 @@ impl EsPaths {
     /// One collection's membership file.
     pub fn collection(&self, name: &str) -> PathBuf {
         self.collections.join(crate::eslist::CollectionFile::file_name(name))
+    }
+
+    /// `(system folder, path inside it)` for an absolute ROM path from a
+    /// collection file, or `None` for one outside the ROMs folder.
+    pub fn locate(&self, rom: &Path) -> Option<(String, String)> {
+        let rest = rom.strip_prefix(&self.roms).ok()?;
+        let mut parts = rest.components().map(|c| c.as_os_str().to_string_lossy().into_owned());
+        let folder = parts.next()?;
+        let inside = parts.collect::<Vec<_>>().join("/");
+        (!inside.is_empty()).then_some((folder, inside))
     }
 }
 
@@ -211,12 +251,65 @@ mod tests {
         );
     }
 
+    /// `snes/Aftermarket/` holds games too, and the library has file names in
+    /// both it and `snes/`. Matching on the name alone never found the
+    /// subfolder games, and took a twin at the top for the one below.
+    #[test]
+    fn a_game_in_a_subfolder_and_its_twin_at_the_top_are_two_games() {
+        let dir = std::env::temp_dir().join("moose-favmap-subfolders");
+        let _ = std::fs::remove_dir_all(&dir);
+        let roms = dir.join("roms");
+        std::fs::create_dir_all(roms.join("snes/Aftermarket")).unwrap();
+        for f in ["snes/Foo (USA).sfc", "snes/Aftermarket/Foo (USA).sfc", "snes/Aftermarket/Bar (USA).sfc"] {
+            std::fs::write(roms.join(f), b"rom").unwrap();
+        }
+        std::fs::create_dir_all(dir.join("etc")).unwrap();
+        std::fs::write(dir.join("etc/Foo (USA).sfc"), b"not a rom").unwrap();
+        let game = |rel_dir: &str, fs_name: &str| moose_rack::esde::Game {
+            platform_slug: "sfc".into(),
+            system: "snes".into(),
+            name: fs_name.into(),
+            fs_name: fs_name.into(),
+            rel_dir: rel_dir.into(),
+            ..Default::default()
+        };
+        let mut cache = Cache::open(&dir.join("cache.sqlite3")).unwrap();
+        cache
+            .replace_from_esde(&[
+                game("", "Foo (USA).sfc"),
+                game("Aftermarket", "Foo (USA).sfc"),
+                game("Aftermarket", "Bar (USA).sfc"),
+                // Not on this card, and a path that would leave the folder.
+                game("../../etc", "Foo (USA).sfc"),
+            ])
+            .unwrap();
+        let known = on_card(&cache, &moose_rack::platform::knulli::Knulli, &roms).unwrap();
+        let mut paths: Vec<String> = known.iter().map(|k| format!("{}/{}", k.folder, k.rel_path())).collect();
+        paths.sort();
+        assert_eq!(paths, ["snes/Aftermarket/Bar (USA).sfc", "snes/Aftermarket/Foo (USA).sfc", "snes/Foo (USA).sfc"]);
+        let index = by_file(&known);
+        let top = index[&("snes".to_owned(), "Foo (USA).sfc".to_owned())];
+        let below = index[&("snes".to_owned(), "Aftermarket/Foo (USA).sfc".to_owned())];
+        assert_ne!(top, below, "the twins became one game");
+        assert_eq!(top, moose_rack::gameid::game_id("snes", "", "Foo (USA).sfc"));
+        assert_eq!(below, moose_rack::gameid::game_id("snes", "Aftermarket", "Foo (USA).sfc"));
+        let k = known.iter().find(|k| k.rom_id == below).unwrap();
+        assert_eq!(k.full_path(&roms), roms.join("snes/Aftermarket/Foo (USA).sfc"));
+        // And a collection file's absolute path finds its way back.
+        let es = EsPaths::under(&dir);
+        assert_eq!(
+            es.locate(&es.roms.join("snes/Aftermarket/Foo (USA).sfc")),
+            Some(("snes".to_owned(), "Aftermarket/Foo (USA).sfc".to_owned()))
+        );
+        assert_eq!(es.locate(Path::new("/elsewhere/snes/Foo.sfc")), None);
+    }
+
     #[test]
     fn known_games_group_and_index_the_way_the_writers_need_them() {
         let known = vec![
-            Known { rom_id: 1, folder: "snes".into(), file: "A.sfc".into() },
-            Known { rom_id: 2, folder: "snes".into(), file: "B.sfc".into() },
-            Known { rom_id: 3, folder: "gb".into(), file: "C.gb".into() },
+            Known { rom_id: 1, folder: "snes".into(), rel_dir: String::new(), file: "A.sfc".into() },
+            Known { rom_id: 2, folder: "snes".into(), rel_dir: String::new(), file: "B.sfc".into() },
+            Known { rom_id: 3, folder: "gb".into(), rel_dir: String::new(), file: "C.gb".into() },
         ];
         assert_eq!(ids(&known), [1, 2, 3].into());
         let grouped = by_folder(&known);
@@ -243,7 +336,7 @@ mod tests {
     fn a_rom_path_is_absolute_because_that_is_what_a_collection_file_holds() {
         // ES-DE writes %ROMPATH%; Batocera's ES writes the whole path, and the
         // files already on this card are absolute.
-        let k = Known { rom_id: 1, folder: "fbneo".into(), file: "64street.zip".into() };
+        let k = Known { rom_id: 1, folder: "fbneo".into(), rel_dir: String::new(), file: "64street.zip".into() };
         assert_eq!(
             k.full_path(Path::new("/userdata/roms")),
             Path::new("/userdata/roms/fbneo/64street.zip")

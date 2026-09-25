@@ -363,8 +363,31 @@ fn apply_cli(patches: &[Patch], arg: Option<String>) -> Result<()> {
 /// Without `--stars-apply` this only looks — it reads ES's gamelists and the
 /// server's collections and prints the difference. Deciding by looking is the
 /// point: every difference here is a star somebody set, and a plan that moves
-/// nothing can be checked against what they remember doing.
+/// nothing can be checked against what they remember doing. The look does
+/// write the baseline for lists that already agree.
+///
+/// `--stars-apply` stops EmulationStation first when it is running, and
+/// starts it again afterwards, because ES writes its gamelists back from
+/// memory when it exits; it refuses while a game is running. A plan that
+/// would take more than 20 stars off, or more than half of one list, is
+/// refused unless `--anyway` is given. Exits 1 when any list did not sync.
 fn stars_cli(carry_out: bool) -> Result<()> {
+    let anyway = std::env::args().any(|a| a == "--anyway");
+    let failed = if carry_out {
+        use moose_patch::esctl::{Knulli, with_es_stopped};
+        with_es_stopped(&Knulli::default(), &|m| println!("{m}"), || stars_run(true, anyway))?
+    } else {
+        stars_run(false, false)?
+    };
+    // Only now: exiting inside the run would leave EmulationStation stopped.
+    if failed > 0 {
+        std::process::exit(1);
+    }
+    Ok(())
+}
+
+/// The body of `stars_cli`. Returns how many lists failed.
+fn stars_run(carry_out: bool, anyway: bool) -> Result<usize> {
     let cfg = moose_rack::config::Config::load().unwrap_or_default();
     let app_dir = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
     let Some(cache_path) = worker::find_cache(&worker::cache_search_path(&app_dir)) else {
@@ -395,6 +418,9 @@ fn stars_cli(carry_out: bool) -> Result<()> {
         let plan =
             moose_patch::favrun::plan(&client, &cache, &es, &known, &baseline, platform).await?;
         println!("{}", plan.headline());
+        for u in &plan.unread {
+            println!("  not read: {u}");
+        }
         // Every collection, agreed or not. "Nothing to do" is only worth
         // anything if you can see that both sides were actually read.
         for s in &plan.surveyed {
@@ -426,24 +452,36 @@ fn stars_cli(carry_out: bool) -> Result<()> {
                 println!("    {what:<16} {name}");
             }
         }
-        if !carry_out {
-            println!("\nnothing moved — run --stars-apply to carry this out");
-            return Ok(());
+        if let Some(why) = plan.too_many_unstars() {
+            println!("\n{why}");
         }
+        if !carry_out {
+            if moose_patch::favrun::record_agreement(&plan, &mut baseline) {
+                baseline.save(&baseline_path)?;
+            }
+            println!("\nnothing moved — run --stars-apply to carry this out");
+            return anyhow::Ok(plan.unread.len());
+        }
+        let backups = worker::es_backups(&app_dir);
         let report =
-            moose_patch::favrun::carry_out(&client, &es, &known, &plan, &mut baseline).await?;
+            moose_patch::favrun::carry_out(&client, &es, &plan, &mut baseline, &backups, anyway)
+                .await?;
         baseline.save(&baseline_path)?;
-        if moose_patch::favrun::show_all(&es, &plan)? {
+        if report.shown {
             println!("told EmulationStation to show the collections it was hiding");
         }
         println!(
-            "{} applied here ({} files rewritten), {} sent",
-            report.applied_here, report.files_written, report.sent
+            "{} applied here ({} files rewritten, old copies in {}), {} sent",
+            report.applied_here,
+            report.files_written,
+            backups.display(),
+            report.sent
         );
+        // The unread lists were printed with the plan.
         for failure in &report.failed {
             println!("  failed: {failure}");
         }
-        anyhow::Ok(())
+        anyhow::Ok(moose_patch::favrun::failures(&plan, &report).len())
     })
 }
 
@@ -659,8 +697,15 @@ fn window(paths: &Paths, patches: &[Patch]) -> Result<()> {
                         &library_root,
                     )),
                     Request::Refresh => Running::Saves(worker::refresh_index(&cfg, &app_dir)),
-                    Request::Stars => Running::Stars(worker::stars(&cfg, &app_dir, false)),
-                    Request::StarsApply => Running::Stars(worker::stars(&cfg, &app_dir, true)),
+                    Request::Stars => Running::Stars(worker::stars(&cfg, &app_dir)),
+                    // The plan that was shown, not a new one. `act` only asks
+                    // for this while one is held.
+                    Request::StarsApply => Running::Stars(worker::stars_apply(
+                        &cfg,
+                        &app_dir,
+                        moose_patch::favmap::EsPaths::knulli(),
+                        app.star_plan.take().unwrap_or_default(),
+                    )),
                 });
             }
         }
@@ -814,9 +859,10 @@ fn act(
                         return None;
                     }
                     // Same two-step as the saves, decided in one place so the
-                    // prompt and the handler cannot disagree.
+                    // prompt and the handler cannot disagree. Carrying out
+                    // needs the plan that was shown; with none held, look again.
                     return match app.stars.next_step() {
-                        Some("carry this out") => {
+                        Some("carry this out") if app.star_plan.is_some() => {
                             app.stars = moose_patch::sync::Stars::Asking("starting".into());
                             Some(Request::StarsApply)
                         }
@@ -1098,11 +1144,22 @@ mod tests {
         // press into one that writes.
         let mut f = fixture("stars-two-step");
         f.0.stars = moose_patch::sync::Stars::Ready { headline: "2 to send".into(), moves: 2 };
+        f.0.star_plan = Some(moose_patch::favrun::Plan::default());
         press(&mut f, Press::TabLeft);
         press(&mut f, Press::Down);
         press(&mut f, Press::Down);
         press(&mut f, Press::Accept);
         assert_eq!(press(&mut f, Press::Accept), Some(Request::StarsApply));
+        assert!(f.0.star_plan.is_some(), "the plan shown is what the loop hands the worker");
+
+        // With no plan held there is nothing shown to carry out: look again.
+        let mut f = fixture("stars-no-plan");
+        f.0.stars = moose_patch::sync::Stars::Ready { headline: "2 to send".into(), moves: 2 };
+        press(&mut f, Press::TabLeft);
+        press(&mut f, Press::Down);
+        press(&mut f, Press::Down);
+        press(&mut f, Press::Accept);
+        assert_eq!(press(&mut f, Press::Accept), Some(Request::Stars));
 
         // and a plan with nothing in it offers to look again, not to run
         let mut f = fixture("stars-empty-plan");
