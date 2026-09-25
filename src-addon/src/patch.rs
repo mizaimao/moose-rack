@@ -395,10 +395,20 @@ pub enum Step {
     /// A marked block in a text config. `None` means the block should not be
     /// there — which is how "off" is written.
     Block { file: PathBuf, id: String, body: Option<String>, form: Form },
-    /// A file this app owns. `None` means it should not be there, and
-    /// whatever was there before comes back — from `backup`, which is
-    /// deliberately not inside the directory `path` lives in.
+    /// A file this app owns, at a path nothing else writes to. `None` means it
+    /// should not be there, and whatever was there before comes back — from
+    /// `backup`, which is deliberately not inside the directory `path` lives
+    /// in.
     Place { path: PathBuf, bytes: Option<&'static [u8]>, backup: PathBuf },
+    /// Our file laid over one KNULLI may ship: `es_input.cfg`, ES's
+    /// `logo.png`. `ours` is what we put there and `on` says whether it should
+    /// be there.
+    ///
+    /// Off never deletes a file we did not put there. It puts the backup back
+    /// if the file is ours (or gone), deletes it only if it is byte for byte
+    /// ours and there is no backup, and otherwise leaves it alone. So a stock
+    /// file reads as off, which is what a fresh install is.
+    Cover { path: PathBuf, ours: &'static [u8], on: bool, backup: PathBuf },
 }
 
 /// Write, even if the filesystem says no.
@@ -488,6 +498,23 @@ fn mount_point_of(path: &Path) -> Option<String> {
         .map(str::to_string)
 }
 
+/// A file's bytes, or `None` when there is no such file.
+fn read_bytes(path: &Path) -> Result<Option<Vec<u8>>> {
+    match fs::read(path) {
+        Ok(bytes) => Ok(Some(bytes)),
+        Err(e) if e.kind() == ErrorKind::NotFound => Ok(None),
+        Err(e) => Err(e).with_context(|| format!("reading {}", path.display())),
+    }
+}
+
+/// Put the backup of `path` back, and drop it.
+fn put_back(path: &Path, backup: &Path) -> Result<()> {
+    let original = fs::read(backup).with_context(|| format!("reading {}", backup.display()))?;
+    write_through(path, &original).with_context(|| format!("restoring {}", path.display()))?;
+    fs::remove_file(backup).ok();
+    Ok(())
+}
+
 /// Two texts that differ at most in how they end.
 fn same_text(a: &str, b: &str) -> bool {
     a.trim_end() == b.trim_end()
@@ -540,6 +567,10 @@ impl Step {
             Step::Place { path, bytes, .. } => match bytes {
                 Some(want) => fs::read(path).map(|got| got == *want).unwrap_or(false),
                 None => !path.exists(),
+            },
+            Step::Cover { path, ours, on, .. } => match read_bytes(path) {
+                Ok(now) => (now.as_deref() == Some(*ours)) == *on,
+                Err(_) => false,
             },
         }
     }
@@ -597,9 +628,7 @@ impl Step {
                 Some(bytes) => lay_down(path, bytes, backup),
                 None => {
                     if backup.exists() {
-                        write_through(path, &fs::read(backup)?)
-                            .with_context(|| format!("restoring {}", path.display()))?;
-                        fs::remove_file(backup).ok();
+                        put_back(path, backup)?;
                     } else if path.exists() {
                         remove_through(path)
                             .with_context(|| format!("removing {}", path.display()))?;
@@ -607,6 +636,21 @@ impl Step {
                     Ok(())
                 }
             },
+            Step::Cover { path, ours, on, backup } => {
+                if *on {
+                    return lay_down(path, ours, backup);
+                }
+                let now = read_bytes(path)?;
+                let is_ours = now.as_deref() == Some(*ours);
+                if (is_ours || now.is_none()) && backup.exists() {
+                    put_back(path, backup)
+                } else if is_ours {
+                    remove_through(path).with_context(|| format!("removing {}", path.display()))
+                } else {
+                    // Somebody else's: KNULLI's own, or one ES wrote since.
+                    Ok(())
+                }
+            }
         }
     }
 }
