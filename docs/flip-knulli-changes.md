@@ -143,13 +143,24 @@ TOCA World Touring Cars. Everything else is SRAM or flash.
     moose-blank-logo.png        a blank PNG
     moose-libmali-stock.so      43 MB
     moose-libmali-wayland.so    56 MB
-    moose-gpu                   which blob to install (absent = stock)
+    moose-gpu                   which blob to install (absent = stock),
+                                and the KNULLI it was set on
+    moose-evmapy-guard          the evmapy guard is on; also carries the KNULLI
 
-`boot-custom.sh` does two jobs at every boot:
+`boot-custom.sh` does three jobs at every boot:
 
 * **`apply_gpu`** — copies the chosen Mali blob over `/usr/lib/libmali.so.1`.
 * **`blank_es_logo`** — copies the blank PNG over
   `/usr/share/emulationstation/resources/logo.png`, before S31 starts ES.
+* **`guard_evmapy`** — see section 8.
+
+The gpu marker and the evmapy flag have a second line,
+`knulli=<first line of /usr/share/knulli/knulli.version>`, written when the
+patch is applied. When it is not the image being booted, the hook skips that
+job and writes why to `/var/log/moose-boot.log`, so a KNULLI update never gets
+the old blob or an edit checked against the old image. Both rows then read
+`changed` until applied again. A marker from before this line existed is
+skipped the same way.
 
 Everything it reads is on `/boot`, and that is not a preference. It runs as
 S00; `/userdata` is not mounted until S02. Both halves of this file lived in
@@ -171,6 +182,13 @@ In `/userdata/system/configs/multimedia_keys.conf` (which overrides `/etc`):
 
 Both orderings, because triggerhappy matches the **exact set of held keys** and
 the trigger must be the second button pressed.
+
+That file replaces `/etc/triggerhappy/triggers.d/multimedia_keys.conf` rather
+than adding to it, and the volume, power and lid keys are in there. So it is
+always KNULLI's file as it is now plus those two lines: rebuilt from /etc at
+every apply, deleted when the patch is off, and read as `changed` when a KNULLI
+update changes the /etc file. An apply with no /etc file to build from writes
+nothing.
 
 ## 5. EmulationStation
 
@@ -230,7 +248,8 @@ Measured 3.43 s → 2.50 s, three runs each side, identical to within 0.02 s.
 `/usr` is a tmpfs, so `boot-custom.sh` puts the line back at every boot — the
 same mechanism as `es-logo` and `gpu`. It is *inserted* rather than copied over,
 so a KNULLI update to that script keeps its own changes and only gains our
-line, and a marker comment makes it idempotent.
+line, and a marker comment makes it idempotent. It is inserted only on the
+KNULLI the flag was set on (section 2).
 
 The rest of the 3.43 s is being taken by a native launcher — see
 [fast-launch.md](fast-launch.md).
@@ -343,7 +362,10 @@ and change one without a controller in hand with:
     ./moose-patch --apply charge-awake=ON
 
 `--apply` reads the state back rather than reporting what it was asked for,
-which is the difference that catches the first-wins class of bug.
+which is the difference that catches the first-wins class of bug, and exits
+non-zero when it is not the option asked for. It stops EmulationStation while
+it writes, so ES's copy of knulli.conf is written out before ours rather than
+over it, and starts it again after. It refuses while a game is running.
 
 **Open question for Frank:** `never-sleep` and `charge-awake` are both on. Now
 that blocks actually override KNULLI's own values, `never-sleep` will do what
