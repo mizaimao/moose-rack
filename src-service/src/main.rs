@@ -149,15 +149,24 @@ struct Args {
 
 /// The scan, held for the process lifetime.
 ///
-/// Rescanning is cheap — 11,473 games in about three seconds — but not free, and
-/// nothing here mutates it yet. When writes arrive this becomes a lock rather
-/// than an Arc.
+/// Rescanning is cheap — 11,473 games in about three seconds — but not free.
+/// The games do not change while the service runs; the lists do, when a device
+/// stars something, and they are behind a lock of their own.
 struct Library {
     games: Vec<esde::Game>,
     /// Stable id -> index into `games`. See `moose_rack::gameid`.
     by_id: std::collections::HashMap<i64, usize>,
-    /// The curated lists, resolved to ids at startup.
-    collections: Vec<collections::Collection>,
+    /// The curated lists, resolved to ids. Read again from disk after every
+    /// membership change, so what `/api/collections` answers is always what
+    /// the files say.
+    collections: std::sync::RwLock<Vec<collections::Collection>>,
+    /// Where the lists live.
+    col_dir: std::path::PathBuf,
+    /// Name -> id for the lists, built once from the scan.
+    names: std::collections::HashMap<(String, String), i64>,
+    /// Told when a list changed, so the web UI's copy follows. Set once, after
+    /// the UI exists; unset when there is no UI.
+    lists_changed: std::sync::OnceLock<Box<dyn Fn() + Send + Sync>>,
     /// The BIOS set, flattened.
     ///
     /// Flattened on purpose: the tree has `mame/`, `fbneo/` and so on, but
@@ -184,6 +193,17 @@ impl Library {
     fn game(&self, id: i64) -> Option<&esde::Game> {
         self.by_id.get(&id).and_then(|&i| self.games.get(i))
     }
+}
+
+/// The scan as the list files name it.
+fn named(games: &[esde::Game]) -> impl Iterator<Item = collections::Named<'_>> {
+    games.iter().map(|g| collections::Named {
+        platform: &g.platform_slug,
+        rel_dir: &g.rel_dir,
+        name: &g.name,
+        fs_name: &g.fs_name,
+        id: gameid::game_id(&g.system, &g.rel_dir, &g.fs_name),
+    })
 }
 
 /// Index a scan by stable id, and say so loudly if two games share one.
@@ -515,7 +535,11 @@ async fn index(State(lib): State<Arc<Library>>) -> axum::response::Html<String> 
         m
     };
     let saves = lib.sync.lock().map(|s| s.store.list(None).len()).unwrap_or(0);
-    let cols: i64 = lib.collections.iter().map(|c| c.rom_count).sum();
+    let (lists, cols) = lib
+        .collections
+        .read()
+        .map(|c| (c.len(), c.iter().map(|c| c.rom_count).sum::<i64>()))
+        .unwrap_or_default();
     let rows = platforms
         .iter()
         .map(|(p, n)| format!("<tr><td>{p}</td><td align=right>{n}</td></tr>"))
@@ -538,7 +562,7 @@ td{padding:.1rem .8rem .1rem 0}code{background:#eee;padding:.1rem .3rem}</style>
             .replace("{games}", &lib.games.len().to_string())
             .replace("{plat}", &platforms.len().to_string())
             .replace("{fw}", &lib.firmware.len().to_string())
-            .replace("{cn}", &lib.collections.len().to_string())
+            .replace("{cn}", &lists.to_string())
             .replace("{cm}", &cols.to_string())
             .replace("{saves}", &saves.to_string())
             .replace("{rows}", &rows),
@@ -650,7 +674,118 @@ async fn no_kinds() -> Json<Vec<String>> {
 }
 
 async fn serve_collections(State(lib): State<Arc<Library>>) -> axum::response::Response {
-    Json(&lib.collections).into_response()
+    match lib.collections.read() {
+        Ok(c) => Json(&*c).into_response(),
+        Err(_) => axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+/// The body both membership calls send: `edit_collection_roms` in `src/api.rs`.
+#[derive(Deserialize)]
+struct Members {
+    rom_ids: Vec<i64>,
+}
+
+/// `POST /api/collections/{id}/roms`: put games in a list.
+///
+/// A game already in it is not an error, which is what the client expects. A
+/// game the server does not have is: there is no line to write for it, and
+/// leaving it out without a word would let the device record an agreement the
+/// server never made.
+async fn add_members(
+    State(lib): State<Arc<Library>>,
+    AxPath(id): AxPath<String>,
+    Json(body): Json<Members>,
+) -> axum::response::Response {
+    change_members(&lib, &id, &body.rom_ids, true)
+}
+
+/// `DELETE /api/collections/{id}/roms`: take games out. A game not in the
+/// list, or not in the library, is not an error.
+async fn remove_members(
+    State(lib): State<Arc<Library>>,
+    AxPath(id): AxPath<String>,
+    Json(body): Json<Members>,
+) -> axum::response::Response {
+    change_members(&lib, &id, &body.rom_ids, false)
+}
+
+/// Edit the list's text file, then read every list back from disk.
+///
+/// The file is the membership, as it always was: this writes the lines a
+/// person would have typed, and the answer comes from reading them back, so a
+/// line that does not say what was meant shows up in this response rather than
+/// at the next restart. The write lock is held throughout, so two devices
+/// starring at once cannot interleave their edits of one file.
+fn change_members(lib: &Library, id: &str, rom_ids: &[i64], add: bool) -> axum::response::Response {
+    use axum::http::StatusCode;
+    if let Some(no) = refuse_legacy(rom_ids.iter().copied()) {
+        return no;
+    }
+    let Ok(mut lists) = lib.collections.write() else {
+        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    };
+    // Only a list that was loaded, which is also what stops `id` naming a path
+    // anywhere else.
+    if !lists.iter().any(|c| c.id == id) {
+        return (StatusCode::NOT_FOUND, format!("no collection {id:?}")).into_response();
+    }
+    let change = if add {
+        let mut lines = Vec::new();
+        let mut unknown = Vec::new();
+        let mut unnamed = Vec::new();
+        for &rom in rom_ids {
+            let Some(g) = lib.game(rom) else {
+                unknown.push(rom.to_string());
+                continue;
+            };
+            let named = collections::Named {
+                platform: &g.platform_slug,
+                rel_dir: &g.rel_dir,
+                name: &g.name,
+                fs_name: &g.fs_name,
+                id: rom,
+            };
+            match collections::line_for(&named, &lib.names) {
+                Some(line) => lines.push((rom, line)),
+                None => unnamed.push(gameid::key(&g.system, &g.rel_dir, &g.fs_name)),
+            }
+        }
+        if !unknown.is_empty() {
+            let msg = format!(
+                "the server has no game {} -- refresh this device's game list",
+                unknown.join(", ")
+            );
+            return (StatusCode::NOT_FOUND, msg).into_response();
+        }
+        if !unnamed.is_empty() {
+            let msg = format!(
+                "no line in a list can name {} without naming another game too",
+                unnamed.join(", ")
+            );
+            return (StatusCode::CONFLICT, msg).into_response();
+        }
+        collections::Change::Add(lines)
+    } else {
+        collections::Change::Remove(rom_ids.iter().copied().collect())
+    };
+    let path = lib.col_dir.join(format!("{id}.txt"));
+    let changed = match collections::edit(&path, &change, &lib.names) {
+        Ok(c) => c,
+        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, format!("{e:#}")).into_response(),
+    };
+    if changed {
+        *lists = collections::load(&lib.col_dir, &lib.names).0;
+    }
+    let Some(now) = lists.iter().find(|c| c.id == id) else {
+        return (StatusCode::INTERNAL_SERVER_ERROR, format!("{id} did not read back")).into_response();
+    };
+    let body = Json(now).into_response();
+    drop(lists);
+    if changed && let Some(tell) = lib.lists_changed.get() {
+        tell();
+    }
+    body
 }
 
 /// The bytes of a game.
@@ -976,7 +1111,7 @@ async fn require_auth(
         // answer -- the account exists precisely so that reading the library
         // needs no ceremony. `/login` is still there for the owner.
         None if is_page && guard.cfg.guest => {
-            let w = auth::Identity::User(auth::AuthConfig::GUEST.to_owned());
+            let w = auth::Identity::Guest;
             let id = guard.sessions.open(w.clone());
             set_cookie = Some(format!(
                 "{}={id}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000",
@@ -1008,6 +1143,15 @@ async fn require_auth(
                 )
                     .into_response();
             }
+    // Decided here for the reason `/invoke/` is: it holds however the
+    // handlers are rewritten.
+    if who == auth::Identity::Guest && auth::guest_refused(req.method(), req.uri().path()) {
+        return (
+            axum::http::StatusCode::FORBIDDEN,
+            "the shared guest account cannot change a collection",
+        )
+            .into_response();
+    }
     req.extensions_mut().insert(who);
     let mut res = next.run(req).await;
     // The session the guest was just given, so the next request is not a second
@@ -1053,8 +1197,7 @@ async fn login(
         if !guard.cfg.guest {
             return (axum::http::StatusCode::UNAUTHORIZED, "no").into_response();
         }
-        let who = auth::Identity::User(auth::AuthConfig::GUEST.to_owned());
-        let id = guard.sessions.open(who);
+        let id = guard.sessions.open(auth::Identity::Guest);
         let cookie =
             format!("{}={id}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000", auth::COOKIE);
         return (
@@ -1275,6 +1418,10 @@ fn app(lib: Arc<Library>, media_dir: std::path::PathBuf, with_index: bool) -> Ro
             .route("/api/roms/{id}", get(rom_by_id))
             .route("/api/roms/{id}/content/{*name}", get(rom_content))
             .route("/api/collections", get(serve_collections))
+            .route(
+                "/api/collections/{id}/roms",
+                axum::routing::post(add_members).delete(remove_members),
+            )
             .route("/api/collections/smart", get(no_collections))
             .route("/api/collections/virtual", get(no_collections))
             .route("/api/collections/virtual/identifiers", get(no_kinds))
@@ -1448,14 +1595,7 @@ async fn main() -> Result<()> {
     // Name -> id, from the scan, so a list resolves without a database. The
     // keying rule lives in `collections` because the web UI resolves the same
     // lists against different ids and the two must agree on what a name is.
-    let by_name = collections::name_table(
-        games
-            .iter()
-            .map(|g| {
-                let id = gameid::game_id(&g.system, &g.rel_dir, &g.fs_name);
-                (g.platform_slug.as_str(), g.name.as_str(), g.fs_name.as_str(), id)
-            }),
-    );
+    let by_name = collections::name_table(named(&games));
     let col_dir = pick(args.collections.clone(), &cfg.library.collections)
         .map(std::path::PathBuf::from)
         .unwrap_or_else(|| std::path::Path::new(&root).join("collections"));
@@ -1483,7 +1623,10 @@ async fn main() -> Result<()> {
     let lib = Arc::new(Library {
         by_id: index_games(&games),
         games,
-        collections: cols,
+        collections: std::sync::RwLock::new(cols),
+        col_dir: col_dir.clone(),
+        names: by_name,
+        lists_changed: std::sync::OnceLock::new(),
         hashes,
         firmware,
         sync: std::sync::Mutex::new(SyncState {
@@ -1495,7 +1638,7 @@ async fn main() -> Result<()> {
     });
 
     let ui_path = pick(args.ui.clone(), &cfg.library.ui);
-    let mut app = app(lib, media_dir, ui_path.is_none());
+    let mut app = app(lib.clone(), media_dir, ui_path.is_none());
 
     // The UI, when there is one. Its `/` replaces the status page: a person who
     // types the address wants the app, not a summary of it.
@@ -1564,7 +1707,22 @@ async fn main() -> Result<()> {
                 emulatorjs.display()
             ),
         }
-        app = web_app(Arc::new(web::WebState { state, ui_dir, emulatorjs })).merge(app);
+        let web_state = Arc::new(web::WebState { state, ui_dir, emulatorjs });
+        // A device starring a game changes a list file. The UI in this process
+        // reads its own copy of the lists, so it is told to read them again.
+        let (ui, dir) = (web_state.clone(), col_dir.clone());
+        let _ = lib.lists_changed.set(Box::new(move || {
+            let done = ui
+                .state
+                .cache
+                .lock()
+                .map_err(|e| anyhow::anyhow!("{e}"))
+                .and_then(|mut c| collections::into_cache(&mut c, &dir));
+            if let Err(e) = done {
+                eprintln!("ui lists   not reloaded after a change: {e:#}");
+            }
+        }));
+        app = web_app(web_state).merge(app);
     }
 
     // Everything above is routes; this is who may reach them. Applied to the
@@ -1639,10 +1797,18 @@ mod tests {
         let (games, _) = esde::scan(&layout, &CoreMap::embedded()).unwrap();
         let saves_root = dir.join("saves");
         std::fs::create_dir_all(&saves_root).unwrap();
+        // Whatever lists a test wrote before building, loaded the way `main`
+        // loads them. None by default.
+        let col_dir = dir.join("collections");
+        let names = collections::name_table(named(&games));
+        let (cols, _) = collections::load(&col_dir, &names);
         let lib = Library {
             by_id: index_games(&games),
             games,
-            collections: Vec::new(),
+            collections: std::sync::RwLock::new(cols),
+            col_dir,
+            names,
+            lists_changed: std::sync::OnceLock::new(),
             hashes: Default::default(),
             firmware: scan_firmware(&dir.join("bios")),
             sync: std::sync::Mutex::new(SyncState {
@@ -2560,6 +2726,166 @@ mod tests {
         assert!(body.contains("Moose Rack"), "should name itself");
         assert!(body.contains("/api/heartbeat"), "should point at the API");
         assert!(body.contains("nes"), "should list what it holds");
+    }
+
+    // --- Changing a list ----------------------------------------------------
+
+    /// The fixture with one list on disk: Alpha in it, Beta not.
+    fn with_list(dir: &std::path::Path) -> (Arc<Library>, std::path::PathBuf) {
+        std::fs::create_dir_all(dir.join("collections")).unwrap();
+        std::fs::write(
+            dir.join("collections/★ Best of nes.txt"),
+            "# ★ Best of nes\n# 1 game, exported 2026-09-03 from RomM\nnes/Alpha (USA)    # Alpha\n",
+        )
+        .unwrap();
+        fixture(dir)
+    }
+
+    /// `/api/collections/★ Best of nes/roms`, as `urlencode` in `src/api.rs`
+    /// writes it.
+    const BEST: &str = "/api/collections/%E2%98%85%20Best%20of%20nes/roms";
+
+    async fn members(app: &Router, method: &str, ids: &[i64], auth: Option<&str>) -> (StatusCode, String) {
+        let mut b = Request::builder()
+            .method(method)
+            .uri(BEST)
+            .header("content-type", "application/json");
+        if let Some(a) = auth {
+            b = b.header("authorization", a);
+        }
+        let body = serde_json::json!({ "rom_ids": ids }).to_string();
+        let r = app.clone().oneshot(b.body(Body::from(body)).unwrap()).await.unwrap();
+        let s = r.status();
+        let bytes = axum::body::to_bytes(r.into_body(), usize::MAX).await.unwrap();
+        (s, String::from_utf8_lossy(&bytes).into_owned())
+    }
+
+    fn beta() -> i64 {
+        gameid::game_id("nes", "", "Beta (USA).zip")
+    }
+
+    async fn listed(app: &Router) -> Vec<i64> {
+        let (_, body) = get(app, "/api/collections").await;
+        let v: serde_json::Value = serde_json::from_str(&body).unwrap();
+        let best = v.as_array().unwrap().iter().find(|c| c["id"] == "★ Best of nes").unwrap();
+        best["rom_ids"].as_array().unwrap().iter().map(|i| i.as_i64().unwrap()).collect()
+    }
+
+    /// Audit item 1. The Flip POSTs and DELETEs membership and the server had
+    /// only GET, so a star added on the handheld never arrived and the list
+    /// was skipped in both directions from then on.
+    #[tokio::test]
+    async fn a_star_goes_in_reads_back_and_comes_out_again() {
+        let d = tempdir::TempDir::new("svc-lists").unwrap();
+        let (lib, media) = with_list(d.path());
+        let app = app(lib, media, true);
+        let file = d.path().join("collections/★ Best of nes.txt");
+        let mut before = vec![alpha()];
+        before.sort();
+        assert_eq!(listed(&app).await, before);
+
+        let (s, body) = members(&app, "POST", &[beta(), alpha()], None).await;
+        assert_eq!(s, StatusCode::OK, "{body}");
+        let mut both = vec![alpha(), beta()];
+        both.sort();
+        assert_eq!(listed(&app).await, both, "the next GET must show the new member");
+        assert_eq!(
+            std::fs::read_to_string(&file).unwrap(),
+            "# ★ Best of nes\n# 1 game, exported 2026-09-03 from RomM\n\
+             nes/Alpha (USA)    # Alpha\nnes/Beta (USA)    # Beta\n",
+            "one line appended, in the shape the export wrote, and Alpha not doubled"
+        );
+
+        let (s, body) = members(&app, "DELETE", &[alpha()], None).await;
+        assert_eq!(s, StatusCode::OK, "{body}");
+        assert_eq!(listed(&app).await, vec![beta()]);
+        assert_eq!(
+            std::fs::read_to_string(&file).unwrap(),
+            "# ★ Best of nes\n# 1 game, exported 2026-09-03 from RomM\nnes/Beta (USA)    # Beta\n",
+            "the comments stay and only Alpha's line went"
+        );
+
+        // And a restart, which reads only the file, agrees.
+        let (lib2, media2) = fixture(d.path());
+        assert_eq!(listed(&super::app(lib2, media2, true)).await, vec![beta()]);
+    }
+
+    /// A game the server does not hold has no line to write. Refused, with the
+    /// file untouched, rather than dropped and answered 200.
+    #[tokio::test]
+    async fn a_game_the_server_does_not_have_is_refused_and_nothing_is_written() {
+        let d = tempdir::TempDir::new("svc-lists").unwrap();
+        let (lib, media) = with_list(d.path());
+        let app = app(lib, media, true);
+        let file = d.path().join("collections/★ Best of nes.txt");
+        let before = std::fs::read_to_string(&file).unwrap();
+        let nowhere = gameid::game_id("nes", "", "Not Here (USA).zip");
+        let (s, body) = members(&app, "POST", &[beta(), nowhere], None).await;
+        assert_eq!(s, StatusCode::NOT_FOUND, "{body}");
+        assert!(body.contains(&nowhere.to_string()), "{body}");
+        assert_eq!(std::fs::read_to_string(&file).unwrap(), before);
+        // Removing it is not an error: it is not in the list.
+        let (s, _) = members(&app, "DELETE", &[nowhere], None).await;
+        assert_eq!(s, StatusCode::OK);
+        // An old positional id is the same refusal the saves give.
+        let (s, body) = members(&app, "POST", &[12], None).await;
+        assert_eq!(s, StatusCode::BAD_REQUEST, "{body}");
+        let (s, _) = members(&app, "POST", &[beta()], None).await;
+        assert_eq!(s, StatusCode::OK);
+        let (s, _) = post_json(&app, "/api/collections/Nope/roms", serde_json::json!({"rom_ids": [beta()]})).await;
+        assert_eq!(s, StatusCode::NOT_FOUND, "a list that does not exist");
+    }
+
+    /// The owner and a named account may change a list; the shared guest
+    /// account may read it and may not.
+    #[tokio::test]
+    async fn named_accounts_may_change_a_list_and_the_guest_may_not() {
+        let d = tempdir::TempDir::new("svc-lists").unwrap();
+        let (lib, media) = with_list(d.path());
+        let guard = std::sync::Arc::new(Guard { cfg: with_guest(), sessions: auth::Sessions::default() });
+        let app = app(lib, media, true)
+            .merge(
+                Router::new()
+                    .route("/login", axum::routing::get(login_page).post(login))
+                    .with_state(guard.clone()),
+            )
+            .layer(axum::middleware::from_fn_with_state(guard, require_auth));
+        let file = d.path().join("collections/★ Best of nes.txt");
+
+        let (_, cookie, _) = post_login(&app, "/login", r#"{"guest":true}"#).await;
+        let cookie = cookie.unwrap();
+        let guest = |method: &'static str| {
+            let app = app.clone();
+            let cookie = cookie.clone();
+            async move {
+                let r = app
+                    .oneshot(
+                        Request::builder()
+                            .method(method)
+                            .uri(BEST)
+                            .header("cookie", cookie)
+                            .header("content-type", "application/json")
+                            .body(Body::from(format!(r#"{{"rom_ids":[{}]}}"#, beta())))
+                            .unwrap(),
+                    )
+                    .await
+                    .unwrap();
+                r.status()
+            }
+        };
+        let before = std::fs::read_to_string(&file).unwrap();
+        assert_eq!(guest("POST").await, StatusCode::FORBIDDEN);
+        assert_eq!(guest("DELETE").await, StatusCode::FORBIDDEN);
+        assert_eq!(std::fs::read_to_string(&file).unwrap(), before, "a guest changed the list");
+        let (s, _) = req(&app, "GET", "/api/collections", &[("cookie", &cookie)]).await;
+        assert_eq!(s, StatusCode::OK, "a guest may still read the lists");
+
+        // `locked()` names its user "guest" too: a real account, not the
+        // shared one, and it may.
+        let named = basic("guest", "hunter2");
+        assert_eq!(members(&app, "POST", &[beta()], Some(&named)).await.0, StatusCode::OK);
+        assert_eq!(members(&app, "DELETE", &[beta()], Some("Bearer owner-secret")).await.0, StatusCode::OK);
+        assert_eq!(members(&app, "POST", &[beta()], None).await.0, StatusCode::UNAUTHORIZED);
     }
 
     /// The GUI asks for all three on every load. A 404 is survivable -- each is
