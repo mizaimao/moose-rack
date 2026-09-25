@@ -35,8 +35,9 @@ const BEZEL_INFO: &[u8] = include_bytes!("../../device/gba-bezel/systems/gba-4_3
 
 const BLANK_LOGO: &[u8] = include_bytes!("../../device/splash/blank-logo.png");
 const BOOT_HOOK: &[u8] = include_bytes!("../../device/splash/boot-custom.sh");
-/// Presence is the switch; the hook reads nothing out of it.
-const EVMAPY_FLAG: &[u8] = b"moose-patch: evmapy guard on\n";
+/// The first line of the evmapy switch. Presence turns it on; see
+/// `boot_switch` for the line after it.
+const EVMAPY_FLAG: &str = "moose-patch: evmapy guard on";
 const ES_INPUT: &[u8] = include_bytes!("../../device/hotkey/es_input.cfg");
 const TRIGGERS: &str = include_str!("../../device/hotkey/multimedia_keys.append");
 
@@ -78,6 +79,19 @@ fn place(paths: &Paths, path: std::path::PathBuf, bytes: Option<&'static [u8]>) 
 fn cover(paths: &Paths, path: std::path::PathBuf, ours: &'static [u8], on: bool) -> Step {
     let backup = paths.backup_for(&path);
     Step::Cover { path, ours, on, backup }
+}
+
+/// A switch on /boot for `boot-custom.sh`: `first` line, then the KNULLI it
+/// was set on.
+///
+/// The hook runs at every boot, where nothing checks versions, so it checks
+/// this line against the image it is booting and skips, with a line in
+/// /var/log/moose-boot.log, when they differ. Here it also makes the patch
+/// read as changed after a KNULLI update, because the version is part of what
+/// it expects to find.
+fn boot_switch(paths: &Paths, first: &str) -> &'static [u8] {
+    let version = crate::knulli::installed(paths).unwrap_or_default();
+    Box::leak(format!("{first}\nknulli={version}\n").into_bytes().into_boxed_slice())
 }
 
 /// The four presets and our three sets.
@@ -479,11 +493,13 @@ pub fn all(paths: &Paths) -> Vec<Patch> {
                      so a libretro launch with no gun writes nothing and then waits for a \
                      daemon with no job. The guard is that test and nothing more, so the 54 \
                      standalone emulators that do declare player mappings are untouched. \
-                     /usr is a tmpfs, so /boot/boot-custom.sh puts the line back each boot.",
+                     /usr is a tmpfs, so /boot/boot-custom.sh puts the line back each boot, \
+                     and only on the KNULLI this was set on: after an update it skips it \
+                     until this is applied again.",
             choices: on_off(
                 "ON",
                 vec![
-                    place(paths, paths.evmapy_flag(), Some(EVMAPY_FLAG)),
+                    place(paths, paths.evmapy_flag(), Some(boot_switch(paths, EVMAPY_FLAG))),
                     place(paths, paths.boot_custom(), Some(BOOT_HOOK)),
                 ],
                 vec![place(paths, paths.evmapy_flag(), None)],
@@ -553,7 +569,9 @@ pub fn all(paths: &Paths) -> Vec<Patch> {
                      blobs are 43 and 56 MB, too big to carry in here, so they are placed on \
                      /boot once; without them this setting is remembered and does nothing. \
                      The stock one has no Wayland support, the g24p0 one does, and the \
-                     emulators behave identically on both.",
+                     emulators behave identically on both. The marker also records which \
+                     KNULLI it was set on, and after an update the hook leaves the new \
+                     image's driver alone until this is applied again.",
             choices: vec![
                 Choice {
                     // No marker at all: the hook does nothing without one and
@@ -565,7 +583,7 @@ pub fn all(paths: &Paths) -> Vec<Patch> {
                 Choice {
                     name: "wayland".into(),
                     steps: vec![
-                        place(paths, paths.gpu_choice(), Some(b"wayland\n")),
+                        place(paths, paths.gpu_choice(), Some(boot_switch(paths, "wayland"))),
                         place(paths, paths.boot_custom(), Some(BOOT_HOOK)),
                     ],
                 },
@@ -961,6 +979,73 @@ mod tests {
         assert!(!paths.shaderset("moose-lcd").exists());
         assert!(!paths.shader("1-sharp-shimmerless.glslp").exists());
         assert_eq!(state(&patches, "shaders"), "off");
+    }
+
+    /// Run the boot hook as S00bootcustom does, against `paths` instead of /.
+    /// With dash where there is one, so a bashism fails here too.
+    #[cfg(unix)]
+    fn boot(paths: &Paths) {
+        let hook = paths.root.join("boot-custom.sh");
+        std::fs::write(&hook, BOOT_HOOK).unwrap();
+        let shell = if std::path::Path::new("/bin/dash").exists() { "/bin/dash" } else { "sh" };
+        let status = std::process::Command::new(shell)
+            .arg(&hook)
+            .arg("start")
+            .env("MOOSE_ROOT", &paths.root)
+            .status()
+            .unwrap();
+        assert!(status.success());
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn the_boot_hook_skips_a_switch_set_on_another_knulli() {
+        // /boot survives a KNULLI update and /usr does not. The hook used to
+        // copy the old driver blob over the new image's, and edit its evmapy
+        // script, at the first boot after an update, checked against nothing.
+        let paths = scratch("boot-version");
+        let at = |rest: &str| paths.root.join(rest);
+        for dir in ["usr/share/knulli", "usr/lib", "usr/bin", "var/log", "boot"] {
+            std::fs::create_dir_all(at(dir)).unwrap();
+        }
+        let evmapy_stock = "case \"$1\" in\n  start)\n    daemon\n    ;;\nesac\n";
+        std::fs::write(paths.knulli_version(), format!("{}\n", crate::knulli::BUILT_FOR)).unwrap();
+        std::fs::write(paths.gpu_blob("wayland"), b"the g24p0 blob").unwrap();
+        std::fs::write(at("usr/bin/batocera-evmapy"), evmapy_stock).unwrap();
+        let patches = all(&paths);
+        choose(&patches, "gpu", "wayland");
+        choose(&patches, "launch-evmapy", "ON");
+
+        // The image they were set on: the driver goes in.
+        boot(&paths);
+        assert_eq!(std::fs::read(at("usr/lib/libmali.so.1")).unwrap(), b"the g24p0 blob");
+        // GNU sed only; the Mac's sed -i takes different arguments.
+        #[cfg(target_os = "linux")]
+        assert!(
+            std::fs::read_to_string(at("usr/bin/batocera-evmapy"))
+                .unwrap()
+                .contains("moose-evmapy-guard")
+        );
+
+        // An update: /usr is the new image's, /boot is as it was.
+        std::fs::remove_file(at("usr/lib/libmali.so.1")).unwrap();
+        std::fs::write(at("usr/bin/batocera-evmapy"), evmapy_stock).unwrap();
+        std::fs::write(paths.knulli_version(), "scarab 2026/11/01 09:00\n").unwrap();
+        boot(&paths);
+        assert!(!at("usr/lib/libmali.so.1").exists(), "put the old blob on a new image");
+        assert_eq!(std::fs::read_to_string(at("usr/bin/batocera-evmapy")).unwrap(), evmapy_stock);
+        let log = std::fs::read_to_string(at("var/log/moose-boot.log")).unwrap();
+        assert!(log.contains("skipped the wayland graphics driver"), "{log}");
+        assert!(log.contains("skipped the evmapy guard"), "{log}");
+        assert!(log.contains("2026/11/01"), "{log}");
+
+        // The rows say so, and applying on the new image is what brings it back.
+        let patches = all(&paths);
+        assert_eq!(state(&patches, "gpu"), "changed");
+        assert_eq!(state(&patches, "launch-evmapy"), "changed");
+        choose(&patches, "gpu", "wayland");
+        boot(&paths);
+        assert!(at("usr/lib/libmali.so.1").exists());
     }
 
     #[test]
