@@ -103,6 +103,10 @@ pub struct Summary {
     pub unchanged: usize,
     /// Local files the server was not told about, and why.
     pub skipped: usize,
+    /// Transfers that were attempted and did not happen. Counted, not just
+    /// noted: a run where every transfer failed used to read "Saves already in
+    /// sync", because the headline only looked at what had moved.
+    pub failed: usize,
     /// One line each, in the order they happened.
     pub notes: Vec<String>,
 }
@@ -137,7 +141,7 @@ pub enum Keep {
 
 impl Summary {
     pub fn headline(&self) -> String {
-        if self.uploaded + self.downloaded + self.conflicts.len() == 0 {
+        if self.uploaded + self.downloaded + self.conflicts.len() + self.failed == 0 {
             return format!("Saves already in sync ({} checked)", self.unchanged);
         }
         let mut parts = Vec::new();
@@ -149,6 +153,9 @@ impl Summary {
         }
         if !self.conflicts.is_empty() {
             parts.push(format!("{} in conflict", self.conflicts.len()));
+        }
+        if self.failed > 0 {
+            parts.push(format!("{} failed", self.failed));
         }
         parts.join(", ")
     }
@@ -491,6 +498,20 @@ pub fn respell(path: &Path, new_name: &str) -> Result<PathBuf> {
     Ok(target)
 }
 
+/// The local save the server means by `(rom_id, name)`.
+///
+/// By game as well as name. The same file name exists under more than one
+/// system -- 374 of them on the server -- and matching on the name alone sent
+/// whichever sorted first: a Game Boy Color upload could carry the Game Boy
+/// Advance file's bytes, on every sync.
+fn local_for<'a>(candidates: &'a [Candidate], rom_id: i64, name: &str) -> Option<&'a Candidate> {
+    candidates.iter().find(|c| {
+        c.kind == saves::Kind::Save
+            && matches!(c.resolution, Resolution::Resolved { rom_id: r, .. } if r == rom_id)
+            && c.path.file_name().is_some_and(|n| n.to_string_lossy() == name)
+    })
+}
+
 /// Negotiate and carry out the plan for an already-scanned tree.
 pub async fn run(
     client: &Client,
@@ -514,6 +535,12 @@ pub async fn run(
         .negotiate(&identity.device_id, &states)
         .await
         .context("asking the server what to sync")?;
+
+    // What this device told the server it holds. A download of anything else
+    // is, by the server's reckoning, a file the device lacks -- which is only
+    // true if nothing is at the target. See `Landed::Occupied`.
+    let reported: std::collections::HashSet<(i64, String)> =
+        states.iter().map(|s| (s.rom_id, s.file_name.clone())).collect();
 
     // Downloads that would land on a local save spelled differently. The
     // upload the server asks for alongside each one is the same save seen from
@@ -566,6 +593,7 @@ pub async fn run(
                     continue;
                 };
                 let name = op.file_name.clone().unwrap_or_else(|| format!("save-{save_id}"));
+                let was_reported = reported.contains(&(op.rom_id, local_name(&name)));
                 match download_one(
                     client,
                     ra_root,
@@ -576,21 +604,50 @@ pub async fn run(
                     library_root,
                     op.rom_id,
                     op.slot.as_deref(),
+                    Guard::Unreported { reported: was_reported, server_hash: op.server_content_hash.as_deref() },
                 )
                 .await
                 {
-                    Ok(path) => {
+                    Ok(Landed::Written { path, note }) => {
                         summary.downloaded += 1;
                         summary.notes.push(format!("downloaded {}", path.display()));
+                        summary.notes.extend(note);
                     }
-                    Err(e) => summary.notes.push(format!("could not download {name}: {e}")),
+                    Ok(Landed::Occupied { path, same: true }) => {
+                        summary.unchanged += 1;
+                        summary.notes.push(format!(
+                            "{name}: already here with the server's bytes, left as it is ({})",
+                            path.display()
+                        ));
+                    }
+                    Ok(Landed::Occupied { path, same: false }) => {
+                        summary.conflicts.push(SaveConflict {
+                            rom_id: op.rom_id,
+                            save_id: op.save_id,
+                            slot: op.slot.clone(),
+                            emulator: op.emulator.clone(),
+                            reason: Some(
+                                "a save is already here that this device never reported, and it \
+                                 differs from the server's"
+                                    .to_owned(),
+                            ),
+                            local_updated: Some(modified_rfc3339(&path)),
+                            local_bytes: std::fs::metadata(&path).map(|m| m.len() as i64).unwrap_or(0),
+                            local_path: Some(path),
+                            server_updated: op.server_updated_at.clone(),
+                            file_name: name,
+                        });
+                    }
+                    Err(e) => {
+                        summary.failed += 1;
+                        summary.notes.push(format!("could not download {name}: {e:#}"));
+                    }
                 }
             }
             "upload" => {
                 let name = op.file_name.clone().unwrap_or_default();
-                let Some(c) = candidates.iter().find(|c| {
-                    c.path.file_name().is_some_and(|n| n.to_string_lossy() == name)
-                }) else {
+                let Some(c) = local_for(candidates, op.rom_id, &name) else {
+                    summary.failed += 1;
                     summary.notes.push(format!("server asked to upload {name}, which is not here"));
                     continue;
                 };
@@ -621,14 +678,15 @@ pub async fn run(
                         });
                         summary.notes.push(format!("{name}: server copy moved on, left alone"));
                     }
-                    Err(e) => summary.notes.push(format!("could not upload {name}: {e}")),
+                    Err(e) => {
+                        summary.failed += 1;
+                        summary.notes.push(format!("could not upload {name}: {e:#}"));
+                    }
                 }
             }
             "conflict" => {
                 let name = op.file_name.clone().unwrap_or_default();
-                let local = candidates
-                    .iter()
-                    .find(|c| c.path.file_name().is_some_and(|n| n.to_string_lossy() == name));
+                let local = local_for(candidates, op.rom_id, &name);
                 summary.conflicts.push(SaveConflict {
                     rom_id: op.rom_id,
                     save_id: op.save_id,
@@ -643,7 +701,10 @@ pub async fn run(
                 });
             }
             "no_op" => summary.unchanged += 1,
-            other => summary.notes.push(format!("unknown action {other:?} from the server")),
+            other => {
+                summary.failed += 1;
+                summary.notes.push(format!("unknown action {other:?} from the server"));
+            }
         }
     }
 
@@ -733,7 +794,11 @@ pub async fn resolve(
             let save_id = conflict
                 .save_id
                 .context("the server did not name a save to download")?;
-            let path = download_one(
+            // Someone chose the server's copy, so overwriting is the point.
+            // Written to the local file the conflict named when there is one:
+            // that is the file the emulator reads, whatever the server's
+            // spelling or folder would work out to.
+            let landed = download_one(
                 client,
                 ra_root,
                 save_id,
@@ -743,11 +808,51 @@ pub async fn resolve(
                 library_root,
                 conflict.rom_id,
                 Some(slot),
+                match conflict.local_path.as_deref() {
+                    Some(p) => Guard::Into(p),
+                    None => Guard::Overwrite,
+                },
             )
             .await?;
-            Ok(format!("{}: kept the server's copy", path.display()))
+            match landed {
+                Landed::Written { path, note } => {
+                    let tail = note.map(|n| format!(" ({n})")).unwrap_or_default();
+                    Ok(format!("{}: kept the server's copy{tail}", path.display()))
+                }
+                Landed::Occupied { path, .. } => {
+                    anyhow::bail!("{}: not written", path.display())
+                }
+            }
         }
     }
+}
+
+/// Where a download may write, and what it must check first.
+pub enum Guard<'a> {
+    /// A planned download. When the device did not report the save, anything
+    /// already at the target is a local file the server never saw.
+    Unreported { reported: bool, server_hash: Option<&'a str> },
+    /// Someone chose the server's copy: write over whatever is there.
+    Overwrite,
+    /// As `Overwrite`, into this exact file.
+    Into(&'a Path),
+}
+
+/// What became of one download.
+#[derive(Debug)]
+pub enum Landed {
+    /// Written at `path`. `note` says anything that went wrong afterwards.
+    Written { path: PathBuf, note: Option<String> },
+    /// Not written: a save the device never reported is already at `path`.
+    /// `same` when its bytes are the server's.
+    ///
+    /// The server offers a save as "this device does not have it" whenever
+    /// the device did not report it, and a device does not report a save it
+    /// cannot match to a game -- an incomplete game index after a dropped
+    /// refresh, a renamed ROM. The download then landed on that save, with a
+    /// backup but no conflict. Every game in a system the index was missing
+    /// could lose its progress in one sync.
+    Occupied { path: PathBuf, same: bool },
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -761,30 +866,45 @@ async fn download_one(
     library_root: &Path,
     rom_id: i64,
     slot: Option<&str>,
-) -> Result<PathBuf> {
-    let bytes = client.save_content(save_id, &identity.device_id).await?;
-    // The platform, for a device that files by system.
-    //
-    // Asked of the server rather than the local cache: the whole point of a
-    // download is that there may be nothing local for this game yet, and the
-    // cache is behind a mutex that deliberately is not held across an await —
-    // `Cache` is not `Sync`, which is why `scan` was split out of `run` in the
-    // first place. One small GET per downloaded save is the cheaper trade.
-    let platform = match crate::platform::current().save_layout() {
-        SaveLayout::ByCore => None,
-        SaveLayout::BySystem => client
-            .rom_with_files(rom_id)
-            .await
-            .ok()
-            // `platform_fs_slug`, not `platform_slug`: the first is the
-            // library's folder name and what the cache keys on; the second is
-            // RomM's catalogue slug. They differ — Super Famicom is `sfc` and
-            // `sfam` — and matching against the wrong one is a save that
-            // resolves to no game at all.
-            .and_then(|rom| rom.platform_fs_slug)
-            .filter(|s| !s.is_empty()),
+    guard: Guard<'_>,
+) -> Result<Landed> {
+    let path = match guard {
+        Guard::Into(p) => p.to_path_buf(),
+        _ => {
+            // The platform, for a device that files by system.
+            //
+            // Asked of the server rather than the local cache: the whole point
+            // of a download is that there may be nothing local for this game
+            // yet, and the cache is behind a mutex that deliberately is not
+            // held across an await. `platform_fs_slug`, not `platform_slug`:
+            // the first is the library's folder name.
+            //
+            // A failure is an error, not a fallback. Without the platform the
+            // save was written to the top of the saves folder, where nothing
+            // reads it, and counted as downloaded.
+            let platform = match crate::platform::current().save_layout() {
+                SaveLayout::ByCore => None,
+                SaveLayout::BySystem => {
+                    let rom = client
+                        .rom_with_files(rom_id)
+                        .await
+                        .context("asking the server which system this game is")?;
+                    Some(
+                        rom.platform_fs_slug
+                            .filter(|s| !s.is_empty())
+                            .context("the server did not say which system this game is")?,
+                    )
+                }
+            };
+            download_path(root, file_name, destination(emulator, platform.as_deref()))
+        }
     };
-    let path = download_path(root, file_name, destination(emulator, platform.as_deref()));
+
+    if let Some(stop) = occupied(&path, &guard)? {
+        return Ok(stop);
+    }
+
+    let bytes = client.save_content(save_id, &identity.device_id).await?;
     if let Some(dir) = path.parent() {
         std::fs::create_dir_all(dir)
             .with_context(|| format!("creating {}", dir.display()))?;
@@ -793,15 +913,51 @@ async fn download_one(
     // the only irreversible step in a sync, and it stops being something the
     // user consciously chose the moment syncing runs on its own.
     let slot = slot.unwrap_or("unslotted");
+    let mut note = None;
     if let Err(e) = crate::savebackup::keep(library_root, rom_id, slot, &path) {
         // A failed backup must not cost the download, but it must be said.
-        eprintln!("warning: could not back up {} before overwriting: {e}", path.display());
+        note = Some(format!("could not back up {} before overwriting: {e:#}", path.display()));
     }
-    std::fs::write(&path, bytes).with_context(|| format!("writing {}", path.display()))?;
+    write_atomically(&path, &bytes)?;
     // Only after the bytes are safely on disk: telling the server first would
     // have it believe we hold a save we failed to write.
-    client.confirm_download(save_id).await?;
-    Ok(path)
+    if let Err(e) = client.confirm_download(save_id, &identity.device_id).await {
+        let n = format!(
+            "{} is written, but the server did not record it, so the next change here may \
+             read as a conflict: {e:#}",
+            path.display()
+        );
+        note = Some(match note {
+            Some(first) => format!("{first}; {n}"),
+            None => n,
+        });
+    }
+    Ok(Landed::Written { path, note })
+}
+
+/// Whether a planned download must stop because a save the device never
+/// reported is already where it would land.
+pub fn occupied(path: &Path, guard: &Guard<'_>) -> Result<Option<Landed>> {
+    let Guard::Unreported { reported: false, server_hash } = guard else {
+        return Ok(None);
+    };
+    if !path.exists() {
+        return Ok(None);
+    }
+    let here = crate::savehash::compute(path).with_context(|| format!("reading {}", path.display()))?;
+    Ok(Some(Landed::Occupied { same: *server_hash == Some(here.as_str()), path: path.to_path_buf() }))
+}
+
+/// Write through a temporary file in the same folder, then rename.
+///
+/// A sync stopped part way -- the app quit, the battery died -- used to leave
+/// a truncated save where the old one was.
+pub fn write_atomically(path: &Path, bytes: &[u8]) -> Result<()> {
+    let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+    let tmp = path.with_file_name(format!(".{name}.part"));
+    std::fs::write(&tmp, bytes).with_context(|| format!("writing {}", tmp.display()))?;
+    std::fs::rename(&tmp, path).with_context(|| format!("replacing {}", path.display()))?;
+    Ok(())
 }
 
 /// Returns false when the server refused because its copy moved on.
@@ -890,15 +1046,19 @@ pub async fn run_all(
 
     // States are best effort against the saves half: failing to sync a
     // freeze-frame should not discard a successful game-save sync.
-    match crate::statesync::run(client, candidates, ra_root, library_root, data_dir).await {
+    match crate::statesync::run(client, candidates, library_root, data_dir).await {
         Ok(states) => {
             summary.uploaded += states.uploaded;
             summary.downloaded += states.downloaded;
             summary.unchanged += states.unchanged;
+            summary.failed += states.failed;
             summary.conflicts.extend(states.conflicts);
             summary.notes.extend(states.notes);
         }
-        Err(e) => summary.notes.push(format!("save states did not sync: {e}")),
+        Err(e) => {
+            summary.failed += 1;
+            summary.notes.push(format!("save states did not sync: {e:#}"));
+        }
     }
     Ok(summary)
 }
@@ -1312,6 +1472,65 @@ mod tests {
             .collect();
         assert_eq!(names, vec![LOWER.to_owned()], "one file, spelled the server's way");
         assert_eq!(std::fs::read(moved).unwrap(), b"progress");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+
+    /// The download that overwrote every save in a system after an incomplete
+    /// game index: the device did not report them, so the server offered its
+    /// copies as new. Delete the `occupied` call in `download_one`, or make it
+    /// ignore `reported`, and this is what goes through.
+    #[test]
+    fn a_download_stops_at_a_save_the_device_never_reported() {
+        let dir = scratch("occupied");
+        let here = dir.join("Metroid Fusion (USA).srm");
+        std::fs::write(&here, b"the flip's progress").unwrap();
+        let ours = crate::savehash::compute(&here).unwrap();
+
+        let unreported = Guard::Unreported { reported: false, server_hash: Some("the server's") };
+        match occupied(&here, &unreported).unwrap() {
+            Some(Landed::Occupied { same: false, path }) => assert_eq!(path, here),
+            other => panic!("expected a conflict, got {other:?}"),
+        }
+        let same = Guard::Unreported { reported: false, server_hash: Some(ours.as_str()) };
+        assert!(matches!(occupied(&here, &same).unwrap(), Some(Landed::Occupied { same: true, .. })));
+
+        // Reported by the device: the server's rule decides, and it said download.
+        let reported = Guard::Unreported { reported: true, server_hash: Some("the server's") };
+        assert!(occupied(&here, &reported).unwrap().is_none());
+        // Nothing there: a genuinely new save.
+        assert!(occupied(&dir.join("new.srm"), &unreported).unwrap().is_none());
+        // Chosen by a person.
+        assert!(occupied(&here, &Guard::Overwrite).unwrap().is_none());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// Two systems, one file name. The upload for the Game Boy Color game must
+    /// send the Game Boy Color file.
+    #[test]
+    fn the_local_save_is_found_by_game_as_well_as_name() {
+        let gba = twin_save("/card/saves/gba/Tony Hawk's Pro Skater 3 (USA).srm", 1, "gba bytes");
+        let gbc = twin_save("/card/saves/gbc/Tony Hawk's Pro Skater 3 (USA).srm", 2, "gbc bytes");
+        let all = [gba, gbc];
+        let found = local_for(&all, 2, "Tony Hawk's Pro Skater 3 (USA).srm").unwrap();
+        assert_eq!(found.content_hash, "gbc bytes");
+        assert!(local_for(&all, 3, "Tony Hawk's Pro Skater 3 (USA).srm").is_none());
+    }
+
+    #[test]
+    fn a_failure_is_never_headlined_as_in_sync() {
+        let s = Summary { unchanged: 300, failed: 2, ..Default::default() };
+        assert_eq!(s.headline(), "2 failed");
+    }
+
+    #[test]
+    fn an_atomic_write_leaves_no_part_file() {
+        let dir = scratch("atomic");
+        let path = dir.join("a.srm");
+        std::fs::write(&path, b"old").unwrap();
+        write_atomically(&path, b"new").unwrap();
+        assert_eq!(std::fs::read(&path).unwrap(), b"new");
+        assert_eq!(std::fs::read_dir(&dir).unwrap().count(), 1);
         let _ = std::fs::remove_dir_all(&dir);
     }
 }

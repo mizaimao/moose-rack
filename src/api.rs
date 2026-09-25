@@ -926,16 +926,29 @@ impl Client {
         Ok(resp.bytes().await?.to_vec())
     }
 
-    /// Tell the server a download landed, so its per-device bookkeeping stays
-    /// accurate and the file is not offered again next time.
-    pub async fn confirm_download(&self, save_id: i64) -> Result<()> {
-        let url = format!("{}/api/saves/{save_id}/downloaded", self.base);
-        self.http
+    /// Tell the server a download landed, so it records that this device now
+    /// holds the server's copy -- the same agreement an upload records.
+    ///
+    /// Without the device id the server cannot know whose agreement it is, and
+    /// without checking the status a missing route read as success: moose-service
+    /// had no such route, so no download was ever recorded, and the next change
+    /// on the device read as a conflict.
+    pub async fn confirm_download(&self, save_id: i64, device_id: &str) -> Result<()> {
+        let url = format!(
+            "{}/api/saves/{save_id}/downloaded?device_id={}",
+            self.base,
+            urlencode(device_id)
+        );
+        let resp = self
+            .http
             .post(&url)
             .header("Authorization", &self.auth)
             .send()
             .await
             .with_context(|| format!("POST {url}"))?;
+        if !resp.status().is_success() {
+            anyhow::bail!("POST {url} -> {}", resp.status());
+        }
         Ok(())
     }
 
@@ -1192,6 +1205,11 @@ impl Client {
     /// States the server holds for one ROM.
     pub async fn states(&self, rom_id: i64) -> Result<Vec<SaveState>> {
         self.get_json(&format!("/api/states?rom_id={rom_id}")).await
+    }
+
+    /// Every state the server holds, in one call.
+    pub async fn all_states(&self) -> Result<Vec<SaveState>> {
+        self.get_json("/api/states").await
     }
 
     /// Download one state's bytes.

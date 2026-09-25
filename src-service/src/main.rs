@@ -776,6 +776,32 @@ async fn save_content(
 }
 
 #[derive(Deserialize)]
+struct DownloadedQuery {
+    device_id: String,
+}
+
+/// A device took a save: it now holds the server's copy, so record that it
+/// agrees, exactly as an upload does.
+///
+/// The client has always called this. Until now nothing answered it, so a
+/// download was never recorded, and the next time that save changed on the
+/// device the server could not tell "the device moved" from "both moved" and
+/// called it a conflict. A pulled save could never simply be pushed back.
+async fn save_downloaded(
+    State(lib): State<Arc<Library>>,
+    AxPath(id): AxPath<i64>,
+    Query(q): Query<DownloadedQuery>,
+) -> axum::http::StatusCode {
+    let mut st = lib.sync.lock().unwrap();
+    let Some(s) = st.store.list(None).into_iter().find(|s| s.id == id) else {
+        return axum::http::StatusCode::NOT_FOUND;
+    };
+    let hash = s.content_hash.clone().unwrap_or_default();
+    st.agree(&q.device_id, s.rom_id, &s.file_name, &hash);
+    axum::http::StatusCode::NO_CONTENT
+}
+
+#[derive(Deserialize)]
 struct StatesQuery {
     rom_id: Option<i64>,
 }
@@ -1283,6 +1309,7 @@ fn app(lib: Arc<Library>, media_dir: std::path::PathBuf, with_index: bool) -> Ro
         .route("/api/devices", axum::routing::post(register_device))
         .route("/api/saves", get(list_saves).post(upload_save))
         .route("/api/saves/{id}/content", get(save_content))
+        .route("/api/saves/{id}/downloaded", axum::routing::post(save_downloaded))
         .route("/api/states", get(list_states).post(upload_state))
         .route("/api/states/{id}/content", get(state_content))
         .route("/api/sync/negotiate", axum::routing::post(negotiate))
@@ -2504,6 +2531,32 @@ mod tests {
         let plan: serde_json::Value = serde_json::from_str(&body).unwrap();
         assert_eq!(plan["total_download"], 1);
         assert_eq!(plan["operations"][0]["action"], "download");
+    }
+
+    /// Take a save from the server, change it, send it back: an upload, not a
+    /// conflict. Without the confirm route the server never learned the
+    /// device had taken it, and the push back was refused as a conflict.
+    #[tokio::test]
+    async fn a_save_taken_from_the_server_can_be_changed_and_sent_back() {
+        let (_d, app) = built();
+        post_save(&app, "/api/saves?rom_id=16777217&device_id=alice", "a.srm", b"alice's").await;
+        let (_, body) = get(&app, "/api/saves?rom_id=16777217").await;
+        let id = serde_json::from_str::<serde_json::Value>(&body).unwrap()[0]["id"].as_i64().unwrap();
+
+        let (s, _) = post_json(&app, &format!("/api/saves/{id}/downloaded?device_id=flip"), serde_json::json!({})).await;
+        assert_eq!(s, StatusCode::NO_CONTENT);
+
+        // The flip plays and reports its new bytes.
+        let (_, body) = post_json(&app, "/api/sync/negotiate", serde_json::json!({
+            "device_id": "flip",
+            "saves": [{"rom_id": 16777217, "file_name": "a.srm", "content_hash": "flip-changed-it",
+                       "updated_at": "2026-09-24T12:00:00Z", "file_size_bytes": 7}]
+        })).await;
+        let plan: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(plan["operations"][0]["action"], "upload", "{plan}");
+
+        let (s, _) = post_json(&app, "/api/saves/999/downloaded?device_id=flip", serde_json::json!({})).await;
+        assert_eq!(s, StatusCode::NOT_FOUND, "an unknown save is said to be unknown");
     }
 
     /// The tree has subdirectories; RetroArch wants one flat system directory.
