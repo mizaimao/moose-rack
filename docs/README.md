@@ -15,6 +15,7 @@ these look like to-do lists and are not.
 | [devices.md](devices.md) | **Current.** How to reach each of the four copies and where everything is on it — ROMs, artwork, gamelists, hashes, and the shell traps that waste a day. Start here before touching any of them |
 | [flip-knulli-changes.md](flip-knulli-changes.md) | **Current.** Every change made to the Miyoo Flip, read back off the device rather than written from memory. Read before touching it |
 | [knulli-addon.md](knulli-addon.md) | **Current.** `moose-patch` — what it patches, how a patch is undone, the favourites sync |
+| [addon-audit.md](addon-audit.md) | **Record, 2026-09-24.** What was wrong with moose-patch at 0.4.312: 29 findings, live and latent, each with file and line. A work list; delete it when empty |
 | [handheld-os.md](handheld-os.md) | **Current, one section superseded.** Which OS the Flip runs and why. The ROCKNIX reasoning lost to KNULLI on 2026-08-24 and is kept for history; the on-device findings after it are live |
 | [flip-wayland-and-the-gpu-blob.md](flip-wayland-and-the-gpu-blob.md) | **Finding, closed.** Why KNULLI's Mali driver has no Wayland support, and the blob swap that makes Weston and Sway run |
 | [card-prep.md](card-prep.md) | **Current.** Preparing a card — the standard procedure, four firmwares in |
