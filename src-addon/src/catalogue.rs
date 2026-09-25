@@ -56,7 +56,6 @@ fn block(paths: &Paths, id: &str, body: Option<&str>) -> Step {
         file: paths.knulli_conf(),
         id: id.into(),
         body: body.map(str::to_string),
-        seed: None,
         form: Form::Settings,
     }
 }
@@ -66,7 +65,6 @@ fn startup(paths: &Paths, id: &str, body: Option<&str>) -> Step {
         file: paths.user_startup(),
         id: id.into(),
         body: body.map(str::to_string),
-        seed: None,
         form: Form::Script,
     }
 }
@@ -452,24 +450,24 @@ pub fn all(paths: &Paths) -> Vec<Patch> {
             title: "L2+R2 opens this app",
             detail: "Two lines in /userdata/system/configs/multimedia_keys.conf, which \
                      S50triggerhappy prefers over anything in /etc — and /etc is on the tmpfs \
-                     overlay, so a rule there would be gone by the next boot. The file is \
-                     seeded from KNULLI's own first, because the /userdata one replaces it \
-                     rather than adding to it, and the volume and power keys live in there.",
+                     overlay, so a rule there would be gone by the next boot. The /userdata \
+                     file replaces KNULLI's rather than adding to it, and the volume and power \
+                     keys live in there, so it is KNULLI's file as it is now plus our lines: \
+                     rebuilt at every apply, deleted when this is off, and shown as changed \
+                     when a KNULLI update changes the original.",
             choices: on_off(
                 "ON",
                 vec![Step::Block {
                     file: paths.trigger_conf(),
                     id: "hotkey".into(),
                     body: Some(TRIGGERS.to_string()),
-                    seed: Some(paths.stock_triggers()),
-                    form: Form::Script,
+                    form: Form::Seeded(paths.stock_triggers()),
                 }],
                 vec![Step::Block {
                     file: paths.trigger_conf(),
                     id: "hotkey".into(),
                     body: None,
-                    seed: Some(paths.stock_triggers()),
-                    form: Form::Script,
+                    form: Form::Seeded(paths.stock_triggers()),
                 }],
             ),
         },
@@ -997,6 +995,35 @@ mod tests {
         let written = std::fs::read_to_string(paths.trigger_conf()).unwrap();
         assert!(written.contains("KEY_VOLUMEUP"), "volume keys were lost:\n{written}");
         assert!(written.contains("BTN_TR2"));
+    }
+
+    #[test]
+    fn the_trigger_file_follows_knullis_and_is_gone_when_off() {
+        // The /userdata copy shadows /etc whatever is in it. Seeded once and
+        // left behind, it froze this image's keys over every later KNULLI's,
+        // on or off, with no apply for the version check to catch.
+        let paths = scratch("triggers-follow");
+        let patch = all(&paths).into_iter().find(|p| p.id == "hotkey-app").unwrap();
+        let conf = paths.trigger_conf();
+
+        patch.apply(1).unwrap();
+        assert_eq!(patch.state(), State::At(1));
+
+        // A KNULLI update changes its own file.
+        let newer = format!("{STOCK_TRIGGERS}KEY_LID 1  /usr/bin/lid-control\n");
+        std::fs::write(paths.stock_triggers(), &newer).unwrap();
+        assert_eq!(patch.state(), State::Changed, "the old keys still shadow the new ones");
+
+        // One apply brings it level.
+        patch.apply(1).unwrap();
+        assert_eq!(patch.state(), State::At(1));
+        let written = std::fs::read_to_string(&conf).unwrap();
+        assert!(written.contains("KEY_LID"), "{written}");
+
+        // Off leaves nothing to shadow /etc with.
+        patch.apply(0).unwrap();
+        assert!(!conf.exists(), "a copy of /etc was left in /userdata");
+        assert_eq!(patch.state(), State::At(0));
     }
 
     #[test]

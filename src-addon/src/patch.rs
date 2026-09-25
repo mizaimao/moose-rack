@@ -376,6 +376,17 @@ pub enum Form {
     /// the block is the value KNULLI's reader would find, not only that the
     /// block is in the file.
     Settings,
+    /// A file in /userdata that *replaces* one KNULLI ships rather than adding
+    /// to it: `multimedia_keys.conf`, whose /etc copy holds the volume, power
+    /// and lid keys. So it is always that file, as it is now, plus our block.
+    ///
+    /// On rebuilds it from the /etc copy at every apply. Off deletes it when
+    /// what is left is that copy, so /etc is read again. And it reads as on
+    /// only while the rest of it matches /etc, so a KNULLI update that changes
+    /// the /etc copy shows as `changed` instead of being shadowed by a frozen
+    /// copy of the old one. Nothing on the device is edited by hand, so
+    /// rebuilding the file loses nothing.
+    Seeded(PathBuf),
 }
 
 /// One thing a patch does.
@@ -383,19 +394,7 @@ pub enum Form {
 pub enum Step {
     /// A marked block in a text config. `None` means the block should not be
     /// there — which is how "off" is written.
-    ///
-    /// `seed` is the file to copy in first if the target is missing. It
-    /// matters for exactly one case and that case is a trap:
-    /// `multimedia_keys.conf` in `/userdata` *replaces* the one in `/etc`
-    /// rather than adding to it, so creating it with only our block in it
-    /// would take the volume, power and lid keys away.
-    Block {
-        file: PathBuf,
-        id: String,
-        body: Option<String>,
-        seed: Option<PathBuf>,
-        form: Form,
-    },
+    Block { file: PathBuf, id: String, body: Option<String>, form: Form },
     /// A file this app owns. `None` means it should not be there, and
     /// whatever was there before comes back — from `backup`, which is
     /// deliberately not inside the directory `path` lives in.
@@ -489,6 +488,11 @@ fn mount_point_of(path: &Path) -> Option<String> {
         .map(str::to_string)
 }
 
+/// Two texts that differ at most in how they end.
+fn same_text(a: &str, b: &str) -> bool {
+    a.trim_end() == b.trim_end()
+}
+
 /// Put `bytes` at `path`, keeping whatever was there the first time.
 fn lay_down(path: &Path, bytes: &[u8], backup: &Path) -> Result<()> {
     if let Some(parent) = path.parent() {
@@ -515,19 +519,20 @@ impl Step {
     /// `changed`, and applying it stops with the reason.
     pub fn satisfied(&self) -> bool {
         match self {
-            Step::Block { file, id, body, form, .. } => {
+            Step::Block { file, id, body, form } => {
                 let Ok(text) = read_text(file) else { return false };
                 let text = text.unwrap_or_default();
                 // An unterminated block is not "absent", whatever read_block
                 // makes of it.
-                if clear_block(&text, id).is_err() {
-                    return false;
-                }
+                let Ok(rest) = clear_block(&text, id) else { return false };
                 match (read_block(&text, id), body) {
                     (None, None) => true,
                     (Some(found), Some(want)) if found.trim() == want.trim() => match form {
                         Form::Script => true,
                         Form::Settings => in_force(&text, want),
+                        Form::Seeded(seed) => {
+                            matches!(read_text(seed), Ok(Some(stock)) if same_text(&rest, &stock))
+                        }
                     },
                     _ => false,
                 }
@@ -541,30 +546,43 @@ impl Step {
 
     pub fn apply(&self) -> Result<()> {
         match self {
-            Step::Block { file, id, body, seed, .. } => {
+            Step::Block { file, id, body, form } => {
                 let current = read_text(file)?;
-                // What the block goes into. The seed only when there is no
-                // file yet, and a seed that cannot be read stops everything:
-                // the file it would be written as replaces the one in /etc,
-                // so our lines alone would take every key that one carries.
-                let base = match (&current, seed) {
-                    (Some(text), _) => text.clone(),
-                    (None, Some(seed)) => read_text(seed)?.with_context(|| {
-                        format!(
-                            "{} is missing, and {} replaces it rather than adding to it; \
-                             nothing was written",
-                            seed.display(),
-                            file.display()
-                        )
-                    })?,
-                    (None, None) => String::new(),
-                };
-                let next = match body {
-                    Some(body) => set_block(&base, id, body)?,
-                    // Nothing to take a block out of. Creating an empty file
-                    // here would be a change nobody asked for.
-                    None if current.is_none() => return Ok(()),
-                    None => clear_block(&base, id)?,
+                let next = match (form, body) {
+                    // Rebuilt from the /etc copy as it is now, every time. A
+                    // copy that cannot be read stops everything: this file
+                    // replaces that one, so our lines alone would take every
+                    // key it carries.
+                    (Form::Seeded(seed), Some(body)) => {
+                        let stock = read_text(seed)?.with_context(|| {
+                            format!(
+                                "{} is missing, and {} replaces it rather than adding to it; \
+                                 nothing was written",
+                                seed.display(),
+                                file.display()
+                            )
+                        })?;
+                        set_block(&stock, id, body)?
+                    }
+                    (Form::Seeded(seed), None) => {
+                        let Some(text) = current.as_deref() else { return Ok(()) };
+                        let rest = clear_block(text, id)?;
+                        // Nothing left but KNULLI's own file: remove it, so
+                        // /etc is what triggerhappy reads, this image's and
+                        // every later one's.
+                        if read_text(seed)?.is_some_and(|stock| same_text(&rest, &stock)) {
+                            return remove_through(file)
+                                .with_context(|| format!("removing {}", file.display()));
+                        }
+                        rest
+                    }
+                    (_, Some(body)) => set_block(current.as_deref().unwrap_or(""), id, body)?,
+                    (_, None) => match current.as_deref() {
+                        // Nothing to take a block out of. Creating an empty
+                        // file here would be a change nobody asked for.
+                        None => return Ok(()),
+                        Some(text) => clear_block(text, id)?,
+                    },
                 };
                 if current.as_deref() == Some(next.as_str()) {
                     return Ok(());
@@ -665,7 +683,6 @@ mod tests {
             file: file.to_path_buf(),
             id: id.into(),
             body: body.map(str::to_string),
-            seed: None,
             form: Form::Settings,
         }
     }
@@ -840,7 +857,6 @@ mod tests {
             file: file.clone(),
             id: "power".into(),
             body: Some("a=1".into()),
-            seed: None,
             form: Form::Settings,
         };
         let err = on.apply().expect_err("applied over a file it could not read");
@@ -863,8 +879,7 @@ mod tests {
             file: file.clone(),
             id: "hotkey".into(),
             body: Some("BTN_TR2+BTN_TL2 1 /bin/true".into()),
-            seed: Some(dir.join("etc/multimedia_keys.conf")),
-            form: Form::Script,
+            form: Form::Seeded(dir.join("etc/multimedia_keys.conf")),
         };
         assert!(step.apply().is_err());
         assert!(!file.exists(), "created the file with only our lines in it");
@@ -979,7 +994,6 @@ mod tests {
             file: script.clone(),
             id: "wifi".into(),
             body: Some("X=1".into()),
-            seed: None,
             form: Form::Script,
         };
         step.apply().unwrap();
@@ -1092,7 +1106,6 @@ mod tests {
                         file: file.clone(),
                         id: "shaders".into(),
                         body: None,
-                        seed: None,
                         form: Form::Settings,
                     }],
                 },
@@ -1102,7 +1115,6 @@ mod tests {
                         file: file.clone(),
                         id: "shaders".into(),
                         body: Some("set=a".into()),
-                        seed: None,
                         form: Form::Settings,
                     }],
                 },
@@ -1135,7 +1147,6 @@ mod tests {
                     file,
                     id: "shaders".into(),
                     body: Some("set=a".into()),
-                    seed: None,
                     form: Form::Settings,
                 }],
             }],
