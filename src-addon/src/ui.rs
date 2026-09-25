@@ -95,6 +95,7 @@ impl Ui {
         match &app.overlay {
             Overlay::None => {}
             Overlay::Detail => self.detail(gfx, painter, app),
+            Overlay::Notice { title, text } => self.notice(gfx, painter, title, text),
             Overlay::ConfirmApply => self.confirm_apply(gfx, painter, app),
             Overlay::ConfirmDiscard => self.confirm_discard(gfx, painter, app),
             Overlay::ConfirmAction { title } => self.confirm_action(gfx, painter, app, title),
@@ -225,6 +226,7 @@ impl Ui {
             (Overlay::None, Tab::Patches) => "←→ change   A apply   B back   X what it does",
             (Overlay::None, Tab::Sync) => "A run this   B back   X what it does   L/R tabs",
             (Overlay::Detail, _) => "B close",
+            (Overlay::Notice { .. }, _) => "A or B close",
             (Overlay::ConfirmApply, _) => "A confirm   B cancel",
             (Overlay::ConfirmDiscard, _) => "A discard   B stay",
             (Overlay::ConfirmAction { .. }, _) => match &app.stage {
@@ -277,6 +279,24 @@ impl Ui {
         painter.put(
             gfx,
             &body,
+            Rect::new(
+                at.x + self.px(10.0),
+                at.y + self.px(28.0),
+                at.w - self.px(20.0),
+                at.h - self.px(38.0),
+            ),
+            ink::DIM,
+        );
+    }
+
+    /// A refusal, or what did not take. Wrapped, and as tall as the screen
+    /// allows: an error that is cut off is one nobody can act on.
+    fn notice(&self, gfx: &Gfx, painter: &mut Painter, title: &str, text: &str) {
+        let at = self.panel(gfx, title, painter, 12);
+        let width_points = at.w / self.scale - 20.0;
+        painter.put(
+            gfx,
+            &self.spec(text, size::SMALL).wrapped(width_points, 14),
             Rect::new(
                 at.x + self.px(10.0),
                 at.y + self.px(28.0),

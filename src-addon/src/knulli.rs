@@ -89,6 +89,19 @@ impl Verdict {
             }
         )
     }
+
+    /// The same, for the screen, where there is no `--anyway` to offer.
+    pub fn refusal_on_screen(&self) -> String {
+        let found = match self {
+            Verdict::Moved(found) => found.as_str(),
+            _ => "not one this build knows",
+        };
+        format!(
+            "This KNULLI is {found}. moose-patch was checked against {BUILT_FOR}, and a patch \
+             written for another image can set a key nothing reads. Update moose-patch first. \
+             Nothing was written."
+        )
+    }
 }
 
 #[cfg(test)]

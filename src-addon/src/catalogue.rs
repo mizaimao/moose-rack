@@ -10,7 +10,7 @@
 //! not the obvious one. Every one of these was placed by hand first, and the
 //! hard part was never the change.
 
-use crate::patch::{Choice, Patch, Paths, Step};
+use crate::patch::{Choice, Form, NamedIn, Patch, Paths, Step};
 
 const HOTKEYS: &str = include_str!("../assets/hotkeys.conf");
 const SHADERS_LCD: &str = include_str!("../assets/shaders.conf");
@@ -35,8 +35,9 @@ const BEZEL_INFO: &[u8] = include_bytes!("../../device/gba-bezel/systems/gba-4_3
 
 const BLANK_LOGO: &[u8] = include_bytes!("../../device/splash/blank-logo.png");
 const BOOT_HOOK: &[u8] = include_bytes!("../../device/splash/boot-custom.sh");
-/// Presence is the switch; the hook reads nothing out of it.
-const EVMAPY_FLAG: &[u8] = b"moose-patch: evmapy guard on\n";
+/// The first line of the evmapy switch. Presence turns it on; see
+/// `boot_switch` for the line after it.
+const EVMAPY_FLAG: &str = "moose-patch: evmapy guard on";
 const ES_INPUT: &[u8] = include_bytes!("../../device/hotkey/es_input.cfg");
 const TRIGGERS: &str = include_str!("../../device/hotkey/multimedia_keys.append");
 
@@ -56,7 +57,7 @@ fn block(paths: &Paths, id: &str, body: Option<&str>) -> Step {
         file: paths.knulli_conf(),
         id: id.into(),
         body: body.map(str::to_string),
-        seed: None,
+        form: Form::Settings,
     }
 }
 
@@ -65,7 +66,7 @@ fn startup(paths: &Paths, id: &str, body: Option<&str>) -> Step {
         file: paths.user_startup(),
         id: id.into(),
         body: body.map(str::to_string),
-        seed: None,
+        form: Form::Script,
     }
 }
 
@@ -74,35 +75,58 @@ fn place(paths: &Paths, path: std::path::PathBuf, bytes: Option<&'static [u8]>) 
     Step::Place { path, bytes, backup }
 }
 
-/// The four presets, plus whichever set is being chosen. Every option lays
-/// down all four, so the cycle is the same list whichever one you start from.
-fn shader_files(paths: &Paths, set: Option<(&str, &'static [u8])>) -> Vec<Step> {
-    let presets: [(&str, Option<&'static [u8]>); 4] = match set {
-        Some(_) => [
-            ("1-sharp-shimmerless.glslp", Some(SHADER_1)),
-            ("2-sharp-shimmerless-scanlines.glslp", Some(SHADER_2)),
-            ("3-sharp-shimmerless-lcd.glslp", Some(SHADER_3)),
-            ("4-zfast-crt.glslp", Some(SHADER_4)),
-        ],
-        None => [
-            ("1-sharp-shimmerless.glslp", None),
-            ("2-sharp-shimmerless-scanlines.glslp", None),
-            ("3-sharp-shimmerless-lcd.glslp", None),
-            ("4-zfast-crt.glslp", None),
-        ],
+/// Ours over a file KNULLI ships. Off never deletes theirs.
+fn cover(paths: &Paths, path: std::path::PathBuf, ours: &'static [u8], on: bool) -> Step {
+    let backup = paths.backup_for(&path);
+    Step::Cover { path, ours, on, backup }
+}
+
+/// A switch on /boot for `boot-custom.sh`: `first` line, then the KNULLI it
+/// was set on.
+///
+/// The hook runs at every boot, where nothing checks versions, so it checks
+/// this line against the image it is booting and skips, with a line in
+/// /var/log/moose-boot.log, when they differ. Here it also makes the patch
+/// read as changed after a KNULLI update, because the version is part of what
+/// it expects to find.
+fn boot_switch(paths: &Paths, first: &str) -> &'static [u8] {
+    let version = crate::knulli::installed(paths).unwrap_or_default();
+    Box::leak(format!("{first}\nknulli={version}\n").into_bytes().into_boxed_slice())
+}
+
+/// The four presets and our three sets.
+///
+/// Every option that names one of our sets, global or per system, lays all of
+/// them down, so the cycle is the same list whichever one you start from.
+/// Every other option takes them away, but only once no `*.shaderset` line in
+/// knulli.conf names one of ours any more. `shaders=off` used to delete them
+/// outright while `shader-gba` could still be pointing at `moose-lcd`.
+fn shader_files(paths: &Paths, want: bool) -> Vec<Step> {
+    let named = NamedIn {
+        conf: paths.knulli_conf(),
+        key_suffix: ".shaderset",
+        value_prefix: "moose-",
     };
-    let mut steps: Vec<Step> = presets
-        .iter()
-        .map(|(name, bytes)| place(paths, paths.shader(name), *bytes))
-        .collect();
-    for (name, body) in [
-        ("moose-lcd", SET_LCD),
-        ("moose-plain", SET_PLAIN),
-        ("moose-zfast", SET_ZFAST),
-    ] {
-        steps.push(place(paths, paths.shaderset(name), set.map(|_| body)));
-    }
-    steps
+    [
+        (paths.shader("1-sharp-shimmerless.glslp"), SHADER_1),
+        (paths.shader("2-sharp-shimmerless-scanlines.glslp"), SHADER_2),
+        (paths.shader("3-sharp-shimmerless-lcd.glslp"), SHADER_3),
+        (paths.shader("4-zfast-crt.glslp"), SHADER_4),
+        (paths.shaderset("moose-lcd"), SET_LCD),
+        (paths.shaderset("moose-plain"), SET_PLAIN),
+        (paths.shaderset("moose-zfast"), SET_ZFAST),
+    ]
+    .into_iter()
+    .map(|(path, bytes)| Step::Shared { path, bytes, want, named: named.clone() })
+    .collect()
+}
+
+/// A shader option: its line in knulli.conf, then the files it needs.
+fn shader_choice(paths: &Paths, name: &str, id: &str, body: Option<&str>) -> Choice {
+    let ours = body.is_some_and(|b| b.contains("shaderset=moose-"));
+    let mut steps = vec![block(paths, id, body)];
+    steps.extend(shader_files(paths, ours));
+    Choice { name: name.into(), steps }
 }
 
 fn on_off(name_on: &str, on: Vec<Step>, off: Vec<Step>) -> Vec<Choice> {
@@ -170,39 +194,19 @@ fn shader(paths: &Paths, slug: &'static str, name: &'static str) -> Patch {
         )
         .into_boxed_str(),
     );
+    let block_id = format!("shader-{slug}");
+    let set = |name: &str, set: &str| {
+        shader_choice(paths, name, &block_id, Some(&format!("{slug}.shaderset={set}")))
+    };
     Patch {
         id,
         title,
         detail,
         choices: vec![
-            Choice {
-                name: "follow global".into(),
-                steps: vec![block(paths, &format!("shader-{slug}"), None)],
-            },
-            Choice {
-                name: "shimmerless plain".into(),
-                steps: vec![block(
-                    paths,
-                    &format!("shader-{slug}"),
-                    Some(&format!("{slug}.shaderset=moose-plain")),
-                )],
-            },
-            Choice {
-                name: "shimmerless + LCD".into(),
-                steps: vec![block(
-                    paths,
-                    &format!("shader-{slug}"),
-                    Some(&format!("{slug}.shaderset=moose-lcd")),
-                )],
-            },
-            Choice {
-                name: "none".into(),
-                steps: vec![block(
-                    paths,
-                    &format!("shader-{slug}"),
-                    Some(&format!("{slug}.shaderset=none")),
-                )],
-            },
+            shader_choice(paths, "follow global", &block_id, None),
+            set("shimmerless plain", "moose-plain"),
+            set("shimmerless + LCD", "moose-lcd"),
+            set("none", "none"),
         ],
     }
 }
@@ -389,38 +393,10 @@ pub fn all(paths: &Paths) -> Vec<Patch> {
                      seven hundred presets in the library, most of which this handheld \
                      cannot afford. Ours holds four, all cheap.",
             choices: vec![
-                Choice {
-                    name: "off".into(),
-                    steps: {
-                        let mut s = vec![block(paths, "shaders", None)];
-                        s.extend(shader_files(paths, None));
-                        s
-                    },
-                },
-                Choice {
-                    name: "shimmerless + LCD/CRT".into(),
-                    steps: {
-                        let mut s = vec![block(paths, "shaders", Some(SHADERS_LCD))];
-                        s.extend(shader_files(paths, Some(("moose-lcd", SET_LCD))));
-                        s
-                    },
-                },
-                Choice {
-                    name: "shimmerless plain".into(),
-                    steps: {
-                        let mut s = vec![block(paths, "shaders", Some(SHADERS_PLAIN))];
-                        s.extend(shader_files(paths, Some(("moose-plain", SET_PLAIN))));
-                        s
-                    },
-                },
-                Choice {
-                    name: "zfast".into(),
-                    steps: {
-                        let mut s = vec![block(paths, "shaders", Some(SHADERS_ZFAST))];
-                        s.extend(shader_files(paths, Some(("moose-zfast", SET_ZFAST))));
-                        s
-                    },
-                },
+                shader_choice(paths, "off", "shaders", None),
+                shader_choice(paths, "shimmerless + LCD/CRT", "shaders", Some(SHADERS_LCD)),
+                shader_choice(paths, "shimmerless plain", "shaders", Some(SHADERS_PLAIN)),
+                shader_choice(paths, "zfast", "shaders", Some(SHADERS_ZFAST)),
             ],
         },
         // Bezels, one system at a time.
@@ -450,22 +426,24 @@ pub fn all(paths: &Paths) -> Vec<Patch> {
             title: "L2+R2 opens this app",
             detail: "Two lines in /userdata/system/configs/multimedia_keys.conf, which \
                      S50triggerhappy prefers over anything in /etc — and /etc is on the tmpfs \
-                     overlay, so a rule there would be gone by the next boot. The file is \
-                     seeded from KNULLI's own first, because the /userdata one replaces it \
-                     rather than adding to it, and the volume and power keys live in there.",
+                     overlay, so a rule there would be gone by the next boot. The /userdata \
+                     file replaces KNULLI's rather than adding to it, and the volume and power \
+                     keys live in there, so it is KNULLI's file as it is now plus our lines: \
+                     rebuilt at every apply, deleted when this is off, and shown as changed \
+                     when a KNULLI update changes the original.",
             choices: on_off(
                 "ON",
                 vec![Step::Block {
                     file: paths.trigger_conf(),
                     id: "hotkey".into(),
                     body: Some(TRIGGERS.to_string()),
-                    seed: Some(paths.stock_triggers()),
+                    form: Form::Seeded(paths.stock_triggers()),
                 }],
                 vec![Step::Block {
                     file: paths.trigger_conf(),
                     id: "hotkey".into(),
                     body: None,
-                    seed: Some(paths.stock_triggers()),
+                    form: Form::Seeded(paths.stock_triggers()),
                 }],
             ),
         },
@@ -478,8 +456,8 @@ pub fn all(paths: &Paths) -> Vec<Patch> {
                      and EmulationStation will not start.",
             choices: on_off(
                 "ON",
-                vec![place(paths, paths.es_input(), Some(ES_INPUT))],
-                vec![place(paths, paths.es_input(), None)],
+                vec![cover(paths, paths.es_input(), ES_INPUT, true)],
+                vec![cover(paths, paths.es_input(), ES_INPUT, false)],
             ),
         },
         Patch {
@@ -496,11 +474,11 @@ pub fn all(paths: &Paths) -> Vec<Patch> {
                 vec![
                     place(paths, paths.blank_logo(), Some(BLANK_LOGO)),
                     place(paths, paths.boot_custom(), Some(BOOT_HOOK)),
-                    place(paths, paths.es_logo(), Some(BLANK_LOGO)),
+                    cover(paths, paths.es_logo(), BLANK_LOGO, true),
                 ],
                 vec![
                     place(paths, paths.blank_logo(), None),
-                    place(paths, paths.es_logo(), None),
+                    cover(paths, paths.es_logo(), BLANK_LOGO, false),
                 ],
             ),
         },
@@ -515,11 +493,13 @@ pub fn all(paths: &Paths) -> Vec<Patch> {
                      so a libretro launch with no gun writes nothing and then waits for a \
                      daemon with no job. The guard is that test and nothing more, so the 54 \
                      standalone emulators that do declare player mappings are untouched. \
-                     /usr is a tmpfs, so /boot/boot-custom.sh puts the line back each boot.",
+                     /usr is a tmpfs, so /boot/boot-custom.sh puts the line back each boot, \
+                     and only on the KNULLI this was set on: after an update it skips it \
+                     until this is applied again.",
             choices: on_off(
                 "ON",
                 vec![
-                    place(paths, paths.evmapy_flag(), Some(EVMAPY_FLAG)),
+                    place(paths, paths.evmapy_flag(), Some(boot_switch(paths, EVMAPY_FLAG))),
                     place(paths, paths.boot_custom(), Some(BOOT_HOOK)),
                 ],
                 vec![place(paths, paths.evmapy_flag(), None)],
@@ -589,7 +569,9 @@ pub fn all(paths: &Paths) -> Vec<Patch> {
                      blobs are 43 and 56 MB, too big to carry in here, so they are placed on \
                      /boot once; without them this setting is remembered and does nothing. \
                      The stock one has no Wayland support, the g24p0 one does, and the \
-                     emulators behave identically on both.",
+                     emulators behave identically on both. The marker also records which \
+                     KNULLI it was set on, and after an update the hook leaves the new \
+                     image's driver alone until this is applied again.",
             choices: vec![
                 Choice {
                     // No marker at all: the hook does nothing without one and
@@ -601,7 +583,7 @@ pub fn all(paths: &Paths) -> Vec<Patch> {
                 Choice {
                     name: "wayland".into(),
                     steps: vec![
-                        place(paths, paths.gpu_choice(), Some(b"wayland\n")),
+                        place(paths, paths.gpu_choice(), Some(boot_switch(paths, "wayland"))),
                         place(paths, paths.boot_custom(), Some(BOOT_HOOK)),
                     ],
                 },
@@ -615,12 +597,21 @@ mod tests {
     use super::*;
     use crate::patch::State;
 
+    /// A bare device, as far as these patches can tell. It has KNULLI's own
+    /// trigger file, as every KNULLI does: hotkey-app is written from it and
+    /// refuses to write without it.
     fn scratch(name: &str) -> Paths {
         let dir = std::env::temp_dir().join(format!("moose-catalogue-{name}"));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
-        Paths::new(dir)
+        let paths = Paths::new(dir);
+        std::fs::create_dir_all(paths.stock_triggers().parent().unwrap()).unwrap();
+        std::fs::write(paths.stock_triggers(), STOCK_TRIGGERS).unwrap();
+        paths
     }
+
+    const STOCK_TRIGGERS: &str = "KEY_VOLUMEUP 1  /usr/bin/volume-button volup\n\
+                                  KEY_POWER 1  /usr/bin/power-button\n";
 
     #[test]
     fn a_fresh_device_reads_as_the_first_option_everywhere() {
@@ -953,6 +944,121 @@ mod tests {
         assert!(!paths.shaderset("moose-lcd").exists());
     }
 
+    /// Turn one patch to the option with this name.
+    fn choose(patches: &[Patch], id: &str, option: &str) {
+        let patch = patches.iter().find(|p| p.id == id).unwrap();
+        let i = patch.choices.iter().position(|c| c.name == option).unwrap();
+        patch.apply(i).unwrap();
+    }
+
+    fn state(patches: &[Patch], id: &str) -> String {
+        let patch = patches.iter().find(|p| p.id == id).unwrap();
+        match patch.state() {
+            State::At(i) => patch.choices[i].name.clone(),
+            State::Changed => "changed".into(),
+        }
+    }
+
+    #[test]
+    fn turning_the_global_shader_off_keeps_a_set_a_system_still_names() {
+        // shaders=off deleted every set, while shader-gba could still say
+        // gba.shaderset=moose-lcd. The files now stay until nothing names one.
+        let paths = scratch("shader-sets-shared");
+        let patches = all(&paths);
+        choose(&patches, "shaders", "shimmerless + LCD/CRT");
+        choose(&patches, "shader-gba", "shimmerless + LCD");
+
+        choose(&patches, "shaders", "off");
+        assert!(paths.shaderset("moose-lcd").exists(), "deleted the set gba names");
+        assert!(paths.shader("3-sharp-shimmerless-lcd.glslp").exists());
+        assert_eq!(state(&patches, "shaders"), "off");
+        assert_eq!(state(&patches, "shader-gba"), "shimmerless + LCD");
+
+        // The last one to stop naming our sets takes the files with it.
+        choose(&patches, "shader-gba", "follow global");
+        assert!(!paths.shaderset("moose-lcd").exists());
+        assert!(!paths.shader("1-sharp-shimmerless.glslp").exists());
+        assert_eq!(state(&patches, "shaders"), "off");
+    }
+
+    /// Run the boot hook as S00bootcustom does, against `paths` instead of /.
+    /// With dash where there is one, so a bashism fails here too.
+    #[cfg(unix)]
+    fn boot(paths: &Paths) {
+        let hook = paths.root.join("boot-custom.sh");
+        std::fs::write(&hook, BOOT_HOOK).unwrap();
+        let shell = if std::path::Path::new("/bin/dash").exists() { "/bin/dash" } else { "sh" };
+        let status = std::process::Command::new(shell)
+            .arg(&hook)
+            .arg("start")
+            .env("MOOSE_ROOT", &paths.root)
+            .status()
+            .unwrap();
+        assert!(status.success());
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn the_boot_hook_skips_a_switch_set_on_another_knulli() {
+        // /boot survives a KNULLI update and /usr does not. The hook used to
+        // copy the old driver blob over the new image's, and edit its evmapy
+        // script, at the first boot after an update, checked against nothing.
+        let paths = scratch("boot-version");
+        let at = |rest: &str| paths.root.join(rest);
+        for dir in ["usr/share/knulli", "usr/lib", "usr/bin", "var/log", "boot"] {
+            std::fs::create_dir_all(at(dir)).unwrap();
+        }
+        let evmapy_stock = "case \"$1\" in\n  start)\n    daemon\n    ;;\nesac\n";
+        std::fs::write(paths.knulli_version(), format!("{}\n", crate::knulli::BUILT_FOR)).unwrap();
+        std::fs::write(paths.gpu_blob("wayland"), b"the g24p0 blob").unwrap();
+        std::fs::write(at("usr/bin/batocera-evmapy"), evmapy_stock).unwrap();
+        let patches = all(&paths);
+        choose(&patches, "gpu", "wayland");
+        choose(&patches, "launch-evmapy", "ON");
+
+        // The image they were set on: the driver goes in.
+        boot(&paths);
+        assert_eq!(std::fs::read(at("usr/lib/libmali.so.1")).unwrap(), b"the g24p0 blob");
+        // GNU sed only; the Mac's sed -i takes different arguments.
+        #[cfg(target_os = "linux")]
+        assert!(
+            std::fs::read_to_string(at("usr/bin/batocera-evmapy"))
+                .unwrap()
+                .contains("moose-evmapy-guard")
+        );
+
+        // An update: /usr is the new image's, /boot is as it was.
+        std::fs::remove_file(at("usr/lib/libmali.so.1")).unwrap();
+        std::fs::write(at("usr/bin/batocera-evmapy"), evmapy_stock).unwrap();
+        std::fs::write(paths.knulli_version(), "scarab 2026/11/01 09:00\n").unwrap();
+        boot(&paths);
+        assert!(!at("usr/lib/libmali.so.1").exists(), "put the old blob on a new image");
+        assert_eq!(std::fs::read_to_string(at("usr/bin/batocera-evmapy")).unwrap(), evmapy_stock);
+        let log = std::fs::read_to_string(at("var/log/moose-boot.log")).unwrap();
+        assert!(log.contains("skipped the wayland graphics driver"), "{log}");
+        assert!(log.contains("skipped the evmapy guard"), "{log}");
+        assert!(log.contains("2026/11/01"), "{log}");
+
+        // The rows say so, and applying on the new image is what brings it back.
+        let patches = all(&paths);
+        assert_eq!(state(&patches, "gpu"), "changed");
+        assert_eq!(state(&patches, "launch-evmapy"), "changed");
+        choose(&patches, "gpu", "wayland");
+        boot(&paths);
+        assert!(at("usr/lib/libmali.so.1").exists());
+    }
+
+    #[test]
+    fn a_system_shader_lays_down_the_set_it_names() {
+        // With the global shader off there was no set on the card for
+        // gba.shaderset=moose-lcd to find at all.
+        let paths = scratch("shader-per-system-alone");
+        let patches = all(&paths);
+        choose(&patches, "shader-gba", "shimmerless + LCD");
+        assert!(paths.shaderset("moose-lcd").exists());
+        assert!(paths.shader("4-zfast-crt.glslp").exists(), "the cycle is all four");
+    }
+
     #[test]
     fn only_the_systems_with_artwork_get_a_bezel_row() {
         // gba, gb and gbc, and no others. A 4:3 console game already fills a
@@ -987,6 +1093,35 @@ mod tests {
     }
 
     #[test]
+    fn the_trigger_file_follows_knullis_and_is_gone_when_off() {
+        // The /userdata copy shadows /etc whatever is in it. Seeded once and
+        // left behind, it froze this image's keys over every later KNULLI's,
+        // on or off, with no apply for the version check to catch.
+        let paths = scratch("triggers-follow");
+        let patch = all(&paths).into_iter().find(|p| p.id == "hotkey-app").unwrap();
+        let conf = paths.trigger_conf();
+
+        patch.apply(1).unwrap();
+        assert_eq!(patch.state(), State::At(1));
+
+        // A KNULLI update changes its own file.
+        let newer = format!("{STOCK_TRIGGERS}KEY_LID 1  /usr/bin/lid-control\n");
+        std::fs::write(paths.stock_triggers(), &newer).unwrap();
+        assert_eq!(patch.state(), State::Changed, "the old keys still shadow the new ones");
+
+        // One apply brings it level.
+        patch.apply(1).unwrap();
+        assert_eq!(patch.state(), State::At(1));
+        let written = std::fs::read_to_string(&conf).unwrap();
+        assert!(written.contains("KEY_LID"), "{written}");
+
+        // Off leaves nothing to shadow /etc with.
+        patch.apply(0).unwrap();
+        assert!(!conf.exists(), "a copy of /etc was left in /userdata");
+        assert_eq!(patch.state(), State::At(0));
+    }
+
+    #[test]
     fn hiding_the_logo_gives_es_its_own_file_back() {
         // If "off" deleted logo.png instead of restoring it, ES would be
         // missing a resource it loads unconditionally.
@@ -1000,6 +1135,48 @@ mod tests {
         assert_eq!(std::fs::read(&logo).unwrap(), BLANK_LOGO);
         patch.apply(0).unwrap();
         assert_eq!(std::fs::read(&logo).unwrap(), b"the real KNULLI beetle");
+    }
+
+    #[test]
+    fn a_stock_file_reads_as_off_and_off_never_deletes_it() {
+        // "Off" used to mean "no file there". On a fresh install ES's own
+        // logo.png made es-logo read as changed, and applying off deleted it
+        // until the next boot. A stock es_input.cfg went the same way, for
+        // good.
+        let paths = scratch("stock-files");
+        let stock: [(std::path::PathBuf, &[u8]); 2] =
+            [(paths.es_logo(), b"the KNULLI beetle"), (paths.es_input(), b"<inputList/>")];
+        for (path, bytes) in &stock {
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, bytes).unwrap();
+        }
+        let patches = all(&paths);
+        for id in ["es-logo", "es-shoulders"] {
+            let patch = patches.iter().find(|p| p.id == id).unwrap();
+            assert_eq!(patch.state(), State::At(0), "{id} reads as changed on a fresh install");
+            patch.apply(0).unwrap();
+        }
+        for (path, bytes) in &stock {
+            assert_eq!(&std::fs::read(path).unwrap(), bytes, "{} was deleted", path.display());
+        }
+    }
+
+    #[test]
+    fn off_leaves_a_file_that_is_no_longer_ours() {
+        // ES writes es_input.cfg when a pad is set up. Off must not put the
+        // older backup over that, or delete it.
+        let paths = scratch("es-rewrote-input");
+        let input = paths.es_input();
+        std::fs::create_dir_all(input.parent().unwrap()).unwrap();
+        std::fs::write(&input, b"KNULLI's").unwrap();
+        let patch = all(&paths).into_iter().find(|p| p.id == "es-shoulders").unwrap();
+
+        patch.apply(1).unwrap();
+        std::fs::write(&input, b"ES's, newer").unwrap();
+        patch.apply(0).unwrap();
+
+        assert_eq!(std::fs::read(&input).unwrap(), b"ES's, newer");
+        assert_eq!(patch.state(), State::At(0));
     }
 
     #[test]

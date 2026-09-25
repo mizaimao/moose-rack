@@ -128,8 +128,13 @@ one profile.
 Steps 1 to 3 are done and running on the device.
 
 `patch.rs` is the engine: a patch is a list of steps, a step is either a marked
-block in a text config or a file we own, and both can be asked whether they are
-already satisfied. That last part is what lets the menu open at what the device
+block in a text config or a file we place, and both can be asked whether they
+are already satisfied. A file we place is one only we write (`Place`), one we
+lay over a file KNULLI ships, whose off never deletes theirs (`Cover`), or one
+several patches need, which stays while any of them names it (`Shared`, the
+shader sets). A config it cannot read, or a block with no end marker, stops
+the apply with nothing written, and every write goes to a temporary file that
+is renamed over the old one. That last part is what lets the menu open at what the device
 *actually is* rather than at what it ought to be — and lets it say **changed**
 when a patch sits at none of its options, which is what a KNULLI update looks
 like from in here.
@@ -376,6 +381,14 @@ Check a patch on the device, not by reading the file it wrote:
     moose-patch --apply charge-awake=ON
     knulli-settings-get system.batterysaver.chargingbypass   # the reader's answer
 
+The state reads it the same way. A knulli.conf patch is on only when its block
+is there **and** every key in it has, first-wins, the value the block gives it;
+`patch::effective` works that out from the file, without running
+`knulli-settings-get`. A line ES puts above our block makes the row read
+`changed`. Off is still "our block is absent", so a value ES writes back as a
+plain line after an off is not caught by the state; stopping ES around the
+write (below) is what stops ES doing that over ssh.
+
 ## A patch has to claim every key its promise depends on
 
 The same failure came back on 2026-09-08 in a different shape, and cost two
@@ -402,8 +415,16 @@ EmulationStation also rewrote the value *inside* our block: it holds
 `knulli.conf` in memory and writes the whole file back when settings change, so
 `extendedmode=none` came back as `=suspend` between the markers. `--status` did
 catch that one — `changed — not at any known setting` — which is what that
-third state is for. Re-applying is the fix, and it will happen again the next
-time settings are saved from the ES menu.
+third state is for. Re-applying is the fix.
+
+So `--apply` and `--restore` now stop ES around the write, with
+`/etc/init.d/S31emulationstation stop`, which makes it write out what it holds
+first, and start it again afterwards in its own session with the profile
+scripts sourced (see "Restarting ES over ssh loses sound" in
+[flip-knulli-changes.md](flip-knulli-changes.md)). They refuse while a game is
+running, because stopping ES would end it. The window opened with L2+R2 runs
+with ES already stopped by its launcher. Opened from Ports, ES is still
+running underneath it.
 
 ## The version this was all read against
 
@@ -423,11 +444,18 @@ custom.sh and the like, and comparing against those would call every
 customised device a different OS.
 
 `--status` and the top of the patches tab both say which it is. On a KNULLI
-this build has never seen, **applying is refused**, because a patch applied
-against the wrong image leaves markers behind and undoing them needs the same
-wrong build. `--anyway` overrides it. A *missing* version file is allowed:
-every test in the crate runs against a scratch directory that has no squashfs
-in it.
+this build has never seen, **applying is refused**, from the command line and
+from the screen, because a patch applied against the wrong image leaves
+markers behind and undoing them needs the same wrong build. `--anyway`
+overrides it on the command line; the screen has no override. A *missing*
+version file is allowed: every test in the crate runs against a scratch
+directory that has no squashfs in it.
+
+The boot hook checks too, because it runs at every boot and no apply is
+involved. The gpu marker and the evmapy flag on /boot carry
+`knulli=<version>` from when they were applied; after an update the hook skips
+them and says why in `/var/log/moose-boot.log`, and both rows read `changed`
+until they are applied on the new image.
 
 Bumping `BUILT_FOR` is a claim that the patches were re-checked against the new
 image, not a way to silence the warning.
