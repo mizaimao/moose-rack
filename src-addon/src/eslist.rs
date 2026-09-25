@@ -15,11 +15,85 @@
 //! has never heard of. Reading 633 games and writing back 633 games is how you
 //! lose a library's worth of scraping to a tag you forgot. So the only bytes
 //! that move are the ones inside the `<favorite>` element.
+//!
+//! Every file here is copied aside before it is rewritten -- see [`back_up`].
 
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
+
+/// How many copies of each file [`back_up`] keeps. The same number the save
+/// backups keep.
+pub const KEEP: usize = 10;
+
+/// Copy `file` aside before it is overwritten, and drop the oldest copies.
+///
+/// `<backups>/<folder>/<mtime millis>-<name>`, where `folder` is the directory
+/// the file sits in: `snes/…-gamelist.xml`, `collections/…-custom-X.cfg`.
+/// Plain files, so putting one back is a `cp` over ssh. Keyed on the file's
+/// own mtime, so backing up bytes that have not changed since the last copy
+/// writes nothing. A file that does not exist yet has nothing to keep.
+///
+/// An error here stops the write it was protecting.
+pub fn back_up(backups: &Path, file: &Path) -> Result<()> {
+    let meta = match std::fs::metadata(file) {
+        Ok(m) => m,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(e) => return Err(e).with_context(|| format!("reading {}", file.display())),
+    };
+    let name = file.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+    let folder = file
+        .parent()
+        .and_then(|p| p.file_name())
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "top".into());
+    let dir = backups.join(folder);
+    std::fs::create_dir_all(&dir).with_context(|| format!("creating {}", dir.display()))?;
+    let stamp = meta
+        .modified()
+        .ok()
+        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+        .map_or(0, |d| d.as_millis());
+    let dest = dir.join(format!("{stamp}-{name}"));
+    if !dest.exists() {
+        std::fs::copy(file, &dest)
+            .with_context(|| format!("backing up {} to {}", file.display(), dest.display()))?;
+    }
+    // Only this file's copies: one folder holds every collection's.
+    let mut kept: Vec<(u128, PathBuf)> = std::fs::read_dir(&dir)
+        .with_context(|| format!("listing {}", dir.display()))?
+        .flatten()
+        .filter_map(|e| {
+            let n = e.file_name().to_string_lossy().into_owned();
+            let (stamp, rest) = n.split_once('-')?;
+            if rest != name {
+                return None;
+            }
+            Some((stamp.parse::<u128>().ok()?, e.path()))
+        })
+        .collect();
+    kept.sort_by(|a, b| b.cmp(a));
+    for (_, old) in kept.into_iter().skip(KEEP) {
+        std::fs::remove_file(&old).ok();
+    }
+    Ok(())
+}
+
+/// Write `body` to `path` through a temporary beside it, after backing up
+/// what is there.
+fn replace(path: &Path, body: &str, backups: &Path) -> Result<()> {
+    back_up(backups, path)?;
+    if let Some(dir) = path.parent() {
+        std::fs::create_dir_all(dir).with_context(|| format!("creating {}", dir.display()))?;
+    }
+    let mut tmp = path.as_os_str().to_owned();
+    tmp.push(".moose");
+    let tmp = PathBuf::from(tmp);
+    std::fs::write(&tmp, body).with_context(|| format!("writing {}", tmp.display()))?;
+    std::fs::rename(&tmp, path).with_context(|| format!("replacing {}", path.display()))?;
+    Ok(())
+}
 
 /// One system's `gamelist.xml`, held as the text it is.
 pub struct Gamelist {
@@ -30,7 +104,8 @@ pub struct Gamelist {
 
 /// Where a `<game>` block sits, and what it says.
 struct Entry {
-    /// The ROM's file name, with ES's leading `./` taken off.
+    /// The ROM's path inside the system folder, with ES's leading `./` taken
+    /// off: `Tetris.gb`, or `Aftermarket/Foo.sfc` for one in a subfolder.
     file: String,
     /// Byte range of the whole `<game>…</game>` block.
     block: (usize, usize),
@@ -55,15 +130,46 @@ impl Gamelist {
         }
     }
 
+    /// The list, or `None` when the system has none yet.
+    ///
+    /// Only "not found" is `None`. Anything else -- a byte that is not UTF-8,
+    /// an I/O error -- is an error: read as an empty list it would be a list
+    /// with no stars, and every star on the server would look unstarred here.
+    pub fn load_if_present(path: &Path) -> Result<Option<Self>> {
+        match std::fs::read_to_string(path) {
+            Ok(text) => Ok(Some(Self { path: path.to_path_buf(), text, dirty: false })),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
+            Err(e) => Err(e).with_context(|| format!("reading {}", path.display())),
+        }
+    }
+
     pub fn load_or_empty(path: &Path) -> Result<Self> {
-        if path.exists() { Self::load(path) } else { Ok(Self::empty(path)) }
+        Ok(Self::load_if_present(path)?.unwrap_or_else(|| Self::empty(path)))
+    }
+
+    /// Where the next `<game>` block opens, at or after `from`.
+    ///
+    /// With or without attributes: ES writes `<game id="1234" source="ScreenScraper">`
+    /// for a game it scraped itself, and looking for the bare `<game>` alone
+    /// read every one of those as absent -- starred on the card and never seen.
+    /// `<gameList>` is not one.
+    fn next_game(&self, mut from: usize) -> Option<usize> {
+        while let Some(i) = self.text[from..].find("<game") {
+            let start = from + i;
+            let after = self.text[start + "<game".len()..].chars().next();
+            if after.is_some_and(|c| c == '>' || c.is_whitespace()) {
+                return Some(start);
+            }
+            from = start + "<game".len();
+        }
+        None
     }
 
     /// Every `<game>` block, in the order they appear.
     fn entries(&self) -> Vec<Entry> {
         let mut out = Vec::new();
         let mut from = 0;
-        while let Some(start) = self.text[from..].find("<game>").map(|i| i + from) {
+        while let Some(start) = self.next_game(from) {
             let Some(end) = self.text[start..].find("</game>").map(|i| i + start + "</game>".len())
             else {
                 break;
@@ -85,7 +191,7 @@ impl Gamelist {
         out
     }
 
-    /// The ROM file names ES has starred.
+    /// The ROMs ES has starred, as paths inside the system folder.
     pub fn favorites(&self) -> BTreeSet<String> {
         self.entries()
             .into_iter()
@@ -145,7 +251,8 @@ impl Gamelist {
         let Some(close) = self.text.rfind("</gameList>") else {
             return false;
         };
-        let name = file.rsplit_once('.').map_or(file, |(stem, _)| stem);
+        let base = file.rsplit_once('/').map_or(file, |(_, name)| name);
+        let name = base.rsplit_once('.').map_or(base, |(stem, _)| stem);
         let block = format!(
             "\t<game>\n\t\t<path>./{}</path>\n\t\t<name>{}</name>\n\t\t<favorite>true</favorite>\n\t</game>\n",
             escape(file),
@@ -169,22 +276,16 @@ impl Gamelist {
         self.dirty
     }
 
-    /// Write it back, but only if something moved.
+    /// Write it back, but only if something moved, after copying the old one
+    /// into `backups`.
     ///
     /// Through a temporary file in the same directory: ES reads these on a
     /// timer, and a half-written gamelist is a system that opens empty.
-    pub fn save(&self) -> Result<bool> {
+    pub fn save(&self, backups: &Path) -> Result<bool> {
         if !self.dirty {
             return Ok(false);
         }
-        if let Some(dir) = self.path.parent() {
-            std::fs::create_dir_all(dir).ok();
-        }
-        let tmp = self.path.with_extension("xml.moose");
-        std::fs::write(&tmp, &self.text)
-            .with_context(|| format!("writing {}", tmp.display()))?;
-        std::fs::rename(&tmp, &self.path)
-            .with_context(|| format!("replacing {}", self.path.display()))?;
+        replace(&self.path, &self.text, backups)?;
         Ok(true)
     }
 }
@@ -218,62 +319,106 @@ fn block_indent(text: &str, block: (usize, usize)) -> String {
         .unwrap_or_else(|| "\t\t".into())
 }
 
+/// Text for inside an element.
 fn escape(s: &str) -> String {
     s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;")
 }
 
+/// Text for inside a `"`-quoted attribute. A bare `"` there ends the value
+/// early, and ES then cannot parse the rest of `es_settings.cfg`.
+fn escape_attr(s: &str) -> String {
+    escape(s).replace('"', "&quot;")
+}
+
 fn unescape(s: &str) -> String {
-    s.replace("&lt;", "<").replace("&gt;", ">").replace("&amp;", "&")
+    s.replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", "\"")
+        .replace("&apos;", "'")
+        .replace("&amp;", "&")
 }
 
 // --- Custom collections -----------------------------------------------------
+
+/// The name ES knows a collection by.
+///
+/// ES takes it from the file name, `custom-<name>.cfg`, and lists the ones to
+/// show in `CollectionSystemsCustom` separated by commas, with no escaping for
+/// either. So `/`, which would make the file a directory, and `,`, which would
+/// split one name into two in the setting, become `-` in both places. The two
+/// have to agree or the file is written and never shown.
+pub fn es_name(collection: &str) -> String {
+    collection.replace(['/', ','], "-")
+}
 
 /// One `custom-<name>.cfg`: absolute ROM paths, one per line.
 pub struct CollectionFile {
     path: PathBuf,
     pub entries: BTreeSet<PathBuf>,
+    /// The file as it was read, so comments, blank lines and the order of the
+    /// entries survive a save.
+    lines: Vec<String>,
 }
 
 impl CollectionFile {
     /// What ES calls the file for a collection of this name.
     pub fn file_name(collection: &str) -> String {
-        // `/` would make it a directory, and ES has no escaping for it.
-        format!("custom-{}.cfg", collection.replace('/', "-"))
+        format!("custom-{}.cfg", es_name(collection))
     }
 
+    fn is_entry(line: &str) -> bool {
+        let l = line.trim();
+        !l.is_empty() && !l.starts_with('#')
+    }
+
+    /// The file, or an empty one when there is none yet. Any other failure to
+    /// read it is an error: read as empty, it would be a list with no games,
+    /// and every one of them would look taken out here.
     pub fn load(path: &Path) -> Result<Self> {
-        let entries = match std::fs::read_to_string(path) {
-            Ok(text) => text
-                .lines()
-                .map(str::trim)
-                .filter(|l| !l.is_empty() && !l.starts_with('#'))
-                .map(PathBuf::from)
-                .collect(),
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => BTreeSet::new(),
+        let lines: Vec<String> = match std::fs::read_to_string(path) {
+            Ok(text) => text.lines().map(str::to_owned).collect(),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Vec::new(),
             Err(e) => return Err(e).with_context(|| format!("reading {}", path.display())),
         };
-        Ok(Self { path: path.to_path_buf(), entries })
+        let entries = lines
+            .iter()
+            .filter(|l| Self::is_entry(l))
+            .map(|l| PathBuf::from(l.trim()))
+            .collect();
+        Ok(Self { path: path.to_path_buf(), entries, lines })
     }
 
-    /// Write it back, sorted, only when it differs from what is there.
-    pub fn save(&self) -> Result<bool> {
-        let body = self
-            .entries
-            .iter()
-            .map(|p| p.to_string_lossy().into_owned())
-            .collect::<Vec<_>>()
-            .join("\n");
-        let body = if body.is_empty() { body } else { format!("{body}\n") };
-        if std::fs::read_to_string(&self.path).is_ok_and(|old| old == body) {
+    /// Write it back, only when it differs from what is there, after copying
+    /// the old one into `backups`.
+    ///
+    /// Lines keep their places: an entry taken out loses its line, one put in
+    /// goes at the end, and comments and blank lines stay where they were.
+    pub fn save(&mut self, backups: &Path) -> Result<bool> {
+        let mut out: Vec<String> = Vec::new();
+        let mut written = BTreeSet::new();
+        for line in &self.lines {
+            if Self::is_entry(line) {
+                let p = PathBuf::from(line.trim());
+                if !self.entries.contains(&p) || !written.insert(p) {
+                    continue;
+                }
+            }
+            out.push(line.clone());
+        }
+        for p in &self.entries {
+            if !written.contains(p) {
+                out.push(p.to_string_lossy().into_owned());
+            }
+        }
+        if out == self.lines {
             return Ok(false);
         }
-        if let Some(dir) = self.path.parent() {
-            std::fs::create_dir_all(dir).ok();
+        let mut body = out.join("\n");
+        if !body.is_empty() {
+            body.push('\n');
         }
-        let tmp = self.path.with_extension("cfg.moose");
-        std::fs::write(&tmp, &body).with_context(|| format!("writing {}", tmp.display()))?;
-        std::fs::rename(&tmp, &self.path)
-            .with_context(|| format!("replacing {}", self.path.display()))?;
+        replace(&self.path, &body, backups)?;
+        self.lines = out;
         Ok(true)
     }
 }
@@ -297,16 +442,43 @@ pub fn enabled_collections(settings: &str) -> Vec<String> {
 
 /// Rewrite `CollectionSystemsCustom` so every named collection is shown.
 ///
-/// Returns the new file when it had to change, `None` when it already said so.
+/// `wanted` are server names; each goes in under [`es_name`], the name its file
+/// has. Returns the new file when it had to change, `None` when it already
+/// said so.
 pub fn show_collections(settings: &str, wanted: &[String]) -> Option<String> {
     let mut names: BTreeSet<String> = enabled_collections(settings).into_iter().collect();
     let before = names.len();
-    names.extend(wanted.iter().cloned());
+    names.extend(wanted.iter().map(|w| es_name(w)));
     if names.len() == before {
         return None;
     }
     let joined = names.into_iter().collect::<Vec<_>>().join(",");
     Some(set_setting(settings, "CollectionSystemsCustom", &joined))
+}
+
+/// `es_settings.cfg` updated so these collections show, or `None` when it
+/// already shows them all.
+///
+/// A missing file starts from an empty `<config>`. Any other failure to read it
+/// is an error: read as empty, the rewrite would be a settings file holding
+/// one line, and ES would come up with every other setting at its default.
+pub fn settings_showing(path: &Path, wanted: &[String]) -> Result<Option<String>> {
+    if wanted.is_empty() {
+        return Ok(None);
+    }
+    let settings = match std::fs::read_to_string(path) {
+        Ok(s) => s,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            "<?xml version=\"1.0\"?>\n<config>\n</config>\n".to_owned()
+        }
+        Err(e) => return Err(e).with_context(|| format!("reading {}", path.display())),
+    };
+    Ok(show_collections(&settings, wanted))
+}
+
+/// Write what [`settings_showing`] returned, after backing up the old file.
+pub fn write_settings(path: &Path, body: &str, backups: &Path) -> Result<()> {
+    replace(path, body, backups)
 }
 
 /// ES settings are `<string name="Key" value="..." />` lines.
@@ -321,7 +493,7 @@ fn setting_value(settings: &str, key: &str) -> Option<String> {
 
 fn set_setting(settings: &str, key: &str, value: &str) -> String {
     let needle = format!("name=\"{key}\"");
-    let line = format!("\t<string name=\"{key}\" value=\"{}\" />", escape(value));
+    let line = format!("\t<string name=\"{key}\" value=\"{}\" />", escape_attr(value));
     let Some(at) = settings.find(&needle) else {
         // Not there at all: add it before the closing tag.
         return match settings.rfind("</config>") {
@@ -368,6 +540,11 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         dir
+    }
+
+    /// Somewhere for the tests that are not about backups to put theirs.
+    fn bk() -> PathBuf {
+        std::env::temp_dir().join("moose-eslist-backups")
     }
 
     fn loaded(name: &str, text: &str) -> Gamelist {
@@ -429,7 +606,7 @@ mod tests {
         assert!(!list.set_favorite("Avenging Spirit.gb", true));
         assert!(!list.set_favorite("Tetris.gb", false));
         assert!(!list.changed());
-        assert!(!list.save().unwrap());
+        assert!(!list.save(&bk()).unwrap());
     }
 
     #[test]
@@ -455,7 +632,7 @@ mod tests {
         let p = scratch("fresh").join("gamelist.xml");
         let mut list = Gamelist::load_or_empty(&p).unwrap();
         assert!(list.set_favorite("Super Mario Land.gb", true));
-        assert!(list.save().unwrap());
+        assert!(list.save(&bk()).unwrap());
         assert_eq!(
             Gamelist::load(&p).unwrap().favorites(),
             ["Super Mario Land.gb".to_owned()].into()
@@ -470,7 +647,7 @@ mod tests {
         std::fs::write(&p, REAL).unwrap();
         let mut list = Gamelist::load(&p).unwrap();
         list.set_favorite("Tetris.gb", true);
-        assert!(list.save().unwrap());
+        assert!(list.save(&bk()).unwrap());
         assert!(!p.with_extension("xml.moose").exists(), "left its temporary behind");
         assert_eq!(Gamelist::load(&p).unwrap().favorites().len(), 2);
     }
@@ -484,9 +661,9 @@ mod tests {
         let mut c = CollectionFile::load(&p).unwrap();
         assert_eq!(c.entries.len(), 2, "blank and commented lines are not games");
         c.entries.insert(PathBuf::from("/userdata/roms/fbneo/aliencha.zip"));
-        assert!(c.save().unwrap());
+        assert!(c.save(&bk()).unwrap());
         assert_eq!(CollectionFile::load(&p).unwrap().entries.len(), 3);
-        assert!(!c.save().unwrap(), "rewrote a file that already said this");
+        assert!(!c.save(&bk()).unwrap(), "rewrote a file that already said this");
     }
 
     #[test]
@@ -525,6 +702,173 @@ mod tests {
     #[test]
     fn telling_es_what_it_already_shows_rewrites_nothing() {
         assert!(show_collections(SETTINGS, &["Arcade Maze".to_owned()]).is_none());
+    }
+
+    /// ES writes `<game id="…" source="…">` for a game it scraped itself.
+    /// Looking only for the bare tag read every one of those as absent: a
+    /// star on the card that never reached the server, and a star from the
+    /// server that got a second block for a game that already had one.
+    #[test]
+    fn a_game_block_with_attributes_is_still_a_game() {
+        let text = "<?xml version=\"1.0\"?>\n<gameList>\n\
+\t<game id=\"4231\" source=\"ScreenScraper.fr\">\n\
+\t\t<path>./Tetris.gb</path>\n\
+\t\t<name>Tetris</name>\n\
+\t\t<favorite>true</favorite>\n\
+\t</game>\n\
+\t<game\tid=\"12\">\n\
+\t\t<path>./Dr. Mario.gb</path>\n\
+\t</game>\n\
+</gameList>\n";
+        let mut list = loaded("attrs", text);
+        assert_eq!(list.favorites(), ["Tetris.gb".to_owned()].into());
+        assert_eq!(list.known().len(), 2);
+        assert!(list.set_favorite("Dr. Mario.gb", true));
+        assert_eq!(list.text.matches("<path>./Dr. Mario.gb</path>").count(), 1, "added a second block");
+        assert!(list.set_favorite("Tetris.gb", false));
+        assert_eq!(list.favorites(), ["Dr. Mario.gb".to_owned()].into());
+        // `<gameList>` itself is not a game.
+        assert!(loaded("attrs-empty", "<gameList>\n</gameList>\n").known().is_empty());
+    }
+
+    /// A game in `snes/Aftermarket/` is `./Aftermarket/Foo.sfc` to ES, and
+    /// its star goes on that path, not on a same-named game at the top.
+    #[test]
+    fn a_game_in_a_subfolder_is_starred_by_its_path() {
+        let text = "<gameList>\n\t<game>\n\t\t<path>./Foo.sfc</path>\n\t</game>\n</gameList>\n";
+        let mut list = loaded("subfolder", text);
+        assert!(list.set_favorite("Aftermarket/Foo.sfc", true));
+        assert_eq!(list.favorites(), ["Aftermarket/Foo.sfc".to_owned()].into());
+        assert!(list.text.contains("<path>./Aftermarket/Foo.sfc</path>"));
+        assert!(list.text.contains("<name>Foo</name>"), "the name is the file's, not the folder's");
+    }
+
+    /// A gamelist that cannot be read is an error. Read as empty it has no
+    /// stars, and every star the server has for this system reads as taken
+    /// off here.
+    #[test]
+    fn an_unreadable_gamelist_is_an_error_not_an_empty_list() {
+        let p = scratch("bad-gamelist").join("gamelist.xml");
+        std::fs::write(&p, b"<gameList>\n\xff\xfe</gameList>\n").unwrap();
+        assert!(Gamelist::load_if_present(&p).is_err());
+        assert!(Gamelist::load_or_empty(&p).is_err());
+        assert!(Gamelist::load_if_present(&p.with_file_name("none.xml")).unwrap().is_none());
+    }
+
+    /// Somebody's notes in a `custom-*.cfg` are still there after a sync,
+    /// and so is the order.
+    #[test]
+    fn comments_and_order_in_a_collection_file_survive_a_save() {
+        let dir = scratch("coll-comments");
+        let p = dir.join("custom-Arcade Maze.cfg");
+        std::fs::write(
+            &p,
+            "# picked by hand\n/userdata/roms/fbneo/pacman.zip\n\n# the hard ones\n/userdata/roms/fbneo/digdug.zip\n/userdata/roms/fbneo/amidar.zip\n",
+        )
+        .unwrap();
+        let mut c = CollectionFile::load(&p).unwrap();
+        c.entries.remove(Path::new("/userdata/roms/fbneo/digdug.zip"));
+        c.entries.insert(PathBuf::from("/userdata/roms/fbneo/alibaba.zip"));
+        assert!(c.save(&bk()).unwrap());
+        assert_eq!(
+            std::fs::read_to_string(&p).unwrap(),
+            "# picked by hand\n/userdata/roms/fbneo/pacman.zip\n\n# the hard ones\n/userdata/roms/fbneo/amidar.zip\n/userdata/roms/fbneo/alibaba.zip\n"
+        );
+    }
+
+    /// A cfg that cannot be read is an error, never an empty collection.
+    #[test]
+    fn an_unreadable_collection_file_is_an_error() {
+        let p = scratch("coll-bad").join("custom-X.cfg");
+        std::fs::write(&p, b"/userdata/roms/fbneo/\xff.zip\n").unwrap();
+        assert!(CollectionFile::load(&p).is_err());
+    }
+
+    /// A collection name with a quote in it went into the attribute bare, and
+    /// ES could not read the rest of `es_settings.cfg`.
+    #[test]
+    fn a_quote_in_a_collection_name_is_escaped_in_the_settings() {
+        let settings = "<?xml version=\"1.0\"?>\n<config>\n\
+\t<string name=\"CollectionSystemsCustom\" value=\"Best &quot;Hard&quot; Ones,Arcade Maze\" />\n\
+</config>\n";
+        assert_eq!(
+            enabled_collections(settings),
+            vec!["Best \"Hard\" Ones".to_owned(), "Arcade Maze".to_owned()]
+        );
+        let out = show_collections(settings, &["Say \"Hi\"".to_owned()]).unwrap();
+        assert!(
+            out.contains("value=\"Arcade Maze,Best &quot;Hard&quot; Ones,Say &quot;Hi&quot;\""),
+            "{out}"
+        );
+        assert_eq!(enabled_collections(&out).len(), 3);
+    }
+
+    /// ES splits the setting on commas with no escape, and takes a
+    /// collection's name from its file. A comma in a server name becomes `-`
+    /// in both, so the file written is the one the setting shows.
+    #[test]
+    fn a_comma_in_a_collection_name_does_not_split_it_in_two() {
+        let out = show_collections(SETTINGS, &["Shmups, Vertical".to_owned()]).unwrap();
+        let shown = enabled_collections(&out);
+        assert_eq!(shown.len(), 3, "{shown:?}");
+        assert!(shown.contains(&"Shmups- Vertical".to_owned()));
+        assert_eq!(CollectionFile::file_name("Shmups, Vertical"), "custom-Shmups- Vertical.cfg");
+    }
+
+    /// A settings file that cannot be read must not be rewritten as one line.
+    #[test]
+    fn settings_that_cannot_be_read_are_not_rewritten() {
+        let dir = scratch("settings-bad");
+        let p = dir.join("es_settings.cfg");
+        std::fs::write(&p, b"<config>\n\t<string name=\"A\" value=\"\xff\" />\n</config>\n").unwrap();
+        assert!(settings_showing(&p, &["Arcade Maze".to_owned()]).is_err());
+        // Missing is a fresh file, and a well-formed one.
+        let fresh = settings_showing(&dir.join("none.cfg"), &["Arcade Maze".to_owned()]).unwrap().unwrap();
+        assert!(fresh.contains("<config>") && fresh.contains("</config>"), "{fresh}");
+        assert_eq!(enabled_collections(&fresh), vec!["Arcade Maze".to_owned()]);
+    }
+
+    /// Every rewrite keeps the old file, ten deep, like the save backups.
+    #[test]
+    fn a_rewrite_keeps_the_old_file_and_the_oldest_copies_go() {
+        let dir = scratch("backup");
+        let backups = dir.join("es-backup");
+        let p = dir.join("snes").join("gamelist.xml");
+        std::fs::create_dir_all(p.parent().unwrap()).unwrap();
+        // Nothing there yet: nothing to keep, and not an error.
+        back_up(&backups, &p).unwrap();
+        assert!(!backups.exists() || std::fs::read_dir(backups.join("snes")).map_or(0, |d| d.count()) == 0);
+
+        let t0 = std::time::SystemTime::now() - std::time::Duration::from_secs(3600);
+        for i in 0..12u64 {
+            std::fs::write(&p, format!("<gameList>{i}</gameList>")).unwrap();
+            let f = std::fs::File::options().write(true).open(&p).unwrap();
+            f.set_modified(t0 + std::time::Duration::from_secs(i)).unwrap();
+            back_up(&backups, &p).unwrap();
+        }
+        // Unchanged since the last copy: no new one.
+        back_up(&backups, &p).unwrap();
+        let mut kept: Vec<String> = std::fs::read_dir(backups.join("snes"))
+            .unwrap()
+            .map(|e| std::fs::read_to_string(e.unwrap().path()).unwrap())
+            .collect();
+        kept.sort();
+        assert_eq!(kept.len(), KEEP);
+        assert!(kept.contains(&"<gameList>11</gameList>".to_owned()));
+        assert!(!kept.contains(&"<gameList>0</gameList>".to_owned()), "the oldest should have gone");
+
+        // And a save goes through it.
+        let before = "<gameList>\n\t<game>\n\t\t<path>./A.sfc</path>\n\t</game>\n</gameList>\n";
+        std::fs::write(&p, before).unwrap();
+        let mut list = Gamelist::load(&p).unwrap();
+        assert!(list.set_favorite("A.sfc", true));
+        assert!(list.save(&backups).unwrap());
+        assert_ne!(std::fs::read_to_string(&p).unwrap(), before, "setup: the save changed nothing");
+        let copies: Vec<String> = std::fs::read_dir(backups.join("snes"))
+            .unwrap()
+            .map(|e| std::fs::read_to_string(e.unwrap().path()).unwrap())
+            .collect();
+        assert!(copies.iter().any(|c| c == before), "the file a save replaced was not kept");
     }
 
     #[test]

@@ -83,6 +83,8 @@ The client reads a missing endpoint as an error and an empty list as "none yet".
 | `GET /api/roms/{id}` | one rom |
 | `GET /api/roms/{id}/content/{*name}` | bytes, **Range-capable**. The name is ignored; the id decides |
 | `GET /api/collections` | the curated text lists |
+| `POST /api/collections/{id}/roms` | `{"rom_ids":[…]}`. Appends one `platform/name    # Title` line per game to `<id>.txt`, then rereads every list. A game already in it is fine; one the server does not have is a 404 and nothing is written |
+| `DELETE /api/collections/{id}/roms` | same body. Removes the lines naming those games; comments, unmatched lines and order stay |
 | `GET /api/firmware` | BIOS tree, flattened, hashes included |
 | `GET /api/firmware/{id}/content/{*name}` | one BIOS file |
 | `POST /api/devices` | register, or return the id already held for that name |
@@ -121,6 +123,12 @@ resolved to famicom games and looked entirely plausible. Lines are
 the title — because ES-DE uses the gamelist `<name>` where a scraper filled one
 in and the file stem where it did not. Keyed on one alone: 466 of 2,662 one way,
 103 the other. On both, with the platform: correct.
+
+A line the server writes uses the stem, as the export did. When another game in
+the same system already answers to that stem (`snes/Foo` and
+`snes/Aftermarket/Foo`), it writes `snes/Aftermarket/Foo` instead, then the file
+name with its extension. Those longer keys are added to the name table in a
+second pass, so they never change what an existing line resolves to.
 
 **BIOS is not flat.** `bios.rs` wrote every firmware file into one directory on
 the reasoning that RetroArch wants it that way. True for RomM's curated
@@ -251,9 +259,15 @@ whichever arrives.
 | | credential | may |
 | --- | --- | --- |
 | owner | `[auth] token` | everything |
-| user | `[[auth.users]]` name + password | read the library, sync saves |
+| user | `[[auth.users]]` name + password | read the library, sync saves, change collection membership |
 | browser | either, at `/login` | whatever that credential may |
-| guest | the button, when `[auth] guest = true` | read the library, sync saves and states |
+| guest | the button, when `[auth] guest = true` | read the library, sync saves and states. Not change a collection |
+
+Collection membership is written by the owner and by named accounts. The shared
+guest account is refused in `require_auth` (`auth::guest_refused`), for the same
+reason `delete_state` is the owner's: one guest changing a list changes it for
+every other guest. It is `Identity::Guest`, not a user called "guest", so a real
+`[[auth.users]]` account of that name is not caught by it.
 
 The guest account is shared on purpose: one identity, one set of saves, one set
 of states, however many people use it. `delete_state` stays the owner's --

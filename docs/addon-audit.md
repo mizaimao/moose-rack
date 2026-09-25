@@ -11,13 +11,13 @@ code path was followed end to end or reproduced; "suspicion" means it was not.
 
 ## Live today
 
-1. **Favourites never reach the server.** moose-service registers only GET
+1. ~~**Favourites never reach the server.** moose-service registers only GET
    routes for collections (src-service/src/main.rs:1277-1280). The Flip POSTs
    and DELETEs `/api/collections/{id}/roms` (src/api.rs:679), gets 404, and
    `favrun.rs:266` then skips the whole collection, card side included. A
    single star added on the Flip wedges that list in both directions for good.
    docs/flip-knulli-changes.md says both kinds of list sync both ways; they have
-   not since RomM was replaced. Confirmed.
+   not since RomM was replaced. Confirmed.~~
 2. **The on-screen apply skips the KNULLI version check.** Only `--apply` and
    `--restore` are gated (main.rs:334, 517); `run_queue` (main.rs:705-721)
    applies on any image. Confirmed.
@@ -84,13 +84,13 @@ code path was followed end to end or reproduced; "suspicion" means it was not.
 17. **The boot hook has no version check.** With `gpu=wayland` every boot copies
     the old blob over a new image's libmali (boot-custom.sh:19-28). Not live:
     gpu is stock. Suspicion that a newer driver would clash.
-18. **Favourites, once the 404 is fixed.** The baseline records server members
+18. ~~**Favourites, once the 404 is fixed.** The baseline records server members
     not on the card (favsync.rs:96-97), so a game that lands later reads as an
     unstar; a list that agrees keeps its stale baseline forever (favrun.rs:181);
     an error loading a `custom-*.cfg` reads as an empty list (favrun.rs:223) and
     becomes a mass unstar; and ES rewrites gamelists from memory on exit,
     undoing whatever the sync wrote. Matching ignores `rel_dir` (favmap.rs:48-58),
-    so games in subfolders and same-name twins misbehave. Confirmed.
+    so games in subfolders and same-name twins misbehave. Confirmed.~~
 19. **The profile drops patches that drifted.** "changed" patches are left out
     silently (profile.rs:47-51) and the profile is rewritten after every
     on-screen apply, so an ES rewrite of never-sleep can drop it from the
@@ -110,8 +110,8 @@ code path was followed end to end or reproduced; "suspicion" means it was not.
     and Status sticks on "syncing" (main.rs:650-665).
 23. With a save plan held, the confirm dialog shows it on any row; A on
     "Refresh the game list" rebuilds the index instead (ui.rs:230, 345).
-24. The favourites second press re-plans instead of running the plan shown
-    (main.rs:663).
+24. ~~The favourites second press re-plans instead of running the plan shown
+    (main.rs:663).~~
 25. A failed `rom_with_files` is dropped (savesync.rs:775-787), so a pulled
     save lands at the top of /userdata/saves where nothing reads it.
 26. `--keep=local` is ignored without a word (main.rs:270).

@@ -117,17 +117,22 @@ fn prepare(
     Ok(Ready { candidates })
 }
 
-/// Favourites and collections, both ways.
+/// Where the gamelists and collection files are copied before a rewrite.
+pub fn es_backups(app_dir: &Path) -> PathBuf {
+    app_dir.join("es-backup")
+}
+
+/// Favourites and collections: look at what a sync would do.
 ///
-/// One job for looking and for doing, because the looking is the expensive
-/// part — reading nine gamelists off an exFAT card and asking the server for
-/// every collection — and doing it twice to carry out what it just worked out
-/// would double the wait for no gain. `carry_out` decides which.
+/// The looking is the expensive part — reading nine gamelists off an exFAT
+/// card and asking the server for every collection — and the plan it hands
+/// back is what [`stars_apply`] carries out, so the second press does not do
+/// it again.
 ///
-/// Unlike the save sync this does *not* re-negotiate before acting. There is
-/// no server-side session to go stale, and re-reading would only widen the
-/// window in which the card changes under us.
-pub fn stars(cfg: &Config, app_dir: &Path, carry_out: bool) -> Job {
+/// The one thing it writes is the baseline for lists that already agree. Both
+/// sides hold those already, and recording it here is what lets a baseline
+/// from before stable ids heal when there is nothing to carry out.
+pub fn stars(cfg: &Config, app_dir: &Path) -> Job {
     let (tx, rx) = channel();
     let server = cfg.server.url.clone();
     let username = cfg.server.username.clone();
@@ -178,11 +183,81 @@ pub fn stars(cfg: &Config, app_dir: &Path, carry_out: bool) -> Job {
                 crate::favrun::plan(&client, &cache, &es, &known, &baseline, platform)
                     .await
                     .map_err(|e| format!("{e:#}"))?;
-            if !carry_out {
-                return Ok(Message::Stars(Box::new(plan)));
+            // In full in the log: the panel has room for the names only.
+            for u in &plan.unread {
+                eprintln!("stars: not read: {u}");
             }
-            say(Message::Note("applying".into()));
-            let report = crate::favrun::carry_out(&client, &es, &known, &plan, &mut baseline)
+            if crate::favrun::record_agreement(&plan, &mut baseline)
+                && let Err(e) = baseline.save(&baseline_path)
+            {
+                return Err(format!("saving what was agreed: {e:#}"));
+            }
+            Ok(Message::Stars(Box::new(plan)))
+        });
+        match result {
+            Ok(m) => say(m),
+            Err(e) => say(Message::Failed(e)),
+        }
+    });
+
+    Job { rx }
+}
+
+/// Carry out the plan that was shown, as it was shown.
+///
+/// Not worked out again: what a person accepted is what runs. Refused while
+/// EmulationStation is running and the plan writes a file it keeps in memory,
+/// because ES would write its own copy back over it on its next exit. From
+/// L2+R2 ES is already stopped; opened as a Port, it is not.
+pub fn stars_apply(
+    cfg: &Config,
+    app_dir: &Path,
+    es: crate::favmap::EsPaths,
+    plan: crate::favrun::Plan,
+) -> Job {
+    use crate::esctl::Frontend as _;
+    let (tx, rx) = channel();
+    let server = cfg.server.url.clone();
+    let username = cfg.server.username.clone();
+    let password = cfg.server.password.clone();
+    let token = cfg.server.token.clone();
+    let app_dir = app_dir.to_path_buf();
+
+    std::thread::spawn(move || {
+        let tx2 = tx.clone();
+        let say = move |m: Message| {
+            let _ = tx2.send(m);
+        };
+        match plan.writes_card(&es) {
+            Ok(true) if crate::esctl::Knulli::default().es_running() => {
+                return say(Message::Failed(
+                    "EmulationStation is running and would write its own copy over this — \
+                     open moose-patch with L2+R2, or run moose-patch --stars-apply over ssh"
+                        .into(),
+                ));
+            }
+            Ok(_) => {}
+            Err(e) => return say(Message::Failed(format!("{e:#}"))),
+        }
+        let baseline_path = app_dir.join("favorites-baseline.json");
+        let mut baseline = crate::favsync::Baseline::load(&baseline_path);
+        let runtime = match tokio::runtime::Builder::new_current_thread().enable_all().build() {
+            Ok(r) => r,
+            Err(e) => return say(Message::Failed(format!("starting the network: {e}"))),
+        };
+        say(Message::Note("applying".into()));
+        let result: Result<Message, String> = runtime.block_on(async {
+            let client = moose_rack::api::Client::with_auth(
+                &server,
+                &username,
+                &password,
+                token.as_deref().filter(|t| !t.is_empty()),
+            )
+            .map_err(|e| format!("{e:#}"))?;
+            // No `--anyway` from the screen: a mass unstar is refused here and
+            // can only be pushed through over ssh, where it is typed.
+            let backups = es_backups(&app_dir);
+            let report = crate::favrun::carry_out(&client, &es, &plan, &mut baseline, &backups, false)
                 .await
                 .map_err(|e| format!("{e:#}"))?;
             // The baseline is saved after the work, never before: a run that
@@ -190,24 +265,19 @@ pub fn stars(cfg: &Config, app_dir: &Path, carry_out: bool) -> Job {
             if let Err(e) = baseline.save(&baseline_path) {
                 return Err(format!("saving what was agreed: {e:#}"));
             }
-            let shown = crate::favrun::show_all(&es, &plan).unwrap_or(false);
-            let mut note = match (report.applied_here, report.sent) {
-                (0, 0) => "nothing to change".to_owned(),
-                (0, n) => format!("{n} sent"),
-                (n, 0) => format!("{n} applied here"),
-                (a, b) => format!("{a} applied here, {b} sent"),
-            };
-            if shown {
-                note.push_str(" — EmulationStation told to show them");
+            let note = report.summary();
+            let failed = crate::favrun::failures(&plan, &report);
+            if failed.is_empty() {
+                return Ok(Message::Finished {
+                    moved: report.applied_here + report.sent,
+                    note,
+                    conflicts: Vec::new(),
+                });
             }
-            if !report.failed.is_empty() {
-                note.push_str(&format!(" ({} failed)", report.failed.len()));
+            for f in &failed {
+                eprintln!("stars: failed: {f}");
             }
-            Ok(Message::Finished {
-                moved: report.applied_here + report.sent,
-                note,
-                conflicts: Vec::new(),
-            })
+            Err(format!("{note}; {} list(s) did not sync: {}", failed.len(), failed.join("; ")))
         });
         match result {
             Ok(m) => say(m),
@@ -607,6 +677,102 @@ mod tests {
         let mut stage = Stage::Asking { note: "scanning saves".into() };
         apply(&mut stage, &mut Vec::new(), vec![]);
         assert_eq!(stage, Stage::Asking { note: "scanning saves".into() });
+    }
+
+    /// Audit item 24. The second press planned again and carried out the new
+    /// plan, not the one on screen. The server here is nowhere, so a worker
+    /// that asked it for the collections again would fail; this one only
+    /// writes the star it was shown.
+    #[test]
+    fn the_second_press_carries_out_the_plan_that_was_shown() {
+        use crate::favmap::{EsPaths, Known};
+        use crate::favrun::{Held, Item, Plan};
+        use crate::favsync::Move;
+
+        let dir = std::env::temp_dir().join("moose-worker-stars-apply");
+        let _ = std::fs::remove_dir_all(&dir);
+        let es = EsPaths::under(&dir);
+        std::fs::create_dir_all(es.roms.join("snes")).unwrap();
+        std::fs::write(
+            es.gamelist("snes"),
+            "<gameList>\n\t<game>\n\t\t<path>./Chrono Trigger (USA).sfc</path>\n\t</game>\n</gameList>\n",
+        )
+        .unwrap();
+        let plan = Plan {
+            items: vec![Item {
+                id: "34".into(),
+                name: "★ Best of snes".into(),
+                held: Held::Stars(vec!["snes".into()]),
+                moves: vec![Move::StarHere(1)],
+                agreed: [1i64].into(),
+            }],
+            known: vec![Known {
+                rom_id: 1,
+                folder: "snes".into(),
+                rel_dir: String::new(),
+                file: "Chrono Trigger (USA).sfc".into(),
+            }],
+            ..Plan::default()
+        };
+        let mut cfg = Config::default();
+        cfg.server.url = "http://nowhere.invalid".into();
+        cfg.server.username = "flip".into();
+        cfg.server.password = "pw".into();
+        let job = stars_apply(&cfg, &dir, es.clone(), plan);
+
+        let mut stars = Stars::Asking("starting".into());
+        let mut held = None;
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(20);
+        while stars.is_busy() && std::time::Instant::now() < deadline {
+            apply_stars(&mut stars, &mut held, job.drain());
+            std::thread::sleep(std::time::Duration::from_millis(20));
+        }
+        assert!(matches!(stars, Stars::Done(_)), "{stars:?}");
+        let list = crate::eslist::Gamelist::load(&es.gamelist("snes")).unwrap();
+        assert!(list.favorites().contains("Chrono Trigger (USA).sfc"));
+        let baseline = crate::favsync::Baseline::load(&dir.join("favorites-baseline.json"));
+        assert_eq!(baseline.of("34"), [1i64].into());
+        assert!(es_backups(&dir).join("snes").is_dir(), "the gamelist was not backed up");
+    }
+
+    /// A list that did not sync is named on the panel, with why. It used to
+    /// read "1 sent (1 failed)" and the log said nothing more.
+    #[test]
+    fn a_list_that_did_not_sync_is_named_not_counted() {
+        use crate::favmap::EsPaths;
+        use crate::favrun::{Held, Item, Plan};
+        use crate::favsync::Move;
+
+        let dir = std::env::temp_dir().join("moose-worker-stars-failed");
+        let _ = std::fs::remove_dir_all(&dir);
+        let es = EsPaths::under(&dir);
+        let plan = Plan {
+            items: vec![Item {
+                id: "45".into(),
+                name: "Arcade Fighting".into(),
+                held: Held::File,
+                moves: vec![Move::StarOnServer(1)],
+                agreed: [1i64].into(),
+            }],
+            unread: vec!["Arcade Maze: reading custom-Arcade Maze.cfg: invalid UTF-8".into()],
+            ..Plan::default()
+        };
+        let mut cfg = Config::default();
+        cfg.server.url = "http://nowhere.invalid".into();
+        cfg.server.username = "flip".into();
+        cfg.server.password = "pw".into();
+        let job = stars_apply(&cfg, &dir, es, plan);
+        let mut stars = Stars::Asking("starting".into());
+        let mut held = None;
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(30);
+        while stars.is_busy() && std::time::Instant::now() < deadline {
+            apply_stars(&mut stars, &mut held, job.drain());
+            std::thread::sleep(std::time::Duration::from_millis(20));
+        }
+        let Stars::Failed(why) = &stars else { panic!("{stars:?}") };
+        assert!(why.contains("2 list(s) did not sync"), "{why}");
+        assert!(why.contains("Arcade Fighting: POST"), "{why}");
+        assert!(why.contains("Arcade Maze: reading"), "{why}");
     }
 
     #[test]
