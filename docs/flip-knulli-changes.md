@@ -352,7 +352,8 @@ the device and the server afterwards.
 
 - The Flip signs in as its own account, `flip`, by password. It had held an old
   token the server no longer accepted.
-- 352 saves and 1,286 states on the server now match the Flip's, byte for byte.
+- 333 saves and 1,286 states on the server match the Flip's, byte for byte
+  (the server's 1,287th state is a browser one the Flip cannot load).
   Neo Geo memory cards sync for the first time. Tintin was added to the
   server's library so its save and 27 states could go up.
 - Saves the Flip had stopped loading after ROM renames: Skyland's only save
