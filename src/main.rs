@@ -266,7 +266,9 @@ motion_shader: cfg.shaders.motion.as_deref(),
                 Ok(false) => {}
                 Err(e) => eprintln!("warning: could not fetch {core}: {e}"),
             }
-            match moose_rack::bios::ensure(&client, &cfg.system_dir(), core, &platform).await {
+            match moose_rack::bios::ensure(
+                &client, &cfg.system_dir(), &cfg.legacy_bios_dirs(), core, &platform,
+            ).await {
                 Ok(0) => {}
                 Ok(n) => println!("fetched {n} BIOS file(s)"),
                 Err(e) => eprintln!("warning: could not fetch BIOS: {e}"),
@@ -2087,7 +2089,7 @@ async fn cmd_sync_bios() -> Result<()> {
     let dest = cfg.system_dir();
 
     let interactive = std::io::IsTerminal::is_terminal(&std::io::stdout());
-    let summary = moose_rack::bios::sync(&client, &dest, |done, total, name| {
+    let summary = moose_rack::bios::sync(&client, &dest, &cfg.legacy_bios_dirs(), |done, total, name| {
         if interactive {
             print!("\r  {done}/{total}  {:<38}", name.chars().take(36).collect::<String>());
             use std::io::Write as _;

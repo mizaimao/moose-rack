@@ -163,7 +163,7 @@ async fn open_settings(app: tauri::AppHandle) -> CmdResult<()> {
 #[tauri::command]
 async fn sync_bios(app: tauri::AppHandle, state: State<'_, AppState>) -> CmdResult<String> {
     let client = state.client.clone().ok_or("not connected to a server")?;
-    let summary = moose_rack::bios::sync(&client, &state.system_dir(), |done, total, name| {
+    let summary = moose_rack::bios::sync(&client, &state.system_dir(), &state.legacy_bios, |done, total, name| {
         let _ = app.emit("bios-progress", (done, total, name.to_owned()));
     })
     .await
@@ -274,7 +274,7 @@ async fn download_set(
     let mut bios_note = String::new();
     if choice.bios {
         let _ = app.emit("bulk-progress", "BIOS files…".to_owned());
-        match moose_rack::bios::sync(&client, &state.system_dir(), |done, got, name| {
+        match moose_rack::bios::sync(&client, &state.system_dir(), &state.legacy_bios, |done, got, name| {
             let _ = app.emit("bulk-progress", format!("BIOS {done}/{got} — {name}"));
         })
         .await
@@ -580,7 +580,7 @@ async fn launch_rom(
         // why the screen is black. Only what this platform actually needs.
         let bios_dir = state.system_dir();
         say("checking BIOS files…");
-        match moose_rack::bios::ensure(api, &bios_dir, core, &row.platform_slug).await {
+        match moose_rack::bios::ensure(api, &bios_dir, &state.legacy_bios, core, &row.platform_slug).await {
             Ok(0) => {}
             Ok(n) => fetched.push(format!("fetched {n} BIOS file(s)")),
             Err(e) => {
