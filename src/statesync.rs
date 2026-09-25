@@ -25,7 +25,7 @@
 //!   neither differs                    ->  nothing to do.
 
 use std::collections::BTreeMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
@@ -189,7 +189,6 @@ pub fn decide(
 pub async fn run(
     client: &Client,
     candidates: &[Candidate],
-    ra_root: &Path,
     library_root: &Path,
     data_dir: &Path,
 ) -> Result<Summary> {
@@ -219,7 +218,8 @@ pub async fn run(
                 remote.insert(*id, list);
             }
             Err(e) => {
-                summary.notes.push(format!("could not list states for rom {id}: {e}"));
+                summary.failed += 1;
+                summary.notes.push(format!("could not list states for rom {id}: {e:#}"));
             }
         }
     }
@@ -247,6 +247,7 @@ pub async fn run(
                 let bytes = match std::fs::read(&c.path) {
                     Ok(b) => b,
                     Err(e) => {
+                        summary.failed += 1;
                         summary.notes.push(format!("could not read {file_name}: {e}"));
                         continue;
                     }
@@ -273,24 +274,21 @@ pub async fn run(
                         };
                         ledger.record(*rom_id, &file_name, &c.content_hash, Some(&print));
                     }
-                    Err(e) => summary.notes.push(format!("could not upload {file_name}: {e}")),
+                    Err(e) => {
+                        summary.failed += 1;
+                        summary.notes.push(format!("could not upload {file_name}: {e:#}"));
+                    }
                 }
             }
             Action::Download => {
                 let Some(server) = server else { continue };
                 match client.state_content(server.id).await {
                     Ok(bytes) => {
-                        let dest = crate::savesync::download_path(
-                            ra_root,
-                            &file_name,
-                            crate::savesync::destination(
-                                c.core.as_deref().or(Some(&c.core_dir)),
-                                c.platform(),
-                            ),
-                        );
-                        if let Some(dir) = dest.parent() {
-                            std::fs::create_dir_all(dir).ok();
-                        }
+                        // Into the file that is there. Working the folder out
+                        // again from the core and the server's slug put a state
+                        // where nothing reads it wherever the two mappings
+                        // disagree, and the ledger then recorded it as taken.
+                        let dest = c.path.clone();
                         // Same rule as a save: nothing is overwritten without a
                         // copy of what was there first.
                         if let Err(e) =
@@ -298,19 +296,23 @@ pub async fn run(
                         {
                             summary.notes.push(format!("could not back up {file_name}: {e}"));
                         }
-                        match std::fs::write(&dest, &bytes) {
+                        match crate::savesync::write_atomically(&dest, &bytes) {
                             Ok(()) => {
                                 summary.downloaded += 1;
                                 summary.notes.push(format!("downloaded state {file_name}"));
                                 let hash = crate::savehash::compute(&dest).unwrap_or_default();
                                 ledger.record(*rom_id, &file_name, &hash, Some(&fingerprint(server)));
                             }
-                            Err(e) => summary
-                                .notes
-                                .push(format!("could not write {}: {e}", dest.display())),
+                            Err(e) => {
+                                summary.failed += 1;
+                                summary.notes.push(format!("could not write {}: {e:#}", dest.display()));
+                            }
                         }
                     }
-                    Err(e) => summary.notes.push(format!("could not download {file_name}: {e}")),
+                    Err(e) => {
+                        summary.failed += 1;
+                        summary.notes.push(format!("could not download {file_name}: {e:#}"));
+                    }
                 }
             }
             Action::Conflict => summary.conflicts.push(SaveConflict {
@@ -331,12 +333,77 @@ pub async fn run(
         }
     }
 
+    // States that exist only on the server. Until now nothing brought these
+    // down: the loop above walks this device's files, so a state made on
+    // another device never arrived.
+    match client.all_states().await {
+        Ok(all) => {
+            for (s, dest) in incoming(&all, candidates, &ledger) {
+                match client.state_content(s.id).await {
+                    Ok(bytes) => match crate::savesync::write_atomically(&dest, &bytes) {
+                        Ok(()) => {
+                            summary.downloaded += 1;
+                            summary.notes.push(format!("downloaded state {}", s.file_name));
+                            let hash = crate::savehash::compute(&dest).unwrap_or_default();
+                            ledger.record(s.rom_id, &s.file_name, &hash, Some(&fingerprint(s)));
+                        }
+                        Err(e) => {
+                            summary.failed += 1;
+                            summary.notes.push(format!("could not write {}: {e:#}", dest.display()));
+                        }
+                    },
+                    Err(e) => {
+                        summary.failed += 1;
+                        summary.notes.push(format!("could not download {}: {e:#}", s.file_name));
+                    }
+                }
+            }
+        }
+        Err(e) => {
+            summary.failed += 1;
+            summary.notes.push(format!("could not list the server's states: {e:#}"));
+        }
+    }
+
     // Best effort: losing the ledger costs one round of extra comparison, not
     // any data, so it must not fail the sync that just succeeded.
     if let Err(e) = ledger.save(data_dir) {
         summary.notes.push(format!("could not record state sync: {e}"));
     }
     Ok(summary)
+}
+
+/// Server states to bring down, and where each one goes.
+///
+/// Only for games already played here -- a save or state for the game exists
+/// on this device -- and into the same folder as that file, which is where
+/// this device's emulator keeps that game's states. A state this device had
+/// agreed on and no longer holds was deleted here, and is not brought back.
+pub fn incoming<'a>(
+    server: &'a [crate::api::SaveState],
+    candidates: &[Candidate],
+    ledger: &Ledger,
+) -> Vec<(&'a crate::api::SaveState, PathBuf)> {
+    let resolved = |c: &Candidate| match &c.resolution {
+        Resolution::Resolved { rom_id, .. } => Some(*rom_id),
+        _ => None,
+    };
+    let mut out = Vec::new();
+    for s in server {
+        let here = candidates
+            .iter()
+            .filter(|c| resolved(c) == Some(s.rom_id))
+            .collect::<Vec<_>>();
+        let Some(beside) = here.first() else { continue };
+        let held = here.iter().any(|c| {
+            c.kind == Kind::State && c.path.file_name().is_some_and(|n| n.to_string_lossy() == s.file_name)
+        });
+        if held || ledger.seen.contains_key(&key(s.rom_id, &s.file_name)) {
+            continue;
+        }
+        out.push((s, beside.path.with_file_name(&s.file_name)));
+    }
+    out
 }
 
 fn mtime_secs(path: &Path) -> i64 {
@@ -392,21 +459,13 @@ pub async fn resolve_one(
                 .save_id
                 .context("the server did not name a state to download")?;
             let bytes = client.state_content(state_id).await?;
-            // A state conflict carries no platform, so this files by core.
-            // Correct on RetroArch's layout; on Batocera's, states are out of
-            // scope for now by decision, not by accident.
-            let dest = crate::savesync::download_path(
-                ra_root,
-                &conflict.file_name,
-                crate::savesync::destination(conflict.emulator.as_deref(), None),
-            );
+            let dest = keep_server_target(conflict, ra_root);
             if let Some(dir) = dest.parent() {
                 std::fs::create_dir_all(dir).ok();
             }
             let slot = conflict.slot.as_deref().unwrap_or("unslotted");
             crate::savebackup::keep(library_root, conflict.rom_id, slot, &dest).ok();
-            std::fs::write(&dest, &bytes)
-                .with_context(|| format!("writing {}", dest.display()))?;
+            crate::savesync::write_atomically(&dest, &bytes)?;
 
             let hash = crate::savehash::compute(&dest).unwrap_or_default();
             let print = server_print(client, conflict.rom_id, &conflict.file_name).await;
@@ -417,6 +476,24 @@ pub async fn resolve_one(
 
     ledger.save(data_dir)?;
     Ok(message)
+}
+
+/// Where the server's copy goes when someone keeps it.
+///
+/// The conflicting local file, whenever the conflict names one. Working it out
+/// by core instead wrote the state to `states/<core>/` on the Flip, which
+/// nothing reads; the ledger then recorded the server's hash, the rejected
+/// local state no longer matched it, and the next sync uploaded it over the
+/// copy that had just been chosen.
+pub fn keep_server_target(conflict: &SaveConflict, ra_root: &Path) -> PathBuf {
+    match &conflict.local_path {
+        Some(p) => p.clone(),
+        None => crate::savesync::download_path(
+            ra_root,
+            &conflict.file_name,
+            crate::savesync::destination(conflict.emulator.as_deref(), None),
+        ),
+    }
 }
 
 /// The server's fingerprint for one state, read from the listing.
@@ -554,5 +631,84 @@ mod tests {
         std::fs::write(dir.join(LEDGER), b"{not json").unwrap();
         assert!(Ledger::load(&dir).seen.is_empty(), "corrupt");
         std::fs::remove_dir_all(&dir).ok();
+    }
+
+
+    fn local(path: &str, rom_id: i64, kind: Kind) -> Candidate {
+        Candidate {
+            path: std::path::PathBuf::from(path),
+            kind,
+            core_dir: "snes".into(),
+            core: Some("snes9x".into()),
+            rom_base: "ActRaiser (USA)".into(),
+            slot: "state1".into(),
+            size: 10,
+            content_hash: "h".into(),
+            resolution: Resolution::Resolved { rom_id, platform: "snes".into(), fs_name: "ActRaiser (USA).zip".into() },
+            canonical: true,
+            superseded_by: None,
+        }
+    }
+
+    fn on_server(id: i64, rom_id: i64, name: &str) -> crate::api::SaveState {
+        crate::api::SaveState {
+            id,
+            rom_id,
+            file_name: name.into(),
+            file_size_bytes: 10,
+            emulator: None,
+            updated_at: Some("1".into()),
+        }
+    }
+
+    /// A state made on another device used to stay on the server: the sync
+    /// only walked this device's own files.
+    #[test]
+    fn a_state_only_on_the_server_comes_down_beside_the_games_save() {
+        let here = [local("/userdata/saves/snes/ActRaiser (USA).srm", 7, Kind::Save)];
+        let server = [on_server(1, 7, "ActRaiser (USA).state1")];
+        let got = incoming(&server, &here, &Ledger::default());
+        assert_eq!(got.len(), 1);
+        assert_eq!(got[0].1, std::path::PathBuf::from("/userdata/saves/snes/ActRaiser (USA).state1"));
+    }
+
+    #[test]
+    fn nothing_comes_down_for_a_game_never_played_here_or_already_held() {
+        let here = [local("/userdata/saves/snes/ActRaiser (USA).state1", 7, Kind::State)];
+        // Held already: the ordinary three-way rule handles it.
+        assert!(incoming(&[on_server(1, 7, "ActRaiser (USA).state1")], &here, &Ledger::default()).is_empty());
+        // A game with nothing on this device.
+        assert!(incoming(&[on_server(2, 8, "Other.state1")], &here, &Ledger::default()).is_empty());
+    }
+
+    /// Deleted here after it last agreed with the server: gone on purpose.
+    #[test]
+    fn a_state_deleted_here_is_not_brought_back() {
+        let here = [local("/userdata/saves/snes/ActRaiser (USA).srm", 7, Kind::Save)];
+        let mut ledger = Ledger::default();
+        ledger.record(7, "ActRaiser (USA).state2", "h", Some("p"));
+        assert!(incoming(&[on_server(3, 7, "ActRaiser (USA).state2")], &here, &ledger).is_empty());
+    }
+
+    /// Keeping the server's copy writes into the conflicting file, which is the
+    /// one the emulator reads.
+    #[test]
+    fn keeping_the_servers_state_writes_the_local_file() {
+        let c = SaveConflict {
+            rom_id: 7,
+            save_id: Some(1),
+            file_name: "ActRaiser (USA).state1".into(),
+            slot: None,
+            emulator: Some("snes9x".into()),
+            reason: None,
+            local_path: Some("/userdata/saves/snes/ActRaiser (USA).state1".into()),
+            local_updated: None,
+            local_bytes: 0,
+            server_updated: None,
+        };
+        assert_eq!(
+            keep_server_target(&c, Path::new("/userdata")),
+            std::path::PathBuf::from("/userdata/saves/snes/ActRaiser (USA).state1")
+        );
     }
 }
