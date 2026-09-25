@@ -1285,5 +1285,16 @@ mod tests {
         assert!(live(&text).contains(&"system.batterysaver.mode=suspend"));
         assert!(live(&text).contains(&"system.batterysaver.extendedmode=suspend"));
     }
-}
 
+
+    #[test]
+    fn a_patch_says_whether_it_writes_what_emulationstation_holds() {
+        let paths = scratch("es-holds");
+        let all = all(&paths);
+        let get = |id: &str| all.iter().find(|p| p.id == id).unwrap();
+        // knulli.conf, which ES rewrites from memory.
+        assert!(get("never-sleep").writes_what_es_holds(1, &paths));
+        // /userdata/system/custom.sh, which ES never touches.
+        assert!(!get("boot-splash").writes_what_es_holds(1, &paths));
+    }
+}
