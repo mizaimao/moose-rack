@@ -18,9 +18,9 @@ code path was followed end to end or reproduced; "suspicion" means it was not.
    single star added on the Flip wedges that list in both directions for good.
    docs/flip-knulli-changes.md says both kinds of list sync both ways; they have
    not since RomM was replaced. Confirmed.
-2. **The on-screen apply skips the KNULLI version check.** Only `--apply` and
+2. ~~**The on-screen apply skips the KNULLI version check.** Only `--apply` and
    `--restore` are gated (main.rs:334, 517); `run_queue` (main.rs:705-721)
-   applies on any image. Confirmed.
+   applies on any image. Confirmed.~~
 3. **"I took this save" goes nowhere.** `confirm_download` posts to
    `/api/saves/{id}/downloaded`, which moose-service does not have, and ignores
    the status (api.rs:931-940). The server records agreement only on upload.
@@ -67,23 +67,23 @@ code path was followed end to end or reproduced; "suspicion" means it was not.
     `destination(emu, None)` (statesync.rs:398-402), which on KNULLI is a folder
     nothing reads, then re-uploads the rejected local state over the server's,
     which keeps no old version. Confirmed.
-14. **One unreadable byte wipes a config.** `fs::read_to_string(file)
+14. ~~**One unreadable byte wipes a config.** `fs::read_to_string(file)
     .unwrap_or_default()` (patch.rs:427) turns any read error — one non-UTF-8
     byte, an EIO — into an empty file, and the write leaves only our block:
     Wi-Fi, cores, everything in knulli.conf gone. Same for custom.sh and the
-    hotkey file. All three are valid UTF-8 today. Confirmed by probe.
-15. **A missing seed kills the system keys.** A failed seed copy is ignored
+    hotkey file. All three are valid UTF-8 today. Confirmed by probe.~~
+15. ~~**A missing seed kills the system keys.** A failed seed copy is ignored
     (patch.rs:422-426), so hotkey-app ON on an image where
     `/etc/triggerhappy/triggers.d/multimedia_keys.conf` moved creates the
     /userdata file with only our two lines; it replaces /etc wholesale, and
-    volume, power and lid stop. Confirmed by probe.
-16. **hotkey-app "off" leaves a frozen copy.** The seeded /userdata file stays
+    volume, power and lid stop. Confirmed by probe.~~
+16. ~~**hotkey-app "off" leaves a frozen copy.** The seeded /userdata file stays
     (catalogue.rs:464-469) and shadows every later KNULLI's version, patch on
     or off, with no apply for the version check to catch. It matches this
-    image today. Confirmed; the update effect is a suspicion.
-17. **The boot hook has no version check.** With `gpu=wayland` every boot copies
+    image today. Confirmed; the update effect is a suspicion.~~
+17. ~~**The boot hook has no version check.** With `gpu=wayland` every boot copies
     the old blob over a new image's libmali (boot-custom.sh:19-28). Not live:
-    gpu is stock. Suspicion that a newer driver would clash.
+    gpu is stock. Suspicion that a newer driver would clash.~~
 18. **Favourites, once the 404 is fixed.** The baseline records server members
     not on the card (favsync.rs:96-97), so a game that lands later reads as an
     unstar; a list that agrees keeps its stale baseline forever (favrun.rs:181);
@@ -91,18 +91,18 @@ code path was followed end to end or reproduced; "suspicion" means it was not.
     becomes a mass unstar; and ES rewrites gamelists from memory on exit,
     undoing whatever the sync wrote. Matching ignores `rel_dir` (favmap.rs:48-58),
     so games in subfolders and same-name twins misbehave. Confirmed.
-19. **The profile drops patches that drifted.** "changed" patches are left out
+19. ~~**The profile drops patches that drifted.** "changed" patches are left out
     silently (profile.rs:47-51) and the profile is rewritten after every
     on-screen apply, so an ES rewrite of never-sleep can drop it from the
-    profile a reflash restores from. Confirmed.
-20. **es-logo off deletes the stock logo.** "off" means "file absent" for a
+    profile a reflash restores from. Confirmed.~~
+20. ~~**es-logo off deletes the stock logo.** "off" means "file absent" for a
     stock file (catalogue.rs:501-504, patch.rs:458); a fresh install reads
     "changed", and a second off deletes logo.png until reboot. Confirmed by
-    probe.
-21. **Patch state reads our block, not KNULLI's reader.** patch.rs:401-407
+    probe.~~
+21. ~~**Patch state reads our block, not KNULLI's reader.** patch.rs:401-407
     never asks `knulli-settings-get`, so ES writing its old value back after an
     "off" leaves the row reading off while the device does the opposite.
-    Confirmed.
+    Confirmed.~~
 
 ## Wrong or misleading, no data at stake
 
@@ -115,9 +115,9 @@ code path was followed end to end or reproduced; "suspicion" means it was not.
 25. A failed `rom_with_files` is dropped (savesync.rs:775-787), so a pulled
     save lands at the top of /userdata/saves where nothing reads it.
 26. `--keep=local` is ignored without a word (main.rs:270).
-27. After an on-screen apply the row shows the option picked, not a read-back
-    (model.rs:193); `--apply` exits 0 on "changed".
-28. `shaders=off` deletes sets that `shader-gba/gb/gbc` still name.
+27. ~~After an on-screen apply the row shows the option picked, not a read-back
+    (model.rs:193); `--apply` exits 0 on "changed".~~
+28. ~~`shaders=off` deletes sets that `shader-gba/gb/gbc` still name.~~
 29. Stale text: "a rescan renumbers ids" (rows.rs:26-29, worker.rs:282-291).
 
 ## Saves the Flip no longer loads, or cannot match
