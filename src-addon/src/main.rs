@@ -163,8 +163,9 @@ fn main() -> Result<()> {
         Some("--stars") => return stars_cli(false),
         Some("--stars-apply") => return stars_cli(true),
         Some("--save") => {
-            profile::save(&paths, &patches)?;
+            let saved = profile::save(&paths, &patches)?;
             println!("wrote {}", paths.profile().display());
+            print_saved(&saved);
             return Ok(());
         }
         Some(other) if other.starts_with("--") => {
@@ -716,8 +717,20 @@ fn run_queue(app: &mut App, paths: &Paths, patches: &[Patch]) {
             Err(e) => eprintln!("{id}: {e:#}"),
         }
     }
-    if let Err(e) = profile::save(paths, patches) {
-        eprintln!("could not write the profile: {e:#}");
+    match profile::save(paths, patches) {
+        Ok(saved) => print_saved(&saved),
+        Err(e) => eprintln!("could not write the profile: {e:#}"),
+    }
+}
+
+/// What a profile save could not read off the device. On stderr, so the
+/// window's lines land in the log beside everything else it did.
+fn print_saved(saved: &profile::Saved) {
+    for line in &saved.kept {
+        eprintln!("profile: kept {line}; it reads as changed, so the saved setting stays");
+    }
+    for id in &saved.missing {
+        eprintln!("profile: left out {id}; it reads as changed and was never saved");
     }
 }
 

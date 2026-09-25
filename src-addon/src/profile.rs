@@ -37,30 +37,70 @@ pub fn parse(text: &str) -> BTreeMap<String, String> {
     out
 }
 
-pub fn render(patches: &[Patch]) -> String {
+/// The patches a save could not read a setting off, and what it did instead.
+#[derive(Debug, Default, PartialEq, Eq)]
+pub struct Saved {
+    /// Read as `changed`, so the line from the profile before stays, as
+    /// `id = option`.
+    pub kept: Vec<String>,
+    /// Read as `changed` with nothing saved before to keep.
+    pub missing: Vec<String>,
+}
+
+/// The profile for `patches` as they read now. `before` is the profile being
+/// replaced: a patch that reads as `changed` keeps its line from there.
+///
+/// It used to be dropped. The profile is rewritten after every on-screen
+/// apply, and ES rewriting never-sleep's line is enough to make it read as
+/// changed, so one apply of anything else took never-sleep out of the file a
+/// reflashed device is restored from.
+pub fn render(patches: &[Patch], before: &BTreeMap<String, String>) -> (String, Saved) {
     let mut out = String::from(
         "# moose-patch — what this device is set to.\n\
          # Options are named rather than numbered, so adding one to a patch\n\
          # later cannot silently change what an old profile means.\n\n",
     );
+    let mut saved = Saved::default();
     for patch in patches {
-        if let State::At(i) = patch.state()
-            && let Some(choice) = patch.choices.get(i)
-        {
-            out.push_str(&format!("{} = \"{}\"\n", patch.id, choice.name));
+        match patch.state() {
+            State::At(i) => {
+                if let Some(choice) = patch.choices.get(i) {
+                    out.push_str(&format!("{} = \"{}\"\n", patch.id, choice.name));
+                }
+            }
+            State::Changed => match before.get(patch.id) {
+                Some(name) => {
+                    out.push_str(&format!(
+                        "# {} reads as changed on the device; this is what was saved before.\n\
+                         {} = \"{name}\"\n",
+                        patch.id, patch.id
+                    ));
+                    saved.kept.push(format!("{} = {name}", patch.id));
+                }
+                None => {
+                    out.push_str(&format!(
+                        "# {} reads as changed on the device and was never saved.\n",
+                        patch.id
+                    ));
+                    saved.missing.push(patch.id.to_string());
+                }
+            },
         }
     }
-    out
+    (out, saved)
 }
 
-/// Write down where every patch currently sits.
-pub fn save(paths: &Paths, patches: &[Patch]) -> Result<()> {
+/// Write down where every patch currently sits. What it could not read off
+/// the device is in the answer, so the caller can say so.
+pub fn save(paths: &Paths, patches: &[Patch]) -> Result<Saved> {
     let path = paths.profile();
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent).ok();
     }
-    fs::write(&path, render(patches))
-        .with_context(|| format!("writing {}", path.display()))
+    let (text, saved) = render(patches, &load(paths));
+    crate::patch::write_through(&path, text.as_bytes())
+        .with_context(|| format!("writing {}", path.display()))?;
+    Ok(saved)
 }
 
 /// What `restore` did, so it can be printed rather than guessed at.
@@ -219,11 +259,38 @@ mod tests {
         let paths = scratch("names");
         let all = catalogue::all(&paths);
         all.iter().find(|p| p.id == "shaders").unwrap().apply(2).unwrap();
-        let text = render(&all);
+        let (text, _) = render(&all, &BTreeMap::new());
         assert!(
             text.contains("shaders = \"shimmerless plain\""),
             "should record the name:\n{text}"
         );
+    }
+
+    #[test]
+    fn a_patch_that_reads_changed_keeps_what_was_saved_before() {
+        // ES rewrites never-sleep's line and it reads as changed. The next
+        // save, after any on-screen apply, used to drop it from the profile,
+        // and a reflashed device came back without it.
+        let paths = scratch("keeps-changed");
+        let all = catalogue::all(&paths);
+        let never_sleep = all.iter().find(|p| p.id == "never-sleep").unwrap();
+        never_sleep.apply(1).unwrap();
+        save(&paths, &all).unwrap();
+
+        let conf = paths.knulli_conf();
+        let text = fs::read_to_string(&conf).unwrap();
+        fs::write(&conf, text.replace("extendedmode=none", "extendedmode=suspend")).unwrap();
+        assert_eq!(never_sleep.state(), State::Changed);
+
+        let saved = save(&paths, &all).unwrap();
+        assert_eq!(saved.kept, vec!["never-sleep = ON"]);
+        let profile = fs::read_to_string(paths.profile()).unwrap();
+        assert!(profile.contains("never-sleep = \"ON\""), "{profile}");
+        assert!(profile.contains("never-sleep reads as changed"), "{profile}");
+
+        // And a restore puts it back.
+        restore(&paths, &all).unwrap();
+        assert_eq!(never_sleep.state(), State::At(1));
     }
 
     #[test]
