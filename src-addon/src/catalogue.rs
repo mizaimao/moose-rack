@@ -74,6 +74,12 @@ fn place(paths: &Paths, path: std::path::PathBuf, bytes: Option<&'static [u8]>) 
     Step::Place { path, bytes, backup }
 }
 
+/// Ours over a file KNULLI ships. Off never deletes theirs.
+fn cover(paths: &Paths, path: std::path::PathBuf, ours: &'static [u8], on: bool) -> Step {
+    let backup = paths.backup_for(&path);
+    Step::Cover { path, ours, on, backup }
+}
+
 /// The four presets, plus whichever set is being chosen. Every option lays
 /// down all four, so the cycle is the same list whichever one you start from.
 fn shader_files(paths: &Paths, set: Option<(&str, &'static [u8])>) -> Vec<Step> {
@@ -480,8 +486,8 @@ pub fn all(paths: &Paths) -> Vec<Patch> {
                      and EmulationStation will not start.",
             choices: on_off(
                 "ON",
-                vec![place(paths, paths.es_input(), Some(ES_INPUT))],
-                vec![place(paths, paths.es_input(), None)],
+                vec![cover(paths, paths.es_input(), ES_INPUT, true)],
+                vec![cover(paths, paths.es_input(), ES_INPUT, false)],
             ),
         },
         Patch {
@@ -498,11 +504,11 @@ pub fn all(paths: &Paths) -> Vec<Patch> {
                 vec![
                     place(paths, paths.blank_logo(), Some(BLANK_LOGO)),
                     place(paths, paths.boot_custom(), Some(BOOT_HOOK)),
-                    place(paths, paths.es_logo(), Some(BLANK_LOGO)),
+                    cover(paths, paths.es_logo(), BLANK_LOGO, true),
                 ],
                 vec![
                     place(paths, paths.blank_logo(), None),
-                    place(paths, paths.es_logo(), None),
+                    cover(paths, paths.es_logo(), BLANK_LOGO, false),
                 ],
             ),
         },
@@ -1040,6 +1046,48 @@ mod tests {
         assert_eq!(std::fs::read(&logo).unwrap(), BLANK_LOGO);
         patch.apply(0).unwrap();
         assert_eq!(std::fs::read(&logo).unwrap(), b"the real KNULLI beetle");
+    }
+
+    #[test]
+    fn a_stock_file_reads_as_off_and_off_never_deletes_it() {
+        // "Off" used to mean "no file there". On a fresh install ES's own
+        // logo.png made es-logo read as changed, and applying off deleted it
+        // until the next boot. A stock es_input.cfg went the same way, for
+        // good.
+        let paths = scratch("stock-files");
+        let stock: [(std::path::PathBuf, &[u8]); 2] =
+            [(paths.es_logo(), b"the KNULLI beetle"), (paths.es_input(), b"<inputList/>")];
+        for (path, bytes) in &stock {
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, bytes).unwrap();
+        }
+        let patches = all(&paths);
+        for id in ["es-logo", "es-shoulders"] {
+            let patch = patches.iter().find(|p| p.id == id).unwrap();
+            assert_eq!(patch.state(), State::At(0), "{id} reads as changed on a fresh install");
+            patch.apply(0).unwrap();
+        }
+        for (path, bytes) in &stock {
+            assert_eq!(&std::fs::read(path).unwrap(), bytes, "{} was deleted", path.display());
+        }
+    }
+
+    #[test]
+    fn off_leaves_a_file_that_is_no_longer_ours() {
+        // ES writes es_input.cfg when a pad is set up. Off must not put the
+        // older backup over that, or delete it.
+        let paths = scratch("es-rewrote-input");
+        let input = paths.es_input();
+        std::fs::create_dir_all(input.parent().unwrap()).unwrap();
+        std::fs::write(&input, b"KNULLI's").unwrap();
+        let patch = all(&paths).into_iter().find(|p| p.id == "es-shoulders").unwrap();
+
+        patch.apply(1).unwrap();
+        std::fs::write(&input, b"ES's, newer").unwrap();
+        patch.apply(0).unwrap();
+
+        assert_eq!(std::fs::read(&input).unwrap(), b"ES's, newer");
+        assert_eq!(patch.state(), State::At(0));
     }
 
     #[test]
