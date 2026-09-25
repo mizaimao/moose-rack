@@ -341,6 +341,40 @@ discards whatever ES held instead — play counts, and any favourite toggled sin
 it started — which is the cheaper of the two losses. `S31emulationstation`
 brings it back in about ten seconds.
 
+(Since 0.4.316 moose-patch does this itself, the other way round: `--apply`,
+`--restore` and `--stars-apply` over ssh stop ES cleanly through its init script
+*before* writing, so what it held is written out first, and start it again
+after. Checked on the device: ES comes back in its own session with
+`XDG_RUNTIME_DIR` and D-Bus set.)
+
+**Saves, states and favourites, 2026-09-24.** Everything below read back off
+the device and the server afterwards.
+
+- The Flip signs in as its own account, `flip`, by password. It had held an old
+  token the server no longer accepted.
+- 352 saves and 1,286 states on the server now match the Flip's, byte for byte.
+  Neo Geo memory cards sync for the first time. Tintin was added to the
+  server's library so its save and 27 states could go up.
+- Saves the Flip had stopped loading after ROM renames: Skyland's only save
+  was copied to the current ROM name. Metroid Fusion had two different saves;
+  the one under the old ROM name, `(USA, Australia)`, has 699/699 energy (six
+  tanks) against 499/499 and more items and map, so it is now the one loaded.
+  Every file moved aside is in
+  `moose-patch/library/saves-backup/stranded-20260924/`.
+- Favourites merged both ways: 17 stars added on the card, 126 sent to the
+  server's lists, nothing removed on either side. Old gamelists and
+  collection files are in `moose-patch/es-backup/`; the server's lists before
+  the merge are in git under `data/collections/`.
+- Rebooted to check the boot hook: blank logo and evmapy guard both reapplied,
+  nothing skipped.
+
+What the card does not mirror from the server: 869 unlicensed NES games in
+`nes/Unlicensed/` (the server's copies sit in `nes_unlicensed/`, which it does
+not index, so their saves cannot sync), a handful of SNES hacks, Zelda Master
+Quest and two Mega Drive games whose full-width Japanese names differ from the
+server's. The Flip carries subsets of N64 (43 of 416), PSX, Dreamcast, arcade
+and Mega Drive.
+
 ## Where it stands
 
     hotkeys          ON            hotkey-app       ON
