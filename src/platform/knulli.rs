@@ -80,6 +80,11 @@ impl Platform for Knulli {
             // this device `fbneo` holds 2,504 zips — exactly the RomM `arcade`
             // count, so it is that library and not a subset of it.
             ("fbneo", "arcade"),
+            // Neo Geo. The server files these games as `neogeoaes`, and the
+            // device's default core, geolith, is keyed on that. Without this
+            // the folder mapped to no core, so every memory card in it was
+            // "unknown core" and no Neo Geo progress ever synced.
+            ("neogeo", "neogeoaes"),
             // Batocera's spellings for two Bandai handhelds and the GameCube.
             // Empty on this device today, and mapped anyway so that filling
             // them later does not need a code change. `gamecube` is
@@ -246,6 +251,21 @@ mod tests {
             Knulli.system_aliases().contains(&("fbneo", "arcade")),
             "fbneo is the arcade library on this device"
         );
+    }
+
+    /// A save in `saves/neogeo/` has to reach a core and the server's Neo Geo
+    /// games. The folder maps to the server's slug, and that slug has a core.
+    #[test]
+    fn neo_geo_saves_reach_a_core_and_the_servers_games() {
+        let slug = Knulli
+            .system_aliases()
+            .iter()
+            .find(|(dir, _)| *dir == "neogeo")
+            .map(|(_, s)| *s)
+            .expect("neogeo is aliased");
+        assert_eq!(slug, "neogeoaes");
+        assert!(Knulli.default_cores().iter().any(|(p, _)| *p == slug), "{slug} has a default core");
+        assert!(Knulli.platforms_in_folder(slug).iter().any(|p| p == "neogeoaes"));
     }
 
     /// Hidden means silent, not skipped-and-reported. If one of these ever
