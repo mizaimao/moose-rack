@@ -21,33 +21,37 @@ code path was followed end to end or reproduced; "suspicion" means it was not.
 2. ~~**The on-screen apply skips the KNULLI version check.** Only `--apply` and
    `--restore` are gated (main.rs:334, 517); `run_queue` (main.rs:705-721)
    applies on any image. Confirmed.~~
-3. ~~**"I took this save" goes nowhere.** `confirm_download` posts to~~
+3. ~~**"I took this save" goes nowhere.** `confirm_download` posts to
    `/api/saves/{id}/downloaded`, which moose-service does not have, and ignores
    the status (api.rs:931-940). The server records agreement only on upload.
    After any pulled save changes, the next sync calls it a conflict;
    `--keep server` never sticks; a save deleted on the Flip comes back every
-   sync. worker.rs:347 and main.rs:223 still describe RomM's rule. Confirmed.
-4. ~~**Sync failures are swallowed.** `carry_out` passes on only the headline~~
+   sync. worker.rs:347 and main.rs:223 still describe RomM's rule. Confirmed.~~
+4. ~~**Sync failures are swallowed.** `carry_out` passes on only the headline
    (worker.rs:268-272): failed transfers, "save states did not sync" and rename
    failures are dropped. A run where everything failed reads "in sync" and
-   exits 0. Confirmed.
-5. ~~**Conflicts are never drawn on screen.** `app.conflicts` is held and not~~
-   shown, so `--sync --keep` over ssh is the only way to answer one. Confirmed.
-6. ~~**States only go up.** `statesync::run` walks local files only~~
+   exits 0. Confirmed.~~
+5. ~~**Conflicts are never drawn on screen.** `app.conflicts` is held and not
+   shown, so `--sync --keep` over ssh is the only way to answer one. Confirmed.~~
+6. ~~**States only go up.** `statesync::run` walks local files only
    (statesync.rs:201-208), so a state the Flip lacks never comes down; the plan
    covers saves only (worker.rs:441-496), so when saves agree states cannot be
    synced from the screen, and when they differ states move without being
-   shown. `--pull-all` is saves only. Confirmed.
-7. ~~**Neo Geo saves never sync.** `split_slot` accepts `.srm`, `.sav` and~~
+   shown. `--pull-all` is saves only. Confirmed.~~
+7. ~~**Neo Geo saves never sync.** `split_slot` accepts `.srm`, `.sav` and
    `.state` only (saves.rs:131-161); geolith's `Game.zip#Game.mcr` cards and
-   `.nv` files are never seen. Confirmed.
+   `.nv` files are never seen. Confirmed.~~
 8. **Games the server does not hold have no backup.** Tintin: a save and 12+
    states exist only on the Flip. It is on the SSD and the card, not in the
-   server's library. Device.
-9. ~~**The log records presses, not outcomes.** moose-patch.log has 279 "press~~
-   Down" and no line saying what a sync, apply or refresh did. Device.
-10. **The Flip logs in with the token**, against the standing rule, because the
-    server has no `[[auth.users]]` account to use instead. Device.
+   server's library. Device. *Tintin fixed 2026-09-24:* added to the server's
+   library, and its save and 27 states are up. Still open for the other games
+   on the card the server lacks; see the list below.
+9. ~~**The log records presses, not outcomes.** moose-patch.log has 279 "press
+   Down" and no line saying what a sync, apply or refresh did. Device.~~
+10. ~~**The Flip logs in with the token**, against the standing rule, because the
+    server has no `[[auth.users]]` account to use instead. Device.~~ The Flip
+    has its own account, `flip`, and signs in with its password; the token is
+    gone from its config.
 
 ## Latent, and each one loses data
 

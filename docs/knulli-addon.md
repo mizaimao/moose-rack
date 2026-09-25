@@ -158,11 +158,20 @@ thing to fix and ten.
 
 ### Credentials
 
-`config.toml` beside the binary, holding only the `[server]` section copied from
-the desktop's. Nothing else on that machine belongs on a handheld, and a
-smaller file is a smaller thing to lose. `--status` prints the server and which
-credential it found, so "cannot reach RomM" and "no patch is on" are one line
-apart instead of guesswork.
+`config.toml` beside the binary, holding only the `[server]` section. Nothing
+else on the desktop's belongs on a handheld, and a smaller file is a smaller
+thing to lose. `--status` prints the server and which credential it found, so
+"cannot reach the server" and "no patch is on" are one line apart instead of
+guesswork.
+
+**A username and password, never the token.** Frank's rule. The Flip has its
+own account on the server, `flip`, an `[[auth.users]]` entry in
+`moose-service.toml` holding only the PBKDF2 hash; the plain password lives in
+the Flip's own config and nowhere else. An account sees the same saves and
+states as the token (the store is not split by who signs in), may sync them
+and change collection membership, and may not touch the server's settings.
+Before 2026-09-24 the Flip held a copy of an old token, which the server had
+stopped accepting, and every sync answered 401.
 
 ### Answering a conflict over ssh
 
