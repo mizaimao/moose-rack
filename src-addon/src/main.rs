@@ -12,13 +12,16 @@
 //! `--restore` is what a freshly installed KNULLI needs, and it is deliberately
 //! reachable over ssh — a device that has just been reflashed has no way to
 //! launch a windowed app until the patches that make that possible are on.
+//!
+//! `--apply` and `--restore` stop EmulationStation while they write and start
+//! it again after, and refuse while a game is running. See `es` for why.
 
 use anyhow::{Context, Result};
 use moose_patch::model::{App, Kind, Overlay, Tab};
 use moose_patch::patch::{Patch, Paths, State};
 use moose_patch::sync::Stage;
 use moose_patch::worker;
-use moose_patch::{catalogue, knulli, profile, rows, ui};
+use moose_patch::{catalogue, es, knulli, profile, rows, ui};
 use moose_sdl::gfx::Gfx;
 use moose_sdl::input;
 use moose_sdl::text;
@@ -159,7 +162,7 @@ fn main() -> Result<()> {
         Some("--pull-all") => return pull_all_cli(),
         Some("--refresh") => return refresh_cli(),
         Some("--saves") => return saves_cli(),
-        Some("--apply") => return apply_cli(&patches, std::env::args().nth(2)),
+        Some("--apply") => return apply_cli(&paths, &patches, std::env::args().nth(2)),
         Some("--stars") => return stars_cli(false),
         Some("--stars-apply") => return stars_cli(true),
         Some("--save") => {
@@ -327,12 +330,31 @@ fn resolve_all(
 /// the device — over ssh, against the real /userdata, without a screen. Every
 /// patch bug so far has been found by applying one and then reading the file
 /// it claimed to write, and doing that needed a controller in hand until now.
-fn apply_cli(patches: &[Patch], arg: Option<String>) -> Result<()> {
+fn apply_cli(paths: &Paths, patches: &[Patch], arg: Option<String>) -> Result<()> {
     let Some(arg) = arg else {
         anyhow::bail!("--apply needs <id>=<option>, e.g. --apply charge-awake=ON");
     };
     let anyway = std::env::args().any(|a| a == "--anyway");
-    let verdict = knulli::check(&Paths::default());
+    let line = apply_one(paths, patches, &arg, anyway, &mut es::Device::default())?;
+    println!("{line}");
+    Ok(())
+}
+
+/// `--apply`, with the device's EmulationStation passed in so the tests can
+/// stand in for it.
+///
+/// ES is stopped around the write, so what it holds in memory is written out
+/// before ours instead of over it, and started again after; a running game is
+/// a refusal. See `es`. The answer is the read-back, and anything other than
+/// the option asked for is an error, so the exit status says so too.
+fn apply_one(
+    paths: &Paths,
+    patches: &[Patch],
+    arg: &str,
+    anyway: bool,
+    frontend: &mut dyn es::Frontend,
+) -> Result<String> {
+    let verdict = knulli::check(paths);
     if !verdict.safe_to_apply() && !anyway {
         anyhow::bail!(verdict.refusal());
     }
@@ -349,14 +371,25 @@ fn apply_cli(patches: &[Patch], arg: Option<String>) -> Result<()> {
     let Some(index) = options.iter().position(|o| o.eq_ignore_ascii_case(wanted)) else {
         anyhow::bail!("{id} has no option {wanted:?} — it has: {}", options.join(", "));
     };
-    patch.apply(index)?;
+    // Already there: nothing to write, so no reason to take ES down.
+    if patch.state() == State::At(index) {
+        return Ok(format!("{id} -> {} (already)", options[index]));
+    }
+    es::with_es_stopped(frontend, || patch.apply(index))?;
     // Read back, rather than reporting what was asked for. The two disagreeing
     // is the whole class of bug this exists to catch.
-    println!("{id} -> {}", match patch.state() {
-        State::At(i) => options[i].clone(),
-        State::Changed => "changed (does not match any option)".into(),
-    });
-    Ok(())
+    match patch.state() {
+        State::At(i) if i == index => Ok(format!("{id} -> {}", options[i])),
+        State::At(i) => anyhow::bail!(
+            "{id} -> {} (asked for {}; the device reads as the other)",
+            options[i],
+            options[index]
+        ),
+        State::Changed => anyhow::bail!(
+            "{id} -> changed (does not match any option) after applying {}",
+            options[index]
+        ),
+    }
 }
 
 /// Favourites and collections: what the card and the server disagree about.
@@ -519,7 +552,9 @@ fn restore(paths: &Paths, patches: &[Patch]) -> Result<()> {
     if !verdict.safe_to_apply() && !std::env::args().any(|a| a == "--anyway") {
         anyhow::bail!(verdict.refusal());
     }
-    let done = profile::restore(paths, patches)?;
+    // The same reason as --apply: ES would write its own knulli.conf over ours.
+    let done =
+        es::with_es_stopped(&mut es::Device::default(), || profile::restore(paths, patches))?;
     for line in &done.applied {
         println!("applied  {line}");
     }
@@ -1150,6 +1185,95 @@ mod tests {
         assert_eq!(press(&mut f, Press::Back), None);
         assert_eq!(f.0.overlay, Overlay::None);
         assert!(!f.0.stage.is_busy());
+    }
+
+    /// EmulationStation over ssh, standing in. Notes whether the patch was in
+    /// knulli.conf yet each time ES was stopped or started.
+    struct FakeEs {
+        running: bool,
+        game: Option<&'static str>,
+        conf: std::path::PathBuf,
+        seen: Vec<String>,
+    }
+
+    impl FakeEs {
+        fn new(conf: std::path::PathBuf, running: bool, game: Option<&'static str>) -> Self {
+            FakeEs { running, game, conf, seen: Vec::new() }
+        }
+
+        fn written(&self) -> bool {
+            std::fs::read_to_string(&self.conf).unwrap_or_default().contains("## moose-patch:")
+        }
+    }
+
+    impl es::Frontend for FakeEs {
+        fn game(&self) -> Option<String> {
+            self.game.map(str::to_string)
+        }
+        fn es_running(&self) -> bool {
+            self.running
+        }
+        fn stop_es(&mut self) -> Result<()> {
+            self.seen.push(format!("stop, written {}", self.written()));
+            self.running = false;
+            Ok(())
+        }
+        fn start_es(&mut self) -> Result<()> {
+            self.seen.push(format!("start, written {}", self.written()));
+            self.running = true;
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn apply_over_ssh_writes_while_es_is_stopped() {
+        // ES holds knulli.conf in memory and writes it back. Stopped first, it
+        // writes what it held before ours lands, not after.
+        let f = fixture("apply-es");
+        let mut es = FakeEs::new(f.2.knulli_conf(), true, None);
+        let line = apply_one(&f.2, &f.3, "charge-awake=ON", false, &mut es).unwrap();
+        assert_eq!(line, "charge-awake -> ON");
+        assert_eq!(es.seen, ["stop, written false", "start, written true"]);
+        assert!(es.running);
+    }
+
+    #[test]
+    fn apply_over_ssh_refuses_while_a_game_runs() {
+        let f = fixture("apply-game");
+        let mut es = FakeEs::new(f.2.knulli_conf(), true, Some("retroarch (pid 900)"));
+        let err = apply_one(&f.2, &f.3, "charge-awake=ON", false, &mut es).unwrap_err();
+        assert!(format!("{err:#}").contains("retroarch"), "{err:#}");
+        assert!(!f.2.knulli_conf().exists(), "wrote under a running game");
+        assert!(es.seen.is_empty(), "{:?}", es.seen);
+    }
+
+    #[test]
+    fn apply_fails_when_the_read_back_is_not_what_was_asked() {
+        // It printed "changed" and exited 0, so anything reading the exit
+        // status took a patch that did not take for one that did.
+        use moose_patch::patch::{Choice, Form, Step};
+        let f = fixture("apply-changed");
+        let conf = f.2.knulli_conf();
+        let block = |body: Option<&str>| Step::Block {
+            file: conf.clone(),
+            id: "odd".into(),
+            body: body.map(str::to_string),
+            form: Form::Settings,
+        };
+        // Two steps writing one block: the second undoes the first, so ON can
+        // never read back as ON.
+        let odd = Patch {
+            id: "odd",
+            title: "Odd",
+            detail: "",
+            choices: vec![
+                Choice { name: "off".into(), steps: vec![block(None)] },
+                Choice { name: "ON".into(), steps: vec![block(Some("a=1")), block(Some("a=2"))] },
+            ],
+        };
+        let mut es = FakeEs::new(conf, false, None);
+        let err = apply_one(&f.2, &[odd], "odd=ON", false, &mut es).unwrap_err();
+        assert!(format!("{err:#}").contains("changed"), "{err:#}");
     }
 
     #[test]

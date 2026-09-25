@@ -5,6 +5,7 @@
 //! context and is only the drawing.
 
 pub mod catalogue;
+pub mod es;
 pub mod eslist;
 pub mod favmap;
 pub mod favrun;
