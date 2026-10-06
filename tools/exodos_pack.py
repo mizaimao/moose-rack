@@ -60,14 +60,25 @@ class Refused(Exception):
 
 
 def adapt_autoexec(conf: str) -> str:
-    """eXo's dosbox.conf with its C: mount turned into a change of directory.
+    """eXo's dosbox.conf, with its C: mount made to work in both places it runs.
 
     eXo mounts a folder under its eXoDOS directory as C: -- the game's own in
     6,140 of 7,666 configs (`mount c .\\eXoDOS\\DOOM`), eXoDOS itself in
-    1,465. In Pure the loaded zip is C:, and the zip's root is what eXo's
-    eXoDOS directory holds once the game is unpacked into it. So the mount
-    becomes a `cd` to the same place, right after `c:`, and anything eXo does
-    after that, its own `cd` included, lands where it always did.
+    1,465. Here the zip's root stands in for that directory, and it reaches
+    DOSBox Pure two ways:
+
+    - The desktop loads the zip, and Pure mounts it as C: before the autoexec
+      runs. eXo's mount has to go.
+    - EmulatorJS unpacks the zip into its own filesystem root and hands Pure
+      this file alone, which runs like plain DOSBox: nothing is mounted.
+      `mount c /` is the zip's root there. Pure's own `automount = true` does
+      the same mount and crashes the core ("memory access out of bounds").
+
+    So the mount stays, guarded by whether C: holds this file already, and
+    `c:` is followed by a `cd` to the folder eXo mounted. Anything eXo does
+    after that, its own `cd` included, lands where it always did. Both were
+    checked with DOOM: the desktop through RetroArch, the browser through
+    EmulatorJS, the same zip.
     """
     nl = "\r\n" if "\r\n" in conf else "\n"
     out: list[str] = []
@@ -91,6 +102,8 @@ def adapt_autoexec(conf: str) -> str:
                     target = path[len(".\\eXoDOS\\"):]
                 else:
                     raise Refused(f"mounts C: outside eXoDOS: {stripped}")
+                # 8.3, which is how Pure itself looks for it in a zip.
+                out.append("@if not exist C:\\DOSBOX.CON mount c /")
                 continue
             if re.match(r"(?i)imgmount\s", cmd):
                 raise Refused(f"mounts a CD image, untested in Pure: {stripped}")
@@ -223,10 +236,17 @@ def pack(stem: str, library: Path, apply: bool, art_names: list[str]) -> None:
     if not apply:
         return
 
+    # DOSBOX.CONF goes first. EmulatorJS starts the first .conf it unpacks, and
+    # some games ship a .conf of their own; appended, ours would come after it.
     def write_zip(part: Path) -> None:
-        shutil.copyfile(game_zip, part)
-        with zipfile.ZipFile(part, "a", compression=zipfile.ZIP_DEFLATED) as z:
-            z.writestr("DOSBOX.CONF", adapted)
+        with zipfile.ZipFile(game_zip) as src, zipfile.ZipFile(part, "w") as z:
+            z.writestr("DOSBOX.CONF", adapted, compress_type=zipfile.ZIP_DEFLATED)
+            for info in src.infolist():
+                if info.is_dir():
+                    z.writestr(info, b"")
+                    continue
+                with src.open(info) as f, z.open(info, "w") as g:
+                    shutil.copyfileobj(f, g, 1 << 20)
 
     write_atomically(out_zip, write_zip)
     es = library / "ES-DE"

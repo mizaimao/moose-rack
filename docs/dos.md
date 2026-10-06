@@ -1,9 +1,10 @@
 # DOS games
 
-**Tested by hand, not built.** Written 2026-09-17 on the `moose-dos` branch.
-One eXoDOS game was fetched, packed and played in DOSBox Pure through RetroArch
-on the Mac. None of it is in the app yet. Work moved on to Windows 98 games
-before any code was written, so this is the record to start from.
+**First pass built, 2026-10-05, on `moose-dos` (0.5.1).** DOOM and The
+$100,000 Pyramid are in the library and start from the app on the desktop and
+in the browser. The 2026-09-17 record below is what the build followed; [What
+the first pass built](#what-the-first-pass-built) says what changed, and [Not
+built](#not-built) what is still open.
 
 ## What was decided
 
@@ -117,26 +118,85 @@ Its CPU core option offers only "Normal (interpreter)", although Pure's source
 has an ARMv8 dynrec backend. DOS games are fine on it. Windows 9x games on a
 Pentium II are not, which is why those went to DOSBox-X.
 
+## What the first pass built
+
+- `dos` in `data/esde-core-map.json`, ES-DE's upstream entry with DOSBox-Pure
+  first. Only that entry was added: regenerating the file with
+  `tools/extract_esde_cores.py` drops hand-made additions (the Android
+  packages, the easyrpg, wii and saturn defaults), so the generator only knows
+  `dos` for next time.
+- `tools/exodos_pack.py`, run on the server. It packs a game that is already
+  downloaded: the eXo zip with `DOSBOX.CONF` written first, its gamelist entry
+  from `MS-DOS.xml`, and eight kinds of artwork. 6,187 of the 7,666 configs
+  adapt. 1,438 mount a CD image and 41 never switch to C:, and those are
+  refused until someone tries one.
+- The desktop launch (`src/tweaks.rs`, `src/keyboard.rs`): `dosbox_pure_conf
+  = inside`, MIDI on `SoundCanvas.sf2`, all thirty default keyboard hotkeys
+  unbound, the menu on F12 and the mouse grabbed. No shader by default: VGA
+  drew 200-line modes twice, so there were never TV scanlines.
+- `SoundCanvas.sf2` is a `dos` BIOS (`data/bios-manifest.json`, and `EXTRA` in
+  `tools/bios_manifest.py`), so the launch fetches it like any other. It sits
+  in `moose-library/bios/`, copied out of `util.zip` -> `EXTDOS.zip` ->
+  `mt32/`. That folder is outside the four the agreement below gives the DOS
+  side; it is one file, and this is where it is recorded.
+- The browser: `dos` plays through EmulatorJS when the page is cross-origin
+  isolated, and is refused with the reason when it is not.
+
+Checked: the desktop through the app's own launch planner and RetroArch, with
+a screenshot at eXo's menu and `MIDI: Opened device:tsf` in the log; the
+browser through the deployed service in headless Chrome, into DOOM's demo after
+pressing 3, and Pyramid to its title screen. macOS refuses synthetic
+keystrokes from a terminal, so nothing past the menu was driven on the desktop.
+
+### What the browser needed
+
+Three things, none of which the desktop needs:
+
+1. **Threads.** The pinned EmulatorJS builds Pure with threads only
+   (`requiresThreads`), and refuses it without `EJS_threads`. Threads need
+   `SharedArrayBuffer`, which a browser gives only to a page that is
+   cross-origin isolated (the service now sends COOP and COEP on everything
+   the web app serves) *and* a secure context: HTTPS, or localhost. Over
+   `http://dev.lan` the headers are ignored, so DOS does not play there.
+   Through `ssh -L 8080:127.0.0.1:80 dev.lan` and `http://localhost:8080` it
+   does.
+2. **The C: drive.** EmulatorJS unpacks the zip into its filesystem root and
+   hands the core the first file with an extension it lists for the core, and
+   for `dos` it lists only `conf`. Pure, given a `.conf` alone, runs it like
+   plain DOSBox and mounts nothing (`init_dosbox`, "Loading a .conf file
+   behaves like regular DOSBox"). So the packed `[autoexec]` keeps a mount,
+   guarded: `@if not exist C:\DOSBOX.CON mount c /`. On the desktop C: is the
+   zip already and the line does nothing. Pure's own `automount = true` mounts
+   the same folder and crashes the core ("memory access out of bounds").
+3. **`DOSBOX.CONF` first in the zip.** EmulatorJS takes the first `.conf` it
+   unpacks. Appended at the end, ours would lose to any `.conf` a game ships.
+
+The browser has no soundfont, so Sound Canvas music is silent there. The
+SoundBlaster choice in DOOM's menu plays FM music without one.
+
 ## Not built
 
 In the order they would be needed:
 
-1. `dos` in `data/esde-core-map.json` and `tools/extract_esde_cores.py`.
-   Upstream ES-DE's entry has DOSBox-Pure first, then DOSBox-Core, DOSBox-SVN
-   and VirtualXT.
-2. The launch config for `dos`: the core options and the three fixes above.
-3. The importer, on the server: catalogue from `MS-DOS.xml`, fetch by torrent
-   index, pack the zip with its adapted conf into `ROMs/dos/`, write the
-   gamelist and artwork.
-4. A game that is in the catalogue but not downloaded: a third state beside
+1. HTTPS on dev.lan, without which the browser half works only on localhost.
+2. Fetching by torrent index in `tools/exodos_pack.py`. It packs only what has
+   already been downloaded (three games so far).
+3. Games that mount CD images: 1,438 of them, Dune II among them. Pure mounts
+   the first CD image it finds on C: by itself, which suggests dropping the
+   line, untested.
+4. Save sync for `.pure.zip`. In the browser Pure keeps no save at all: a
+   `.conf` loaded alone runs without Pure's save file.
+5. A game that is in the catalogue but not downloaded: a third state beside
    "on this machine" and "on the server".
-5. Save sync for `.pure.zip`.
-6. The browser, through EmulatorJS. Check first that the pinned 4.2.3 archive
-   carries `dosbox_pure`.
-7. DOSBox Staging as a per-game fallback on the desktop, which needs a launch path that is
-   not RetroArch.
+6. DOSBox Staging as a per-game fallback on the desktop, which needs a launch
+   path that is not RetroArch.
 
 ## Testing without touching the machine
+
+The browser half can be tried without the app: a page that sets the same
+`EJS_*` values, served with COOP and COEP from 127.0.0.1, loads a test zip in
+headless Chrome, and `Input.dispatchKeyEvent` types into the game. That is how
+the guarded mount was found, against three other layouts.
 
 A test run of RetroArch with its own `--config` in `/tmp` still writes to
 `~/Library/Application Support/RetroArch`. With no

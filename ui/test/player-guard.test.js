@@ -77,7 +77,7 @@ describe("starting a game in the page", () => {
 
   test("a platform with no browser core never opens a stage", async () => {
     const out = await playInBrowser({ ...ROM, platform_slug: "ngc" });
-    assert.match(out, /not playable/i);
+    assert.match(out, /GameCube has no browser core/, "the answer says why");
     assert.equal(document.getElementById("ejs-stage"), null);
   });
 

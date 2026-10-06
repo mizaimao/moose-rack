@@ -438,10 +438,11 @@ export async function playInBrowser(rom) {
   }
 
   const verdict = browserPlay(rom.platform_slug ?? rom.platform, globalThis.crossOriginIsolated);
+  // Returned rather than toasted: the caller toasts what this returns, so a
+  // toast here was replaced at once by a line that did not say why.
   if (verdict.refuse) {
     starting = false;
-    toast(verdict.refuse, 6000);
-    return "Not playable in a browser";
+    return verdict.refuse;
   }
   if (!(await confirmHeavy(rom))) {
     starting = false;
