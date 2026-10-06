@@ -538,6 +538,17 @@
   ]
  },
  {
+  "path": "SoundCanvas.sf2",
+  "desc": "SoundCanvas.sf2 (Roland Sound Canvas soundfont, from eXoDOS)",
+  "required": true,
+  "cores": [
+   "dosbox_pure"
+  ],
+  "systems": [
+   "dos"
+  ]
+ },
+ {
   "path": "tos.img",
   "desc": "tos.img (TOS 1.02 US aka Mega TOS)",
   "required": true,

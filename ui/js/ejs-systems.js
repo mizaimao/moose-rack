@@ -35,6 +35,26 @@ export const PLAYABLE = {
   psx: "psx",
   nds: "nds",
   saturn: "segaSaturn",
+  // DOSBox Pure. A game is eXoDOS's zip with its DOSBOX.CONF inside; see
+  // `OPTIONS` and `THREADED` below, and docs/dos.md.
+  dos: "dos",
+};
+
+/// EmulatorJS cores that will not start without threads, as `requiresThreads`
+/// in the pinned `emulator.min.js` lists them.
+///
+/// Threads need `SharedArrayBuffer`, and a browser hands that only to a page
+/// that is cross-origin isolated *and* a secure context: HTTPS, or localhost.
+/// The service sends the isolation headers (`cache_headers` in src-service);
+/// whether the page arrived over HTTPS is up to how it is reached.
+export const THREADED = new Set(["dos"]);
+
+/// Core options a core needs before its game will start, passed as
+/// `EJS_defaultOptions`, which EmulatorJS writes into the core's options file.
+export const OPTIONS = {
+  // The zip carries a DOSBOX.CONF saying how to start the game. Pure ignores it
+  // unless told to read it, and sits at its own start menu instead.
+  dos: { dosbox_pure_conf: "inside" },
 };
 
 /// Platforms with no browser core at all, and why.
@@ -63,14 +83,27 @@ export const ASK_ABOVE = 64e6;
 
 /// What the Play button should do for this platform.
 ///
-/// `{ core }` to play, `{ refuse }` with a sentence to show instead. Size is
-/// separate on purpose: a big game is a question, not a refusal.
-export function browserPlay(platformSlug) {
+/// `{ core, threads, options }` to play, `{ refuse }` with a sentence to show
+/// instead. Size is separate on purpose: a big game is a question, not a
+/// refusal.
+///
+/// `isolated` is whether this page can have threads at all
+/// (`globalThis.crossOriginIsolated`). A threaded core on a page that cannot is
+/// refused here, with the reason, rather than left to EmulatorJS, whose own
+/// message is "Error for site owner".
+export function browserPlay(platformSlug, isolated = true) {
   const slug = String(platformSlug ?? "").toLowerCase();
   if (UNSUPPORTED[slug]) return { refuse: UNSUPPORTED[slug] };
   const core = PLAYABLE[slug];
   if (!core) return { refuse: `No browser core for ${slug || "this platform"}` };
-  return { core };
+  const threads = THREADED.has(core);
+  if (threads && !isolated) {
+    return {
+      refuse:
+        "This game needs browser threads, which only work over HTTPS or on localhost",
+    };
+  }
+  return { core, threads, options: OPTIONS[core] ?? {} };
 }
 
 /// True when this game is big enough to ask about first.

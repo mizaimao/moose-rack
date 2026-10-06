@@ -561,7 +561,7 @@ function corePicker(cores, d) {
   // "This window" is offered even when RetroArch has nothing: a system with no
   // installed core is exactly the case the in-page emulator is for, and the
   // sentence "none installed" with no way out of it is not much help.
-  const here = browserPlay(d.platform_slug ?? d.platform);
+  const here = browserPlay(d.platform_slug ?? d.platform, globalThis.crossOriginIsolated);
   const canPlayHere = !here.refuse;
   const wanted = canPlayHere && playHereWanted(d.id);
   if (!cores.length && !canPlayHere) {
