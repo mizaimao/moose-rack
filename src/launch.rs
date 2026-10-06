@@ -281,12 +281,15 @@ pub fn plan(ra: &RetroArch, map: &CoreMap, req: &Request<'_>) -> Result<Plan> {
     if let Some(note) = crate::lightgun::describe(req.platform, gun) {
         notes.push(note);
     }
+    if let Some(note) = crate::keyboard::describe(req.platform) {
+        notes.push(note);
+    }
 
     // Point RetroArch at the generated chain when there is one. Passing the
     // absolute path rather than a catalog name keeps config_lines honest:
     // it only ever emits a shader it has verified exists.
     let extra = format!(
-        "{}{}{}{}{}{}{}",
+        "{}{}{}{}{}{}{}{}",
         match &chained {
             Some(p) => format!(
                 "\n# Base shader with a motion pass chained on.\n\
@@ -305,6 +308,7 @@ pub fn plan(ra: &RetroArch, map: &CoreMap, req: &Request<'_>) -> Result<Plan> {
         ra.prepare_tweaks(req.library_root, req.platform, &core, req.autofire),
         req.achievements.map(crate::achievements::config_lines).unwrap_or_default(),
         crate::lightgun::config_lines(req.platform, gun),
+        crate::keyboard::config_lines(req.platform),
         crate::retroarch::window_lines(
             req.screen,
             // Only when asked for. Someone who wants the window filling the

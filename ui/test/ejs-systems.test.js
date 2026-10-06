@@ -3,13 +3,13 @@
 
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { browserPlay, shouldWarn, PLAYABLE, UNSUPPORTED } from "../js/ejs-systems.js";
+import { browserPlay, shouldWarn, PLAYABLE, UNSUPPORTED, THREADED } from "../js/ejs-systems.js";
 
 /// The platform slugs `moose-service` reports today, from `/invoke/platforms`
 /// against the live server. Written down so adding a platform to the library
 /// fails here until somebody says what the browser should do with it.
 const SERVED = [
-  "arcade", "dc", "famicom", "gamegear", "gb", "gba", "gbc", "megadrive", "n64",
+  "arcade", "dc", "dos", "famicom", "gamegear", "gb", "gba", "gbc", "megadrive", "n64",
   "nds", "neo-geo-pocket", "neogeoaes", "nes", "ngc", "pcengine", "psx",
   "saturn", "sfc", "snes", "wonderswan", "wonderswancolor",
 ];
@@ -70,6 +70,31 @@ describe("what the browser can play", () => {
     assert.equal(browserPlay("ngp").core, "ngp");
     assert.equal(browserPlay("neo-geo-pocket").core, "ngp");
     assert.equal(browserPlay("SNES").core, "snes", "case should not matter");
+  });
+
+  /// DOSBox Pure is built with threads only, and EmulatorJS refuses it without
+  /// them. A page that cannot have threads says why instead.
+  test("dos plays with threads and its own config, or says why it cannot", () => {
+    const here = browserPlay("dos", true);
+    assert.equal(here.core, "dos");
+    assert.equal(here.threads, true);
+    assert.equal(here.options.dosbox_pure_conf, "inside");
+
+    const insecure = browserPlay("dos", false);
+    assert.equal(insecure.core, undefined);
+    assert.match(insecure.refuse, /HTTPS/);
+  });
+
+  test("a cartridge needs no threads, so an insecure page still plays it", () => {
+    const r = browserPlay("snes", false);
+    assert.equal(r.core, "snes");
+    assert.equal(r.threads, false);
+    assert.deepEqual(r.options, {});
+  });
+
+  test("every threaded core is one the browser actually offers", () => {
+    const offered = new Set(Object.values(PLAYABLE));
+    for (const core of THREADED) assert.ok(offered.has(core), core);
   });
 
   test("nothing is in both tables", () => {

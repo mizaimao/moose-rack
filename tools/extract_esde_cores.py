@@ -39,6 +39,7 @@ EMU_RE = re.compile(r"%EMULATOR_([A-Za-z0-9_\-]+)%")
 BUNDLED_TO_SERVER: dict[str, str] = {
     "3do": "3do",
     "arcade": "arcade",
+    "dos": "dos",
     "dreamcast": "dc",
     "famicom": "famicom",
     "gamegear": "gamegear",
@@ -87,7 +88,7 @@ ESDE_TO_SERVER: dict[str, list[str]] = {
 
 # Every platform slug in library/, so we can report what is still missing.
 SERVER_PLATFORMS = [
-    "3do", "arcade", "dc", "famicom", "gamegear", "gb", "gba", "gbc", "ngc",
+    "3do", "arcade", "dc", "dos", "famicom", "gamegear", "gb", "gba", "gbc", "ngc",
     "megadrive", "mame", "mastersystem", "n64", "nds", "neogeoaes", "nes",
     "neo-geo-pocket", "pcengine", "psp", "psx", "sfc", "snes", "wonderswan",
     "wonderswancolor",

@@ -437,7 +437,7 @@ export async function playInBrowser(rom) {
     return "EmulatorJS is not installed";
   }
 
-  const verdict = browserPlay(rom.platform_slug ?? rom.platform);
+  const verdict = browserPlay(rom.platform_slug ?? rom.platform, globalThis.crossOriginIsolated);
   if (verdict.refuse) {
     starting = false;
     toast(verdict.refuse, 6000);
@@ -487,7 +487,12 @@ export async function playInBrowser(rom) {
   w.__moosePlayingId = rom.id;
   // EmulatorJS reads its start-up options from here. An empty string is a real
   // value meaning "none", so it is set either way rather than left undefined.
-  w.EJS_defaultOptions = { ...(w.EJS_defaultOptions ?? {}), shader: shader || "none" };
+  w.EJS_defaultOptions = {
+    ...(w.EJS_defaultOptions ?? {}),
+    ...verdict.options,
+    shader: shader || "none",
+  };
+  w.EJS_threads = verdict.threads;
 
   // Told by EmulatorJS itself rather than guessed at.
   w.EJS_ready = () => note(stage, "Core loaded — press start");
