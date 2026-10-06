@@ -81,6 +81,10 @@ pub fn display_of(platform: &str) -> Display {
 /// Game Boy grid on a PSP looks nothing like the real thing.
 pub fn default_for(platform: &str) -> Option<&'static str> {
     Some(match platform {
+        // A PC monitor, not a television. VGA drew its 200-line modes twice
+        // over, so a DOS game never had the scanlines a CRT preset adds, and
+        // its text is the one thing such a preset blurs.
+        "dos" => return None,
         "gb" => "handheld/gameboy",
         "gbc" => "handheld/gameboy-color-dot-matrix",
         // ags001, not agb001: the AGB-001 is the *original* Game Boy Advance,
@@ -379,6 +383,12 @@ mod tests {
 
     /// An explicit choice wins over the shipped default, and "none" means none
     /// rather than falling back.
+    #[test]
+    fn a_dos_game_gets_no_crt_by_default() {
+        assert_eq!(default_for("dos"), None);
+        assert_eq!(preset_for(&Default::default(), "dos"), None);
+    }
+
     #[test]
     fn an_override_beats_the_default() {
         let mut over = std::collections::BTreeMap::new();
