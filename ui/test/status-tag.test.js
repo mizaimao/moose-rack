@@ -108,12 +108,9 @@ describe("whether the link is encrypted", () => {
     assert.equal(linkLabel(false), "Not encrypted (HTTP)");
   });
 
-  test("an encrypted link gets the gold border, and it holds still on request", () => {
+  test("an encrypted link gets a dark gold border, and nothing moves", () => {
     const css = readFileSync(new URL("../style.css", import.meta.url), "utf8");
-    assert.match(css, /#status\[data-secure="yes"\]::after\s*\{[^}]*animation: status-gold-glint/);
-    assert.match(
-      css,
-      /prefers-reduced-motion: reduce\)\s*\{\s*#status\[data-secure="yes"\]::after \{ animation: none; \}/
-    );
+    assert.match(css, /#status\[data-secure="yes"\] \{ border-color: #8f6f2e; \}/);
+    assert.doesNotMatch(css, /status-gold|#status\[data-secure="yes"\]::after/);
   });
 });
