@@ -250,37 +250,10 @@ header h1 {
    green would be a lie and orange reads as a fault. It is serving, to you. */
 #status[data-state="serving"]::before { background: #4c8dff; }
 
-/* Gold when the link to the library is encrypted (`secureLink` in
-   status-tag.js): a muted ring, and once every 8 s a soft glint crosses it and
-   leaves. The glint starts and ends off the ring, so the loop has no visible
-   seam. The ring is drawn on ::after, masked to 1px, so the tag stays
-   see-through. */
-#status[data-secure="yes"] { border-color: transparent; }
-#status[data-secure="yes"]::after {
-  content: "";
-  position: absolute;
-  inset: -1px;
-  border-radius: inherit;
-  padding: 1px;
-  background:
-    linear-gradient(100deg, transparent 44%, rgba(255, 240, 205, 0.55) 50%, transparent 56%),
-    linear-gradient(rgba(206, 168, 88, 0.55), rgba(206, 168, 88, 0.55));
-  background-size: 300% 100%, 100% 100%;
-  background-position: 100% 0, 0 0;
-  background-repeat: no-repeat;
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  animation: status-gold-glint 8s ease-in-out infinite;
-  pointer-events: none;
-}
-@keyframes status-gold-glint {
-  0% { background-position: 100% 0, 0 0; }
-  15%, 100% { background-position: 0% 0, 0 0; }
-}
-@media (prefers-reduced-motion: reduce) {
-  #status[data-secure="yes"]::after { animation: none; }
-}
+/* Dark gold when the link to the library is encrypted (`secureLink` in
+   status-tag.js). Still, on purpose: it is a fact about the connection, not
+   something to draw the eye. */
+#status[data-secure="yes"] { border-color: #8f6f2e; }
 
 #status-card {
   position: fixed;

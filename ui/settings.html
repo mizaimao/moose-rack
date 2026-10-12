@@ -3,6 +3,15 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- One address for the web page. Its look and layout are kept in the
+         browser per address, so http://dev.lan and https://dev.lan drew two
+         differently set-up apps. Runs before anything draws. The desktop app,
+         the devices' API calls and a tunnel to localhost are left alone. -->
+    <script>
+      if (location.protocol === "http:" &&
+          !/^(localhost|127\.0\.0\.1|\[::1\]|0\.0\.0\.0)$|\.localhost$/i.test(location.hostname))
+        location.replace("https://" + location.hostname + location.pathname + location.search + location.hash);
+    </script>
     <!-- Tells the engine this page already has a dark theme, so it must not
          apply one of its own.
 
