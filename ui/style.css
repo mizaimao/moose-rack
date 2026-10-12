@@ -251,29 +251,32 @@ header h1 {
 #status[data-state="serving"]::before { background: #4c8dff; }
 
 /* Gold when the link to the library is encrypted (`secureLink` in
-   status-tag.js). The border is drawn on ::after, masked to a 1px ring, so the
-   gradient can run round the pill while the tag stays see-through. */
-#status[data-secure="yes"] {
-  border-color: transparent;
-  box-shadow: 0 0 6px rgba(240, 200, 90, 0.35);
-}
+   status-tag.js): a muted ring, and once every 8 s a soft glint crosses it and
+   leaves. The glint starts and ends off the ring, so the loop has no visible
+   seam. The ring is drawn on ::after, masked to 1px, so the tag stays
+   see-through. */
+#status[data-secure="yes"] { border-color: transparent; }
 #status[data-secure="yes"]::after {
   content: "";
   position: absolute;
   inset: -1px;
   border-radius: inherit;
   padding: 1px;
-  background: linear-gradient(110deg, #8a6420 0%, #d9ac45 25%, #fff3c4 40%, #e8bf55 55%, #8a6420 80%)
-    0 0 / 250% 100%;
+  background:
+    linear-gradient(100deg, transparent 44%, rgba(255, 240, 205, 0.55) 50%, transparent 56%),
+    linear-gradient(rgba(206, 168, 88, 0.55), rgba(206, 168, 88, 0.55));
+  background-size: 300% 100%, 100% 100%;
+  background-position: 100% 0, 0 0;
+  background-repeat: no-repeat;
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
-  animation: status-gold-sheen 4s linear infinite;
+  animation: status-gold-glint 8s ease-in-out infinite;
   pointer-events: none;
 }
-@keyframes status-gold-sheen {
-  from { background-position: 100% 0; }
-  to { background-position: -150% 0; }
+@keyframes status-gold-glint {
+  0% { background-position: 100% 0, 0 0; }
+  15%, 100% { background-position: 0% 0, 0 0; }
 }
 @media (prefers-reduced-motion: reduce) {
   #status[data-secure="yes"]::after { animation: none; }
