@@ -250,6 +250,35 @@ header h1 {
    green would be a lie and orange reads as a fault. It is serving, to you. */
 #status[data-state="serving"]::before { background: #4c8dff; }
 
+/* Gold when the link to the library is encrypted (`secureLink` in
+   status-tag.js). The border is drawn on ::after, masked to a 1px ring, so the
+   gradient can run round the pill while the tag stays see-through. */
+#status[data-secure="yes"] {
+  border-color: transparent;
+  box-shadow: 0 0 6px rgba(240, 200, 90, 0.35);
+}
+#status[data-secure="yes"]::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(110deg, #8a6420 0%, #d9ac45 25%, #fff3c4 40%, #e8bf55 55%, #8a6420 80%)
+    0 0 / 250% 100%;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: status-gold-sheen 4s linear infinite;
+  pointer-events: none;
+}
+@keyframes status-gold-sheen {
+  from { background-position: 100% 0; }
+  to { background-position: -150% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #status[data-secure="yes"]::after { animation: none; }
+}
+
 #status-card {
   position: fixed;
   z-index: 60;
