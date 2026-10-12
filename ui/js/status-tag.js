@@ -36,6 +36,25 @@ export function viewerIsRemote(loc = globalThis.location) {
   );
 }
 
+/// Whether the link to the library is encrypted, for the hover card and the gold
+/// border on the tag. `null` when there is no link to describe.
+///
+/// In a browser the page itself is that link, so the address bar decides: the
+/// same service answers on http and https, and only the browser knows which was
+/// typed. The desktop app's window is local, so there it is the link the backend
+/// makes to the server named in config.toml.
+export function secureLink(s, loc = globalThis.location) {
+  if (loc && /^https?:$/.test(loc.protocol || "")) return loc.protocol === "https:";
+  if (!s.connected) return null;
+  return /^https:\/\//i.test(String(s.server ?? ""));
+}
+
+/// The words for the hover card's Connection line.
+export function linkLabel(secure) {
+  if (secure === null) return "no server";
+  return secure ? "Encrypted (HTTPS)" : "Not encrypted (HTTP)";
+}
+
 /// The three things the tag can mean, as one decision.
 ///
 /// * a server name, when this backend syncs from one -- the usual case, and the
