@@ -178,9 +178,16 @@ SoundBlaster choice in DOOM's menu plays FM music without one.
 
 In the order they would be needed:
 
-1. HTTPS on dev.lan, without which the browser half works only on localhost.
+0. **A better DOS emulator.** Frank, 2026-10-12: "retroarch dos core runs
+   poorly: laggy, broken sound. We need a better emulator." DOSBox Pure was
+   the choice in "What was decided" above; this reopens it, on the desktop and
+   in the browser. In the browser DOOM also had no music. Nothing is picked
+   yet. DOSBox Staging is already named here as a fallback and has a Mac build.
+1. ~~HTTPS on dev.lan~~: on since 2026-10-11 (Caddy, Frank Home CA), and the
+   page moves itself from http to https.
 2. Fetching by torrent index in `tools/exodos_pack.py`. It packs only what has
-   already been downloaded (three games so far).
+   already been downloaded: 28 games on 2026-10-12, 26 of them fetched by hand
+   with aria2c from a list of 30.
 3. Games that mount CD images: 1,438 of them, Dune II among them. Pure mounts
    the first CD image it finds on C: by itself, which suggests dropping the
    line, untested.
