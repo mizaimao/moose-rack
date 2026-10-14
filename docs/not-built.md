@@ -25,6 +25,21 @@ Was `attract-mode.md`, `cartridge-shelf.md` and `features-wanted.md`.
 
 ---
 
+## Clients over HTTPS — requested 2026-10-11
+
+Frank: "make it run in both http and https mode." Since 2026-10-11 `https://dev.lan`
+works: Caddy on dev.lan (`~/dev-stack/`) serves port 443 with a certificate from the
+private Frank Home CA (root name-constrained to `.lan`) and proxies to moose-service on
+port 80. Plain `http://dev.lan` stays on because the clients don't trust that CA yet.
+
+**To do:** make the desktop app, the Android build (Thor) and moose-patch (Flip) trust
+the Frank Home root and default to `https://dev.lan`. After that, plain HTTP can close.
+**Exists:** every client goes through `util::http_client` (rustls + ring), so trust is
+one place: add the root certificate (`~/dev-stack/ca/root.crt` on dev.lan; public, safe
+to commit) as an extra trust anchor. Nothing on the server needs to change.
+**Hard:** Android ignores user-installed CAs, so the app has to carry the root itself;
+same for the Flip. **Size:** M.
+
 ## Features wanted
 
 *Was `features-wanted.md`.*

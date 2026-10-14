@@ -27,6 +27,7 @@
     "3do": "opera",
     "arcade": "mame",
     "dc": "flycast",
+    "dos": "dosbox_pure",
     "famicom": "mesen",
     "gamegear": "genesis_plus_gx",
     "gb": "gambatte",
@@ -280,6 +281,78 @@
             "linux": "dice_libretro.so",
             "windows": "dice_libretro.dll",
             "android": "dice_libretro_android.so"
+          },
+          "default": false
+        }
+      ]
+    },
+    "dos": {
+      "fullname": "DOS (PC)",
+      "extensions": [
+        ".7z",
+        ".bat",
+        ".com",
+        ".conf",
+        ".cue",
+        ".dosz",
+        ".exe",
+        ".img",
+        ".iso",
+        ".zip"
+      ],
+      "server_platforms": [
+        "dos"
+      ],
+      "emulators": [
+        {
+          "label": "DOSBox-Pure",
+          "kind": "libretro",
+          "core": "dosbox_pure",
+          "core_android": "dosbox_pure",
+          "files": {
+            "macos": "dosbox_pure_libretro.dylib",
+            "linux": "dosbox_pure_libretro.so",
+            "windows": "dosbox_pure_libretro.dll",
+            "android": "dosbox_pure_libretro_android.so"
+          },
+          "default": true
+        },
+        {
+          "label": "DOSBox-Core",
+          "kind": "libretro",
+          "core": "dosbox_core",
+          "core_android": "dosbox_core",
+          "files": {
+            "macos": "dosbox_core_libretro.dylib",
+            "linux": "dosbox_core_libretro.so",
+            "windows": "dosbox_core_libretro.dll",
+            "android": "dosbox_core_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "DOSBox-SVN",
+          "kind": "libretro",
+          "core": "dosbox_svn",
+          "core_android": "dosbox_svn",
+          "files": {
+            "macos": "dosbox_svn_libretro.dylib",
+            "linux": "dosbox_svn_libretro.so",
+            "windows": "dosbox_svn_libretro.dll",
+            "android": "dosbox_svn_libretro_android.so"
+          },
+          "default": false
+        },
+        {
+          "label": "VirtualXT",
+          "kind": "libretro",
+          "core": "virtualxt",
+          "core_android": "virtualxt",
+          "files": {
+            "macos": "virtualxt_libretro.dylib",
+            "linux": "virtualxt_libretro.so",
+            "windows": "virtualxt_libretro.dll",
+            "android": "virtualxt_libretro_android.so"
           },
           "default": false
         }

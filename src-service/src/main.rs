@@ -1356,6 +1356,31 @@ async fn login_page(State(guard): State<std::sync::Arc<Guard>>) -> axum::respons
 }
 
 
+/// Let the page have threads.
+///
+/// EmulatorJS builds DOSBox Pure, and PPSSPP, with threads only, and a browser
+/// hands out the `SharedArrayBuffer` they need only to a page that is
+/// cross-origin isolated: these two headers on the document and on every worker
+/// script it starts. They go on everything the web app serves because that is
+/// simplest and costs nothing here -- the page loads nothing from another
+/// origin, and `require-corp` only restricts what comes from one.
+///
+/// Not enough on its own. The browser also wants a secure context, HTTPS or
+/// localhost, and over plain HTTP to a LAN name it ignores both headers. The
+/// page checks `crossOriginIsolated` and says so rather than starting a core
+/// that cannot run (`browserPlay` in ui/js/ejs-systems.js).
+async fn isolation_headers(
+    req: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> axum::response::Response {
+    use axum::http::HeaderValue;
+    let mut res = next.run(req).await;
+    let h = res.headers_mut();
+    h.insert("cross-origin-opener-policy", HeaderValue::from_static("same-origin"));
+    h.insert("cross-origin-embedder-policy", HeaderValue::from_static("require-corp"));
+    res
+}
+
 /// The routes, as a function so tests can build one without a socket.
 /// Tell the browser when it may keep what it has.
 ///
@@ -1427,6 +1452,7 @@ fn web_app(st: Arc<web::WebState>) -> Router {
         // everything except `/emulatorjs`, which was the one route below it --
         // with a comment claiming the opposite.
         .layer(axum::middleware::from_fn(cache_headers))
+        .layer(axum::middleware::from_fn(isolation_headers))
 }
 
 fn app(lib: Arc<Library>, media_dir: std::path::PathBuf, with_index: bool) -> Router {
@@ -2368,6 +2394,34 @@ mod tests {
             "296 MB pinned to a version is re-checked on every load: {}",
             hdr(&r)
         );
+    }
+
+    /// The page and everything it loads are cross-origin isolated, or the
+    /// threaded cores cannot start: DOSBox Pure refuses to without threads.
+    /// The worker scripts under `/emulatorjs` need the headers as much as the
+    /// page does.
+    #[tokio::test]
+    async fn the_page_and_the_emulator_are_isolated_for_threads() {
+        let d = tempdir::TempDir::new("svc-isolated").unwrap();
+        let ui = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap().join("ui");
+        let web = web_app(std::sync::Arc::new(web::WebState {
+            state: moose_rack::app::AppState::from_config_at(&d.path().join("none.toml"))
+                .expect("state"),
+            ui_dir: ui.clone(),
+            emulatorjs: ui.parent().unwrap().join("assets/emulatorjs"),
+        }));
+        for path in ["/", "/js/main.js", "/emulatorjs/data/loader.js"] {
+            let r = web
+                .clone()
+                .oneshot(Request::builder().uri(path).body(Body::empty()).unwrap())
+                .await
+                .unwrap();
+            let h = |name: &str| {
+                r.headers().get(name).and_then(|v| v.to_str().ok()).unwrap_or("").to_owned()
+            };
+            assert_eq!(h("cross-origin-opener-policy"), "same-origin", "{path}");
+            assert_eq!(h("cross-origin-embedder-policy"), "require-corp", "{path}");
+        }
     }
 
     /// The heartbeat says whose server this is.

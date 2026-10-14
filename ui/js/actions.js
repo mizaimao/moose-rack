@@ -284,7 +284,7 @@ export async function launch(
     const missing = noCoreFrom(e);
     if (missing) {
       const { browserPlay } = await import("./ejs-systems.js");
-      const verdict = browserPlay(missing);
+      const verdict = browserPlay(missing, globalThis.crossOriginIsolated);
       if (!verdict.refuse) {
         const go = await askNoCore(missing, verdict.core);
         if (!go) return toast(`No installed core for ${missing}`, 8000);
