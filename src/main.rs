@@ -1966,6 +1966,11 @@ enum Command {
         /// The copy not kept is backed up to library/saves-backup/ first.
         #[arg(long, value_name = "local|server")]
         keep: Option<String>,
+        /// Sync a save tree that is not this machine's: a handheld's card in a
+        /// reader. The cache, device identity and ledger still come from the
+        /// working directory, so run this from that device's own data folder.
+        #[arg(long, value_name = "PATH")]
+        root: Option<String>,
     },
 }
 
@@ -1974,14 +1979,23 @@ enum Command {
 /// `--dry-run` stops after the scan and prints what would be offered, which is
 /// the safe way to see whether the ROM matching is right before anything
 /// overwrites a save file.
-async fn cmd_sync_saves(dry_run: bool, keep: Option<&str>) -> Result<()> {
+async fn cmd_sync_saves(dry_run: bool, keep: Option<&str>, root: Option<&str>) -> Result<()> {
     let cfg = Config::load()?;
     let store = cache::Cache::open(Path::new(CACHE_DB))?;
     let map = CoreMap::load_or_embedded(Path::new(CORE_MAP));
-    let ra = RetroArch::locate_in(&cfg.retroarch.ordered_paths())?;
+    // `--root` syncs a save tree that is not this machine's: a handheld's card
+    // in a reader. Everything else still comes from the working directory, so
+    // run it from that device's own data folder and the cache, the device
+    // identity and the state ledger are the device's as well. The layout under
+    // the root is the one this build was compiled for, which is why a card is
+    // synced with a build for its handheld.
+    let root = match root {
+        Some(path) => std::path::PathBuf::from(path),
+        None => RetroArch::locate_in(&cfg.retroarch.ordered_paths())?.root,
+    };
 
     if dry_run {
-        let candidates = moose_rack::savesync::scan(&store, &map, &ra.root)?;
+        let candidates = moose_rack::savesync::scan(&store, &map, &root)?;
         let (offered, skipped) = moose_rack::savesync::client_states(&candidates);
         println!("{} save(s) would be offered, {skipped} skipped", offered.len());
         for s in &offered {
@@ -2016,12 +2030,12 @@ async fn cmd_sync_saves(dry_run: bool, keep: Option<&str>) -> Result<()> {
     }
 
     let client = cfg.server.client()?;
-    let candidates = moose_rack::savesync::scan(&store, &map, &ra.root)?;
+    let candidates = moose_rack::savesync::scan(&store, &map, &root)?;
     let summary =
         moose_rack::savesync::run_all(
             &client,
             &candidates,
-            &ra.root,
+            &root,
             Path::new("."),
             Path::new(&cfg.library.local_root),
         )
@@ -2066,7 +2080,7 @@ async fn cmd_sync_saves(dry_run: bool, keep: Option<&str>) -> Result<()> {
             &client,
             c,
             choice,
-            &ra.root,
+            &root,
             Path::new(&cfg.library.local_root),
             Path::new("."),
         )
@@ -2182,7 +2196,9 @@ async fn main() -> Result<()> {
         Command::Art { term } => cmd_art(&term).await,
         Command::Hashcheck { file } => cmd_hashcheck(&file),
         Command::SyncBios => cmd_sync_bios().await,
-        Command::SyncSaves { dry_run, keep } => cmd_sync_saves(dry_run, keep.as_deref()).await,
+        Command::SyncSaves { dry_run, keep, root } => {
+            cmd_sync_saves(dry_run, keep.as_deref(), root.as_deref()).await
+        }
     }
 }
 
