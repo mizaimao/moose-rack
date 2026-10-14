@@ -202,6 +202,17 @@ pub fn core_options(platform: &str, core: &str) -> &'static [Opt] {
         (_, "mesen") => &[("mesen_controllerturbospeed", "Fast")],
         (_, "gambatte") => &[("gambatte_turbo_period", "4")],
         (_, "gpsp") => &[("gpsp_turbo_period", "4")],
+        // A DOS game is eXoDOS's zip with a DOSBOX.CONF at its root that says
+        // how to start it (docs/dos.md). Pure ignores that file unless told to
+        // read it, and then sits at its own start menu instead.
+        //
+        // MIDI goes to the Sound Canvas soundfont, which arrives in the system
+        // directory as a BIOS. Without it Pure falls back to RetroArch's MIDI
+        // driver, which has nothing behind it, and says so on screen.
+        (_, "dosbox_pure") => &[
+            ("dosbox_pure_conf", "inside"),
+            ("dosbox_pure_midi", "SoundCanvas.sf2"),
+        ],
         _ => &[],
     }
 }
@@ -303,6 +314,7 @@ pub fn core_dir_name(core: &str) -> Option<&'static str> {
         "mame2003" => Some("MAME 2003"),
         "swanstation" => Some("SwanStation"),
         "fbneo" => Some("FinalBurn Neo"),
+        "dosbox_pure" => Some("DOSBox-pure"),
         _ => None,
     }
 }
@@ -320,6 +332,9 @@ pub fn describe(platform: &str, core: &str) -> Option<String> {
     }
     if core == "fbneo" {
         return Some("not refusing romsets that fail FBNeo's own audit".to_owned());
+    }
+    if core == "dosbox_pure" {
+        return Some("starting the game from its own DOSBOX.CONF, MIDI through the Sound Canvas".to_owned());
     }
     Some(format!("{} core options applied", core_options(platform, core).len()))
 }

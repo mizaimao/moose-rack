@@ -250,6 +250,11 @@ header h1 {
    green would be a lie and orange reads as a fault. It is serving, to you. */
 #status[data-state="serving"]::before { background: #4c8dff; }
 
+/* Dark gold when the link to the library is encrypted (`secureLink` in
+   status-tag.js). Still, on purpose: it is a fact about the connection, not
+   something to draw the eye. */
+#status[data-secure="yes"] { border-color: #8f6f2e; }
+
 #status-card {
   position: fixed;
   z-index: 60;

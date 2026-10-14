@@ -34,6 +34,7 @@ pub mod focusring;
 pub mod gamesort;
 pub mod gridnav;
 pub mod iconart;
+pub mod keyboard;
 pub mod launch;
 pub mod layout;
 pub mod lightgun;

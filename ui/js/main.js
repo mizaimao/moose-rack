@@ -1,6 +1,6 @@
 // Entry point: wire the header controls and load the first view.
 
-import { statusTag, viewerIsRemote, bareUrl } from "./status-tag.js";
+import { statusTag, viewerIsRemote, bareUrl, secureLink, linkLabel } from "./status-tag.js";
 import { installHistoryNav } from "./history-nav.js";
 import { el, state, trail, invoke, listen, MOBILE } from "./state.js";
 import { applyLabels } from "./chrome.js";
@@ -282,6 +282,9 @@ function statusCard(s) {
     <div class="sc-row"><span>Server</span><strong>${escapeHtml(
       s.configured ? bareUrl(s.server) : "not configured"
     )}</strong></div>
+    <div class="sc-row"><span>Connection</span><strong class="sc-link">${linkLabel(
+      secureLink(s)
+    )}</strong></div>
     <div class="sc-row"><span>Games</span><strong>${s.roms_cached}</strong></div>
     <div class="sc-row"><span>Emulator</span><strong>${
       s.retroarch ? `RetroArch · ${s.cores_installed} cores` : "not found"
@@ -346,6 +349,8 @@ function statusCard(s) {
     const tag = statusTag(s);
     el.status.textContent = tag.text;
     el.status.dataset.state = tag.state;
+    // Gold when the link to the library is encrypted; see `secureLink`.
+    el.status.dataset.secure = secureLink(s) ? "yes" : "no";
     // Both of these are only otherwise discovered by pressing play and having
     // it fail, which is a poor way to learn the app was never configured.
     if (s.crowded_folder) {

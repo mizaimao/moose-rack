@@ -61,6 +61,23 @@ def core_firmware(info_dir):
     return out
 
 
+# Files no core's .info declares that a system still needs.
+#
+# DOSBox Pure plays MIDI through whatever soundfont is in the system directory,
+# so its .info names none. eXoDOS ships the Sound Canvas one (EXTDOS.zip ->
+# mt32/), and without a soundfont Pure falls back to RetroArch's MIDI driver,
+# which has nothing behind it and says so on screen. See docs/dos.md.
+EXTRA = [
+    {
+        "path": "SoundCanvas.sf2",
+        "desc": "SoundCanvas.sf2 (Roland Sound Canvas soundfont, from eXoDOS)",
+        "required": True,
+        "cores": ["dosbox_pure"],
+        "systems": ["dos"],
+    },
+]
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--systems", default="data/vendor/esde_android_es_systems.xml")
@@ -88,6 +105,9 @@ def main():
                     rec["required"] = True
                 if desc and not rec["desc"]:
                     rec["desc"] = desc
+
+    for rec in EXTRA:
+        files[rec["path"]] = {**rec, "cores": set(rec["cores"]), "systems": set(rec["systems"])}
 
     out = []
     for rec in files.values():

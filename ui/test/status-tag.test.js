@@ -8,7 +8,8 @@
 
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { statusTag, viewerIsRemote } from "../js/status-tag.js";
+import { readFileSync } from "node:fs";
+import { statusTag, viewerIsRemote, secureLink, linkLabel } from "../js/status-tag.js";
 
 const loc = (protocol, hostname) => ({ protocol, hostname });
 
@@ -75,5 +76,41 @@ describe("what the tag says", () => {
     const s = { configured: false, connected: false, server: "" };
     assert.deepEqual(statusTag(s, false), { text: "no config.toml", state: "unset" });
     assert.deepEqual(statusTag(s, true), { text: "server mode", state: "serving" });
+  });
+});
+
+describe("whether the link is encrypted", () => {
+  const up = (server) => ({ configured: true, connected: true, server });
+
+  /// The same service answers on both, so only the address bar can tell.
+  test("in a browser, the page's own address decides", () => {
+    assert.equal(secureLink(up(""), loc("https:", "dev.lan")), true);
+    assert.equal(secureLink(up(""), loc("http:", "dev.lan")), false);
+    assert.equal(secureLink(up(""), loc("http:", "localhost")), false);
+  });
+
+  test("in the desktop app, the server in config.toml decides", () => {
+    const app = loc("tauri:", "tauri.localhost");
+    assert.equal(secureLink(up("https://dev.lan"), app), true);
+    assert.equal(secureLink(up("HTTPS://dev.lan/"), app), true);
+    assert.equal(secureLink(up("http://dev.lan"), app), false);
+  });
+
+  /// "Not encrypted" would describe a link that does not exist.
+  test("with no server there is nothing to describe", () => {
+    const offline = { configured: true, connected: false, server: "https://dev.lan" };
+    assert.equal(secureLink(offline, loc("tauri:", "tauri.localhost")), null);
+    assert.equal(linkLabel(null), "no server");
+  });
+
+  test("the card says which, in words", () => {
+    assert.equal(linkLabel(true), "Encrypted (HTTPS)");
+    assert.equal(linkLabel(false), "Not encrypted (HTTP)");
+  });
+
+  test("an encrypted link gets a dark gold border, and nothing moves", () => {
+    const css = readFileSync(new URL("../style.css", import.meta.url), "utf8");
+    assert.match(css, /#status\[data-secure="yes"\] \{ border-color: #8f6f2e; \}/);
+    assert.doesNotMatch(css, /status-gold|#status\[data-secure="yes"\]::after/);
   });
 });
