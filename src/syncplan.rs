@@ -70,10 +70,28 @@ pub struct Line {
 }
 
 /// A plan, ready to be shown.
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Review {
     pub lines: Vec<Line>,
     pub agreed: usize,
+    /// Things the person should know that are not a row: an emulator that has
+    /// to be closed first, a memory card that cannot be synced.
+    pub notes: Vec<String>,
+}
+
+/// By hand, for the headline: the page shows it as the sheet's first line,
+/// and while it was not serialised that line was blank. Only the page tests'
+/// stand-in reply ever sent one.
+impl Serialize for Review {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        use serde::ser::SerializeStruct as _;
+        let mut st = s.serialize_struct("Review", 4)?;
+        st.serialize_field("lines", &self.lines)?;
+        st.serialize_field("agreed", &self.agreed)?;
+        st.serialize_field("notes", &self.notes)?;
+        st.serialize_field("headline", &self.headline())?;
+        st.end()
+    }
 }
 
 impl Review {
@@ -89,7 +107,7 @@ impl Review {
             .filter_map(Self::line_of)
             .collect();
         lines.sort_by(|a, b| a.action.cmp(&b.action).then(a.title.cmp(&b.title)));
-        Review { lines, agreed: plan.total_no_op.max(0) as usize }
+        Review { lines, agreed: plan.total_no_op.max(0) as usize, notes: Vec::new() }
     }
 
     fn line_of(op: &SyncOperation) -> Option<Line> {
@@ -211,6 +229,16 @@ mod tests {
     fn an_empty_plan_says_so_rather_than_looking_broken() {
         let review = Review::from_plan(&plan(vec![], 0));
         assert_eq!(review.headline(), "nothing to sync");
+    }
+
+    #[test]
+    fn the_page_gets_the_headline_and_the_notes() {
+        let mut review = Review::from_plan(&plan(vec![op("upload", "a.srm", 1)], 2));
+        review.notes.push("close PPSSPP first".into());
+        let v = serde_json::to_value(&review).unwrap();
+        assert_eq!(v["headline"], "1 to push");
+        assert_eq!(v["notes"][0], "close PPSSPP first");
+        assert_eq!(v["agreed"], 2);
     }
 
     #[test]

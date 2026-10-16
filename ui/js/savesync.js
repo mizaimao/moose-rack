@@ -75,6 +75,15 @@ function askPlan(review) {
     // only; save states are compared against a local ledger and are not in
     // these rows, so a plan reading "nothing to sync" can still be followed by
     // four states moving. Better to say it than to look like a lie.
+    // The core's own notes: an emulator to close first, a card it cannot
+    // sync. Above the standing note, since they are about this plan.
+    for (const text of review.notes ?? []) {
+      const p = document.createElement("p");
+      p.className = "conflict note sy-note";
+      p.textContent = text;
+      box.appendChild(p);
+    }
+
     const note = document.createElement("p");
     note.className = "conflict note";
     note.textContent =

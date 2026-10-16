@@ -841,6 +841,48 @@ pub struct Conflict {
     pub detail: String,
 }
 
+/// One save unit this device holds, as negotiate wants it.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct ClientUnit {
+    pub family: String,
+    pub key: String,
+    pub content_hash: String,
+}
+
+/// A unit as the server holds it.
+#[derive(Debug, Clone, Deserialize)]
+pub struct ServerUnit {
+    pub id: i64,
+    pub family: String,
+    pub key: String,
+    pub content_hash: String,
+    pub size: u64,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct UnitOperation {
+    /// `upload`, `download`, `conflict`, `no_op` or `skip`.
+    pub action: String,
+    pub family: String,
+    pub key: String,
+    #[serde(default)]
+    pub reason: Option<String>,
+    #[serde(default)]
+    pub unit_id: Option<i64>,
+    #[serde(default)]
+    pub server_content_hash: Option<String>,
+    #[serde(default)]
+    pub server_size: Option<u64>,
+    #[serde(default)]
+    pub server_updated_at: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct UnitPlan {
+    pub operations: Vec<UnitOperation>,
+}
+
 impl Client {
     async fn post_json<B: serde::Serialize, T: serde::de::DeserializeOwned>(
         &self,
@@ -1005,6 +1047,95 @@ impl Client {
             bail!("POST {full} -> {s}\n  {}", body.chars().take(300).collect::<String>());
         }
         Ok(Ok(resp.json().await.context("decoding uploaded save")?))
+    }
+
+    /// The plan for this device's save units, the standalone emulators'
+    /// saves (`docs/emulator-saves.md`). Only `families` are planned.
+    pub async fn negotiate_units(
+        &self,
+        device_id: &str,
+        families: &[String],
+        units: &[ClientUnit],
+    ) -> Result<UnitPlan> {
+        self.post_json(
+            "/api/units/negotiate",
+            &serde_json::json!({ "device_id": device_id, "families": families, "units": units }),
+        )
+        .await
+    }
+
+    /// Upload a unit's zip. `Ok(Err(Conflict))` is the server refusing because
+    /// its copy moved since this device last agreed, as for saves.
+    pub async fn upload_unit(
+        &self,
+        family: &str,
+        key: &str,
+        zip: Vec<u8>,
+        device_id: &str,
+        overwrite: bool,
+    ) -> Result<std::result::Result<ServerUnit, Conflict>> {
+        let mut full = format!(
+            "{}/api/units?family={}&key={}&device_id={}",
+            self.base,
+            urlencode(family),
+            urlencode(key),
+            urlencode(device_id)
+        );
+        if overwrite {
+            full.push_str("&overwrite=true");
+        }
+        let part = reqwest::multipart::Part::bytes(zip).file_name(format!("{key}.zip"));
+        let form = reqwest::multipart::Form::new().part("unitFile", part);
+        let resp = self
+            .http
+            .post(&full)
+            .header("Authorization", &self.auth)
+            .multipart(form)
+            .send()
+            .await
+            .with_context(|| format!("POST {full}"))?;
+        if resp.status() == reqwest::StatusCode::CONFLICT {
+            return Ok(Err(Conflict { detail: resp.text().await.unwrap_or_default() }));
+        }
+        if !resp.status().is_success() {
+            let s = resp.status();
+            let body = resp.text().await.unwrap_or_default();
+            bail!("POST {full} -> {s}\n  {}", body.chars().take(300).collect::<String>());
+        }
+        Ok(Ok(resp.json().await.context("decoding uploaded unit")?))
+    }
+
+    /// A unit's current zip.
+    pub async fn unit_content(&self, unit_id: i64) -> Result<Vec<u8>> {
+        let url = format!("{}/api/units/{unit_id}/content", self.base);
+        let resp = self
+            .http
+            .get(&url)
+            .header("Authorization", &self.auth)
+            .send()
+            .await
+            .with_context(|| format!("GET {url}"))?;
+        if !resp.status().is_success() {
+            bail!("GET {url} -> {}", resp.status());
+        }
+        Ok(resp.bytes().await?.to_vec())
+    }
+
+    /// Tell the server a unit's download was put in place, so this device now
+    /// agrees with its copy.
+    pub async fn confirm_unit(&self, unit_id: i64, device_id: &str) -> Result<()> {
+        let url = format!("{}/api/units/{unit_id}/downloaded?device_id={}", self.base, urlencode(device_id));
+        let resp = self
+            .http
+            .post(&url)
+            .header("Authorization", &self.auth)
+            .send()
+            .await
+            .with_context(|| format!("POST {url}"))?;
+        if !resp.status().is_success() {
+            bail!("POST {url} -> {}", resp.status());
+        }
+        Ok(())
     }
 
     /// Close a sync session so the server stops counting it as in flight.

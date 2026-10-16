@@ -1,6 +1,7 @@
 # Standalone emulator saves
 
-**Design, 2026-10-15. Not built.** Tracked in Linear MOO-25. How saves kept by
+**Milestone 1 built, 2026-10-15; not yet run on a device.** Tracked in
+Linear MOO-25. How saves kept by
 standalone emulators (ARMSX2, PCSX2, PPSSPP first) sync through moose-service,
 so that any device running moose-rack carries its progress. RetroArch saves
 already sync and are not changed by this.
@@ -38,9 +39,11 @@ A save unit is a folder the emulator itself treats as one save. It is keyed by
   memory stick, it survives a ROM rename, and it is what a person would look
   for.
 
-For a PS2 folder card the key is `<card name>/<folder>`, because a game can
-have a save on two cards. Card-level files at the card's root (`_pcsx2_*`)
-stay on the device; everything inside a game's folder travels.
+A device syncs one PS2 folder card, so the key is the game's folder alone:
+card names differ between devices (`Mcd001.ps2` here, `ChickenCard.ps2`
+there) and a key with the card in it would never pair. Card-level files at the
+card's root (`_pcsx2_*`) stay on the device; everything inside a game's folder
+travels, its `_pcsx2_index` included.
 
 A unit's hash is md5 over its sorted `relative/path:md5(file)` lines, which is
 the scheme `savehash.rs` already uses for zips. `.DS_Store`, `Thumbs.db` and
@@ -57,7 +60,7 @@ copy ULUS10509DAT is 845 MB of installed data, the next largest folder is
 New routes beside the save routes, so nothing an existing client sends
 changes meaning:
 
-    POST /api/units/negotiate        {device_id, units: [{family, key, content_hash, updated_at, size}]}
+    POST /api/units/negotiate        {device_id, families: [..], units: [{family, key, content_hash}]}
     POST /api/units                  ?family=&key=&device_id=[&overwrite=true], multipart unitFile (a zip)
     GET  /api/units                  ?family=
     GET  /api/units/{id}/content     the current zip
@@ -68,12 +71,16 @@ last agreed, so copy it; both moved, so conflict, never resolved silently;
 a first meeting of two different copies is a conflict. Upload answers 409 when
 the server's copy moved since the device last agreed, exactly as
 `upload_save` does. Matching copies record agreement, which the save path did
-not do until dab5754.
+not do until dab5754. Two things differ from saves: only the `families` the
+device names are planned, so a phone with no PS2 emulator hears nothing about
+PS2 saves; and a unit the device agreed on before and no longer holds is a
+`skip` ("deleted on this device"), not a download.
 
 ## On the server
 
     <saves_root>/_units/<family>/<key>/current.zip
-    <saves_root>/_units/<family>/<key>/history/<UTC time>-<hash8>.zip
+    <saves_root>/_units/<family>/<key>/unit.json
+    <saves_root>/_units/<family>/<key>/history/<unix seconds>-<hash8>.zip
 
 The ten newest replaced copies are kept, the same count `savebackup.rs` keeps
 on devices. Plain saves have no server history; units get one because
@@ -84,30 +91,34 @@ renamed into place. The agreement ledger is the existing `sync-state.json`
 
 ## On the device
 
-An adapter per family finds the folders and knows the format:
+`src/unitsync.rs` has an adapter per family, and `config.toml` says where
+each emulator keeps its saves, one `[[saves.units]]` per family:
 
-- `ppsspp`: the memory stick root, where `PSP/SAVEDATA/` lives. On the Nova
-  that is `/storage/A2FC-A9FB/Saves/PPSSPP`.
-- `pcsx2`: the memcards folder, with each folder card in it a source of
-  units. On the Nova that is `/storage/A2FC-A9FB/Saves/armsx2/memcards`.
-
-The adapter reads the emulator's own config for the path where it can
-(`PCSX2.ini`, `PCSX2-Android.ini`, `ppsspp.ini`), and `config.toml` can name it
-outright:
-
-    [[units]]
+    [[saves.units]]
     family = "ppsspp"
-    root = "/storage/A2FC-A9FB/Saves/PPSSPP"
+    root = "/storage/A2FC-A9FB/Saves/PPSSPP"       # the memory stick, holding PSP/
+
+    [[saves.units]]
+    family = "pcsx2"
+    root = "/storage/A2FC-A9FB/Saves/armsx2/memcards/<card>.ps2"   # one folder card
+
+`max_mb` raises the 64 MB limit and `skip` names folders to leave alone. A
+file card, or the memcards folder instead of a card, is refused with the way
+out. Reading the path from the emulator's own config (`PCSX2.ini`,
+`PCSX2-Android.ini`) is not built.
 
 A download unpacks into a temporary folder beside the target, then swaps it
 in: the old folder is renamed aside, the new one renamed in, the old one
 deleted. A crash leaves either the old save or the new one, never half of
-each. `savebackup.rs` keeps the replaced folder first; it handles single files
-today and needs a folder case.
+each. The replaced folder is zipped to
+`<library>/saves-backup/units/<family>/<key>/` first, ten kept, as
+`savebackup.rs` does for files.
 
-Units sync whenever saves do: "Sync saves", the plan sheet, the CLI's
-`sync-saves`, and the Flip addon. The plan sheet lists them by the title in
-PARAM.SFO or `icon.sys` rather than the folder name.
+Units sync with a manual sync: "Sync saves" and its plan sheet, and the
+CLI's `sync-saves` (whose `--dry-run` lists them). Not yet the Flip addon,
+and not the per-game sync around a RetroArch launch. The plan sheet names a
+PSP save by its PARAM.SFO title. A unit conflict is a `SaveConflict` named
+`family/key`, so the conflict picker and `--keep` settle it like a save.
 
 ## The running emulator
 
@@ -118,10 +129,10 @@ also holds the card in memory and writes it back on its own schedule. A unit
 written while the game runs can be overwritten by that write-back, and the next
 sync then uploads the old copy as a change.
 
-Milestone 1 handles this two ways. Sync refuses to write into a card or memory
-stick whose emulator is running, where the platform can tell (desktop:
-the process list). Where it cannot (Android), the plan sheet says to close the
-emulator first. The server history is what recovers a save if that is
+Milestone 1 handles this two ways. Sync leaves a family alone while its
+emulator runs, where the platform can tell (`pgrep` on macOS, Linux and
+KNULLI). Where it cannot (Android), the plan sheet says to close the emulator
+first. The server history is what recovers a save if that is
 ignored. Launching standalone emulators from moose-rack, using the
 `android_packages` table `coremap.rs` already carries, would remove the
 problem and is the obvious follow-up.
@@ -130,13 +141,15 @@ problem and is the obvious follow-up.
 
 PPSSPP SAVEDATA and PS2 folder cards, on the Nova, this Mac and dev.lan:
 
-1. Server: the routes, the store with history, the ledger keys, tests in
-   the style of the save tests.
-2. Core: the two adapters, the unit hash, the zip and swap, a unit case in the
-   plan and in `run_all`.
-3. The plan sheet and CLI show units.
-4. Checked end to end: change a save on the Nova, sync, see it on the Mac;
-   then the reverse; then a deliberate conflict.
+1. Built: the routes, the store with history, the ledger keys
+   (`src-service/src/units.rs`).
+2. Built: the two adapters, the unit hash, the zip and swap
+   (`src/saveunit.rs`, `src/unitsync.rs`).
+3. Built: the plan sheet and CLI show units.
+4. Checked in a test over a real socket
+   (`the_app_syncs_a_psp_save_through_the_service`): two devices, a save
+   each way, a conflict, keeping the server's copy with the device's backed
+   up. Not yet checked on the Nova.
 
 One thing to measure early: whether PCSX2 rewrites `_pcsx2_index` in a folder
 when the save inside did not change. If it does, every load looks like a
@@ -187,9 +200,11 @@ reproduced, except where a number says otherwise.
   launch sync, `cfg.saves.root` for the manual one), and a download with no
   emulator recorded lands loose in `saves/` on a by-core device. That is how
   82 of the Nova's saves ended up loose.
-- Open: a manual desktop sync never fills `pending_conflicts`, so the
-  conflict picker answers "no pending conflict" unless a launch left the same
-  one.
+- Fixed with milestone 1: a manual sync never filled `pending_conflicts`, so
+  the conflict picker answered "no pending conflict" unless a launch left the
+  same one.
+- Fixed with milestone 1: the plan sheet's first line was blank, because
+  `Review` never sent its headline; only the page tests' stand-in did.
 - Open: the client hashes a zip save by its contents and the server hashes
   the raw bytes, so a zipped save never matches.
 - Open: the save routes take a free-text `device_id` and ignore the signed-in

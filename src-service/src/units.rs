@@ -17,7 +17,7 @@
 
 use std::path::PathBuf;
 
-use moose_rack::saveunit;
+use moose_rack::saveunit::{self, unit_id};
 use serde::{Deserialize, Serialize};
 
 /// Replaced copies kept per unit, the same count `savebackup.rs` keeps on a
@@ -134,20 +134,6 @@ pub fn plan(
         total_skip: count("skip"),
         operations: ops,
     }
-}
-
-/// Derived from the name, like a save id, and as narrow, for the browser.
-pub fn unit_id(family: &str, key: &str) -> i64 {
-    use md5::{Digest, Md5};
-    let mut h = Md5::new();
-    h.update(b"unit\0");
-    h.update(family.as_bytes());
-    h.update(b"\0");
-    h.update(key.as_bytes());
-    let d = h.finalize();
-    let mut b = [0u8; 8];
-    b.copy_from_slice(&d[..8]);
-    (i64::from_le_bytes(b) & ((1i64 << 53) - 1)).max(1)
 }
 
 pub struct UnitStore {

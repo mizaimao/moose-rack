@@ -221,6 +221,39 @@ pub struct SavesCfg {
     #[serde(default)]
     #[serde(deserialize_with = "lenient_bool")]
     pub confirm_delete_state: bool,
+
+    /// Where standalone emulators keep saves on this device, one
+    /// `[[saves.units]]` each. See [`crate::unitsync`].
+    #[serde(default)]
+    pub units: Vec<UnitSourceCfg>,
+}
+
+/// One place a standalone emulator keeps its saves, synced as save units
+/// (`docs/emulator-saves.md`):
+///
+/// ```toml
+/// [[saves.units]]
+/// family = "ppsspp"
+/// root = "/storage/A2FC-A9FB/Saves/PPSSPP"
+///
+/// [[saves.units]]
+/// family = "pcsx2"
+/// root = "/storage/A2FC-A9FB/Saves/armsx2/memcards/Mcd001.ps2"
+/// ```
+#[derive(Debug, Clone, Deserialize)]
+pub struct UnitSourceCfg {
+    /// `ppsspp`, or `pcsx2` for PCSX2, ARMSX2 and NetherSX2.
+    pub family: String,
+    /// For `ppsspp` the memory stick, the folder holding `PSP/`. For `pcsx2`
+    /// one folder memory card: an 8 MB file card cannot be synced by game.
+    pub root: String,
+    /// Units over this many MB are left alone. 64 when unset, which keeps PSP
+    /// install data off the server.
+    #[serde(default)]
+    pub max_mb: Option<u64>,
+    /// Folder names never synced from this device.
+    #[serde(default)]
+    pub skip: Vec<String>,
 }
 
 impl Default for SavesCfg {
@@ -229,6 +262,7 @@ impl Default for SavesCfg {
             root: default_saves_root(),
             auto_sync: true,
             confirm_delete_state: false,
+            units: Vec::new(),
         }
     }
 }
