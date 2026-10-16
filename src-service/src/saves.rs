@@ -87,6 +87,21 @@ fn key(device: &str, rom_id: i64, file: &str) -> (String, i64, String) {
     (device.to_owned(), rom_id, file.to_owned())
 }
 
+/// What to do with something both sides hold, given the hash this device last
+/// agreed on, as (action, reason). The rule [`plan`] applies to saves and
+/// `units::plan` to save units; the cases are explained on [`plan`].
+pub fn decide_held(client: &str, server: Option<&str>, last: Option<&str>) -> (&'static str, &'static str) {
+    if server == Some(client) {
+        ("no_op", "both sides hold the same bytes")
+    } else if last.is_some() && last == server {
+        ("upload", "changed here since this device last agreed with the server")
+    } else if last == Some(client) {
+        ("download", "changed on the server since this device last agreed")
+    } else {
+        ("conflict", "both copies changed since they last agreed; pick one")
+    }
+}
+
 /// Decide what should happen to every save, given both sides and what this
 /// device last saw.
 ///
@@ -118,20 +133,9 @@ pub fn plan(device: &str, client: &[ClientSaveState], server: &[ServerSave], see
             None => ops.push(op("upload", c.rom_id, None, &c.file_name, c, None,
                 "the server does not have this save")),
             Some(s) => {
-                let same = s.content_hash.as_deref() == Some(c.content_hash.as_str());
-                if same {
-                    ops.push(op("no_op", c.rom_id, Some(s.id), &c.file_name, c, Some(s),
-                        "both sides hold the same bytes"));
-                } else if last.map(|h| Some(h.as_str()) == s.content_hash.as_deref()).unwrap_or(false) {
-                    ops.push(op("upload", c.rom_id, Some(s.id), &c.file_name, c, Some(s),
-                        "changed here since this device last agreed with the server"));
-                } else if last.map(|h| h == &c.content_hash).unwrap_or(false) {
-                    ops.push(op("download", c.rom_id, Some(s.id), &c.file_name, c, Some(s),
-                        "changed on the server since this device last agreed"));
-                } else {
-                    ops.push(op("conflict", c.rom_id, Some(s.id), &c.file_name, c, Some(s),
-                        "both copies changed since they last agreed; pick one"));
-                }
+                let (action, reason) =
+                    decide_held(&c.content_hash, s.content_hash.as_deref(), last.map(String::as_str));
+                ops.push(op(action, c.rom_id, Some(s.id), &c.file_name, c, Some(s), reason));
             }
         }
     }

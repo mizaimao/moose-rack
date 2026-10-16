@@ -76,7 +76,12 @@ fn zip_manifest_hash(path: &Path) -> Result<String> {
     let file = std::fs::File::open(path)?;
     let mut archive = zip::ZipArchive::new(std::io::BufReader::new(file))
         .with_context(|| format!("reading zip {}", path.display()))?;
+    manifest(&mut archive)
+}
 
+/// The manifest hash of an open archive. Shared with [`crate::saveunit`],
+/// which hashes zips it holds in memory and has to agree with this exactly.
+pub(crate) fn manifest<R: Read + std::io::Seek>(archive: &mut zip::ZipArchive<R>) -> Result<String> {
     // Collect names first: sorting must happen over the whole namelist before
     // any entry is read, exactly as `sorted(zf.namelist())` does.
     let mut names: Vec<String> = (0..archive.len())

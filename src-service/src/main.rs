@@ -28,6 +28,7 @@ mod auth;
 mod collections;
 mod web;
 mod saves;
+mod units;
 
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -249,6 +250,8 @@ struct SyncState {
     /// sync by a different rule: `crate::statesync` decides what to send before
     /// it sends, so there is no conflict to answer and nothing to merge.
     states: saves::StateStore,
+    /// Standalone emulators' saves, a folder each. `units.rs`.
+    units: units::UnitStore,
     path: std::path::PathBuf,
     data: Persisted,
 }
@@ -919,6 +922,143 @@ async fn negotiate(
     Json(plan).into_response()
 }
 
+#[derive(Deserialize)]
+struct UnitNegotiateReq {
+    device_id: String,
+    /// The families this device has an adapter for. Only units in these are
+    /// offered to it.
+    families: Vec<String>,
+    #[serde(default)]
+    units: Vec<units::ClientUnit>,
+}
+
+/// The plan for a device's save units. Same rules as `negotiate`, and like it,
+/// matching copies are recorded as agreed.
+async fn negotiate_units(
+    State(lib): State<Arc<Library>>,
+    Json(req): Json<UnitNegotiateReq>,
+) -> axum::response::Response {
+    let bad = req
+        .families
+        .iter()
+        .find(|f| !moose_rack::saveunit::valid_family(f))
+        .map(|f| format!("no such save family: {f}"))
+        .or_else(|| {
+            req.units
+                .iter()
+                .find(|u| !moose_rack::saveunit::valid_family(&u.family) || !moose_rack::saveunit::valid_key(&u.key))
+                .map(|u| format!("not a usable unit: {}/{:?}", u.family, u.key))
+        });
+    if let Some(why) = bad {
+        return (axum::http::StatusCode::BAD_REQUEST, why).into_response();
+    }
+    let mut st = lib.sync.lock().unwrap();
+    let server = st.units.list(None);
+    let plan = {
+        let seen = &st.data.seen;
+        units::plan(&req.families, &req.units, &server, &|f, k| {
+            seen.get(&units::seen_key(&req.device_id, f, k)).cloned()
+        })
+    };
+    let mut noted = false;
+    for o in plan.operations.iter().filter(|o| o.action == "no_op") {
+        if let Some(hash) = &o.server_content_hash {
+            let k = units::seen_key(&req.device_id, &o.family, &o.key);
+            noted |= st.data.seen.insert(k, hash.clone()).as_ref() != Some(hash);
+        }
+    }
+    if noted {
+        st.flush();
+    }
+    Json(plan).into_response()
+}
+
+#[derive(Deserialize)]
+struct UnitListQuery {
+    #[serde(default)]
+    family: Option<String>,
+}
+
+async fn list_units(State(lib): State<Arc<Library>>, Query(q): Query<UnitListQuery>) -> axum::response::Response {
+    Json(lib.sync.lock().unwrap().units.list(q.family.as_deref())).into_response()
+}
+
+#[derive(Deserialize)]
+struct UnitUploadQuery {
+    family: String,
+    key: String,
+    device_id: String,
+    #[serde(default)]
+    overwrite: Option<bool>,
+}
+
+/// Take a unit's zip, unless the server's copy moved since this device last
+/// agreed: the `upload_save` rule, 409 included.
+async fn upload_unit(
+    State(lib): State<Arc<Library>>,
+    Query(q): Query<UnitUploadQuery>,
+    mut form: axum::extract::Multipart,
+) -> axum::response::Response {
+    let bytes = match file_part(&mut form, "unitFile").await {
+        Ok(Some((_, bytes))) => bytes,
+        Ok(None) => return (axum::http::StatusCode::BAD_REQUEST, "no usable unitFile").into_response(),
+        Err(no) => return no,
+    };
+    let mut st = lib.sync.lock().unwrap();
+    let k = units::seen_key(&q.device_id, &q.family, &q.key);
+    if !q.overwrite.unwrap_or(false)
+        && let Some(cur) = st.units.get(&q.family, &q.key)
+    {
+        let agreed = st.data.seen.get(&k).cloned();
+        if agreed.as_deref() != Some(cur.content_hash.as_str()) {
+            return (
+                axum::http::StatusCode::CONFLICT,
+                format!(
+                    "the server copy of {}/{} changed since this device last agreed (server {}, last agreed {})",
+                    q.family,
+                    q.key,
+                    cur.content_hash,
+                    agreed.unwrap_or_else(|| "never".into())
+                ),
+            )
+                .into_response();
+        }
+    }
+    match st.units.write(&q.family, &q.key, &bytes) {
+        Ok(u) => {
+            st.data.seen.insert(k, u.content_hash.clone());
+            st.flush();
+            Json(u).into_response()
+        }
+        Err(units::WriteError::Refused(why)) => (axum::http::StatusCode::BAD_REQUEST, why).into_response(),
+        Err(units::WriteError::Io(e)) => {
+            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response()
+        }
+    }
+}
+
+async fn unit_content(State(lib): State<Arc<Library>>, AxPath(id): AxPath<i64>) -> axum::response::Response {
+    match lib.sync.lock().unwrap().units.read(id) {
+        Some((_, b)) => ([(axum::http::header::CONTENT_TYPE, "application/zip")], b).into_response(),
+        None => axum::http::StatusCode::NOT_FOUND.into_response(),
+    }
+}
+
+/// The device unpacked the server's copy: it now agrees with it.
+async fn unit_downloaded(
+    State(lib): State<Arc<Library>>,
+    AxPath(id): AxPath<i64>,
+    Query(q): Query<DownloadedQuery>,
+) -> axum::response::Response {
+    let mut st = lib.sync.lock().unwrap();
+    let Some(u) = st.units.list(None).into_iter().find(|u| u.id == id) else {
+        return axum::http::StatusCode::NOT_FOUND.into_response();
+    };
+    st.data.seen.insert(units::seen_key(&q.device_id, &u.family, &u.key), u.content_hash.clone());
+    st.flush();
+    Json(u).into_response()
+}
+
 async fn save_content(
     State(lib): State<Arc<Library>>,
     AxPath(id): AxPath<i64>,
@@ -1533,6 +1673,13 @@ fn app(lib: Arc<Library>, media_dir: std::path::PathBuf, with_index: bool) -> Ro
         )
         .route("/api/states/{id}/content", get(state_content))
         .route("/api/sync/negotiate", axum::routing::post(negotiate))
+        .route("/api/units/negotiate", axum::routing::post(negotiate_units))
+        .route(
+            "/api/units",
+            get(list_units).post(upload_unit).layer(DefaultBodyLimit::max(UPLOAD_LIMIT)),
+        )
+        .route("/api/units/{id}/content", get(unit_content))
+        .route("/api/units/{id}/downloaded", axum::routing::post(unit_downloaded))
         .route("/api/sync/sessions/{id}/complete", axum::routing::post(complete_session))
             // Artwork straight off the tree. ES-DE and Skraper already scraped it;
             // re-serving it through a database would gain nothing.
@@ -1732,6 +1879,7 @@ async fn main() -> Result<()> {
         sync: std::sync::Mutex::new(SyncState {
             store: saves::SaveStore::new(&saves_root),
             states: saves::StateStore::new(saves_root.join("_states")),
+            units: units::UnitStore::new(saves_root.join("_units")),
             path: state_path,
             data,
         }),
@@ -1914,6 +2062,7 @@ mod tests {
             sync: std::sync::Mutex::new(SyncState {
                 store: saves::SaveStore::new(&saves_root),
                 states: saves::StateStore::new(saves_root.join("_states")),
+            units: units::UnitStore::new(saves_root.join("_units")),
                 path: saves_root.join("sync-state.json"),
                 data: Default::default(),
             }),
@@ -2305,7 +2454,50 @@ mod tests {
         }
     }
 
-    /// The same rule `upload_state` already kept, for saves.
+    /// One PSP save made on the Nova reaches the Mac, the Mac's change goes
+    /// back, and the Nova's stale copy is refused rather than written over it.
+    #[tokio::test]
+    async fn a_save_unit_travels_both_ways_and_a_stale_copy_is_refused() {
+        use std::io::Write as _;
+        let zip = |bytes: &[u8]| {
+            let mut w = zip::ZipWriter::new(std::io::Cursor::new(Vec::new()));
+            w.start_file("DATA.BIN", zip::write::SimpleFileOptions::default()).unwrap();
+            w.write_all(bytes).unwrap();
+            w.finish().unwrap().into_inner()
+        };
+        let (_d, app) = built();
+        let up = |dev: &str| format!("/api/units?family=ppsspp&key=UCUS98653DATA00&device_id={dev}");
+        assert_eq!(post_part(&app, &up("nova"), "unitFile", "u.zip", &zip(b"nova 1"), true).await, StatusCode::OK);
+
+        let ask = |dev: &str, held: Option<String>| serde_json::json!({
+            "device_id": dev, "families": ["ppsspp"],
+            "units": held.map(|h| vec![serde_json::json!({"family": "ppsspp", "key": "UCUS98653DATA00", "content_hash": h})]).unwrap_or_default(),
+        });
+        let (_, body) = post_json(&app, "/api/units/negotiate", ask("mac", None)).await;
+        let plan: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(plan["operations"][0]["action"], "download", "{body}");
+        let id = plan["operations"][0]["unit_id"].as_i64().unwrap();
+        let (s, _) = get(&app, &format!("/api/units/{id}/content")).await;
+        assert_eq!(s, StatusCode::OK);
+        let (s, _) = post_json(&app, &format!("/api/units/{id}/downloaded?device_id=mac"), serde_json::json!({})).await;
+        assert_eq!(s, StatusCode::OK);
+
+        // The Mac plays and uploads. It agreed on the server's copy, so it may.
+        assert_eq!(post_part(&app, &up("mac"), "unitFile", "u.zip", &zip(b"mac 2"), true).await, StatusCode::OK);
+        // The Nova still holds its first copy and changes it: both moved.
+        assert_eq!(post_part(&app, &up("nova"), "unitFile", "u.zip", &zip(b"nova 3"), true).await, StatusCode::CONFLICT);
+        let nova_1 = moose_rack::saveunit::check(&zip(b"nova 1")).unwrap();
+        let (_, body) = post_json(&app, "/api/units/negotiate", ask("nova", Some(nova_1))).await;
+        assert!(body.contains("\"download\""), "a Nova that had not changed it takes the Mac's copy: {body}");
+        let (_, body) = post_json(&app, "/api/units/negotiate", ask("nova", Some("nova 3".into()))).await;
+        assert!(body.contains("\"conflict\""), "one that had is asked which to keep: {body}");
+
+        // Nothing of another family is offered.
+        let (_, body) = post_json(&app, "/api/units/negotiate", serde_json::json!({"device_id": "flip", "families": ["pcsx2"]})).await;
+        assert!(body.contains("\"operations\":[]"), "{body}");
+    }
+
+    /// The same rule `upload_state` already kept, for saves.    /// The same rule `upload_state` already kept, for saves.
     #[tokio::test]
     async fn an_uploaded_save_cannot_escape_its_directory() {
         let (d, app) = built();
