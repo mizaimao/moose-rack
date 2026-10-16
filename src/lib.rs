@@ -54,6 +54,7 @@ pub mod probe;
 pub mod retroarch;
 pub mod retroarch_install;
 pub mod savehash;
+pub mod saveunit;
 pub mod shaders;
 pub mod slangp;
 pub mod theme;
