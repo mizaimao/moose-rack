@@ -751,6 +751,10 @@ pub async fn resolve(
         )
         .await;
     }
+    // A standalone emulator's save folder, named `family/key`.
+    if crate::unitsync::unit_of(&conflict.file_name).is_some() {
+        return crate::unitsync::resolve(client, conflict, keep, library_root, data_dir).await;
+    }
 
     let identity = DeviceIdentity::ensure(client, data_dir).await?;
     let slot = conflict.slot.as_deref().unwrap_or("unslotted");

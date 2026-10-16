@@ -2495,7 +2495,18 @@ pub async fn sync_saves_plan(state: &AppState) -> CmdResult<crate::syncplan::Rev
         .await
         .map_err(err)?;
     let plan = client.negotiate(&identity.device_id, &states).await.map_err(err)?;
-    Ok(crate::syncplan::Review::from_plan(&plan))
+    let mut review = crate::syncplan::Review::from_plan(&plan);
+
+    // Standalone emulators' saves, into the same list.
+    let mut problems = crate::savesync::Summary::default();
+    let units = Config::load().map(|c| c.saves.units).unwrap_or_default();
+    let sources = crate::unitsync::sources(&units, &mut problems);
+    let (lines, agreed, notes) =
+        crate::unitsync::preview(&client, &sources, Path::new(".")).await.map_err(err)?;
+    review.add_states(lines, agreed);
+    review.notes.extend(problems.problems);
+    review.notes.extend(notes);
+    Ok(review)
 }
 
 #[derive(Serialize)]
@@ -2575,15 +2586,26 @@ pub async fn sync_saves(state: &AppState) -> CmdResult<SyncRun> {
         crate::savesync::scan(&cache, &state.map, &root).map_err(err)?
     };
 
-    let summary = crate::savesync::run_all(
+    let library_root = state.roms_dir.parent().unwrap_or(Path::new("."));
+    let mut summary = crate::savesync::run_all(
         &client,
         &candidates,
         &root,
         Path::new("."),
-        state.roms_dir.parent().unwrap_or(Path::new(".")),
+        library_root,
     )
         .await
         .map_err(err)?;
+    let units = Config::load().map(|c| c.saves.units).unwrap_or_default();
+    let sources = crate::unitsync::sources(&units, &mut summary);
+    if let Err(e) =
+        crate::unitsync::run(&client, &sources, Path::new("."), library_root, &mut summary).await
+    {
+        summary.fail(format!("emulator saves: {e:#}"));
+    }
+    // What the conflict picker answers from. Only a launch used to fill it, so
+    // a conflict this sync showed could not be resolved: "no pending conflict".
+    *state.pending_conflicts.lock().map_err(err)? = summary.conflicts.clone();
     Ok(SyncRun {
         headline: summary.headline(),
         notes: summary.notes,

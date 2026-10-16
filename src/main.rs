@@ -2026,12 +2026,26 @@ async fn cmd_sync_saves(dry_run: bool, keep: Option<&str>, root: Option<&str>) -
                 c.core.as_deref().unwrap_or(&c.core_dir)
             );
         }
+
+        // Standalone emulators' saves, from [[saves.units]].
+        let mut summary = moose_rack::savesync::Summary::default();
+        for src in moose_rack::unitsync::sources(&cfg.saves.units, &mut summary) {
+            let held = src.scan(&mut summary);
+            println!("\n{} {} save(s) in {}", held.len(), src.family, src.dir.display());
+            for h in &held {
+                let title = moose_rack::unitsync::title(&src.family, &h.path).unwrap_or_default();
+                println!("  {:<24} {:>8} KB  {title}", h.key, h.summary.bytes / 1024);
+            }
+        }
+        for note in &summary.notes {
+            println!("  {note}");
+        }
         return Ok(());
     }
 
     let client = cfg.server.client()?;
     let candidates = moose_rack::savesync::scan(&store, &map, &root)?;
-    let summary =
+    let mut summary =
         moose_rack::savesync::run_all(
             &client,
             &candidates,
@@ -2040,6 +2054,18 @@ async fn cmd_sync_saves(dry_run: bool, keep: Option<&str>, root: Option<&str>) -
             Path::new(&cfg.library.local_root),
         )
         .await?;
+    let sources = moose_rack::unitsync::sources(&cfg.saves.units, &mut summary);
+    if let Err(e) = moose_rack::unitsync::run(
+        &client,
+        &sources,
+        Path::new("."),
+        Path::new(&cfg.library.local_root),
+        &mut summary,
+    )
+    .await
+    {
+        summary.fail(format!("emulator saves: {e:#}"));
+    }
     for note in &summary.notes {
         println!("{note}");
     }

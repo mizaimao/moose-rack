@@ -2497,7 +2497,80 @@ mod tests {
         assert!(body.contains("\"operations\":[]"), "{body}");
     }
 
-    /// The same rule `upload_state` already kept, for saves.    /// The same rule `upload_state` already kept, for saves.
+    /// The app's own unit sync, over a real socket, between two devices: a
+    /// PSP save from the Nova reaches the Mac, the Mac's change comes back,
+    /// and both changing is a conflict that keeping the server's copy settles,
+    /// with the Nova's copy backed up first.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn the_app_syncs_a_psp_save_through_the_service() {
+        use moose_rack::savesync::{Keep, Summary};
+        let (d, app) = built();
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+        let client = moose_rack::api::Client::new(&format!("http://{addr}"), "frank", "pw").unwrap();
+
+        // Each device: its own data folder (and so its own device id), memory
+        // stick and library.
+        let device = |name: &str| {
+            let home = d.path().join(name);
+            std::fs::create_dir_all(home.join("stick/PSP/SAVEDATA")).unwrap();
+            std::fs::write(home.join("state.json"), format!(r#"{{"device_id":"{name}","name":"{name}"}}"#)).unwrap();
+            let cfg = moose_rack::config::UnitSourceCfg {
+                family: "ppsspp".into(),
+                root: home.join("stick").to_string_lossy().into_owned(),
+                max_mb: None,
+                skip: vec![],
+            };
+            (home, cfg)
+        };
+        let (nova, nova_cfg) = device("nova");
+        let (mac, mac_cfg) = device("mac");
+        let save = |home: &std::path::Path| home.join("stick/PSP/SAVEDATA/UCUS98653DATA00");
+        let write = |home: &std::path::Path, bytes: &str| {
+            std::fs::create_dir_all(save(home)).unwrap();
+            std::fs::write(save(home).join("PARAM.SFO"), b"\0PSF").unwrap();
+            std::fs::write(save(home).join("DATA.BIN"), bytes).unwrap();
+        };
+        let data = |home: &std::path::Path| std::fs::read_to_string(save(home).join("DATA.BIN")).unwrap();
+        let sync = |home: std::path::PathBuf, cfg: moose_rack::config::UnitSourceCfg| {
+            let client = &client;
+            async move {
+                let mut s = Summary::default();
+                let sources = moose_rack::unitsync::sources(std::slice::from_ref(&cfg), &mut s);
+                moose_rack::unitsync::run(client, &sources, &home, &home.join("lib"), &mut s).await.unwrap();
+                assert!(s.problems.is_empty(), "{:?}", s.problems);
+                s
+            }
+        };
+
+        write(&nova, "nova 1");
+        assert_eq!(sync(nova.clone(), nova_cfg.clone()).await.uploaded, 1);
+        assert_eq!(sync(mac.clone(), mac_cfg.clone()).await.downloaded, 1);
+        assert_eq!(data(&mac), "nova 1");
+        assert_eq!(sync(mac.clone(), mac_cfg.clone()).await.unchanged, 1, "a second run moves nothing");
+
+        write(&mac, "mac 2");
+        assert_eq!(sync(mac.clone(), mac_cfg.clone()).await.uploaded, 1);
+        assert_eq!(sync(nova.clone(), nova_cfg.clone()).await.downloaded, 1);
+        assert_eq!(data(&nova), "mac 2");
+
+        write(&nova, "nova 3");
+        write(&mac, "mac 3");
+        assert_eq!(sync(mac.clone(), mac_cfg.clone()).await.uploaded, 1);
+        let s = sync(nova.clone(), nova_cfg.clone()).await;
+        assert_eq!(s.conflicts.len(), 1, "both moved: {:?}", s.notes);
+        assert_eq!(data(&nova), "nova 3", "nothing is written for a conflict");
+
+        let said = moose_rack::savesync::resolve(&client, &s.conflicts[0], Keep::Server, &nova, &nova.join("lib"), &nova).await.unwrap();
+        assert!(said.contains("kept the server's ppsspp/UCUS98653DATA00"), "{said}");
+        assert_eq!(data(&nova), "mac 3");
+        let kept = nova.join("lib/saves-backup/units/ppsspp/UCUS98653DATA00");
+        assert!(std::fs::read_dir(&kept).unwrap().count() >= 1, "the Nova's own copy was backed up first");
+        assert_eq!(sync(nova.clone(), nova_cfg.clone()).await.unchanged, 1);
+    }
+
+    /// The same rule `upload_state` already kept, for saves.    /// The same rule `upload_state` already kept, for saves.    /// The same rule `upload_state` already kept, for saves.
     #[tokio::test]
     async fn an_uploaded_save_cannot_escape_its_directory() {
         let (d, app) = built();

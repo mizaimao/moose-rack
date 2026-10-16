@@ -59,6 +59,7 @@ pub mod shaders;
 pub mod slangp;
 pub mod theme;
 pub mod tweaks;
+pub mod unitsync;
 pub mod theme_remote;
 pub mod rowwindow;
 pub mod savebackup;

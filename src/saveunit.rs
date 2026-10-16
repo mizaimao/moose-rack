@@ -29,6 +29,20 @@ pub fn valid_family(family: &str) -> bool {
     FAMILIES.contains(&family)
 }
 
+/// A unit's id, derived from its name the way a save's is, so the server and
+/// a device compute the same one. No wider than 2^53 - 1, for the browser.
+pub fn unit_id(family: &str, key: &str) -> i64 {
+    let mut h = md5::Md5::new();
+    h.update(b"unit\0");
+    h.update(family.as_bytes());
+    h.update(b"\0");
+    h.update(key.as_bytes());
+    let d = h.finalize();
+    let mut b = [0u8; 8];
+    b.copy_from_slice(&d[..8]);
+    (i64::from_le_bytes(b) & ((1i64 << 53) - 1)).max(1)
+}
+
 /// A key is the folder's own name: one path segment, nothing a Windows or SMB
 /// file system would refuse, no leading dot (temporary folders here use one).
 pub fn valid_key(key: &str) -> bool {

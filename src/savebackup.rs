@@ -98,6 +98,34 @@ pub fn keep(library_root: &Path, rom_id: i64, slot: &str, save: &Path) -> Result
     Ok(Some(dest))
 }
 
+/// Zip a save unit's folder aside before it is replaced, and evict the oldest:
+/// `<library>/saves-backup/units/<family>/<key>/<millis>-<key>.zip`.
+///
+/// The stamp is the newest file's mtime, so backing up an unchanged folder
+/// twice keeps one copy, as [`keep`] does for a file.
+pub fn keep_folder(library_root: &Path, family: &str, key: &str, folder: &Path) -> Result<Option<PathBuf>> {
+    if !folder.is_dir() {
+        return Ok(None);
+    }
+    if !crate::saveunit::valid_family(family) || !crate::saveunit::valid_key(key) {
+        anyhow::bail!("not a save unit: {family}/{key}");
+    }
+    let summary = crate::saveunit::summarize(folder)?;
+    if summary.files == 0 {
+        return Ok(None);
+    }
+    let dir = root(library_root).join("units").join(family).join(key);
+    std::fs::create_dir_all(&dir).with_context(|| format!("creating {}", dir.display()))?;
+    let dest = dir.join(format!("{}-{key}.zip", summary.modified.max(0) as u64 * 1000));
+    if dest.exists() {
+        return Ok(Some(dest));
+    }
+    let zip = crate::saveunit::pack(folder)?;
+    std::fs::write(&dest, zip).with_context(|| format!("writing {}", dest.display()))?;
+    prune(&dir)?;
+    Ok(Some(dest))
+}
+
 /// Drop the oldest copies until at most [`KEEP`] remain.
 fn prune(dir: &Path) -> Result<()> {
     let mut found = list_dir(dir);
