@@ -1036,6 +1036,7 @@ async fn upload_one(
         .map(|n| n.to_string_lossy().into_owned())
         .unwrap_or_default();
 
+    let sent = bytes.len() as i64;
     let result = client
         .upload_save(
             rom_id,
@@ -1048,7 +1049,21 @@ async fn upload_one(
             overwrite,
         )
         .await?;
+    if let Ok(saved) = &result {
+        stored_whole(&name, sent, saved.file_size_bytes)?;
+    }
     Ok(result.is_ok())
+}
+
+/// An error unless the server says it kept every byte it was sent.
+///
+/// moose-service up to 0.5.6 answered 200 to an upload over 2 MB and kept an
+/// empty file, so a 200 alone is not proof that a save arrived.
+pub(crate) fn stored_whole(name: &str, sent: i64, stored: i64) -> Result<()> {
+    if stored != sent {
+        anyhow::bail!("the server kept {stored} of the {sent} bytes of {name}");
+    }
+    Ok(())
 }
 
 /// A file's mtime as RFC 3339 UTC, which is the format the server compares on.
@@ -1580,6 +1595,13 @@ mod tests {
     fn a_failure_is_never_headlined_as_in_sync() {
         let s = Summary { unchanged: 300, failed: 2, ..Default::default() };
         assert_eq!(s.headline(), "2 failed");
+    }
+
+    #[test]
+    fn a_save_the_server_kept_short_is_an_error() {
+        assert!(stored_whole("Game.state", 5_000_000, 5_000_000).is_ok());
+        let e = stored_whole("Game.state", 5_000_000, 0).unwrap_err().to_string();
+        assert!(e.contains("0 of the 5000000 bytes of Game.state"), "{e}");
     }
 
     #[test]

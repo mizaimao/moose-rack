@@ -34,7 +34,7 @@ use std::sync::Arc;
 
 use anyhow::{Context as _, Result};
 use axum::{
-    extract::{Path as AxPath, Query, State},
+    extract::{DefaultBodyLimit, Path as AxPath, Query, State},
     response::IntoResponse,
     routing::get,
     Json, Router,
@@ -960,6 +960,42 @@ async fn state_content(
     }
 }
 
+/// The largest upload either store takes.
+///
+/// axum's default is 2 MB, and a save state is often bigger: a PS1 state is
+/// about 5 MB, a PS2 one tens of MB. 256 MB leaves room for those and for a
+/// whole memory card, and still bounds what one request can hold in memory.
+const UPLOAD_LIMIT: usize = 256 * 1024 * 1024;
+
+/// The `part` file of an upload as (bare file name, bytes).
+///
+/// `Ok(None)` when the form has no such part or its name is unusable; `Err`
+/// with the response to send when the body could not be read. A failed read is
+/// refused, never stored: taking it as empty bytes is how 30 save states over
+/// the old 2 MB limit reached the server as empty files on 2026-10-14, and the
+/// client was told they had arrived.
+async fn file_part(
+    form: &mut axum::extract::Multipart,
+    part: &str,
+) -> std::result::Result<Option<(String, Vec<u8>)>, axum::response::Response> {
+    let refuse =
+        |e: axum::extract::multipart::MultipartError| (e.status(), e.body_text()).into_response();
+    let mut found = None;
+    while let Some(field) = form.next_field().await.map_err(refuse)? {
+        if field.name() != Some(part) {
+            continue;
+        }
+        let name = field.file_name().unwrap_or_default().to_owned();
+        let bytes = field.bytes().await.map_err(refuse)?.to_vec();
+        found = Some((name, bytes));
+    }
+    // A path separator in the name would write outside the store.
+    Ok(found.and_then(|(name, bytes)| {
+        let bare = std::path::Path::new(&name).file_name()?.to_str()?.to_owned();
+        (!bare.starts_with('.')).then_some((bare, bytes))
+    }))
+}
+
 #[derive(Deserialize)]
 struct StateUploadQuery {
     rom_id: i64,
@@ -981,25 +1017,15 @@ async fn upload_state(
     if let Some(no) = refuse_legacy([q.rom_id]) {
         return no;
     }
-    let mut file_name = String::new();
-    let mut bytes: Vec<u8> = Vec::new();
-    while let Ok(Some(field)) = form.next_field().await {
-        // `stateFile`, the name `upload_state` sends. Anything else is ignored
-        // rather than guessed at.
-        if field.name() == Some("stateFile") {
-            file_name = field.file_name().unwrap_or_default().to_owned();
-            bytes = field.bytes().await.unwrap_or_default().to_vec();
+    // `stateFile`, the name `upload_state` sends. Anything else is ignored
+    // rather than guessed at.
+    let (safe, bytes) = match file_part(&mut form, "stateFile").await {
+        Ok(Some(part)) => part,
+        Ok(None) => {
+            return (axum::http::StatusCode::BAD_REQUEST, "no usable stateFile").into_response()
         }
-    }
-    // A path separator in the name would write outside the store.
-    let safe = std::path::Path::new(&file_name)
-        .file_name()
-        .and_then(|n| n.to_str())
-        .unwrap_or_default()
-        .to_owned();
-    if safe.is_empty() || safe.starts_with('.') {
-        return (axum::http::StatusCode::BAD_REQUEST, "no usable stateFile").into_response();
-    }
+        Err(no) => return no,
+    };
     let store = lib.sync.lock().unwrap();
     match store.states.write(q.rom_id, &safe, q.emulator.as_deref(), &bytes) {
         Ok(st) => Json(st).into_response(),
@@ -1028,17 +1054,13 @@ async fn upload_save(
     if let Some(no) = refuse_legacy([q.rom_id]) {
         return no;
     }
-    let mut name = String::new();
-    let mut bytes = Vec::new();
-    while let Ok(Some(field)) = form.next_field().await {
-        if field.name() == Some("saveFile") {
-            name = field.file_name().unwrap_or("save.srm").to_owned();
-            bytes = field.bytes().await.map(|b| b.to_vec()).unwrap_or_default();
+    let (name, bytes) = match file_part(&mut form, "saveFile").await {
+        Ok(Some(part)) => part,
+        Ok(None) => {
+            return (axum::http::StatusCode::BAD_REQUEST, "no usable saveFile").into_response()
         }
-    }
-    if name.is_empty() {
-        return (axum::http::StatusCode::BAD_REQUEST, "no saveFile part").into_response();
-    }
+        Err(no) => return no,
+    };
 
     let mut st = lib.sync.lock().unwrap();
     let existing = st.store.list(Some(q.rom_id)).into_iter().find(|s| s.file_name == name);
@@ -1480,10 +1502,16 @@ fn app(lib: Arc<Library>, media_dir: std::path::PathBuf, with_index: bool) -> Ro
         .route("/api/firmware", get(firmware))
         .route("/api/firmware/{id}/content/{*name}", get(firmware_content))
         .route("/api/devices", axum::routing::post(register_device))
-        .route("/api/saves", get(list_saves).post(upload_save))
+        .route(
+            "/api/saves",
+            get(list_saves).post(upload_save).layer(DefaultBodyLimit::max(UPLOAD_LIMIT)),
+        )
         .route("/api/saves/{id}/content", get(save_content))
         .route("/api/saves/{id}/downloaded", axum::routing::post(save_downloaded))
-        .route("/api/states", get(list_states).post(upload_state))
+        .route(
+            "/api/states",
+            get(list_states).post(upload_state).layer(DefaultBodyLimit::max(UPLOAD_LIMIT)),
+        )
         .route("/api/states/{id}/content", get(state_content))
         .route("/api/sync/negotiate", axum::routing::post(negotiate))
         .route("/api/sync/sessions/{id}/complete", axum::routing::post(complete_session))
@@ -2201,6 +2229,75 @@ mod tests {
                 assert!(!got.starts_with('.'), "{name} was stored as {got}");
             }
         }
+    }
+
+    /// One multipart request with a single file part. `whole: false` leaves
+    /// off the closing boundary, which is what a body cut short looks like.
+    async fn post_part(app: &Router, uri: &str, part: &str, name: &str, bytes: &[u8], whole: bool) -> StatusCode {
+        let mut body = format!(
+            "--X\r\nContent-Disposition: form-data; name=\"{part}\"; filename=\"{name}\"\r\n\r\n"
+        )
+        .into_bytes();
+        body.extend_from_slice(bytes);
+        if whole {
+            body.extend_from_slice(b"\r\n--X--\r\n");
+        }
+        let r = app.clone().oneshot(
+            Request::builder().method("POST").uri(uri)
+                .header("content-type", "multipart/form-data; boundary=X")
+                .body(Body::from(body)).unwrap()).await.unwrap();
+        r.status()
+    }
+
+    /// axum takes 2 MB by default. Over that, the old handlers stored an empty
+    /// file and answered 200, which is how 30 PS1 and Dreamcast states were
+    /// lost on the way to the server.
+    #[tokio::test]
+    async fn an_upload_bigger_than_two_megabytes_arrives_whole() {
+        let (_d, app) = built();
+        let big = vec![b'x'; 5 * 1024 * 1024];
+        for (uri, part, list) in [
+            ("/api/saves?rom_id=16777217&device_id=dev", "saveFile", "/api/saves?rom_id=16777217"),
+            ("/api/states?rom_id=16777217", "stateFile", "/api/states?rom_id=16777217"),
+        ] {
+            assert_eq!(post_part(&app, uri, part, "Big.state", &big, true).await, StatusCode::OK, "{part}");
+            let (_, listed) = get(&app, list).await;
+            let v: serde_json::Value = serde_json::from_str(&listed).unwrap();
+            assert_eq!(v[0]["file_size_bytes"], big.len(), "{part}");
+            let id = v[0]["id"].as_i64().unwrap();
+            let kind = if part == "saveFile" { "saves" } else { "states" };
+            let (_, content) = get(&app, &format!("/api/{kind}/{id}/content")).await;
+            assert_eq!(content.len(), big.len(), "{part}");
+        }
+    }
+
+    /// A body that cannot be read is refused, and nothing is written in its
+    /// place: an empty file would read as a save that was agreed on.
+    #[tokio::test]
+    async fn an_upload_cut_short_is_refused_and_stores_nothing() {
+        let (_d, app) = built();
+        for (uri, part, list) in [
+            ("/api/saves?rom_id=16777217&device_id=dev", "saveFile", "/api/saves?rom_id=16777217"),
+            ("/api/states?rom_id=16777217", "stateFile", "/api/states?rom_id=16777217"),
+        ] {
+            let status = post_part(&app, uri, part, "Game.state", b"half", false).await;
+            assert!(status.is_client_error(), "{part}: {status}");
+            assert_eq!(get(&app, list).await.1, "[]", "{part}");
+        }
+    }
+
+    /// The same rule `upload_state` already kept, for saves.
+    #[tokio::test]
+    async fn an_uploaded_save_cannot_escape_its_directory() {
+        let (d, app) = built();
+        for name in ["../../escape.srm", "/etc/passwd", ".hidden"] {
+            let status = post_part(&app, "/api/saves?rom_id=16777217&device_id=dev", "saveFile", name, b"x", true).await;
+            if status == StatusCode::OK {
+                let (_, listed) = get(&app, "/api/saves?rom_id=16777217").await;
+                assert!(!listed.contains('/') && !listed.contains("\".hidden"), "{name}: {listed}");
+            }
+        }
+        assert!(!d.path().join("escape.srm").exists());
     }
 
     fn with_guest() -> auth::AuthConfig {

@@ -250,11 +250,20 @@ pub async fn run(
                         continue;
                     }
                 };
+                let sent = bytes.len() as i64;
                 match client
                     .upload_state(*rom_id, &file_name, bytes, c.core.as_deref())
                     .await
                 {
                     Ok(saved) => {
+                        if let Err(e) =
+                            crate::savesync::stored_whole(&file_name, sent, saved.file_size_bytes)
+                        {
+                            // Not recorded, so the next run sees it unsynced
+                            // and tries again.
+                            summary.fail(format!("{e}"));
+                            continue;
+                        }
                         summary.uploaded += 1;
                         summary.notes.push(format!("uploaded state {file_name}"));
                         // The fingerprint has to come from the same endpoint the
