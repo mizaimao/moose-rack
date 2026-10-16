@@ -268,10 +268,17 @@ impl SyncState {
     }
 
     fn agree(&mut self, device: &str, rom_id: i64, file: &str, hash: &str) {
+        self.note(device, rom_id, file, hash);
+        self.flush();
+    }
+
+    /// Record agreement without writing it out. True when it changed anything.
+    fn note(&mut self, device: &str, rom_id: i64, file: &str, hash: &str) -> bool {
         self.data
             .seen
-            .insert(format!("{device}\0{rom_id}\0{file}"), hash.to_owned());
-        self.flush();
+            .insert(format!("{device}\0{rom_id}\0{file}"), hash.to_owned())
+            .as_deref()
+            != Some(hash)
     }
 
     fn flush(&self) {
@@ -891,9 +898,21 @@ async fn negotiate(
     if let Some(no) = refuse_legacy(req.saves.iter().map(|s| s.rom_id)) {
         return no;
     }
-    let st = lib.sync.lock().unwrap();
+    let mut st = lib.sync.lock().unwrap();
     let server = st.store.list(None);
     let mut plan = saves::plan(&req.device_id, &req.saves, &server, &st.seen_map());
+    // Holding the same bytes is agreeing on them. Unrecorded, a device whose
+    // copy matched on first contact had nothing on file, and its next change
+    // came back as a conflict instead of an upload: 268 of the Nova's saves.
+    let mut noted = false;
+    for o in plan.operations.iter().filter(|o| o.action == "no_op") {
+        if let (Some(file), Some(hash)) = (&o.file_name, &o.server_content_hash) {
+            noted |= st.note(&req.device_id, o.rom_id, file, hash);
+        }
+    }
+    if noted {
+        st.flush();
+    }
     // A session id the client can quote back. Nothing is reserved by it -- it
     // exists so `complete_session` has something to close.
     plan.session_id = Some(1);
@@ -2836,6 +2855,24 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(r.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn a_copy_that_matched_on_first_contact_uploads_its_next_change() {
+        let (_d, app) = built();
+        let (_, up) = post_save(&app, "/api/saves?rom_id=16777217&device_id=alice", "a.srm", b"v1").await;
+        let v1 = serde_json::from_str::<serde_json::Value>(&up).unwrap()["content_hash"].clone();
+        let ask = |hash: serde_json::Value| serde_json::json!({"device_id": "nova", "saves": [{
+            "rom_id": 16777217, "file_name": "a.srm", "content_hash": hash,
+            "updated_at": "2026-10-15T00:00:00Z", "file_size_bytes": 2}]});
+        let (_, first) = post_json(&app, "/api/sync/negotiate", ask(v1)).await;
+        assert!(first.contains("\"no_op\""), "{first}");
+
+        let (_, next) = post_json(&app, "/api/sync/negotiate", ask("changed".into())).await;
+        let plan: serde_json::Value = serde_json::from_str(&next).unwrap();
+        assert_eq!(plan["operations"][0]["action"], "upload", "{next}");
+        let (s, body) = post_save(&app, "/api/saves?rom_id=16777217&device_id=nova", "a.srm", b"v2").await;
+        assert_eq!(s, StatusCode::OK, "{body}");
     }
 
     #[tokio::test]
