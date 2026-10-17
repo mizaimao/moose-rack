@@ -12,7 +12,7 @@
 
 import { state, invoke } from "./state.js";
 import { toast } from "./util.js";
-import { showPlatforms, renderRows } from "./library.js";
+import { showPlatforms, redrawRows } from "./library.js";
 
 /// Views that are lists of games rather than lists of consoles.
 const GAME_VIEWS = new Set(["roms", "search", "collection-roms"]);
@@ -81,7 +81,7 @@ async function cycleListArt() {
   if (!want) return;
   try {
     const label = await invoke("set_list_art", { value: want });
-    if (state.rows.length) renderRows(state.rows, state.view === "search");
+    redrawRows();
     window.__TAURI__?.event?.emit?.("art-changed");
     toast(String(label));
   } catch (e) {
@@ -99,7 +99,7 @@ async function cycleListArt() {
 export async function useMiximage() {
   try {
     const label = await invoke("set_list_art", { value: "miximages" });
-    if (state.rows.length) renderRows(state.rows, state.view === "search");
+    redrawRows();
     window.__TAURI__?.event?.emit?.("art-changed");
     toast(String(label));
   } catch (e) {

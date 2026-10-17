@@ -13,7 +13,7 @@ import { arrangeCurrentList, listRef, leaveList } from "./arrange.js";
 import {
   setPageFilterLabel, setPageFilterExtra, refreshPageFilter,
 } from "./pagefilter.js";
-import { renderRows, applyLayoutForView } from "./library.js";
+import { renderRows, applyLayoutForView, grouped } from "./library.js";
 import { restoreSidebar } from "./detail.js";
 import { collectionArt } from "./collection-art.js";
 import { shellMode } from "./shell.js";
@@ -218,6 +218,9 @@ export async function showCollectionRoms(id, name) {
   el.search.value = "";
 
   state.rows = await invoke("collection_roms", { id: String(id), list: listRef() });
+  // Collections mix platforms, so the games are drawn one section per console,
+  // and kept that way when the order or the layout changes.
+  state.grouping = true;
   await arrangeCurrentList();
   enterView({
     title: `${name} — ${state.rows.length} games`,
@@ -229,8 +232,7 @@ export async function showCollectionRoms(id, name) {
     zoom: "grid",
     gridLayout: state.layout === "grid",
   });
-  // Collections mix platforms, so the list view needs the platform column.
-  renderRows(state.rows, true);
+  renderRows(state.rows, grouped());
 }
 
 /// Fill collection cards with a member's cover, through the same local cache

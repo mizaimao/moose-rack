@@ -12,7 +12,7 @@ import { openFilterMenu } from "./filter.js";
 import { installPageFilter } from "./pagefilter.js";
 import { chooseMode, storedMode, shellMode, installColumnResizer } from "./shell.js";
 import { human, toast, escapeHtml } from "./util.js";
-import { showPlatforms, showRoms, runSearch, setLayout, setZoom, renderRows, randomGame,
+import { showPlatforms, showRoms, runSearch, setLayout, setZoom, redrawRows, randomGame,
   applyLayoutForView, layoutKeyForView } from "./library.js";
 import { setSidebar, installDetailResizer } from "./detail.js";
 import { installTabs, showSection, resetSection, activeSection } from "./tabs.js";
@@ -89,7 +89,7 @@ installHistoryNav({
 // what is on screen: the images themselves have changed, not their layout.
 listen("art-changed", () => {
   if (state.view === "platforms") return;
-  if (state.rows.length) renderRows(state.rows, state.view === "search");
+  redrawRows();
 });
 
 // The console pictures, which are the other half: `art-changed` deliberately

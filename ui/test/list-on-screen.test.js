@@ -16,11 +16,18 @@ import { fakeBackend } from "./backend.js";
 
 const uiDir = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-let dom, state, el, library, sort, filter, history, pictures;
+let dom, backend, state, el, library, sort, filter, history, pictures, collections;
 
 const SNES = [
   { id: 1, name: "Zelda", platform: "snes", size_bytes: 1, downloaded: true },
   { id: 2, name: "Mario", platform: "snes", size_bytes: 1, downloaded: true },
+];
+
+/// Games from two consoles: a collection, or what was played last.
+const MIXED = [
+  { id: 10, name: "Metroid", platform: "snes", size_bytes: 1, downloaded: true },
+  { id: 11, name: "Golden Sun", platform: "gba", size_bytes: 1, downloaded: true },
+  { id: 12, name: "Kirby", platform: "snes", size_bytes: 1, downloaded: true },
 ];
 
 /// A turn of the event loop, for handlers that redraw when the backend answers.
@@ -53,6 +60,10 @@ before(async () => {
     if (cmd === "platforms") return [{ slug: "snes", name: "SNES", rom_count: 2, playable: true }];
     if (cmd === "play_history") return { sessions: 0 };
     if (cmd === "set_list_art") return "Miximages";
+    if (cmd === "collection_roms") return MIXED.map((r) => ({ ...r }));
+    // The strip on the console screen asks for a handful; the page behind
+    // its More button asks for 500.
+    if (cmd === "recent_games") return args.limit === 500 ? MIXED.map((r) => ({ ...r })) : [];
     if (cmd === "rom_detail") {
       return {
         id: args.id, name: `Game ${args.id}`, fs_name: "g.zip", platform: "snes",
@@ -63,8 +74,9 @@ before(async () => {
     }
     return [];
   };
+  backend = fakeBackend(reply);
   dom.window.__TAURI__ = {
-    core: { invoke: fakeBackend(reply), convertFileSrc: (p) => p },
+    core: { invoke: backend, convertFileSrc: (p) => p },
     event: { listen: async () => () => {}, emit: () => {} },
   };
 
@@ -74,6 +86,7 @@ before(async () => {
   filter = await import("../js/filter.js");
   history = await import("../js/history.js");
   pictures = await import("../js/pictures.js");
+  collections = await import("../js/collections.js");
   // The tables the menus are built from, which the app fetches at startup.
   filter.setFilters((await sort.loadListControls()).filters);
 });
@@ -116,5 +129,34 @@ describe("a screen that is not a list of games", () => {
     await settle();
     assert.match(el.list.textContent, /Nothing recorded yet/, "History was replaced by a game list");
     assert.equal(el.list.querySelector("[data-id]"), null, "a game was drawn over History");
+  });
+});
+
+describe("a redraw keeps the shape the list was opened in", () => {
+  const sections = () => el.list.querySelectorAll(".pgroup").length;
+
+  /// Every redraw passed "is this a search" as whether to group, and
+  /// Continue playing is a search that opens ungrouped, most recent first.
+  /// Switching grid and list regrouped it by console and lost that order.
+  test("Continue playing stays one list when the layout changes", async () => {
+    await library.showAllRecent();
+    assert.equal(sections(), 0, "Continue playing opened grouped");
+    library.setLayout(state.layout === "grid" ? "list" : "grid");
+    assert.equal(sections(), 0, "switching the layout grouped it by console");
+  });
+
+  /// And a collection opens grouped by console without being a search, so
+  /// changing its order flattened it.
+  test("a collection stays grouped when the order changes", async () => {
+    await collections.showCollectionRoms("c1", "Mixed");
+    assert.equal(sections(), 2, "the collection did not open grouped");
+    // Selecting the first row asks the stand-in backend for lists of its
+    // own, and it would take one of those for this list. Told again here.
+    await settle();
+    backend.rows(MIXED);
+    await sort.cycleOrder(1);
+    await settle();
+    await settle();
+    assert.equal(sections(), 2, "changing the order dropped the grouping");
   });
 });

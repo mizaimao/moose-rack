@@ -14,7 +14,7 @@
 // dozen tiles in a fixed order that people learn the shape of, and shuffling
 // it would cost more than it gives.
 
-import { el, state, invoke } from "./state.js";
+import { el, invoke } from "./state.js";
 import { escapeHtml } from "./util.js";
 import { listRef, applyArrangement, arrangement, arrangeCurrentList } from "./arrange.js";
 
@@ -123,8 +123,8 @@ export async function cycleOrder(delta = 1) {
 /// Imported lazily to keep this module out of a cycle: library.js draws the
 /// rows and needs the sort, and the sort needs to ask it to draw again.
 async function redraw() {
-  const { renderRows } = await import("./library.js");
-  if (state.rows.length) renderRows(state.rows, state.view === "search");
+  const { redrawRows } = await import("./library.js");
+  redrawRows();
   refreshSortButton();
 }
 
