@@ -346,7 +346,7 @@ pub fn plan(ra: &RetroArch, map: &CoreMap, req: &Request<'_>) -> Result<Plan> {
     // being overridden and where, and turn override loading off for this
     // launch so the settings we were asked for are the ones in force.
     if let Some(path) = overrides.as_ref() {
-        let clash = ra.override_clash(map.label_for(&core), path);
+        let clash = ra.override_clash(&core, path);
         if !clash.is_empty() {
             notes.push(format!(
                 "RetroArch's own override for {} sets {} — ignoring its override file for \
