@@ -46,6 +46,19 @@ export function applyArrangement(next) {
   return current;
 }
 
+/// Forget the list, for a screen that is not a list of games.
+///
+/// The console grid, History and a collections list hold no games, but
+/// `state.rows` and the arrangement above went on describing whichever list
+/// was open last. Everything that acts on "the list on screen" asks those two,
+/// so pressing S on the console grid sorted SNES and drew its games under the
+/// title "Platforms", R picked a game nobody could see, and changing the game
+/// art in Settings painted the old console over History.
+export function leaveList() {
+  state.rows = [];
+  applyArrangement(null);
+}
+
 /// Ask the backend how the list on screen should be drawn.
 ///
 /// Called after every fetch that replaces `state.rows`, before the rows are

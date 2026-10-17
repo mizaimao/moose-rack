@@ -14,6 +14,7 @@
 
 import { state, invoke } from "./state.js";
 import { region, enter } from "./shell.js";
+import { leaveList } from "./arrange.js";
 import { escapeHtml, toast } from "./util.js";
 
 /// Longest bar in the group is full width; everything else is relative to it.
@@ -52,6 +53,9 @@ export async function showHistory() {
   // section machinery parked History under "platforms" and restored the
   // console grid every time you came back to it — the tab simply never showed.
   state.view = "history";
+  // Nor a list of games, so the sort, the filter, Random and a redraw from
+  // Settings have nothing here to act on; see `leaveList`.
+  leaveList();
   // No column: this is a page, not a list with something to pick from beside
   // it. Emptying the column left a 240px strip of nothing down the left with a
   // drag handle on it, which reads as a list that failed to load.
