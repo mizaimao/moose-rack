@@ -393,7 +393,10 @@ impl App {
         if !self.auto_sync {
             return SyncOutcome::Ok(None);
         }
-        let (Some(client), Some(ra)) = (self.client.clone(), self.ra.as_ref()) else {
+        if self.ra.is_none() {
+            return SyncOutcome::Ok(None);
+        }
+        let Some(client) = self.client.clone() else {
             return SyncOutcome::Ok(None);
         };
         let library_root = self.local_roms.parent().unwrap_or(Path::new(".")).to_path_buf();
@@ -401,17 +404,19 @@ impl App {
         let Some(cache) = self.save_cache.as_ref() else {
             return SyncOutcome::Ok(None);
         };
+        // The saves folder the launch hands RetroArch, not its install folder:
+        // the game writes there, so that is where the sync has to look.
         let candidates = match crate::savesync::scan_for_rom(
             cache,
             &self.map,
-            &ra.root,
+            &self.saves_root,
             &rom.fs_name,
         ) {
             Ok(c) => c,
             Err(e) => return SyncOutcome::Ok(Some(format!("saves: could not scan ({e})"))),
         };
 
-        let root = ra.root.clone();
+        let root = self.saves_root.clone();
         let result = self.rt.block_on(async move {
             crate::savesync::run_all(&client, &candidates, &root, Path::new("."), &library_root).await
         });

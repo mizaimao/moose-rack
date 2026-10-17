@@ -464,15 +464,15 @@ pub async fn verify_achievements() -> CmdResult<crate::achievements::Verified> {
 }
 
 pub fn game_states(state: &AppState, id: i64) -> CmdResult<Vec<StateView>> {
-    let Some(ra) = state.retroarch.as_ref() else {
+    if state.retroarch.is_none() {
         return Ok(Vec::new());
-    };
+    }
     let cache = state.cache.lock().map_err(err)?;
     let Some(row) = cache.rom_by_id(id).map_err(err)? else {
         return Ok(Vec::new());
     };
     let now = std::time::SystemTime::now();
-    Ok(crate::states::shelf(&ra.root, &cache, &state.map, &row.fs_name)
+    Ok(crate::states::shelf(&saves_root(state), &cache, &state.map, &row.fs_name)
         .map_err(err)?
         .into_iter()
         .map(|s| StateView {
@@ -492,11 +492,10 @@ pub fn game_states(state: &AppState, id: i64) -> CmdResult<Vec<StateView>> {
 }
 
 pub fn delete_state(state: &AppState, id: i64, slot: String) -> CmdResult<String> {
-    let ra = state.retroarch.as_ref().ok_or("RetroArch not found")?;
     let library_root = state.roms_dir.parent().unwrap_or(Path::new(".")).to_path_buf();
     let cache = state.cache.lock().map_err(err)?;
     let row = cache.rom_by_id(id).map_err(err)?.ok_or("no such game")?;
-    let shelf = crate::states::shelf(&ra.root, &cache, &state.map, &row.fs_name)
+    let shelf = crate::states::shelf(&saves_root(state), &cache, &state.map, &row.fs_name)
         .map_err(err)?;
     let found = shelf
         .into_iter()
@@ -1619,10 +1618,10 @@ pub async fn android_sync_before(state: &AppState, id: i64) -> CmdResult<String>
         cache.rom_by_id(id).map_err(err)?
     }
     .ok_or_else(|| format!("no rom with id {id}"))?;
-    let Some(ra) = state.retroarch.as_ref() else {
+    if state.retroarch.is_none() {
         return Ok(String::new());
-    };
-    let pre = auto_sync(state, ra, &row, savesync::When::BeforeLaunch).await;
+    }
+    let pre = auto_sync(state, &row, savesync::When::BeforeLaunch).await;
     if !pre.conflicts.is_empty() {
         *state.pending_conflicts.lock().map_err(err)? = pre.conflicts.clone();
         return Err(format!(
@@ -1655,8 +1654,8 @@ pub async fn android_after_play(
     {
         notes.push(format!("played for {}", crate::util::spell_duration(seconds)));
     }
-    if let Some(ra) = state.retroarch.as_ref() {
-        let post = auto_sync(state, ra, &row, savesync::When::AfterExit).await;
+    if state.retroarch.is_some() {
+        let post = auto_sync(state, &row, savesync::When::AfterExit).await;
         if let Some(note) = post.note {
             notes.push(note);
         }
@@ -1907,7 +1906,6 @@ pub struct AutoSync {
 
 pub async fn auto_sync(
     state: &AppState,
-    ra: &RetroArch,
     row: &cache::RomRow,
     when: savesync::When,
 ) -> AutoSync {
@@ -1918,6 +1916,11 @@ pub async fn auto_sync(
         return AutoSync::default();
     };
     let library_root = state.roms_dir.parent().unwrap_or(Path::new(".")).to_path_buf();
+    // The folder the launch told RetroArch to save into, which is where the
+    // manual sync looks too. This used to be RetroArch's install folder, so
+    // the pull before a game and the push after it both looked somewhere the
+    // game never wrote.
+    let root = saves_root(state);
 
     // The SQLite connection is not Sync, so the scan takes the lock and drops
     // it before any awaiting starts.
@@ -1925,7 +1928,7 @@ pub async fn auto_sync(
         let Ok(cache) = state.cache.lock() else {
             return AutoSync::default();
         };
-        match savesync::scan_for_rom(&cache, &state.map, &ra.root, &row.fs_name) {
+        match savesync::scan_for_rom(&cache, &state.map, &root, &row.fs_name) {
             Ok(c) => c,
             Err(e) => {
                 return AutoSync {
@@ -1936,7 +1939,7 @@ pub async fn auto_sync(
         }
     };
 
-    match savesync::run_all(&client, &candidates, &ra.root, Path::new("."), &library_root).await {
+    match savesync::run_all(&client, &candidates, &root, Path::new("."), &library_root).await {
         Ok(summary) => AutoSync {
             note: savesync::describe(when, &summary),
             conflicts: summary.conflicts,
@@ -1957,7 +1960,6 @@ pub async fn resolve_save_conflict(
     keep: crate::savesync::Keep,
 ) -> CmdResult<String> {
     let client = state.client.clone().ok_or("not connected to a server")?;
-    let ra = state.retroarch.as_ref().ok_or("RetroArch not found")?;
     let library_root = state.roms_dir.parent().unwrap_or(Path::new(".")).to_path_buf();
 
     let conflict = {
@@ -1973,7 +1975,7 @@ pub async fn resolve_save_conflict(
         &client,
         &conflict,
         keep,
-        &ra.root,
+        &saves_root(state),
         &library_root,
         Path::new("."),
     )
