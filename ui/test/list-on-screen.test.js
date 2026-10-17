@@ -226,6 +226,18 @@ describe("the search box", () => {
     await library.runSearch("");
   });
 
+  /// Nor over another tab opened while it was out.
+  test("an answer that lands after another screen was opened is dropped", async () => {
+    await library.showPlatforms();
+    const slow = library.runSearch("slow");
+    await settle();
+    await history.showHistory();
+    releaseSlow();
+    await slow;
+    assert.equal(state.view, "history");
+    assert.match(el.list.textContent, /Nothing recorded yet/, "the search was drawn over History");
+  });
+
   /// Escape emptied the box and went back, and the search waiting on the
   /// 200 ms timer then arrived anyway, under an empty box.
   test("Escape stops a search that is still waiting to run", async () => {
