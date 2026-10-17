@@ -265,6 +265,14 @@ pub async fn run(
                 Ok(false) => summary.conflicts.push(as_conflict(&op.family, &op.key, op.reason.clone(), h, None)),
                 Err(e) => summary.fail(format!("could not upload {name}: {e:#}")),
             },
+            // Here, and not reported: it is in the skip list, over the size
+            // limit, or has a name this device cannot sync. The server sees a
+            // unit the device never agreed on and plans a download, which
+            // replaced the folder this device had chosen to leave alone.
+            ("download", None) if kept_here(&src.dir.join(&op.key)) => {
+                summary.skipped += 1;
+                summary.notes.push(format!("{name}: this device does not sync it, so the server's copy was not put over it"));
+            }
             ("download", _) => {
                 let target = src.dir.join(&op.key);
                 match download(
@@ -301,6 +309,11 @@ pub async fn run(
         }
     }
     Ok(())
+}
+
+/// Whether a unit folder holds anything. An empty one has nothing to lose.
+fn kept_here(folder: &Path) -> bool {
+    folder.is_dir() && saveunit::summarize(folder).map(|s| s.files > 0).unwrap_or(true)
 }
 
 type Negotiated = (DeviceIdentity, Vec<(String, Held)>, Vec<UnitOperation>);
@@ -451,6 +464,21 @@ fn sfo_fields(b: &[u8]) -> Option<Vec<(String, String)>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A folder with files in it that the scan left out is kept; an empty or
+    /// missing one is free to fill.
+    #[test]
+    fn a_unit_with_files_in_it_is_kept_here() {
+        let dir = std::env::temp_dir().join("moose-rack-unitsync-kept");
+        let _ = std::fs::remove_dir_all(&dir);
+        assert!(!kept_here(&dir.join("ULUS10509DAT")), "missing");
+        std::fs::create_dir_all(dir.join("EMPTY")).unwrap();
+        assert!(!kept_here(&dir.join("EMPTY")), "empty");
+        std::fs::create_dir_all(dir.join("ULUS10509DAT")).unwrap();
+        std::fs::write(dir.join("ULUS10509DAT/DATA.BIN"), b"install data").unwrap();
+        assert!(kept_here(&dir.join("ULUS10509DAT")));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 
     fn scratch(tag: &str) -> PathBuf {
         let d = std::env::temp_dir().join(format!("moose-unitsync-{tag}-{}", std::process::id()));
