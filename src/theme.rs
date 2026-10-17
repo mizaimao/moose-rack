@@ -567,6 +567,25 @@ pub fn write_set_mapping(media_root: &Path, set: &str, fingerprint: &str) -> std
 
 /// Delete a named set's art. The theme checkout is already long gone; this is
 /// the few hundred kilobytes of SVG it left behind.
+/// Where a set is downloaded before it replaces the installed copy.
+///
+/// Beside the installed sets, under a dot name nothing lists: `installed_sets`
+/// only counts the catalogue's own names, `drop_stale_sets` leaves names it
+/// does not know alone, and `pool_looks` skips `sets/` altogether.
+pub fn staging_dir(media_root: &Path, set: &str) -> PathBuf {
+    media_root.join("_platforms").join("sets").join(format!(".{set}.incoming"))
+}
+
+/// Put the set downloaded into [`staging_dir`] in place of the installed one.
+///
+/// The old copy goes only now, once there is a new one. Removing it before
+/// the download, as both front ends did, meant pressing "Get pictures" with
+/// no network took away the pictures already on screen.
+pub fn commit_set(media_root: &Path, set: &str) -> std::io::Result<()> {
+    remove_set(media_root, set)?;
+    std::fs::rename(staging_dir(media_root, set), media_root.join("_platforms").join("sets").join(set))
+}
+
 pub fn remove_set(media_root: &Path, set: &str) -> std::io::Result<()> {
     let dir = media_root.join("_platforms").join("sets").join(set);
     match std::fs::remove_dir_all(&dir) {
@@ -860,6 +879,31 @@ mod tests {
         assert!(!sets.join("iconic-es-de").exists(), "the stale set is gone");
         assert!(sets.join("razor-es-de").exists(), "a current set is kept");
         assert!(sets.join("hand-made").exists(), "an unrecognized set is not ours to delete");
+    }
+
+    /// A new copy of a set replaces the installed one only once it exists.
+    /// Removing the old one first meant fetching with no network left none.
+    #[test]
+    fn a_fetched_set_replaces_the_installed_one_only_at_the_end() {
+        let media = std::env::temp_dir().join("moose-rack-commit-set");
+        let _ = std::fs::remove_dir_all(&media);
+        let installed = set_dir(&media, "razor-es-de", "logo");
+        std::fs::create_dir_all(&installed).unwrap();
+        std::fs::write(installed.join("snes.svg"), "old").unwrap();
+
+        let staging = staging_dir(&media, "razor-es-de");
+        std::fs::create_dir_all(staging.join("logo")).unwrap();
+        std::fs::write(staging.join("logo").join("nes.svg"), "new").unwrap();
+        // Not a set of its own while it is being filled.
+        let current = BTreeMap::from([("razor-es-de".to_owned(), "logo=x.svg".to_owned())]);
+        write_set_mapping(&media, "razor-es-de", "logo=x.svg").unwrap();
+        assert!(drop_stale_sets(&media, &current).is_empty());
+        assert!(installed.join("snes.svg").is_file(), "the installed copy went before the new one was ready");
+
+        commit_set(&media, "razor-es-de").unwrap();
+        assert!(installed.join("nes.svg").is_file());
+        assert!(!installed.join("snes.svg").exists());
+        assert!(!staging.exists());
     }
 
     /// An unstamped download is a stale one: those are exactly the fetches made
