@@ -63,7 +63,10 @@ el.back.addEventListener("click", stepBack);
     const btn = document.createElement("button");
     btn.id = "signin";
     btn.textContent = "Sign in";
-    btn.title = `Signed in as ${me.name}. Sign in as the owner to change settings.`;
+    // No name when nobody is signed in at all.
+    btn.title = me.name
+      ? `Signed in as ${me.name}. Sign in as the owner to change settings.`
+      : "Sign in as the owner to change settings.";
     btn.addEventListener("click", () => (window.location.href = "/login"));
     el.status?.after(btn);
   } catch {
