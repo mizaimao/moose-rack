@@ -328,7 +328,7 @@ export async function backToPlatforms() {
 
 function platformCard(p) {
   return `
-      <div class="card" data-slug="${p.slug}">
+      <div class="card" data-slug="${escapeHtml(p.slug)}">
         <div class="logo">${
           p.logo
             ? `<img data-fit="1" class="${p.logo_wordmark ? "wordmark" : "art"}" src="${convertFileSrc(p.logo)}" alt="" />`
@@ -353,7 +353,7 @@ function platformRow(p) {
   // core" are beside it, and a riddle in a 240px column where they are not, so
   // the row says so in words and the title says it in full.
   return `
-      <div class="row prow" data-slug="${p.slug}"
+      <div class="row prow" data-slug="${escapeHtml(p.slug)}"
         title="${escapeHtml(p.name)} — ${p.rom_count} games${
           p.playable ? "" : ", but no emulator installed for it"
         }">

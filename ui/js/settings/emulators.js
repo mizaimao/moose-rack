@@ -228,7 +228,7 @@ function motionMarkup(motion) {
 
 function systemRow(s) {
   const cores = s.emulators.length
-    ? `<select data-slug="${s.slug}" data-field="core">${s.emulators
+    ? `<select data-slug="${escapeHtml(s.slug)}" data-field="core">${s.emulators
         .map(
           (e) =>
             `<option value="${e.core}" ${e.core === s.core ? "selected" : ""}>${escapeHtml(
@@ -239,7 +239,7 @@ function systemRow(s) {
     : `<span class="dim">none known</span>`;
 
   const shaders = s.shaders.length
-    ? `<select data-slug="${s.slug}" data-field="shader">
+    ? `<select data-slug="${escapeHtml(s.slug)}" data-field="shader">
          <option value="none" ${!s.shader ? "selected" : ""}>None</option>
          ${s.shaders
            .map(
@@ -262,7 +262,7 @@ function systemRow(s) {
   // back nothing that could shoot.
   const gun = s.gun
     ? `<label class="gun" title="${escapeHtml(s.gun)} in place of a pad — aim with the mouse, left button fires">
-         <input type="checkbox" data-slug="${s.slug}" data-field="lightgun" ${s.gun_on ? "checked" : ""} />
+         <input type="checkbox" data-slug="${escapeHtml(s.slug)}" data-field="lightgun" ${s.gun_on ? "checked" : ""} />
          <span>${escapeHtml(s.gun)}</span>
        </label>`
     : `<span class="dim">—</span>`;
