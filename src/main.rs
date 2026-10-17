@@ -1099,7 +1099,7 @@ async fn cmd_probe(
 
     for rom in &roms {
         let home = roms_dir.join(rom.folder()).join(&rom.fs_name);
-        let local = if home.exists() { home } else { rom.legacy_path(&roms_dir) };
+        let mut local = if home.exists() { home } else { rom.legacy_path(&roms_dir) };
         if !local.exists() {
             let Some(client) = client.as_ref() else {
                 println!("{:<44} skipped (not downloaded, no server)", short(&rom.name));
@@ -1117,12 +1117,20 @@ async fn cmd_probe(
                 sha1: rom.sha1_hash.as_deref(),
                 multi_file: rom.multi_file,
             };
-            if let Err(e) =
-                download::fetch(client.http(), client.base(), client.auth(), &target, &roms_dir, |_, _| {})
-                    .await
+            // Where the download actually went. The old-layout path chosen
+            // above is not it for a game in a subfolder, or for a system whose
+            // folder is not its slug (genesis/ for megadrive), and probing a
+            // path that does not exist ended the whole run at the first game.
+            match download::fetch(client.http(), client.base(), client.auth(), &target, &roms_dir, |_, _| {})
+                .await
             {
-                println!("{:<44} skipped ({e})", short(&rom.name));
-                continue;
+                Ok(download::Outcome::AlreadyHave(p)) | Ok(download::Outcome::Downloaded { path: p, .. }) => {
+                    local = p;
+                }
+                Err(e) => {
+                    println!("{:<44} skipped ({e})", short(&rom.name));
+                    continue;
+                }
             }
         }
         // Neo Geo and similar need their BIOS in RetroArch's system dir, or
@@ -1131,7 +1139,13 @@ async fn cmd_probe(
             let _ = ra.install_bios(d);
         }
 
-        let results = probe::probe_cores(&ra, &local, &candidates, frames, &scratch)?;
+        let results = match probe::probe_cores(&ra, &local, &candidates, frames, &scratch) {
+            Ok(r) => r,
+            Err(e) => {
+                println!("{:<44} skipped ({e:#})", short(&rom.name));
+                continue;
+            }
+        };
         let marks: Vec<String> = results
             .iter()
             .map(|r| format!("{:>7}", if r.verdict.ok() { "ok" } else { "-" }))
