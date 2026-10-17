@@ -1264,6 +1264,21 @@ describe("the settings shortcut", () => {
     press({ key: "," });
     assert.equal(invoked.some((c) => c.cmd === "open_settings"), false);
   });
+
+  /// A game playing in the page has the keyboard. Its keys reached the
+  /// library behind it, so Cmd+, opened settings under a running game.
+  test("nothing reaches the library while a game plays in the page", () => {
+    const stage = document.createElement("dialog");
+    stage.id = "ejs-stage";
+    document.body.appendChild(stage);
+    try {
+      invoked.length = 0;
+      press({ key: ",", metaKey: true });
+      assert.equal(invoked.some((c) => c.cmd === "open_settings"), false);
+    } finally {
+      stage.remove();
+    }
+  });
 });
 
 describe("take offline: collections as well as systems", () => {
