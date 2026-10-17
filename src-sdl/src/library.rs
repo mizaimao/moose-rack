@@ -67,8 +67,10 @@ impl Detail {
         // Rating first: on the desktop it is the line the eye goes to, and a
         // score is the one fact here that is an opinion rather than a
         // measurement.
+        // Out of 100, the scale the cache stores and the desktop shows. This
+        // said "/ 10" over the same number, so a game rated 85 read "85.0 / 10".
         if let Some(rating) = self.rating {
-            out.push(("Rating", format!("{rating:.1} / 10")));
+            out.push(("Rating", format!("{rating:.0} / 100")));
         }
         if let Some(year) = self.year {
             out.push(("Released", year.to_string()));
