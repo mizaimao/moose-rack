@@ -2144,8 +2144,10 @@ pub async fn fetch_icon_set(
 
     // Start from nothing. A set fetched under an older mapping has pictures in
     // folders this one does not write, and leaving them means "Hardware" goes
-    // on showing whatever the previous table filed there.
-    let _ = theme::remove_set(&state.media_dir, dir);
+    // on showing whatever the previous table filed there. So the new copy is
+    // fetched beside the old and replaces it whole at the end.
+    let staging = theme::staging_dir(&state.media_dir, dir);
+    let _ = std::fs::remove_dir_all(&staging);
 
     let wanted = theme::esde_names_for(&state.map, &slugs);
     let total: usize = art.looks.len() * wanted.len();
@@ -2153,7 +2155,7 @@ pub async fn fetch_icon_set(
     let mut per_style: Vec<(String, usize)> = Vec::new();
 
     for look in &art.looks {
-        let out = theme::set_dir(&state.media_dir, dir, &look.id);
+        let out = staging.join(&look.id);
         std::fs::create_dir_all(&out).map_err(err)?;
         let mut written = 0usize;
         for (slug, names) in &wanted {
@@ -2187,9 +2189,10 @@ pub async fn fetch_icon_set(
     }
 
     if per_style.is_empty() {
-        let _ = theme::remove_set(&state.media_dir, dir);
-        return Err(format!("{dir}: no console pictures could be fetched"));
+        let _ = std::fs::remove_dir_all(&staging);
+        return Err(format!("{dir}: no console pictures could be fetched; the ones here are kept"));
     }
+    theme::commit_set(&state.media_dir, dir).map_err(err)?;
     // Stamp what this was fetched under, so a corrected table can tell.
     let _ = theme::write_set_mapping(&state.media_dir, dir, &art.fingerprint());
     Ok(per_style.iter().map(|(l, n)| format!("{n} {l}")).collect::<Vec<_>>().join(", "))
