@@ -9,7 +9,7 @@ import { el, state, trail, invoke, convertFileSrc, listen } from "./state.js";
 import { enter as enterView, region, resetGames } from "./shell.js";
 import { escapeHtml } from "./util.js";
 import { pickerBar, wirePickerBar, sortPicker, loadPickerOrders } from "./picker-order.js";
-import { arrangeCurrentList, listRef } from "./arrange.js";
+import { arrangeCurrentList, listRef, leaveList } from "./arrange.js";
 import {
   setPageFilterLabel, setPageFilterExtra, refreshPageFilter,
 } from "./pagefilter.js";
@@ -42,6 +42,8 @@ function topBar(title, { filter = true } = {}) {
   restoreSidebar();
   state.platform = null;
   state.selected = null;
+  // A grid of collections is not a list of games; see `leaveList`.
+  leaveList();
   el.detail.hidden = true;
   el.search.value = "";
   // The zoom slider stays: these are cards too, and sizing them is the same

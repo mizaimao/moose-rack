@@ -5,7 +5,7 @@ import { fitted, boxSize } from "./fitpicture.js";
 import { resetNav, primeNav } from "./keys.js";
 import { currentOrder, defaultOrder, refreshSortButton, sorted } from "./sort.js";
 import { filtered, refreshFilterButton, activeFilters, clearFilters } from "./filter.js";
-import { arrangeCurrentList, applyArrangement, listRef } from "./arrange.js";
+import { arrangeCurrentList, applyArrangement, listRef, leaveList } from "./arrange.js";
 import { enter, region, showZoom, shellMode } from "./shell.js";
 import { showMenu } from "./menu.js";
 import { deleteState } from "./states.js";
@@ -43,6 +43,9 @@ export async function showPlatforms(prefetched = null) {
   trail.length = 0;
   state.platform = null;
   state.selected = null;
+  // Consoles are not games. In three columns the console chosen next fills
+  // the list again; in one pane nothing should act on the one just left.
+  leaveList();
   // In three columns the preview is a column, not something to hide, and the
   // middle is not emptied — going "back" to the consoles there is a thing that
   // does not happen.
