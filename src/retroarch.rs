@@ -1061,11 +1061,18 @@ input_player2_gun_start_mbtn = \"3\"
     /// Compares by key rather than against a list of interesting settings, so
     /// a clash in anything we set is reported rather than only the ones
     /// somebody thought to check.
-    pub fn override_clash(&self, core_label: Option<&str>, ours: &Path) -> Vec<String> {
-        let Some(label) = core_label else {
+    ///
+    /// `core` is the core's file stem, `snes9x`. The folder is found the way
+    /// [`Self::core_config_dir`] finds it: RetroArch names it after the core's
+    /// own name, `config/Snes9x/`, while ES-DE's label for the same core is
+    /// "Snes9x - Current", and looking under the label found nothing for
+    /// Snes9x, MAME, Nestopia or PCSX ReARMed.
+    pub fn override_clash(&self, core: &str, ours: &Path) -> Vec<String> {
+        let Some(dir) = self.core_config_dir(core) else {
             return Vec::new();
         };
-        let theirs = self.config_dir().join(label).join(format!("{label}.cfg"));
+        let name = dir.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+        let theirs = dir.join(format!("{name}.cfg"));
         let (Ok(ours), Ok(theirs)) =
             (std::fs::read_to_string(ours), std::fs::read_to_string(theirs))
         else {
@@ -2044,7 +2051,7 @@ input_r2_axis = "+5"
         )
         .unwrap();
 
-        let clash = ra.override_clash(Some("Geolith"), &ours);
+        let clash = ra.override_clash("geolith", &ours);
         assert_eq!(clash, vec!["input_turbo_mode", "input_turbo_period"]);
         // Only what both set *differently*: their video_smooth is theirs to
         // keep, and our turbo button is not contested.
@@ -2058,11 +2065,24 @@ input_r2_axis = "+5"
             "input_turbo_mode = \"3\"\ninput_turbo_period = \"15\"\n",
         )
         .unwrap();
-        assert!(ra.override_clash(Some("Geolith"), &ours).is_empty());
+        assert!(ra.override_clash("geolith", &ours).is_empty());
 
-        // A core with no override of its own, and a core we have no name for.
-        assert!(ra.override_clash(Some("SwanStation"), &ours).is_empty());
-        assert!(ra.override_clash(None, &ours).is_empty());
+        // A core with no override of its own.
+        assert!(ra.override_clash("swanstation", &ours).is_empty());
+    }
+
+    /// RetroArch's folder is the core's own name, and ES-DE's label for the
+    /// same core is something else: "Snes9x - Current" for `config/Snes9x/`.
+    #[test]
+    fn a_core_override_is_found_under_retroarchs_folder_name() {
+        let dir = scratch("override-clash-name");
+        let ra = fake(&dir);
+        let core_cfg = ra.config_dir().join("Snes9x");
+        std::fs::create_dir_all(&core_cfg).unwrap();
+        std::fs::write(core_cfg.join("Snes9x.cfg"), "savefile_directory = \"/elsewhere\"\n").unwrap();
+        let ours = dir.join("ours.cfg");
+        std::fs::write(&ours, "savefile_directory = \"/saves\"\n").unwrap();
+        assert_eq!(ra.override_clash("snes9x", &ours), vec!["savefile_directory"]);
     }
 
     /// Nothing is moved, cleared or swapped. That is the whole reason this
