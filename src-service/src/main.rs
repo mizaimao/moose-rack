@@ -284,9 +284,11 @@ impl SyncState {
             != Some(hash)
     }
 
+    /// Through a file beside it and a rename: a crash part way through left
+    /// a torn file, which the next start read as no state at all.
     fn flush(&self) {
         if let Ok(j) = serde_json::to_vec_pretty(&self.data) {
-            let _ = std::fs::write(&self.path, j);
+            let _ = saves::write_atomically(&self.path, &j);
         }
     }
 }
@@ -1198,6 +1200,10 @@ struct UploadQuery {
     device_id: String,
     #[serde(default)]
     overwrite: Option<bool>,
+    /// The core the save came from. Kept beside it, so a device that files
+    /// saves by core knows which folder it goes in.
+    #[serde(default)]
+    emulator: Option<String>,
 }
 
 /// Accept a save, unless the server's copy moved since this device last agreed.
@@ -1244,7 +1250,7 @@ async fn upload_save(
             }
         }
 
-    match st.store.write(q.rom_id, &name, &bytes) {
+    match st.store.write(q.rom_id, &name, &bytes, q.emulator.as_deref()) {
         Ok(s) => {
             let h = s.content_hash.clone().unwrap_or_default();
             st.agree(&q.device_id, q.rom_id, &name, &h);
