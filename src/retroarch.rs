@@ -1308,17 +1308,23 @@ input_player2_gun_start_mbtn = \"3\"
             return String::new();
         }
 
-        [
-                "",
-                "# Project-local core options and remaps, so the user's own",
-                "# config/<Core>/<Core>.opt is never touched. global_core_options",
-                "# is required: without it the per-core file wins and this is ignored.",
-                "global_core_options = \"true\"",
-                &format!("core_options_path = \"{}\"", opts_path.display()),
-                &format!("input_remapping_directory = \"{}\"", remaps_dir.display()),
-                "",
-            ]
-            .join("\n").to_string()
+        let mut out = vec![
+            String::new(),
+            "# Project-local core options and remaps, so the user's own".to_owned(),
+            "# config/<Core>/<Core>.opt is never touched.".to_owned(),
+        ];
+        // Only when a file was written. mGBA and Nestopia have a remap and no
+        // options, and pointing RetroArch at a shared options file that was
+        // not written, or was left by another core, set aside the user's own
+        // `.opt` for those cores on every launch.
+        if !opts.is_empty() {
+            out.push("# global_core_options is required: without it the per-core file wins.".to_owned());
+            out.push("global_core_options = \"true\"".to_owned());
+            out.push(format!("core_options_path = \"{}\"", opts_path.display()));
+        }
+        out.push(format!("input_remapping_directory = \"{}\"", remaps_dir.display()));
+        out.push(String::new());
+        out.join("\n")
     }
     /// As [`Self::launch`], with an override config appended.
     pub fn launch_with(
@@ -1918,6 +1924,24 @@ input_r2_axis = "+5"
         let rmp = lib.join("retroarch/remaps/FCEUmm/FCEUmm.rmp");
         let body = std::fs::read_to_string(&rmp).expect("FCEUmm still wants its X/Y swap");
         assert!(body.contains("input_player1_btn_x"), "the swap was not written: {body}");
+    }
+
+    /// mGBA has a remap and no core options. Turning on the shared options
+    /// file for it pointed RetroArch at a file nothing wrote, in place of the
+    /// user's own `config/mGBA/mGBA.opt`.
+    #[test]
+    fn a_core_with_only_a_remap_keeps_the_users_own_options() {
+        let dir = scratch("remap-only");
+        let lib = dir.join("lib");
+        let ra = fake(&dir);
+        let mgba = ra.prepare_tweaks(&lib, "gba", "mgba", crate::tweaks::AutoFire::Off);
+        assert!(mgba.contains("input_remapping_directory"), "{mgba}");
+        assert!(!mgba.contains("global_core_options"), "{mgba}");
+        assert!(!mgba.contains("core_options_path"), "{mgba}");
+
+        // A core that does have options still gets the shared file.
+        let fceumm = ra.prepare_tweaks(&lib, "nes", "fceumm", crate::tweaks::AutoFire::Off);
+        assert!(fceumm.contains("global_core_options = \"true\""), "{fceumm}");
     }
 
     /// RetroArch 1.20.0 calls this `input_duty_cycle`. The *variable* behind it
