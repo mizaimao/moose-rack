@@ -423,10 +423,22 @@ pub async fn carry_out(
         report.sent += item.to_server().len() + item.off_server().len();
 
         match apply_here(es, &by_id, item, backups) {
-            Ok(written) => {
+            Ok(Applied { written, missed }) => {
                 report.files_written += written;
-                report.applied_here += item.moves.iter().filter(|m| !m.touches_server()).count();
-                baseline.agreed.insert(item.id.clone(), item.agreed.clone());
+                report.applied_here += item
+                    .moves
+                    .iter()
+                    .filter(|m| !m.touches_server())
+                    .count()
+                    .saturating_sub(missed.len());
+                baseline.agreed.insert(item.id.clone(), agreed_after(item, &missed));
+                if !missed.is_empty() {
+                    report.failed.push(format!(
+                        "{}: {} of its stars could not be written to the card",
+                        item.name,
+                        missed.len()
+                    ));
+                }
                 if item.held == Held::File {
                     files.push(item.name.clone());
                 }
@@ -447,21 +459,56 @@ async fn send(client: &Client, item: &Item) -> Result<()> {
     Ok(())
 }
 
-/// Write the handheld's half. Returns how many files were rewritten.
+/// What the handheld's half of a list came to.
+struct Applied {
+    /// How many files were rewritten.
+    written: usize,
+    /// Moves for this card that are not true of it afterwards: a gamelist ES
+    /// wrote in a shape the star could not be put into, or a game whose path
+    /// was not known.
+    missed: Vec<Move>,
+}
+
+/// What the baseline for `item` becomes, given the moves that did not land.
+///
+/// `item.agreed` assumes every move landed. A star that was not written,
+/// recorded as agreed, reads on the next run as one taken off here, and that
+/// unstar goes to the server. So each one that missed is put back the way the
+/// next run needs it to try again: a star not written is left out, and an
+/// unstar not written is kept in.
+fn agreed_after(item: &Item, missed: &[Move]) -> BTreeSet<i64> {
+    let mut agreed = item.agreed.clone();
+    for m in missed {
+        match m {
+            Move::StarHere(id) => {
+                agreed.remove(id);
+            }
+            Move::UnstarHere(id) => {
+                agreed.insert(*id);
+            }
+            Move::StarOnServer(_) | Move::UnstarOnServer(_) => {}
+        }
+    }
+    agreed
+}
+
+/// Write the handheld's half.
 fn apply_here(
     es: &EsPaths,
     by_id: &BTreeMap<i64, &Known>,
     item: &Item,
     backups: &Path,
-) -> Result<usize> {
-    let wanted: Vec<(&Known, bool)> = item
-        .moves
-        .iter()
-        .filter(|m| !m.touches_server())
-        .filter_map(|m| by_id.get(&m.rom_id()).map(|k| (*k, matches!(m, Move::StarHere(_)))))
-        .collect();
+) -> Result<Applied> {
+    let mut missed = Vec::new();
+    let mut wanted: Vec<(Move, &Known, bool)> = Vec::new();
+    for m in item.moves.iter().filter(|m| !m.touches_server()) {
+        match by_id.get(&m.rom_id()) {
+            Some(k) => wanted.push((*m, *k, matches!(m, Move::StarHere(_)))),
+            None => missed.push(*m),
+        }
+    }
     if wanted.is_empty() {
-        return Ok(0);
+        return Ok(Applied { written: 0, missed });
     }
 
     match &item.held {
@@ -469,24 +516,33 @@ fn apply_here(
             // Grouped by folder so each gamelist is read and written once,
             // however many of its games moved.
             let mut written = 0;
-            let mut folders: BTreeMap<String, Vec<(&Known, bool)>> = BTreeMap::new();
-            for (k, on) in wanted {
-                folders.entry(k.folder.clone()).or_default().push((k, on));
+            let mut folders: BTreeMap<String, Vec<(Move, &Known, bool)>> = BTreeMap::new();
+            for (m, k, on) in wanted {
+                folders.entry(k.folder.clone()).or_default().push((m, k, on));
             }
             for (folder, games) in folders {
                 let mut list = Gamelist::load_or_empty(&es.gamelist(&folder))?;
-                for (k, on) in games {
-                    list.set_favorite(&k.rel_path(), on);
+                for (_, k, on) in &games {
+                    list.set_favorite(&k.rel_path(), *on);
                 }
+                // Read back rather than trusted from `set_favorite`, which
+                // also says "nothing moved" for a star that was already there.
+                let stars = list.favorites();
+                missed.extend(
+                    games
+                        .iter()
+                        .filter(|(_, k, on)| stars.contains(&k.rel_path()) != *on)
+                        .map(|(m, ..)| *m),
+                );
                 if list.save(backups)? {
                     written += 1;
                 }
             }
-            Ok(written)
+            Ok(Applied { written, missed })
         }
         Held::File => {
             let mut file = CollectionFile::load(&es.collection(&item.name))?;
-            for (k, on) in wanted {
+            for (_, k, on) in wanted {
                 let full = k.full_path(&es.roms);
                 if on {
                     file.entries.insert(full);
@@ -494,7 +550,7 @@ fn apply_here(
                     file.entries.remove(&full);
                 }
             }
-            Ok(file.save(backups)? as usize)
+            Ok(Applied { written: file.save(backups)? as usize, missed })
         }
     }
 }
@@ -809,6 +865,30 @@ mod tests {
         // The gamelist it replaced was kept.
         let kept = std::fs::read_dir(backups(&es).join("snes")).unwrap().count();
         assert_eq!(kept, 1, "no backup of the gamelist that was rewritten");
+    }
+
+    /// A star the gamelist would not take used to be recorded as agreed all
+    /// the same. The next run then read "in the baseline, on the server, not
+    /// starred here" as an unstar made on the handheld, and took the star off
+    /// the server.
+    #[tokio::test]
+    async fn a_star_that_was_not_written_is_not_recorded_as_agreed() {
+        let (es, known) = card("not-written");
+        // No root to add a block to, so Secret of Mana cannot be starred.
+        std::fs::write(es.gamelist("snes"), "<?xml version=\"1.0\"?>\n").unwrap();
+        let plan = card_plan(known, vec![best_of_snes(vec![Move::StarHere(2)], &[1, 2])]);
+        let mut baseline = Baseline::default();
+        let report =
+            carry_out(&nowhere(), &es, &plan, &mut baseline, &backups(&es), false).await.unwrap();
+        assert_eq!(report.applied_here, 0, "{report:?}");
+        assert_eq!(report.failed.len(), 1, "{report:?}");
+        assert!(report.failed[0].starts_with("★ Best of snes: 1 of its stars"), "{}", report.failed[0]);
+        assert_eq!(
+            baseline.of("★ Best of snes"),
+            [1i64].into(),
+            "recorded a star the card does not have"
+        );
+        assert_eq!(std::fs::read_to_string(es.gamelist("snes")).unwrap(), "<?xml version=\"1.0\"?>\n");
     }
 
     #[tokio::test]
