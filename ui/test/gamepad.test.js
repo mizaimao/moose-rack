@@ -1325,4 +1325,17 @@ describe("take offline: collections as well as systems", () => {
     assert.equal(document.querySelectorAll(".bulk-coll:checked").length, 2);
     document.getElementById("bulk-overlay")?.remove();
   });
+
+  /// Only collections ticked, no system: a real choice, which the check in
+  /// front of Download refused as "nothing ticked".
+  test("collections alone are enough to download", async () => {
+    ui.askDownload({});
+    await settle();
+    document.querySelector('.bulk-coll[value="c1"]').checked = true;
+    invoked.length = 0;
+    document.querySelector(".bulk-go").click();
+    await settle();
+    assert.ok(invoked.some((c) => c.cmd === "download_set"), "the download was refused");
+    document.getElementById("bulk-overlay")?.remove();
+  });
 });

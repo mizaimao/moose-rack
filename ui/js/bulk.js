@@ -210,8 +210,10 @@ export async function askDownload(what = {}) {
     const picked = choice();
     // The one case the backend cannot report usefully: with nothing ticked it
     // has no idea whether you meant everything or nothing.
-    if (!picked.platforms.length && !picked.collection) {
-      return toast("Tick at least one system");
+    // Collections ticked on the "My collections" tab count: they were left out
+    // here, so ticking only those was refused as "nothing ticked".
+    if (!picked.platforms.length && !picked.collections.length && !picked.collection) {
+      return toast("Tick at least one system or collection");
     }
     go.disabled = true;
     const est = q(".bulk-est");
