@@ -1295,14 +1295,21 @@ async fn require_auth(
     next: axum::middleware::Next,
 ) -> axum::response::Response {
     if guard.cfg.open() || is_public(req.uri().path()) {
-        req.extensions_mut().insert(auth::Identity::Owner);
+        // `/whoami` answers everybody and says who they are. Giving it the
+        // owner's identity, as the other open routes get, made it tell a
+        // visitor with no credentials, or the guest, that they were the owner,
+        // so the page never offered a way to sign in.
+        let who = if !guard.cfg.open() && req.uri().path() == "/whoami" {
+            identify(&guard, &req)
+        } else {
+            Some(auth::Identity::Owner)
+        };
+        if let Some(w) = who {
+            req.extensions_mut().insert(w);
+        }
         return next.run(req).await;
     }
-    let header = req.headers().get(axum::http::header::AUTHORIZATION).and_then(|v| v.to_str().ok());
-    let cookie = req.headers().get(axum::http::header::COOKIE).and_then(|v| v.to_str().ok());
-    let who = auth::from_header(&guard.cfg, header).or_else(|| {
-        auth::session_from_cookies(cookie).and_then(|id| guard.sessions.get(id))
-    });
+    let who = identify(&guard, &req);
     let wants_html = req
         .headers()
         .get(axum::http::header::ACCEPT)
@@ -1372,14 +1379,25 @@ async fn require_auth(
     res
 }
 
+/// Who the request says it is, by its `Authorization` header or its session
+/// cookie, without refusing anybody.
+fn identify(guard: &Guard, req: &axum::extract::Request) -> Option<auth::Identity> {
+    let header = req.headers().get(axum::http::header::AUTHORIZATION).and_then(|v| v.to_str().ok());
+    let cookie = req.headers().get(axum::http::header::COOKIE).and_then(|v| v.to_str().ok());
+    auth::from_header(&guard.cfg, header)
+        .or_else(|| auth::session_from_cookies(cookie).and_then(|id| guard.sessions.get(id)))
+}
+
 /// Who the caller is, for a page that wants to offer a way to be somebody else.
 async fn whoami(
     who: Option<axum::extract::Extension<auth::Identity>>,
     State(guard): State<std::sync::Arc<Guard>>,
 ) -> Json<serde_json::Value> {
+    // No identity means credentials are configured and the request had none:
+    // the middleware gives one to everybody when nothing is configured.
     let (name, owner) = match who {
         Some(axum::extract::Extension(w)) => (w.name().to_owned(), w.is_owner()),
-        None => ("owner".to_owned(), true),
+        None => (String::new(), false),
     };
     Json(serde_json::json!({
         "name": name,
@@ -2671,6 +2689,21 @@ mod tests {
         let (_d2, open) = guarded(auth::AuthConfig::default());
         let (_, body) = req(&open, "GET", "/whoami", &[]).await;
         assert!(body.contains(r#""auth":false"#), "{body}");
+        assert!(body.contains(r#""owner":true"#), "{body}");
+    }
+
+    /// Nobody, and the guest, are not the owner. `/whoami` said they were, so
+    /// the page never drew its Sign in button.
+    #[tokio::test]
+    async fn whoami_does_not_call_a_visitor_the_owner() {
+        let (_d, app) = guarded(with_guest());
+        let (s, body) = req(&app, "GET", "/whoami", &[]).await;
+        assert_eq!(s, StatusCode::OK, "whoami has to answer everybody");
+        assert!(body.contains(r#""owner":false"#), "no credentials: {body}");
+
+        let (_, cookie, _) = post_login(&app, "/login", r#"{"guest":true}"#).await;
+        let (_, body) = req(&app, "GET", "/whoami", &[("cookie", &cookie.unwrap())]).await;
+        assert!(body.contains(r#""owner":false"#), "the guest: {body}");
     }
 
     /// The shared account: one button, no password, and it reads the library.
