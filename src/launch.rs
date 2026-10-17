@@ -425,7 +425,7 @@ pub fn plan(ra: &RetroArch, map: &CoreMap, req: &Request<'_>) -> Result<Plan> {
 /// a worse default than a console whose two-player games need a switch turned
 /// off, because the first looks broken and the second is at least visible: the
 /// launch notes say the port is a gun, and the app says so on first launch.
-fn gun_enabled(map: &BTreeMap<String, String>, platform: &str) -> bool {
+pub fn gun_enabled(map: &BTreeMap<String, String>, platform: &str) -> bool {
     // A console with no gun is never enabled, whatever a stale config says.
     // `config_lines` guards this too, but a function called `gun_enabled`
     // answering "yes" for the Game Boy is a trap for the next caller.
