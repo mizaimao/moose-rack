@@ -180,16 +180,27 @@ pub async fn install(
     }
     drop(file);
 
-    let installed = match kind {
-        "dmg" => install_dmg(&tmp, dest_dir)?,
+    let (installed, root) = match kind {
+        "dmg" => (install_dmg(&tmp, dest_dir)?, dest_dir.to_path_buf()),
         "7z" => {
-            let target = dest_dir.join("RetroArch");
-            if target.exists() {
-                std::fs::remove_dir_all(&target).ok();
+            // Unpacked beside the install, then laid over it. The archive
+            // holds a folder with retroarch.exe in it, and RetroArch keeps its
+            // saves, config and cores in that same folder once it is portable,
+            // so the old way (delete the folder, extract the archive) took the
+            // saves with it on every reinstall. It also returned `dest_dir`,
+            // two levels above the exe, where nothing finds RetroArch.
+            let staging = dest_dir.join(".RetroArch.incoming");
+            if staging.exists() {
+                std::fs::remove_dir_all(&staging).ok();
             }
-            sevenz_rust2::decompress_file(&tmp, &target)
+            sevenz_rust2::decompress_file(&tmp, &staging)
                 .with_context(|| format!("extracting {}", tmp.display()))?;
-            target
+            let unpacked = exe_folder(&staging)
+                .with_context(|| format!("no retroarch.exe in {}", tmp.display()))?;
+            let target = dest_dir.join("RetroArch");
+            lay_over(&unpacked, &target)?;
+            std::fs::remove_dir_all(&staging).ok();
+            (target.clone(), target)
         }
         other => bail!("no handler for a .{other} artifact"),
     };
@@ -199,10 +210,68 @@ pub async fn install(
 
     // Portable mode: RetroArch keeps config, saves and cores beside the app
     // rather than in the user's home, so this install cannot disturb another.
-    let marker = dest_dir.join("portable.txt");
+    // Beside the executable, which is where RetroArch looks for it.
+    let marker = root.join("portable.txt");
     if !marker.exists() {
         std::fs::write(&marker, "").ok();
     }
 
-    Ok(dest_dir.to_path_buf())
+    Ok(root)
+}
+
+/// The folder in an unpacked archive that holds `retroarch.exe`: the top, or
+/// the one folder the archive wraps everything in.
+fn exe_folder(dir: &Path) -> Option<PathBuf> {
+    if dir.join("retroarch.exe").is_file() {
+        return Some(dir.to_path_buf());
+    }
+    std::fs::read_dir(dir)
+        .ok()?
+        .flatten()
+        .map(|e| e.path())
+        .find(|p| p.is_dir() && p.join("retroarch.exe").is_file())
+}
+
+/// Copy every file under `from` into `to`, replacing ones of the same name and
+/// leaving everything else in `to` where it is.
+fn lay_over(from: &Path, to: &Path) -> Result<()> {
+    std::fs::create_dir_all(to).with_context(|| format!("creating {}", to.display()))?;
+    for entry in std::fs::read_dir(from)?.flatten() {
+        let src = entry.path();
+        let dst = to.join(entry.file_name());
+        if src.is_dir() {
+            lay_over(&src, &dst)?;
+        } else {
+            std::fs::copy(&src, &dst).with_context(|| format!("writing {}", dst.display()))?;
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// An update lays the new program over the old folder. RetroArch keeps a
+    /// portable install's saves in that folder, and they have to survive it.
+    #[test]
+    fn an_update_keeps_what_retroarch_wrote_beside_itself() {
+        let dir = std::env::temp_dir().join("moose-rack-ra-install");
+        let _ = std::fs::remove_dir_all(&dir);
+        let staging = dir.join(".RetroArch.incoming/RetroArch-Win64");
+        std::fs::create_dir_all(staging.join("cores")).unwrap();
+        std::fs::write(staging.join("retroarch.exe"), "new").unwrap();
+        std::fs::write(staging.join("cores/snes9x_libretro.dll"), "core").unwrap();
+        let target = dir.join("RetroArch");
+        std::fs::create_dir_all(target.join("saves")).unwrap();
+        std::fs::write(target.join("retroarch.exe"), "old").unwrap();
+        std::fs::write(target.join("saves/Zelda.srm"), "hours of play").unwrap();
+
+        let unpacked = exe_folder(&dir.join(".RetroArch.incoming")).expect("found inside the wrapper");
+        lay_over(&unpacked, &target).unwrap();
+        assert_eq!(std::fs::read_to_string(target.join("retroarch.exe")).unwrap(), "new");
+        assert!(target.join("cores/snes9x_libretro.dll").is_file());
+        assert_eq!(std::fs::read_to_string(target.join("saves/Zelda.srm")).unwrap(), "hours of play");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 }

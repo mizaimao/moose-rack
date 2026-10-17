@@ -89,4 +89,14 @@ describe("starting a game in the page", () => {
     assert.ok(note, "no status line in the stage");
     assert.notEqual(note.textContent.trim(), "", "the stage is blank");
   });
+
+  /// Escape closes a modal dialog unless its `cancel` is refused, and closing
+  /// this one hid a game that was still running and not yet saved.
+  test("Escape does not close the stage", async () => {
+    await playInBrowser(ROM);
+    const stage = document.getElementById("ejs-stage");
+    const cancel = new dom.window.Event("cancel", { cancelable: true });
+    stage.dispatchEvent(cancel);
+    assert.ok(cancel.defaultPrevented, "Escape would close the game");
+  });
 });

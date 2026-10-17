@@ -16,6 +16,7 @@
 import { el, invoke } from "./state.js";
 import { attractPool, makeSampler, installAttract, launchesOn } from "./attract.js";
 import { launch, launchInFlight } from "./actions.js";
+import { playingInPage } from "./util.js";
 
 /// ES's own numbers, from `ScreenSaverSwapImageTimeout` and `FADE_TIME`.
 const SWAP_MS = 10_000;
@@ -72,12 +73,15 @@ async function start() {
   // Never over a launch. Coming back from a game is the one moment the app is
   // idle for a long time without anybody having left, and covering the screen
   // then is the most annoying thing this feature could do.
-  if (screen || launchInFlight()) return;
+  //
+  // Nor over a game playing in the page: its input goes to the game, so the
+  // library's idle timer runs out while somebody is playing.
+  if (screen || launchInFlight() || playingInPage()) return;
   const pool = (await attractPool()).filter((g) => g.image);
   if (!pool.length) return;
   // Checked again: fetching the pool takes long enough on a memory card that
   // somebody can have come back in the meantime.
-  if (screen || launchInFlight()) return;
+  if (screen || launchInFlight() || playingInPage()) return;
 
   sampler = makeSampler(pool);
   screen = build();

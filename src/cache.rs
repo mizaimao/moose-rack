@@ -1303,11 +1303,15 @@ impl Cache {
                             -- Only a scan of this machine knows this. The
                             -- server sends NULL, and COALESCE keeps the path.
                             local_path     = COALESCE(excluded.local_path, roms.local_path),
-                            -- Only when the server has one. An incremental
-                            -- pull can return a row with no per-user block,
-                            -- and letting that null out the timestamp would
-                            -- empty the recent list on every sync.
-                            last_played    = COALESCE(excluded.last_played, roms.last_played)";
+                            -- The later of the two. An incremental pull can
+                            -- return a row with no per-user block, and letting
+                            -- that null out the timestamp emptied the recent
+                            -- list; and plays here are never sent back, so the
+                            -- server's older time put a game played today back
+                            -- to May. Both are ISO 8601 in UTC, which sorts as
+                            -- text.
+                            last_played    = NULLIF(MAX(COALESCE(excluded.last_played, ''),
+                                                        COALESCE(roms.last_played, '')), '')";
 
     pub async fn sync(
         &mut self,
@@ -1632,6 +1636,39 @@ mod tests {
                 ],
             )
             .unwrap();
+    }
+
+    /// A sync keeps the later of the server's last-played time and this
+    /// machine's. Plays here are never sent to the server, so taking the
+    /// server's put a game played today back to whenever the server last saw.
+    #[test]
+    fn a_sync_never_moves_last_played_back() {
+        let c = cache("last-played-later");
+        add_platform(&c, 1, "snes", "Super Nintendo");
+        let upsert = |when: Option<&str>| {
+            c.conn
+                .execute(
+                    Cache::ROM_UPSERT,
+                    params![
+                        7, "snes", "A", "a.sfc", 512i64,
+                        None::<String>, None::<String>, None::<String>, None::<String>,
+                        None::<String>, None::<String>, None::<String>, None::<String>,
+                        None::<String>, None::<String>, None::<String>, None::<String>,
+                        None::<String>, None::<String>, 0i64, when,
+                        Some("snes"), Some(""),
+                    ],
+                )
+                .unwrap();
+        };
+        let played = |c: &Cache| c.rom_by_id(7).unwrap().unwrap().last_played;
+        upsert(Some("2026-05-01T12:00:00Z"));
+        c.conn.execute("UPDATE roms SET last_played = '2026-10-16T09:00:00Z' WHERE id = 7", []).unwrap();
+        upsert(Some("2026-05-01T12:00:00Z"));
+        assert_eq!(played(&c).as_deref(), Some("2026-10-16T09:00:00Z"), "an older server time won");
+        upsert(None);
+        assert_eq!(played(&c).as_deref(), Some("2026-10-16T09:00:00Z"), "no time from the server cleared it");
+        upsert(Some("2026-11-01T08:00:00Z"));
+        assert_eq!(played(&c).as_deref(), Some("2026-11-01T08:00:00Z"), "a newer server time was ignored");
     }
 
     fn ids(c: &Cache) -> Vec<i64> {

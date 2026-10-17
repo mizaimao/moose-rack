@@ -10,6 +10,16 @@ export const state = {
   /// it instead of the top-left card.
   lastPlatform: localStorage.getItem("lastPlatform") || null,
   rows: [],
+  /// Whether `rows` are drawn in one section per console: `true`, `false`, or
+  /// `"order"` for a list that is grouped only while it is sorted by console.
+  ///
+  /// Set by the view that draws the list first, and read by every redraw
+  /// after it. The redraws used to work it out again as "is this a search",
+  /// which is not what the views had chosen: a collection is grouped and is
+  /// not a search, and Continue playing is a search that is not grouped. So
+  /// changing the sort in a collection flattened it, and switching grid and
+  /// list in Continue playing regrouped it by console and lost its order.
+  grouping: false,
   selected: null,
   /// Platform slug -> cover aspect (w/h), measured by the backend.
   aspects: {},

@@ -27,14 +27,26 @@ const UNARRANGED = {
 
 let current = UNARRANGED;
 
-/// Which list a question is about. The three fields the backend keys its
-/// per-view memory on — see `gamelist::scope`.
+/// Which page is asking.
+///
+/// The backend keeps the list it last handed out, so a change of sort or
+/// filter is answered with ids rather than the whole list travelling back. It
+/// kept one for everybody, and moose-service is one backend for every browser
+/// pointed at it: the second person to open a list replaced the first
+/// person's, whose next sort then came back as ids from a list they were not
+/// looking at. It keeps one per page now, under this. Not a secret, and not
+/// kept across a reload; it only has to differ from the other pages open.
+const PAGE = Math.random().toString(36).slice(2) + Date.now().toString(36);
+
+/// Which list a question is about: the three fields the backend keys its
+/// per-view memory on (see `gamelist::scope`), and the page asking.
 export function listRef() {
-  return {
-    view: state.view,
-    platform: state.platform ?? null,
-    collection: state.collection ?? null,
-  };
+  return listFor(state.view, state.platform, state.collection);
+}
+
+/// The same for a list that is not on screen yet. See `prefetchRoms`.
+export function listFor(view, platform = null, collection = null) {
+  return { view, platform: platform ?? null, collection: collection ?? null, page: PAGE };
 }
 
 export function arrangement() {
@@ -44,6 +56,19 @@ export function arrangement() {
 export function applyArrangement(next) {
   current = next ?? UNARRANGED;
   return current;
+}
+
+/// Forget the list, for a screen that is not a list of games.
+///
+/// The console grid, History and a collections list hold no games, but
+/// `state.rows` and the arrangement above went on describing whichever list
+/// was open last. Everything that acts on "the list on screen" asks those two,
+/// so pressing S on the console grid sorted SNES and drew its games under the
+/// title "Platforms", R picked a game nobody could see, and changing the game
+/// art in Settings painted the old console over History.
+export function leaveList() {
+  state.rows = [];
+  applyArrangement(null);
 }
 
 /// Ask the backend how the list on screen should be drawn.

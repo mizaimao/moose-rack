@@ -118,8 +118,10 @@ fn run(
 
     // Start from nothing, the same as the desktop does. A set fetched under an
     // older mapping leaves pictures in folders this one does not write, and
-    // those go on being drawn as if they were current.
-    let _ = theme::remove_set(media_root, set);
+    // those go on being drawn as if they were current. So it is fetched beside
+    // the installed copy, which it replaces only once it has pictures in it.
+    let staging = theme::staging_dir(media_root, set);
+    let _ = std::fs::remove_dir_all(&staging);
 
     let wanted = theme::esde_names_for(map, slugs);
     let total = art.looks.len() * wanted.len();
@@ -127,7 +129,7 @@ fn run(
     let mut written = 0usize;
 
     for look in &art.looks {
-        let out = theme::set_dir(media_root, set, &look.id);
+        let out = staging.join(&look.id);
         std::fs::create_dir_all(&out)?;
         for (slug, names) in &wanted {
             done += 1;
@@ -156,6 +158,11 @@ fn run(
             }
         }
     }
+    if written == 0 {
+        let _ = std::fs::remove_dir_all(&staging);
+        anyhow::bail!("no pictures could be fetched; the ones here are kept");
+    }
+    theme::commit_set(media_root, set)?;
     Ok(written)
 }
 

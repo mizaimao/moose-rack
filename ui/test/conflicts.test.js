@@ -6,7 +6,7 @@
 // nothing on screen. The behavior that matters is that cancelling does NOT
 // launch and that an answered conflict is actually sent to the backend.
 
-import { test, describe, before, beforeEach } from "node:test";
+import { test, describe, before, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
 
@@ -282,5 +282,46 @@ describe("RetroArch has no core for this system", () => {
     const done = mod.askNoCore("gba", "mgba");
     document.querySelector('[data-go="yes"]').click();
     assert.equal(await done, true);
+  });
+});
+
+describe("a dialog keeps its keys to itself", () => {
+  /// The library listens for keys on the window. A dialog that answered
+  /// Escape without stopping it also sent the library Back, and Enter there
+  /// pressed Play on whatever was behind it.
+  let heard;
+  const overhear = (ev) => heard.push(ev.key);
+  const press = (key) =>
+    document.body.dispatchEvent(new window.KeyboardEvent("keydown", { key, bubbles: true }));
+
+  beforeEach(() => {
+    heard = [];
+    window.addEventListener("keydown", overhear);
+  });
+  afterEach(() => window.removeEventListener("keydown", overhear));
+
+  test("Escape on the missing-BIOS question goes no further", async () => {
+    const done = mod.askBios("scph5501.bin");
+    press("Escape");
+    assert.equal(await done, false);
+    assert.deepEqual(heard, [], "the library heard it too");
+  });
+
+  test("nor on the no-core question", async () => {
+    const done = mod.askNoCore("gba", "mgba");
+    press("Escape");
+    assert.equal(await done, false);
+    assert.deepEqual(heard, [], "the library heard it too");
+  });
+
+  /// Take offline listened on its own box, so with nothing in it focused
+  /// Escape did not even close it, and the library went Back underneath.
+  test("nor on Take offline, which Escape now closes from anywhere", async () => {
+    const bulk = await import("../js/bulk.js");
+    await bulk.askDownload({ collection: "c1", name: "Road trip" });
+    assert.ok(document.getElementById("bulk-overlay"), "the dialog did not open");
+    press("Escape");
+    assert.equal(document.getElementById("bulk-overlay"), null, "Escape did not close it");
+    assert.deepEqual(heard, [], "the library heard it too");
   });
 });

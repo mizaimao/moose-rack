@@ -145,9 +145,31 @@ export async function askDownload(what = {}) {
     bios: q(".bulk-bios").checked,
   });
   const close = () => {
+    document.removeEventListener("keydown", onKey, true);
     box.remove();
     open = null;
   };
+
+  // The keyboard belongs to the dialog while it is up, so its keys are caught
+  // on the document before anything else and stopped there, the way the
+  // conflict dialog does it. Listening on the box was not enough: the library
+  // listens on the window and heard every key as well, so the Escape that
+  // closed this was also its Back, and with nothing in the dialog focused
+  // Escape never reached the dialog at all. Stopping a key leaves its default
+  // action alone, so a focused checkbox, select or button still answers it.
+  function onKey(e) {
+    // Gone some other way. A listener left behind would swallow every key.
+    if (!box.isConnected) {
+      document.removeEventListener("keydown", onKey, true);
+      return;
+    }
+    e.stopPropagation();
+    if (e.key === "Escape") {
+      e.preventDefault();
+      close();
+    }
+  }
+  document.addEventListener("keydown", onKey, true);
 
   const stale = () => {
     q(".bulk-est").textContent = "Choose what to take, then check the size.";
@@ -203,15 +225,16 @@ export async function askDownload(what = {}) {
   });
   q(".bulk-size").addEventListener("click", refresh);
   q(".bulk-cancel").addEventListener("click", close);
-  box.addEventListener("keydown", (e) => e.key === "Escape" && close());
 
   q(".bulk-go").addEventListener("click", async () => {
     const go = q(".bulk-go");
     const picked = choice();
     // The one case the backend cannot report usefully: with nothing ticked it
     // has no idea whether you meant everything or nothing.
-    if (!picked.platforms.length && !picked.collection) {
-      return toast("Tick at least one system");
+    // Collections ticked on the "My collections" tab count: they were left out
+    // here, so ticking only those was refused as "nothing ticked".
+    if (!picked.platforms.length && !picked.collections.length && !picked.collection) {
+      return toast("Tick at least one system or collection");
     }
     go.disabled = true;
     const est = q(".bulk-est");

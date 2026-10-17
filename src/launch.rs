@@ -346,7 +346,7 @@ pub fn plan(ra: &RetroArch, map: &CoreMap, req: &Request<'_>) -> Result<Plan> {
     // being overridden and where, and turn override loading off for this
     // launch so the settings we were asked for are the ones in force.
     if let Some(path) = overrides.as_ref() {
-        let clash = ra.override_clash(map.label_for(&core), path);
+        let clash = ra.override_clash(&core, path);
         if !clash.is_empty() {
             notes.push(format!(
                 "RetroArch's own override for {} sets {} — ignoring its override file for \
@@ -425,7 +425,7 @@ pub fn plan(ra: &RetroArch, map: &CoreMap, req: &Request<'_>) -> Result<Plan> {
 /// a worse default than a console whose two-player games need a switch turned
 /// off, because the first looks broken and the second is at least visible: the
 /// launch notes say the port is a gun, and the app says so on first launch.
-fn gun_enabled(map: &BTreeMap<String, String>, platform: &str) -> bool {
+pub fn gun_enabled(map: &BTreeMap<String, String>, platform: &str) -> bool {
     // A console with no gun is never enabled, whatever a stale config says.
     // `config_lines` guards this too, but a function called `gun_enabled`
     // answering "yes" for the Game Boy is a trap for the next caller.

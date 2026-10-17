@@ -423,7 +423,11 @@ pub fn open_link(url: String) -> CmdResult<()> {
     }
     #[cfg(target_os = "macos")]
     let mut cmd = std::process::Command::new("open");
-    #[cfg(not(target_os = "macos"))]
+    // Explorer opens a web link in the default browser. Not `cmd /C start`,
+    // which would read the `&` in a query string as a second command.
+    #[cfg(windows)]
+    let mut cmd = std::process::Command::new("explorer");
+    #[cfg(not(any(target_os = "macos", windows)))]
     let mut cmd = std::process::Command::new("xdg-open");
     cmd.arg(&url).spawn().map_err(err)?;
     Ok(())
@@ -464,15 +468,15 @@ pub async fn verify_achievements() -> CmdResult<crate::achievements::Verified> {
 }
 
 pub fn game_states(state: &AppState, id: i64) -> CmdResult<Vec<StateView>> {
-    let Some(ra) = state.retroarch.as_ref() else {
+    if state.retroarch.is_none() {
         return Ok(Vec::new());
-    };
+    }
     let cache = state.cache.lock().map_err(err)?;
     let Some(row) = cache.rom_by_id(id).map_err(err)? else {
         return Ok(Vec::new());
     };
     let now = std::time::SystemTime::now();
-    Ok(crate::states::shelf(&ra.root, &cache, &state.map, &row.fs_name)
+    Ok(crate::states::shelf(&saves_root(state), &cache, &state.map, &row.fs_name)
         .map_err(err)?
         .into_iter()
         .map(|s| StateView {
@@ -492,11 +496,10 @@ pub fn game_states(state: &AppState, id: i64) -> CmdResult<Vec<StateView>> {
 }
 
 pub fn delete_state(state: &AppState, id: i64, slot: String) -> CmdResult<String> {
-    let ra = state.retroarch.as_ref().ok_or("RetroArch not found")?;
-    let library_root = state.roms_dir.parent().unwrap_or(Path::new(".")).to_path_buf();
+    let library_root = state.library_root.clone();
     let cache = state.cache.lock().map_err(err)?;
     let row = cache.rom_by_id(id).map_err(err)?.ok_or("no such game")?;
-    let shelf = crate::states::shelf(&ra.root, &cache, &state.map, &row.fs_name)
+    let shelf = crate::states::shelf(&saves_root(state), &cache, &state.map, &row.fs_name)
         .map_err(err)?;
     let found = shelf
         .into_iter()
@@ -608,7 +611,7 @@ pub fn recent_games(
         let cache = state.cache.lock().map_err(err)?;
         cache.recently_played(limit.unwrap_or(8)).map_err(err)?
     };
-    Ok(to_views(state, rows, list.map(|l| l.scope()).as_deref()))
+    Ok(to_views(state, rows, list.as_ref()))
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -862,7 +865,7 @@ impl Listings {
 pub fn to_views(
     state: &AppState,
     rows: Vec<cache::RomRow>,
-    stash: Option<&str>,
+    stash: Option<&ListRef>,
 ) -> Vec<RomView> {
     // One query for the whole list rather than one per row.
     let favorites = state
@@ -900,11 +903,10 @@ pub fn to_views(
             }
         })
         .collect();
-    if let Some(scope) = stash
-        && let (Ok(mut held), Ok(mut at)) = (state.list_rows.lock(), state.list_scope.lock())
+    if let Some(list) = stash
+        && let Ok(mut held) = state.list_rows.lock()
     {
-        *held = views.iter().map(RomView::as_row).collect();
-        *at = scope.to_owned();
+        held.hold(list.page(), &list.scope(), views.iter().map(RomView::as_row).collect());
     }
     views
 }
@@ -943,7 +945,7 @@ pub fn roms(
         let cache = state.cache.lock().map_err(err)?;
         cache.roms_for(&platform).map_err(err)?
     };
-    Ok(to_views(state, rows, list.map(|l| l.scope()).as_deref()))
+    Ok(to_views(state, rows, list.as_ref()))
 }
 
 #[derive(serde::Serialize)]
@@ -1038,7 +1040,7 @@ pub fn collection_roms(
         let cache = state.cache.lock().map_err(err)?;
         cache.roms_in_collection(&id).map_err(err)?
     };
-    Ok(to_views(state, rows, list.map(|l| l.scope()).as_deref()))
+    Ok(to_views(state, rows, list.as_ref()))
 }
 
 pub fn search(
@@ -1050,7 +1052,7 @@ pub fn search(
         let cache = state.cache.lock().map_err(err)?;
         cache.search(&term, 200).map_err(err)?
     };
-    Ok(to_views(state, rows, list.map(|l| l.scope()).as_deref()))
+    Ok(to_views(state, rows, list.as_ref()))
 }
 
 pub async fn rom_detail(state: &AppState, id: i64) -> CmdResult<RomDetail> {
@@ -1619,10 +1621,10 @@ pub async fn android_sync_before(state: &AppState, id: i64) -> CmdResult<String>
         cache.rom_by_id(id).map_err(err)?
     }
     .ok_or_else(|| format!("no rom with id {id}"))?;
-    let Some(ra) = state.retroarch.as_ref() else {
+    if state.retroarch.is_none() {
         return Ok(String::new());
-    };
-    let pre = auto_sync(state, ra, &row, savesync::When::BeforeLaunch).await;
+    }
+    let pre = auto_sync(state, &row, savesync::When::BeforeLaunch).await;
     if !pre.conflicts.is_empty() {
         *state.pending_conflicts.lock().map_err(err)? = pre.conflicts.clone();
         return Err(format!(
@@ -1655,8 +1657,8 @@ pub async fn android_after_play(
     {
         notes.push(format!("played for {}", crate::util::spell_duration(seconds)));
     }
-    if let Some(ra) = state.retroarch.as_ref() {
-        let post = auto_sync(state, ra, &row, savesync::When::AfterExit).await;
+    if state.retroarch.is_some() {
+        let post = auto_sync(state, &row, savesync::When::AfterExit).await;
         if let Some(note) = post.note {
             notes.push(note);
         }
@@ -1907,7 +1909,6 @@ pub struct AutoSync {
 
 pub async fn auto_sync(
     state: &AppState,
-    ra: &RetroArch,
     row: &cache::RomRow,
     when: savesync::When,
 ) -> AutoSync {
@@ -1917,7 +1918,12 @@ pub async fn auto_sync(
     let Some(client) = state.client.clone() else {
         return AutoSync::default();
     };
-    let library_root = state.roms_dir.parent().unwrap_or(Path::new(".")).to_path_buf();
+    let library_root = state.library_root.clone();
+    // The folder the launch told RetroArch to save into, which is where the
+    // manual sync looks too. This used to be RetroArch's install folder, so
+    // the pull before a game and the push after it both looked somewhere the
+    // game never wrote.
+    let root = saves_root(state);
 
     // The SQLite connection is not Sync, so the scan takes the lock and drops
     // it before any awaiting starts.
@@ -1925,7 +1931,7 @@ pub async fn auto_sync(
         let Ok(cache) = state.cache.lock() else {
             return AutoSync::default();
         };
-        match savesync::scan_for_rom(&cache, &state.map, &ra.root, &row.fs_name) {
+        match savesync::scan_for_rom(&cache, &state.map, &root, &row.fs_name) {
             Ok(c) => c,
             Err(e) => {
                 return AutoSync {
@@ -1936,7 +1942,7 @@ pub async fn auto_sync(
         }
     };
 
-    match savesync::run_all(&client, &candidates, &ra.root, Path::new("."), &library_root).await {
+    match savesync::run_for_game(&client, &candidates, row.id, &root, Path::new("."), &library_root).await {
         Ok(summary) => AutoSync {
             note: savesync::describe(when, &summary),
             conflicts: summary.conflicts,
@@ -1957,8 +1963,7 @@ pub async fn resolve_save_conflict(
     keep: crate::savesync::Keep,
 ) -> CmdResult<String> {
     let client = state.client.clone().ok_or("not connected to a server")?;
-    let ra = state.retroarch.as_ref().ok_or("RetroArch not found")?;
-    let library_root = state.roms_dir.parent().unwrap_or(Path::new(".")).to_path_buf();
+    let library_root = state.library_root.clone();
 
     let conflict = {
         let pending = state.pending_conflicts.lock().map_err(err)?;
@@ -1973,7 +1978,7 @@ pub async fn resolve_save_conflict(
         &client,
         &conflict,
         keep,
-        &ra.root,
+        &saves_root(state),
         &library_root,
         Path::new("."),
     )
@@ -2083,7 +2088,7 @@ pub fn config_patch() -> CmdResult<String> {
     }
     let backup = path.with_extension("toml.before-patch");
     std::fs::copy(path, &backup).map_err(err)?;
-    std::fs::write(path, &patched).map_err(err)?;
+    crate::util::replace_file(path, patched.as_bytes()).map_err(err)?;
     let had_password = applied.iter().any(|f| f.what.ends_with("password"));
     Ok(format!(
         "Updated {}: {}. The file as it was is in {}{}",
@@ -2138,8 +2143,10 @@ pub async fn fetch_icon_set(
 
     // Start from nothing. A set fetched under an older mapping has pictures in
     // folders this one does not write, and leaving them means "Hardware" goes
-    // on showing whatever the previous table filed there.
-    let _ = theme::remove_set(&state.media_dir, dir);
+    // on showing whatever the previous table filed there. So the new copy is
+    // fetched beside the old and replaces it whole at the end.
+    let staging = theme::staging_dir(&state.media_dir, dir);
+    let _ = std::fs::remove_dir_all(&staging);
 
     let wanted = theme::esde_names_for(&state.map, &slugs);
     let total: usize = art.looks.len() * wanted.len();
@@ -2147,7 +2154,7 @@ pub async fn fetch_icon_set(
     let mut per_style: Vec<(String, usize)> = Vec::new();
 
     for look in &art.looks {
-        let out = theme::set_dir(&state.media_dir, dir, &look.id);
+        let out = staging.join(&look.id);
         std::fs::create_dir_all(&out).map_err(err)?;
         let mut written = 0usize;
         for (slug, names) in &wanted {
@@ -2181,9 +2188,10 @@ pub async fn fetch_icon_set(
     }
 
     if per_style.is_empty() {
-        let _ = theme::remove_set(&state.media_dir, dir);
-        return Err(format!("{dir}: no console pictures could be fetched"));
+        let _ = std::fs::remove_dir_all(&staging);
+        return Err(format!("{dir}: no console pictures could be fetched; the ones here are kept"));
     }
+    theme::commit_set(&state.media_dir, dir).map_err(err)?;
     // Stamp what this was fetched under, so a corrected table can tell.
     let _ = theme::write_set_mapping(&state.media_dir, dir, &art.fingerprint());
     Ok(per_style.iter().map(|(l, n)| format!("{n} {l}")).collect::<Vec<_>>().join(", "))
@@ -2330,12 +2338,13 @@ pub fn systems(state: &AppState) -> CmdResult<Vec<SystemView>> {
 
             SystemView {
                 gun: crate::lightgun::label(&slug).map(str::to_owned),
-                gun_on: state
-                    .lightgun
-                    .lock()
-                    .unwrap_or_else(|e| e.into_inner())
-                    .get(&slug)
-                    .is_some_and(|v| v.trim() == "on"),
+                // The launch's own rule, so the box says what the launch will
+                // do: on unless switched off. Reading only "on" showed a fresh
+                // config unticked while the launch put a gun in port 2.
+                gun_on: crate::launch::gun_enabled(
+                    &state.lightgun.lock().unwrap_or_else(|e| e.into_inner()),
+                    &slug,
+                ),
                 core: resolve_core(state, &slug),
                 shader: if state.shaders_enabled {
                     crate::shaders::preset_for(
@@ -2495,7 +2504,18 @@ pub async fn sync_saves_plan(state: &AppState) -> CmdResult<crate::syncplan::Rev
         .await
         .map_err(err)?;
     let plan = client.negotiate(&identity.device_id, &states).await.map_err(err)?;
-    Ok(crate::syncplan::Review::from_plan(&plan))
+    let mut review = crate::syncplan::Review::from_plan(&plan);
+
+    // Standalone emulators' saves, into the same list.
+    let mut problems = crate::savesync::Summary::default();
+    let units = Config::load().map(|c| c.saves.units).unwrap_or_default();
+    let sources = crate::unitsync::sources(&units, &mut problems);
+    let (lines, agreed, notes) =
+        crate::unitsync::preview(&client, &sources, Path::new(".")).await.map_err(err)?;
+    review.add_states(lines, agreed);
+    review.notes.extend(problems.problems);
+    review.notes.extend(notes);
+    Ok(review)
 }
 
 #[derive(Serialize)]
@@ -2575,15 +2595,26 @@ pub async fn sync_saves(state: &AppState) -> CmdResult<SyncRun> {
         crate::savesync::scan(&cache, &state.map, &root).map_err(err)?
     };
 
-    let summary = crate::savesync::run_all(
+    let library_root = state.library_root.as_path();
+    let mut summary = crate::savesync::run_all(
         &client,
         &candidates,
         &root,
         Path::new("."),
-        state.roms_dir.parent().unwrap_or(Path::new(".")),
+        library_root,
     )
         .await
         .map_err(err)?;
+    let units = Config::load().map(|c| c.saves.units).unwrap_or_default();
+    let sources = crate::unitsync::sources(&units, &mut summary);
+    if let Err(e) =
+        crate::unitsync::run(&client, &sources, Path::new("."), library_root, &mut summary).await
+    {
+        summary.fail(format!("emulator saves: {e:#}"));
+    }
+    // What the conflict picker answers from. Only a launch used to fill it, so
+    // a conflict this sync showed could not be resolved: "no pending conflict".
+    *state.pending_conflicts.lock().map_err(err)? = summary.conflicts.clone();
     Ok(SyncRun {
         headline: summary.headline(),
         notes: summary.notes,
@@ -3083,11 +3114,20 @@ pub struct ListRef {
     pub platform: Option<String>,
     #[serde(default)]
     pub collection: Option<String>,
+    /// Which page asked, so each keeps its own list; see
+    /// `crate::gamelist::Held`. A page from before this field sends none and
+    /// shares one unnamed list, which is how every page worked until then.
+    #[serde(default)]
+    pub page: Option<String>,
 }
 
 impl ListRef {
     fn scope(&self) -> String {
         crate::gamelist::scope(&self.view, self.platform.as_deref(), self.collection.as_deref())
+    }
+
+    fn page(&self) -> &str {
+        self.page.as_deref().unwrap_or_default()
     }
 }
 
@@ -3232,8 +3272,9 @@ pub fn arrangement(state: &AppState, list: &ListRef) -> Result<Arrangement, Stri
     let order = chosen.order(&scope);
     let filters = chosen.filters(&scope);
     let held = state.list_rows.lock().map_err(err)?;
-    let ids = (*state.list_scope.lock().map_err(err)? == scope)
-        .then(|| crate::gamelist::arrange(&held, order.id, &filters));
+    let ids = held
+        .rows(list.page(), &scope)
+        .map(|rows| crate::gamelist::arrange(rows, order.id, &filters));
     Ok(Arrangement {
         ids,
         order: order.id,
@@ -3353,12 +3394,25 @@ pub fn set_page_names(
     Ok(())
 }
 
-pub fn page_filter(state: &AppState, query: String) -> CmdResult<PageFilterResult> {
-    let held = state.page_names.lock().map_err(err)?;
-    let (names, groups) = &*held;
-    let visible = crate::pagefilter::visible(names, &query);
+/// Filter the names a page sends with the question.
+///
+/// They used to be sent once per list by `set_page_names` and held here, one
+/// set for everybody, so two browsers on one moose-service filtered with
+/// whichever names arrived last. The page sends them every time now. Without
+/// them, from a page loaded before this, the held ones are used as before.
+pub fn page_filter(
+    state: &AppState,
+    query: String,
+    names: Option<Vec<String>>,
+    groups: Option<Vec<Vec<usize>>>,
+) -> CmdResult<PageFilterResult> {
+    let (names, groups) = match names {
+        Some(names) => (names, groups.unwrap_or_default()),
+        None => state.page_names.lock().map_err(err)?.clone(),
+    };
+    let visible = crate::pagefilter::visible(&names, &query);
     Ok(PageFilterResult {
-        headings: crate::pagefilter::empty_groups(groups, &visible, &query),
+        headings: crate::pagefilter::empty_groups(&groups, &visible, &query),
         shown: visible.iter().filter(|v| **v).count(),
         visible,
     })

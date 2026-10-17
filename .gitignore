@@ -86,6 +86,11 @@ src-tauri/icons/macos.iconset/
 # A stray cache the GUI creates when it is run with src-tauri as the working
 # directory. Always empty, always regenerated.
 /src-tauri/cache.sqlite3
+# Written whenever the service or its tests run from `src-service/`. It was
+# committed by accident: empty, read by nothing -- the one test that opens a
+# cache makes its own in a temp directory -- and it turned up as a change in
+# the working tree after every `cargo test`.
+/src-service/cache.sqlite3
 
 # Loose ROMs dropped in the project root for inspection.
 /*.zip

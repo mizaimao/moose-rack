@@ -13,6 +13,7 @@ import {
   BACKDROPS,
 } from "../backdrop.js";
 import { COLLECTION_ART, collectionArt, setCollectionArt } from "../collection-art.js";
+import { onEventWhile } from "./render.js";
 
 export const html = `      <h4>Layout</h4>
       <div class="srow set-window-layout">
@@ -226,7 +227,7 @@ function markPadControls(box) {
   }
 }
 
-export function wire(box) {
+export function wire(box, signal) {
   // Three columns needs a window. This screen is 833 points wide and the
   // three-column shell wants roughly twice that before the middle column has
   // room for a name, so the option offered a layout that could not be drawn.
@@ -240,8 +241,8 @@ export function wire(box) {
   wireChromeLabels(box);
   wireBackdropFps(box);
   wireAttract(box);
-  wireIconStyles(box);
-  wireAppIcons(box);
+  wireIconStyles(box, signal);
+  wireAppIcons(box, signal);
 
   // What the game lists draw. Populated from the backend rather than listed
   // here, so the names cannot drift from the directories they map to.
@@ -257,8 +258,9 @@ export function wire(box) {
       })
       .catch(() => (artSel.disabled = true));
     // Same again for the game-list pictures, which Select cycles from inside a
-    // console.
-    listen("art-changed", () => {
+    // console. Heard only while this tab is drawn: every visit added another
+    // listener that was never removed, each asking the backend again.
+    onEventWhile(signal, "art-changed", () => {
       invoke("list_art_options")
         .then(([, current]) => {
           if (artSel.isConnected) artSel.value = current;
@@ -596,7 +598,7 @@ function wireViewLayouts(box) {
 /// Drawn from whatever `app_icons` returns rather than from a list here, so
 /// shipping a third icon is a line in `src/appicon.rs` and a PNG — this file
 /// does not learn about it.
-async function wireAppIcons(box) {
+async function wireAppIcons(box, signal) {
   const holder = box.querySelector(".app-icons");
   const note = box.querySelector(".app-icons-note");
   if (!holder) return;
@@ -608,7 +610,8 @@ async function wireAppIcons(box) {
     holder.textContent = "Could not read the icons this build ships";
     return;
   }
-  if (!box.isConnected) return;
+  // Not `box.isConnected`, which is always true; see render.js.
+  if (signal?.aborted) return;
 
   holder.innerHTML = icons
     .map(
@@ -640,7 +643,7 @@ async function wireAppIcons(box) {
   }
 }
 
-async function wireIconStyles(box) {
+async function wireIconStyles(box, signal) {
   const holder = box.querySelector(".icon-styles");
   const note = box.querySelector(".set-icons-note");
   if (!holder) return;
@@ -653,7 +656,7 @@ async function wireIconStyles(box) {
       holder.textContent = "Could not read the installed pictures";
       return;
     }
-    if (!box.isConnected) return;
+    if (signal?.aborted) return;
     // Nothing installed at all is a different answer from "this style has
     // none", and it looked identical: every button grayed out, no explanation,
     // and a Get button below that nobody connects to the row above. Reported
@@ -697,8 +700,9 @@ async function wireIconStyles(box) {
 
   // The pad changes this from the library window, which cannot reach this one.
   // Without the redraw the panel would sit there showing the style that was
-  // selected when it opened, disagreeing with the screen behind it.
-  listen("icons-changed", draw);
+  // selected when it opened, disagreeing with the screen behind it. Only while
+  // this tab is drawn, or every visit leaves one more redraw behind.
+  onEventWhile(signal, "icons-changed", draw);
 
   box.querySelector(".set-icons")?.addEventListener("click", async (e) => {
     const btn = e.currentTarget;

@@ -73,6 +73,13 @@ fn name_of(key: Keycode) -> String {
         Keycode::PageUp => "PageUp".into(),
         Keycode::PageDown => "PageDown".into(),
         Keycode::Space => " ".into(),
+        // A printable key's code is its character, so letters, digits and
+        // punctuation are named here. SDL_GetKeyName writes them into one
+        // static buffer, and two threads asking at once can read each
+        // other's: the rebind test running beside another read "f" for Z.
+        other if (0x21..0x7f).contains(&other.into_i32()) => {
+            (other.into_i32() as u8 as char).to_ascii_lowercase().to_string()
+        }
         other => other.name().to_lowercase(),
     }
 }

@@ -200,7 +200,7 @@ fn downloads_land_by_component_on_any_host() {
         .map(|c| c.as_os_str().to_string_lossy().into_owned())
         .collect();
     assert!(parts.iter().any(|p| p == "states"), "a state goes in states/: {parts:?}");
-    assert!(parts.iter().any(|p| p == "snes9x"), "nested by core: {parts:?}");
+    assert!(parts.iter().any(|p| p == "Snes9x"), "nested by core, as RetroArch names it: {parts:?}");
 
     let save = moose_rack::savesync::download_path(root, "Game.srm", moose_rack::savesync::Destination::Core { core: Some("snes9x") });
     let parts: Vec<String> = save

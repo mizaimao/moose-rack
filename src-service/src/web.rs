@@ -241,7 +241,7 @@ pub async fn dispatch(state: &AppState, cmd: &str, args: &Value) -> Result<Value
         "picker_controls" => j!(c::picker_controls(state, p!("kind"))),
         "set_picker_order" => j!(c::set_picker_order(state, p!("kind"), p!("order"))),
         "set_page_names" => j!(c::set_page_names(state, p!("names"), p!("groups"))),
-        "page_filter" => j!(c::page_filter(state, p!("query"))),
+        "page_filter" => j!(c::page_filter(state, p!("query"), p!("names"), p!("groups"))),
         "grid_uniform" => v!(c::grid_uniform(p!("count"), p!("columns"))),
         "set_grid" => v!(c::set_grid(p!("cards"))),
 

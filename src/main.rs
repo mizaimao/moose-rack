@@ -1099,7 +1099,7 @@ async fn cmd_probe(
 
     for rom in &roms {
         let home = roms_dir.join(rom.folder()).join(&rom.fs_name);
-        let local = if home.exists() { home } else { rom.legacy_path(&roms_dir) };
+        let mut local = if home.exists() { home } else { rom.legacy_path(&roms_dir) };
         if !local.exists() {
             let Some(client) = client.as_ref() else {
                 println!("{:<44} skipped (not downloaded, no server)", short(&rom.name));
@@ -1117,12 +1117,20 @@ async fn cmd_probe(
                 sha1: rom.sha1_hash.as_deref(),
                 multi_file: rom.multi_file,
             };
-            if let Err(e) =
-                download::fetch(client.http(), client.base(), client.auth(), &target, &roms_dir, |_, _| {})
-                    .await
+            // Where the download actually went. The old-layout path chosen
+            // above is not it for a game in a subfolder, or for a system whose
+            // folder is not its slug (genesis/ for megadrive), and probing a
+            // path that does not exist ended the whole run at the first game.
+            match download::fetch(client.http(), client.base(), client.auth(), &target, &roms_dir, |_, _| {})
+                .await
             {
-                println!("{:<44} skipped ({e})", short(&rom.name));
-                continue;
+                Ok(download::Outcome::AlreadyHave(p)) | Ok(download::Outcome::Downloaded { path: p, .. }) => {
+                    local = p;
+                }
+                Err(e) => {
+                    println!("{:<44} skipped ({e})", short(&rom.name));
+                    continue;
+                }
             }
         }
         // Neo Geo and similar need their BIOS in RetroArch's system dir, or
@@ -1131,7 +1139,13 @@ async fn cmd_probe(
             let _ = ra.install_bios(d);
         }
 
-        let results = probe::probe_cores(&ra, &local, &candidates, frames, &scratch)?;
+        let results = match probe::probe_cores(&ra, &local, &candidates, frames, &scratch) {
+            Ok(r) => r,
+            Err(e) => {
+                println!("{:<44} skipped ({e:#})", short(&rom.name));
+                continue;
+            }
+        };
         let marks: Vec<String> = results
             .iter()
             .map(|r| format!("{:>7}", if r.verdict.ok() { "ok" } else { "-" }))
@@ -1273,7 +1287,7 @@ fn cmd_scan_esde(root: Option<&str>, roms: Option<&str>, media: Option<&str>) ->
     let mut store = cache::Cache::open(Path::new(CACHE_DB))?;
     // Shared with the service -- see `moose_rack::app::scan_into`.
     let moose_rack::app::Scan { written: n, on_server, games, skipped } =
-        moose_rack::app::scan_into(&mut store, &layout, &map)?;
+        moose_rack::app::scan_into(&mut store, &layout, &map, &cfg.library_dir())?;
     if games.is_empty() {
         bail!("found no games under {}", layout.roms.display());
     }
@@ -1966,6 +1980,11 @@ enum Command {
         /// The copy not kept is backed up to library/saves-backup/ first.
         #[arg(long, value_name = "local|server")]
         keep: Option<String>,
+        /// Sync a save tree that is not this machine's: a handheld's card in a
+        /// reader. The cache, device identity and ledger still come from the
+        /// working directory, so run this from that device's own data folder.
+        #[arg(long, value_name = "PATH")]
+        root: Option<String>,
     },
 }
 
@@ -1974,14 +1993,27 @@ enum Command {
 /// `--dry-run` stops after the scan and prints what would be offered, which is
 /// the safe way to see whether the ROM matching is right before anything
 /// overwrites a save file.
-async fn cmd_sync_saves(dry_run: bool, keep: Option<&str>) -> Result<()> {
+async fn cmd_sync_saves(dry_run: bool, keep: Option<&str>, root: Option<&str>) -> Result<()> {
     let cfg = Config::load()?;
     let store = cache::Cache::open(Path::new(CACHE_DB))?;
     let map = CoreMap::load_or_embedded(Path::new(CORE_MAP));
-    let ra = RetroArch::locate_in(&cfg.retroarch.ordered_paths())?;
+    // `--root` syncs a save tree that is not this machine's: a handheld's card
+    // in a reader. Everything else still comes from the working directory, so
+    // run it from that device's own data folder and the cache, the device
+    // identity and the state ledger are the device's as well. The layout under
+    // the root is the one this build was compiled for, which is why a card is
+    // synced with a build for its handheld.
+    //
+    // Without it, `[saves] root`: the folder a launch from here tells
+    // RetroArch to save into. RetroArch's install folder was the default
+    // before, and that is not where the games write (on KNULLI it is `/usr`).
+    let root = match root {
+        Some(path) => std::path::PathBuf::from(path),
+        None => moose_rack::util::expand_tilde(&cfg.saves.root),
+    };
 
     if dry_run {
-        let candidates = moose_rack::savesync::scan(&store, &map, &ra.root)?;
+        let candidates = moose_rack::savesync::scan(&store, &map, &root)?;
         let (offered, skipped) = moose_rack::savesync::client_states(&candidates);
         println!("{} save(s) would be offered, {skipped} skipped", offered.len());
         for s in &offered {
@@ -2012,20 +2044,46 @@ async fn cmd_sync_saves(dry_run: bool, keep: Option<&str>) -> Result<()> {
                 c.core.as_deref().unwrap_or(&c.core_dir)
             );
         }
+
+        // Standalone emulators' saves, from [[saves.units]].
+        let mut summary = moose_rack::savesync::Summary::default();
+        for src in moose_rack::unitsync::sources(&cfg.saves.units, &mut summary) {
+            let held = src.scan(&mut summary);
+            println!("\n{} {} save(s) in {}", held.len(), src.family, src.dir.display());
+            for h in &held {
+                let title = moose_rack::unitsync::title(&src.family, &h.path).unwrap_or_default();
+                println!("  {:<24} {:>8} KB  {title}", h.key, h.summary.bytes / 1024);
+            }
+        }
+        for note in &summary.notes {
+            println!("  {note}");
+        }
         return Ok(());
     }
 
     let client = cfg.server.client()?;
-    let candidates = moose_rack::savesync::scan(&store, &map, &ra.root)?;
-    let summary =
+    let candidates = moose_rack::savesync::scan(&store, &map, &root)?;
+    let mut summary =
         moose_rack::savesync::run_all(
             &client,
             &candidates,
-            &ra.root,
+            &root,
             Path::new("."),
             Path::new(&cfg.library.local_root),
         )
         .await?;
+    let sources = moose_rack::unitsync::sources(&cfg.saves.units, &mut summary);
+    if let Err(e) = moose_rack::unitsync::run(
+        &client,
+        &sources,
+        Path::new("."),
+        Path::new(&cfg.library.local_root),
+        &mut summary,
+    )
+    .await
+    {
+        summary.fail(format!("emulator saves: {e:#}"));
+    }
     for note in &summary.notes {
         println!("{note}");
     }
@@ -2066,7 +2124,7 @@ async fn cmd_sync_saves(dry_run: bool, keep: Option<&str>) -> Result<()> {
             &client,
             c,
             choice,
-            &ra.root,
+            &root,
             Path::new(&cfg.library.local_root),
             Path::new("."),
         )
@@ -2182,7 +2240,9 @@ async fn main() -> Result<()> {
         Command::Art { term } => cmd_art(&term).await,
         Command::Hashcheck { file } => cmd_hashcheck(&file),
         Command::SyncBios => cmd_sync_bios().await,
-        Command::SyncSaves { dry_run, keep } => cmd_sync_saves(dry_run, keep.as_deref()).await,
+        Command::SyncSaves { dry_run, keep, root } => {
+            cmd_sync_saves(dry_run, keep.as_deref(), root.as_deref()).await
+        }
     }
 }
 

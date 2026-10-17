@@ -1264,6 +1264,21 @@ describe("the settings shortcut", () => {
     press({ key: "," });
     assert.equal(invoked.some((c) => c.cmd === "open_settings"), false);
   });
+
+  /// A game playing in the page has the keyboard. Its keys reached the
+  /// library behind it, so Cmd+, opened settings under a running game.
+  test("nothing reaches the library while a game plays in the page", () => {
+    const stage = document.createElement("dialog");
+    stage.id = "ejs-stage";
+    document.body.appendChild(stage);
+    try {
+      invoked.length = 0;
+      press({ key: ",", metaKey: true });
+      assert.equal(invoked.some((c) => c.cmd === "open_settings"), false);
+    } finally {
+      stage.remove();
+    }
+  });
 });
 
 describe("take offline: collections as well as systems", () => {
@@ -1308,6 +1323,19 @@ describe("take offline: collections as well as systems", () => {
     document.querySelector('.bulk-tab[data-tab="mine"]').click();
     document.querySelector(".bulk-all").click();
     assert.equal(document.querySelectorAll(".bulk-coll:checked").length, 2);
+    document.getElementById("bulk-overlay")?.remove();
+  });
+
+  /// Only collections ticked, no system: a real choice, which the check in
+  /// front of Download refused as "nothing ticked".
+  test("collections alone are enough to download", async () => {
+    ui.askDownload({});
+    await settle();
+    document.querySelector('.bulk-coll[value="c1"]').checked = true;
+    invoked.length = 0;
+    document.querySelector(".bulk-go").click();
+    await settle();
+    assert.ok(invoked.some((c) => c.cmd === "download_set"), "the download was refused");
     document.getElementById("bulk-overlay")?.remove();
   });
 });

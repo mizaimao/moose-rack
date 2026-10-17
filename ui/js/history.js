@@ -12,8 +12,10 @@
 // the ones you kept opening and kept putting down are the only list here that
 // tells you something you did not already know.
 
-import { state, invoke } from "./state.js";
+import { el, state, invoke } from "./state.js";
 import { region, enter } from "./shell.js";
+import { leaveList } from "./arrange.js";
+import { restoreSidebar } from "./detail.js";
 import { escapeHtml, toast } from "./util.js";
 
 /// Longest bar in the group is full width; everything else is relative to it.
@@ -52,10 +54,24 @@ export async function showHistory() {
   // section machinery parked History under "platforms" and restored the
   // console grid every time you came back to it — the tab simply never showed.
   state.view = "history";
+  // Nor a list of games, so the sort, the filter, Random and a redraw from
+  // Settings have nothing here to act on; see `leaveList`.
+  leaveList();
+  // Nothing in the preview to begin with. It still held the game last
+  // selected, Play button and all, beside a page that has nothing to do with
+  // it, and in one pane the toggle that would close it was disabled here. The
+  // selection goes too, or a double-click anywhere on the page played it.
+  restoreSidebar();
+  state.selected = null;
+  el.detail.hidden = true;
   // No column: this is a page, not a list with something to pick from beside
   // it. Emptying the column left a 240px strip of nothing down the left with a
   // drag handle on it, which reads as a list that failed to load.
-  enter({ title: "History", picker: false, filter: false });
+  //
+  // The preview toggle stays alive, because the games listed here can be
+  // picked: one click opens the pane, a double-click plays, and a pane that
+  // has been opened has to be closable.
+  enter({ title: "History", picker: false, filter: false, sidebar: true });
 
   let h;
   try {

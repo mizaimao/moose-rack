@@ -146,6 +146,34 @@ fn excluded(name: &str) -> bool {
 /// That is why a single-member zip appears to match "the file inside" (with one
 /// member the concatenation *is* that member) while multi-member romsets match
 /// nothing simpler.
+/// Feed everything `r` yields into both digests, a chunk at a time.
+///
+/// Archive members were read whole into memory first, which for a zipped disc
+/// image is a buffer the size of the disc on a handheld with 2 GB of RAM.
+fn digest_into(r: &mut impl std::io::Read, md5: &mut md5::Md5, sha1: &mut sha1::Sha1) -> std::io::Result<()> {
+    let mut buf = vec![0u8; 1 << 20];
+    loop {
+        let n = r.read(&mut buf)?;
+        if n == 0 {
+            return Ok(());
+        }
+        md5.update(&buf[..n]);
+        sha1.update(&buf[..n]);
+    }
+}
+
+/// How many files an archive holds, from its index alone.
+fn archive_member_count(path: &Path) -> usize {
+    if let Ok(file) = std::fs::File::open(path)
+        && let Ok(mut zip) = zip::ZipArchive::new(std::io::BufReader::new(file))
+    {
+        return (0..zip.len()).filter(|&i| zip.by_index(i).is_ok_and(|e| !e.is_dir())).count();
+    }
+    sevenz_rust2::ArchiveReader::open(path, Default::default())
+        .map(|a| a.archive().files.iter().filter(|e| e.has_stream()).count())
+        .unwrap_or(0)
+}
+
 pub fn hash_archive_composite(path: &Path) -> Option<(String, String)> {
     let mut md5 = md5::Md5::new();
     let mut sha1 = sha1::Sha1::new();
@@ -169,12 +197,10 @@ pub fn hash_archive_composite(path: &Path) -> Option<(String, String)> {
                 continue;
             }
             let Ok(mut entry) = zip.by_name(&name) else { continue };
-            let mut buf = Vec::new();
-            if std::io::Read::read_to_end(&mut entry, &mut buf).is_ok() {
-                md5.update(&buf);
-                sha1.update(&buf);
-                any = true;
-            }
+            // A member that cannot be read leaves a digest of part of it,
+            // which matches nothing; say there is no answer instead.
+            digest_into(&mut entry, &mut md5, &mut sha1).ok()?;
+            any = true;
         }
         return any.then(|| (hex::encode(md5.finalize()), hex::encode(sha1.finalize())));
     }
@@ -214,13 +240,9 @@ pub fn hash_archive_members(path: &Path) -> Vec<(String, String, String)> {
                 continue;
             }
             let name = entry.name().to_owned();
-            let mut buf = Vec::new();
-            if std::io::Read::read_to_end(&mut entry, &mut buf).is_ok() {
-                out.push((
-                    name,
-                    hex::encode(md5::Md5::digest(&buf)),
-                    hex::encode(sha1::Sha1::digest(&buf)),
-                ));
+            let (mut md5, mut sha1) = (md5::Md5::new(), sha1::Sha1::new());
+            if digest_into(&mut entry, &mut md5, &mut sha1).is_ok() {
+                out.push((name, hex::encode(md5.finalize()), hex::encode(sha1.finalize())));
             }
         }
         return out;
@@ -271,6 +293,18 @@ fn verify(path: &Path, target: &Target<'_>) -> Result<Verified> {
     let want_md5 = target.md5.filter(|h| !h.is_empty());
     let want_sha1 = target.sha1.filter(|h| !h.is_empty());
     if want_md5.is_none() && want_sha1.is_none() {
+        // "Size only" has to mean the size was looked at. It was not, so any
+        // file already at the path, an empty one or an older revision, was
+        // reported as here and verified.
+        let len = std::fs::metadata(path).with_context(|| format!("reading {}", path.display()))?.len();
+        if len == 0 {
+            bail!("{} is empty", path.display());
+        }
+        if let Some(want) = target.expected_size
+            && len != want
+        {
+            bail!("size mismatch: server {want} bytes, here {len}");
+        }
         return Ok(Verified::SizeOnly);
     }
 
@@ -290,15 +324,17 @@ fn verify(path: &Path, target: &Target<'_>) -> Result<Verified> {
     {
         return Ok(v);
     }
-    let members = hash_archive_members(path);
+    // Counted from the index: reading every member a second time only to
+    // print how many there were doubled the cost of a mismatch.
+    let members = archive_member_count(path);
 
     let want = want_md5.unwrap_or_else(|| want_sha1.unwrap_or(""));
     bail!(
         "hash mismatch: server {want}, downloaded {got_md5}{}",
-        if members.is_empty() {
+        if members == 0 {
             String::new()
         } else {
-            format!(" (composite of {} archive member(s) also checked)", members.len())
+            format!(" (composite of {members} archive member(s) also checked)")
         }
     )
 }
@@ -388,43 +424,107 @@ fn count_members(dir: &Path, listed: &std::collections::HashSet<&str>) -> usize 
 
 /// Extract a downloaded folder-ROM zip into `dest`, flattening any wrapper
 /// directory the archive carries.
+///
+/// `dest` is a fresh folder beside the real one; [`swap_in`] puts it in place
+/// once its files have checked out, so a bad or interrupted download never
+/// costs the copy that was already there.
 fn unpack_folder_rom(zip_path: &Path, dest: &Path) -> Result<()> {
     let file = std::fs::File::open(zip_path)?;
     let mut zip = zip::ZipArchive::new(std::io::BufReader::new(file))
         .with_context(|| format!("reading {}", zip_path.display()))?;
 
-    // A folder ROM downloaded before this function existed is sitting there as
-    // the raw zip, under the folder's own name and with no extension. That is a
-    // *file* where a directory has to go, so removing only directories left it
-    // in place and `create_dir_all` then failed with "File exists" — the one
-    // copy that most needed replacing was the one that could not be.
-    if dest.is_dir() {
-        std::fs::remove_dir_all(dest).ok();
-    } else if dest.exists() {
-        std::fs::remove_file(dest).ok();
+    if dest.exists() {
+        std::fs::remove_dir_all(dest)
+            .with_context(|| format!("clearing {}", dest.display()))?;
     }
     std::fs::create_dir_all(dest)?;
 
+    // The paths inside, kept. Only a wrapper folder every file sits in is
+    // dropped, since `dest` is that folder already. Keeping just each file's
+    // name flattened a PS3 or Wii U game's PS3_GAME/USRDIR/... tree, and two
+    // files of one name in different folders overwrote each other.
+    let mut files: Vec<(usize, PathBuf)> = Vec::new();
     for i in 0..zip.len() {
-        let mut entry = zip.by_index(i)?;
+        let entry = zip.by_index(i)?;
         if entry.is_dir() {
             continue;
         }
-        // Keep only the leaf: entries may be prefixed with the folder name,
-        // and we already have a directory for it.
-        let name = Path::new(entry.name())
-            .file_name()
-            .map(|n| n.to_string_lossy().to_string())
-            .unwrap_or_default();
-        if name.is_empty() {
-            continue;
+        let Some(rel) = entry.enclosed_name() else {
+            bail!("{} would land outside the folder", entry.name());
+        };
+        files.push((i, rel));
+    }
+    let wrapper = files.first().and_then(|(_, p)| {
+        let first = p.components().next()?;
+        let shared = files
+            .iter()
+            .all(|(_, p)| p.components().count() > 1 && p.components().next() == Some(first));
+        shared.then(|| PathBuf::from(first.as_os_str()))
+    });
+    for (i, rel) in files {
+        let rel = match &wrapper {
+            Some(w) => rel.strip_prefix(w).map(Path::to_path_buf).unwrap_or(rel),
+            None => rel,
+        };
+        let out = dest.join(&rel);
+        if let Some(dir) = out.parent() {
+            std::fs::create_dir_all(dir).with_context(|| format!("creating {}", dir.display()))?;
         }
-        let out = dest.join(&name);
+        let mut entry = zip.by_index(i)?;
         let mut w = std::fs::File::create(&out)
             .with_context(|| format!("writing {}", out.display()))?;
         std::io::copy(&mut entry, &mut w)?;
     }
     Ok(())
+}
+
+/// Put the unpacked folder `incoming` where `dest` is, by renames.
+///
+/// The old copy is moved aside first and only removed once the new one is in
+/// place. A folder ROM downloaded before folders were unpacked is sitting at
+/// `dest` as the raw zip, a *file*, and is replaced the same way.
+fn swap_in(incoming: &Path, dest: &Path) -> Result<()> {
+    let name = dest.file_name().unwrap_or_default().to_string_lossy();
+    let replaced = dest.with_file_name(format!(".{name}.replaced"));
+    if replaced.is_dir() {
+        std::fs::remove_dir_all(&replaced).ok();
+    } else if replaced.exists() {
+        std::fs::remove_file(&replaced).ok();
+    }
+    let had_old = dest.exists();
+    if had_old {
+        std::fs::rename(dest, &replaced)
+            .with_context(|| format!("moving {} aside", dest.display()))?;
+    }
+    if let Err(e) = std::fs::rename(incoming, dest) {
+        if had_old {
+            let _ = std::fs::rename(&replaced, dest);
+        }
+        return Err(e).with_context(|| format!("moving the download into {}", dest.display()));
+    }
+    if replaced.is_dir() {
+        std::fs::remove_dir_all(&replaced).ok();
+    } else if replaced.exists() {
+        std::fs::remove_file(&replaced).ok();
+    }
+    Ok(())
+}
+
+/// A name from the server that is one plain file or folder name: no `/`,
+/// no `..`, no drive or root, as this machine's paths read it. Anything else
+/// would be written outside the folder it was meant for.
+fn plain_name(name: &str) -> bool {
+    let mut parts = Path::new(name).components();
+    matches!(parts.next(), Some(std::path::Component::Normal(_))) && parts.next().is_none()
+}
+
+/// A folder under the ROMs folder made only of plain names.
+fn plain_folder(folder: &Path) -> bool {
+    folder.components().next().is_some()
+        && folder.components().all(|c| match c {
+            std::path::Component::Normal(n) => plain_name(&n.to_string_lossy()),
+            _ => false,
+        })
 }
 
 /// Download `target` into `<library_roms>/<platform>/<fs_name>`.
@@ -454,6 +554,13 @@ pub async fn fetch(
         );
     }
 
+    if !plain_name(target.fs_name) || !plain_folder(target.folder) {
+        bail!(
+            "refusing to download {:?} into {:?}: not a plain file and folder name",
+            target.fs_name,
+            target.folder
+        );
+    }
     let dir = library_roms.join(target.folder);
     std::fs::create_dir_all(&dir).with_context(|| format!("creating {}", dir.display()))?;
     let final_path = dir.join(target.fs_name);
@@ -469,15 +576,23 @@ pub async fn fetch(
         {
             return Ok(Outcome::AlreadyHave(final_path));
         }
-    } else if final_path.is_file() {
-        // Trust it only if it still matches; otherwise fall through and refetch.
-        if verify(&final_path, target).is_ok() {
-            return Ok(Outcome::AlreadyHave(final_path));
-        }
-        std::fs::remove_file(&final_path).ok();
+    } else if final_path.is_file() && verify(&final_path, target).is_ok() {
+        // Trust it only if it still matches; otherwise refetch. The copy that
+        // does not match stays where it is until the new one has been checked:
+        // the rename at the end replaces it, and a download that fails leaves
+        // it alone rather than leaving nothing.
+        return Ok(Outcome::AlreadyHave(final_path));
     }
 
-    let resume_from = std::fs::metadata(&part_path).map(|m| m.len()).unwrap_or(0);
+    let mut resume_from = std::fs::metadata(&part_path).map(|m| m.len()).unwrap_or(0);
+    // A `.part` as long as the whole file, or longer, is one that arrived and
+    // then failed its size or hash check. Resuming it asks for bytes past the
+    // end, which the server answers with 416, and every later try did the
+    // same. It starts again instead.
+    if resume_from > 0 && target.expected_size.is_some_and(|size| resume_from >= size) {
+        std::fs::remove_file(&part_path).ok();
+        resume_from = 0;
+    }
     let url = format!(
         "{}/api/roms/{}/content/{}",
         base_url.trim_end_matches('/'),
@@ -485,13 +600,21 @@ pub async fn fetch(
         urlencode_path(target.fs_name)
     );
 
-    let mut req = http
-        .get(&url)
-        .header("Authorization", auth);
-    if resume_from > 0 {
-        req = req.header("Range", format!("bytes={resume_from}-"));
+    let get = |from: u64| {
+        let mut req = http.get(&url).header("Authorization", auth);
+        if from > 0 {
+            req = req.header("Range", format!("bytes={from}-"));
+        }
+        req.send()
+    };
+    let mut resp = get(resume_from).await.with_context(|| format!("GET {url}"))?;
+    // The same, when the size was not known up front: the server says the
+    // range is past the end, so the partial file is no use.
+    if resp.status() == reqwest::StatusCode::RANGE_NOT_SATISFIABLE && resume_from > 0 {
+        std::fs::remove_file(&part_path).ok();
+        resume_from = 0;
+        resp = get(0).await.with_context(|| format!("GET {url}"))?;
     }
-    let resp = req.send().await.with_context(|| format!("GET {url}"))?;
     let status = resp.status();
     if !status.is_success() {
         bail!("GET {url} -> {status}");
@@ -553,16 +676,19 @@ pub async fn fetch(
     // Folder ROMs arrive as a zip of the directory. Unpack it so the layout
     // matches the server's and the .m3u inside points at real neighbours.
     if target.multi_file {
-        unpack_folder_rom(&part_path, &final_path)?;
+        let incoming = dir.join(format!(".{}.incoming", target.fs_name));
+        unpack_folder_rom(&part_path, &incoming)?;
         std::fs::remove_file(&part_path).ok();
-        // Now the files exist individually, each can be checked properly.
-        let verified = match verify_members(&final_path, target.members) {
+        // Now the files exist individually, each can be checked properly,
+        // before anything already here is touched.
+        let verified = match verify_members(&incoming, target.members) {
             Ok((0, _)) => Verified::SizeOnly,
             Ok((checked, total)) => Verified::Members { checked, total },
             Err(e) => {
-                bail!("{e}\n  unpacked files left at {}", final_path.display());
+                bail!("{e}\n  unpacked files left at {}", incoming.display());
             }
         };
+        swap_in(&incoming, &final_path)?;
         return Ok(Outcome::Downloaded {
             path: final_path,
             bytes: written,
@@ -799,5 +925,162 @@ mod tests {
         assert!(Verified::Members { checked: 2, total: 3 }
             .describe()
             .contains("2 of 3"));
+    }
+
+    /// A server that answers one request with `status` and `body`, and hands
+    /// back the request it got.
+    fn serve_once(status: &'static str, body: Vec<u8>) -> (String, std::thread::JoinHandle<String>) {
+        use std::io::{Read, Write};
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let base = format!("http://{}", listener.local_addr().unwrap());
+        let handle = std::thread::spawn(move || {
+            let (mut sock, _) = listener.accept().unwrap();
+            let mut buf = [0u8; 4096];
+            let n = sock.read(&mut buf).unwrap();
+            let head = format!(
+                "HTTP/1.1 {status}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                body.len()
+            );
+            sock.write_all(head.as_bytes()).unwrap();
+            sock.write_all(&body).unwrap();
+            String::from_utf8_lossy(&buf[..n]).into_owned()
+        });
+        (base, handle)
+    }
+
+    fn target<'a>(fs_name: &'a str, folder: &'a Path, size: Option<u64>, md5: Option<&'a str>) -> Target<'a> {
+        Target {
+            rom_id: 7,
+            members: &[],
+            fs_name,
+            folder,
+            expected_size: size,
+            md5,
+            sha1: None,
+            multi_file: false,
+        }
+    }
+
+    /// A local copy that does not match the server's is replaced only by a
+    /// download that arrived and checked out. It used to be deleted before the
+    /// request went out, so a failed download left no copy at all.
+    #[tokio::test]
+    async fn a_copy_that_does_not_match_survives_a_failed_download() {
+        let roms = scratch("survives");
+        let folder = PathBuf::from("snes");
+        let mine = write(&roms.join("snes"), "Game.sfc", b"my own copy");
+        let (base, server) = serve_once("500 Internal Server Error", b"no".to_vec());
+        crate::util::install_tls();
+        let wanted = md5_of(b"the server's copy");
+        let t = target("Game.sfc", &folder, Some(17), Some(&wanted));
+        assert!(fetch(&reqwest::Client::new(), &base, "", &t, &roms, |_, _| {}).await.is_err());
+        server.join().unwrap();
+        assert_eq!(std::fs::read(&mine).unwrap(), b"my own copy");
+    }
+
+    /// A `.part` as long as the whole file is a download that arrived and then
+    /// failed its check. Resuming it asks for bytes past the end, which the
+    /// server refuses with 416, so every later try failed the same way.
+    #[tokio::test]
+    async fn a_full_length_part_starts_over_instead_of_asking_past_the_end() {
+        let roms = scratch("full-part");
+        let folder = PathBuf::from("snes");
+        let body = b"sixteen bytes!!!".to_vec();
+        write(&roms.join("snes"), "Game.sfc.part", b"sixteen bad byte");
+        let (base, server) = serve_once("200 OK", body.clone());
+        crate::util::install_tls();
+        let t = target("Game.sfc", &folder, Some(body.len() as u64), None);
+        fetch(&reqwest::Client::new(), &base, "", &t, &roms, |_, _| {})
+            .await
+            .expect("the download starts over and completes");
+        let request = server.join().unwrap().to_ascii_lowercase();
+        assert!(!request.contains("range:"), "asked for a range again: {request}");
+        assert_eq!(std::fs::read(roms.join("snes/Game.sfc")).unwrap(), body);
+        assert!(!roms.join("snes/Game.sfc.part").exists());
+    }
+
+    /// Names come from the server and are joined onto the ROMs folder, so one
+    /// with a folder in it would write, and on a mismatch replace, a file
+    /// somewhere else.
+    #[tokio::test]
+    async fn a_name_that_leaves_the_folder_is_refused() {
+        let roms = scratch("escape");
+        let snes = PathBuf::from("snes");
+        let up = PathBuf::from("../elsewhere");
+        for t in [
+            target("../Game.sfc", &snes, None, None),
+            target("a/Game.sfc", &snes, None, None),
+            target("..", &snes, None, None),
+            target("Game.sfc", &up, None, None),
+        ] {
+            // Nothing listens on port 9: a request at all would be an error of
+            // a different kind, and the message says which.
+            let e = fetch(&reqwest::Client::new(), "http://127.0.0.1:9", "", &t, &roms, |_, _| {})
+                .await
+                .unwrap_err()
+                .to_string();
+            assert!(e.contains("refusing"), "{e}");
+        }
+    }
+
+    /// With no hash published, "already here" still has to be the right size:
+    /// an empty file or another revision at the path was counted as verified.
+    #[test]
+    fn with_no_hash_the_size_still_has_to_match() {
+        let dir = scratch("size-only");
+        let folder = PathBuf::from("snes");
+        let ok = write(&dir, "Game.sfc", b"twelve bytes");
+        assert!(matches!(verify(&ok, &target("Game.sfc", &folder, Some(12), None)), Ok(Verified::SizeOnly)));
+        assert!(verify(&ok, &target("Game.sfc", &folder, Some(13), None)).is_err());
+        let empty = write(&dir, "Empty.sfc", b"");
+        assert!(verify(&empty, &target("Empty.sfc", &folder, None, None)).is_err());
+    }
+
+    /// A folder game keeps its own folders; only a wrapper around everything
+    /// goes, because the destination is that folder already.
+    #[test]
+    fn a_folder_rom_keeps_its_inner_folders() {
+        let dir = scratch("nested");
+        let zip_path = dir.join("game.zip");
+        zip_of(&zip_path, &[
+            ("Game/PS3_GAME/USRDIR/EBOOT.BIN", b"a"),
+            ("Game/PS3_GAME/PARAM.SFO", b"b"),
+            ("Game/PS3_DISC.SFB", b"c"),
+        ]);
+        let dest = dir.join("out");
+        unpack_folder_rom(&zip_path, &dest).unwrap();
+        assert!(dest.join("PS3_GAME/USRDIR/EBOOT.BIN").is_file());
+        assert!(dest.join("PS3_GAME/PARAM.SFO").is_file());
+        assert!(dest.join("PS3_DISC.SFB").is_file());
+
+        // No shared wrapper: kept as it is.
+        let zip_path = dir.join("flat.zip");
+        zip_of(&zip_path, &[("disc1/track.bin", b"1"), ("disc2/track.bin", b"2"), ("game.m3u", b"m")]);
+        let dest = dir.join("flat");
+        unpack_folder_rom(&zip_path, &dest).unwrap();
+        assert_eq!(std::fs::read(dest.join("disc1/track.bin")).unwrap(), b"1");
+        assert_eq!(std::fs::read(dest.join("disc2/track.bin")).unwrap(), b"2");
+    }
+
+    /// The unpacked folder replaces the old one only once it is complete, and
+    /// a raw zip left at the folder's name by an old build is replaced too.
+    #[test]
+    fn an_unpacked_folder_is_swapped_in_whole() {
+        let dir = scratch("swap");
+        let dest = dir.join("Game");
+        write(&dest, "old.bin", b"old");
+        let incoming = dir.join(".Game.incoming");
+        write(&incoming, "new.bin", b"new");
+        swap_in(&incoming, &dest).unwrap();
+        assert!(dest.join("new.bin").is_file());
+        assert!(!dest.join("old.bin").exists());
+        assert!(!incoming.exists());
+        assert!(!dir.join(".Game.replaced").exists());
+
+        let raw = write(&dir, "Disc", b"a zip from before folders were unpacked");
+        let incoming = dir.join(".Disc.incoming");
+        write(&incoming, "disc.cue", b"cue");
+        swap_in(&incoming, &raw).unwrap();
+        assert!(raw.join("disc.cue").is_file());
     }
 }

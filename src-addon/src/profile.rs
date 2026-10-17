@@ -18,9 +18,17 @@ use crate::patch::{Patch, Paths, State};
 
 /// Read the profile, if there is one. A missing file is not an error — it is
 /// a device that has not been set up yet.
-pub fn load(paths: &Paths) -> BTreeMap<String, String> {
-    let text = fs::read_to_string(paths.profile()).unwrap_or_default();
-    parse(&text)
+///
+/// Any other failure is. Read as empty, a profile that could not be read was
+/// saved over on the next apply with "never saved" for every patch that reads
+/// as changed, and the one file a reflashed device is restored from was gone.
+pub fn load(paths: &Paths) -> Result<BTreeMap<String, String>> {
+    let path = paths.profile();
+    match fs::read_to_string(&path) {
+        Ok(text) => Ok(parse(&text)),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(BTreeMap::new()),
+        Err(e) => Err(e).with_context(|| format!("reading {}", path.display())),
+    }
 }
 
 pub fn parse(text: &str) -> BTreeMap<String, String> {
@@ -87,17 +95,34 @@ pub fn render(patches: &[Patch], before: &BTreeMap<String, String>) -> (String, 
             },
         }
     }
+    // Lines for patches this build does not have, from a profile a newer build
+    // wrote. They go back out as they came in, so running an older build for a
+    // while does not cost the newer one its settings.
+    let foreign: Vec<_> = before
+        .iter()
+        .filter(|(id, _)| !patches.iter().any(|p| p.id == id.as_str()))
+        .collect();
+    if !foreign.is_empty() {
+        out.push_str("\n# Not patches this build knows; kept as they were.\n");
+        for (id, name) in foreign {
+            out.push_str(&format!("{id} = \"{name}\"\n"));
+        }
+    }
     (out, saved)
 }
 
 /// Write down where every patch currently sits. What it could not read off
 /// the device is in the answer, so the caller can say so.
+///
+/// A profile that is there and cannot be read stops the save, and the file is
+/// left as it is.
 pub fn save(paths: &Paths, patches: &[Patch]) -> Result<Saved> {
+    let before = load(paths)?;
     let path = paths.profile();
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent).ok();
     }
-    let (text, saved) = render(patches, &load(paths));
+    let (text, saved) = render(patches, &before);
     crate::patch::write_through(&path, text.as_bytes())
         .with_context(|| format!("writing {}", path.display()))?;
     Ok(saved)
@@ -121,7 +146,7 @@ pub struct Restored {
 /// Put the device back to what the profile says. This is the whole point of
 /// the file.
 pub fn restore(paths: &Paths, patches: &[Patch]) -> Result<Restored> {
-    let wanted = load(paths);
+    let wanted = load(paths)?;
     let mut out = Restored::default();
     for (id, name) in wanted {
         let Some(patch) = patches.iter().find(|p| p.id == id) else {
@@ -291,6 +316,49 @@ mod tests {
         // And a restore puts it back.
         restore(&paths, &all).unwrap();
         assert_eq!(never_sleep.state(), State::At(1));
+    }
+
+    /// A profile written by a newer build names patches this one does not
+    /// have. A save here used to walk only the patches it knows and drop the
+    /// rest, so going back to the newer build found them gone.
+    #[test]
+    fn a_save_keeps_lines_for_patches_this_build_does_not_know() {
+        let paths = scratch("foreign");
+        let all = catalogue::all(&paths);
+        fs::create_dir_all(paths.profile().parent().unwrap()).unwrap();
+        fs::write(paths.profile(), "from-a-newer-build = \"ON\"\n").unwrap();
+
+        save(&paths, &all).unwrap();
+        let profile = fs::read_to_string(paths.profile()).unwrap();
+        assert!(profile.contains("from-a-newer-build = \"ON\""), "{profile}");
+        assert_eq!(
+            load(&paths).unwrap().get("from-a-newer-build").map(String::as_str),
+            Some("ON")
+        );
+        // Saving again does not write it twice.
+        save(&paths, &all).unwrap();
+        let again = fs::read_to_string(paths.profile()).unwrap();
+        assert_eq!(again.matches("from-a-newer-build").count(), 1, "{again}");
+    }
+
+    /// A profile that is there but cannot be read is not an empty one. Read as
+    /// empty, the save after it wrote "never saved" over every setting in it.
+    #[test]
+    fn a_profile_that_cannot_be_read_is_not_saved_over() {
+        let paths = scratch("unreadable");
+        let all = catalogue::all(&paths);
+        fs::create_dir_all(paths.profile().parent().unwrap()).unwrap();
+        let bytes = b"hotkeys = \"ON\"\nnever-sleep = \"\xff\"\n";
+        fs::write(paths.profile(), bytes).unwrap();
+
+        assert!(load(&paths).is_err());
+        assert!(save(&paths, &all).is_err(), "saved over a profile it could not read");
+        assert_eq!(fs::read(paths.profile()).unwrap(), bytes);
+        assert!(restore(&paths, &all).is_err());
+
+        // No file at all is still a device that has not been set up.
+        fs::remove_file(paths.profile()).unwrap();
+        assert!(load(&paths).unwrap().is_empty());
     }
 
     #[test]

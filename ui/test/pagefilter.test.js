@@ -139,6 +139,18 @@ describe("filtering the page", () => {
     assert.equal(el.pageFilter.value, "");
   });
 
+  /// The backend is one for every browser pointed at moose-service. It held
+  /// the names from whichever page sent them last, and this page resent its
+  /// own only when their count changed, so another page's names, sent between
+  /// two keystrokes here, were what the next keystroke was filtered against.
+  test("another page's names do not change what this one finds", async () => {
+    const { invoke } = await import("../js/state.js");
+    await pf.applyPageFilter("game");
+    await invoke("set_page_names", { names: ["Somebody else's console"], groups: [] });
+    await pf.applyPageFilter("game boy");
+    assert.deepEqual(visible(), ["Game Boy", "Game Boy Advance"]);
+  });
+
   test("it says what this page holds", () => {
     pf.setPageFilterLabel("27 collections");
     assert.match(el.pageFilter.placeholder, /27 collections/);
