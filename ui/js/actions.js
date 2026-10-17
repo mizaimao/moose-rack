@@ -155,7 +155,7 @@ async function launchAndroid(id, skipSync = false) {
 /// clicked; resume is a decision this function makes.
 export async function launch(
   id,
-  { resolving = false, skipSync = false, entrySlot = null, resume = false } = {}
+  { resolving = false, skipSync = false, skipBios = false, entrySlot = null, resume = false } = {}
 ) {
   if (resume && entrySlot === null) {
     try {
@@ -190,7 +190,8 @@ export async function launch(
   // And it is a *modal*: `launch` awaits it. On a console with a gun -- which
   // is every SNES game, because the Super Scope exists -- an unanswered dialog
   // is a launch that never happens. Nothing after this line ran.
-  if (askAboutLightGun({ resolving, skipSync, mobile: MOBILE, native: await canLaunchNatively() })) {
+  const retry = skipSync || skipBios;
+  if (askAboutLightGun({ resolving, skipSync: retry, mobile: MOBILE, native: await canLaunchNatively() })) {
     try {
       // Shape-checked, not just truthy. `[]` is truthy in JavaScript, so a
       // backend — or a stub — answering with an empty array opened a dialog
@@ -206,7 +207,7 @@ export async function launch(
   }
   // The retry paths below call back into this function on purpose, so they
   // pass through the guard rather than being stopped by it.
-  if (launching && !resolving && !skipSync) return;
+  if (launching && !resolving && !retry) return;
   launching = true;
   // And the pad goes quiet immediately, before anything is awaited: the press
   // that started this is still down, and the poll runs sixty times a second.
@@ -251,6 +252,7 @@ export async function launch(
           pad: state.gamepad,
           refresh: await measureRefresh(),
           skipSync,
+          skipBios,
           entrySlot,
         });
     stop?.();
@@ -291,11 +293,14 @@ export async function launch(
         return toast(await playHere(id));
       }
     }
+    // Its own flag, not `skipSync`: "play without the BIOS" says nothing
+    // about saves, and reusing the offline answer meant nothing was pulled
+    // before the game or pushed after it, every time that game was played.
     const bios = biosFrom(e);
-    if (bios && !skipSync) {
+    if (bios && !skipBios) {
       const go = await askBios(bios);
       if (!go) return toast("Launch cancelled");
-      return launch(id, { skipSync: true, entrySlot });
+      return launch(id, { skipSync, skipBios: true, entrySlot });
     }
     // Saves could not be checked at all. Ask rather than deciding: starting
     // silently risks an hour on top of a stale save, and refusing would mean a
@@ -304,7 +309,7 @@ export async function launch(
     if (offline && !skipSync) {
       const go = await askOffline(offline);
       if (!go) return toast("Launch cancelled");
-      return launch(id, { skipSync: true, entrySlot });
+      return launch(id, { skipSync: true, skipBios, entrySlot });
     }
 
     toast(`Launch failed — ${e}`, 8000);

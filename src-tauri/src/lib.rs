@@ -467,6 +467,10 @@ fn work_area(app: &tauri::AppHandle) -> Option<moose_rack::retroarch::Screen> {
     })
 }
 
+// Each argument is a key in the page's `invoke("launch_rom", {...})`, so they
+// stay separate rather than being folded into a struct the page would have to
+// match.
+#[allow(clippy::too_many_arguments)]
 #[tauri::command]
 async fn launch_rom(
     app: tauri::AppHandle,
@@ -476,6 +480,10 @@ async fn launch_rom(
     refresh: Option<f32>,
     // Set by the retry after the user answered an offline warning.
     skip_sync: Option<bool>,
+    // Set by the retry after the user said "play anyway" to a missing BIOS.
+    // Separate from `skip_sync`: that answer is about the BIOS, and taking it
+    // as "skip the save sync" lost the sync on both sides of the game.
+    skip_bios: Option<bool>,
     // A save state to start in, chosen from the shelf in the info pane.
     entry_slot: Option<u32>,
 ) -> CmdResult<String> {
@@ -590,7 +598,7 @@ async fn launch_rom(
                 // got either — arrived as a black screen with the explanation
                 // scrolled past behind it. The front end offers "play anyway",
                 // because a core that wants a BIOS sometimes runs without one.
-                if !skip_sync.unwrap_or(false) {
+                if !skip_bios.unwrap_or(false) {
                     let want = moose_rack::bios::required_for(core, &row.platform_slug);
                     let missing: Vec<String> = want
                         .into_iter()

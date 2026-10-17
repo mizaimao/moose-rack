@@ -54,6 +54,12 @@ before(async () => {
         // The backend emits while the command is still running — that is the
         // whole point of it — so the stub does too.
         for (const fn of listeners) fn({ payload: "checking saves with the server…" });
+        // A string fails one launch with that message, as the backend does.
+        if (typeof fail === "string" && cmd === "launch_rom") {
+          const message = fail;
+          fail = false;
+          throw new Error(message);
+        }
         if (fail) throw new Error("no core installed");
         return "played for 3 minutes";
       },
@@ -151,5 +157,27 @@ describe("launching says what it is doing", () => {
     await mod.launch(7);
     await mod.launch(7);
     assert.equal(listeners.length, 0);
+  });
+});
+
+describe("play without the BIOS", () => {
+  /// "Play anyway" is about the BIOS. It went back to the backend as the
+  /// offline answer, `skipSync`, so the save was neither pulled before the game
+  /// nor pushed after it, on every launch of that game.
+  test("the retry skips the BIOS check and still syncs the saves", async () => {
+    fail = "BIOS_MISSING:neogeo needs neogeo.zip — not on the server";
+    const done = mod.launch(7);
+    let yes;
+    for (let i = 0; i < 50 && !yes; i++) {
+      await new Promise((r) => setTimeout(r, 10));
+      yes = dom.window.document.querySelector('#conflict-overlay [data-go="yes"]');
+    }
+    assert.ok(yes, "the BIOS question was not asked");
+    yes.click();
+    await done;
+    const launches = invoked.filter((i) => i.cmd === "launch_rom");
+    assert.equal(launches.length, 2);
+    assert.equal(launches[1].args.skipBios, true, "the retry asked about the BIOS again");
+    assert.equal(launches[1].args.skipSync, false, "the retry skipped the save sync");
   });
 });
