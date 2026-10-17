@@ -581,12 +581,20 @@ fn local_for<'a>(candidates: &'a [Candidate], rom_id: i64, name: &str) -> Option
 }
 
 /// Negotiate and carry out the plan for an already-scanned tree.
+///
+/// `only` limits it to one game, for the sync either side of a launch. That
+/// sync scans one game, and the server, told about one game's saves, plans a
+/// download of every other save it holds as one this device lacks. Carried out,
+/// that pulled every game's save before any launch, and on KNULLI turned each
+/// one that differed into a conflict that refused the launch of a different
+/// game.
 pub async fn run(
     client: &Client,
     candidates: &[Candidate],
     ra_root: &Path,
     data_dir: &Path,
     library_root: &Path,
+    only: Option<i64>,
 ) -> Result<Summary> {
     let identity = DeviceIdentity::ensure(client, data_dir).await?;
     let mut summary = Summary::default();
@@ -623,6 +631,9 @@ pub async fn run(
         .collect();
 
     for (at, op) in plan.operations.iter().enumerate() {
+        if only.is_some_and(|rom| rom != op.rom_id) {
+            continue;
+        }
         if let Some(twin) = twins.get(&at) {
             match twin {
                 Twin::Same { local, server_name } => match respell(local, server_name) {
@@ -1225,7 +1236,31 @@ pub async fn run_all(
     data_dir: &Path,
     library_root: &Path,
 ) -> Result<Summary> {
-    let mut summary = run(client, candidates, ra_root, data_dir, library_root).await?;
+    run_both(client, candidates, ra_root, data_dir, library_root, None).await
+}
+
+/// As [`run_all`], for one game: the sync either side of a launch, whose
+/// candidates are that game's alone. See `only` on [`run`].
+pub async fn run_for_game(
+    client: &Client,
+    candidates: &[Candidate],
+    rom_id: i64,
+    ra_root: &Path,
+    data_dir: &Path,
+    library_root: &Path,
+) -> Result<Summary> {
+    run_both(client, candidates, ra_root, data_dir, library_root, Some(rom_id)).await
+}
+
+async fn run_both(
+    client: &Client,
+    candidates: &[Candidate],
+    ra_root: &Path,
+    data_dir: &Path,
+    library_root: &Path,
+    only: Option<i64>,
+) -> Result<Summary> {
+    let mut summary = run(client, candidates, ra_root, data_dir, library_root, only).await?;
 
     // States are best effort against the saves half: failing to sync a
     // freeze-frame should not discard a successful game-save sync.

@@ -1943,7 +1943,7 @@ pub async fn auto_sync(
         }
     };
 
-    match savesync::run_all(&client, &candidates, &root, Path::new("."), &library_root).await {
+    match savesync::run_for_game(&client, &candidates, row.id, &root, Path::new("."), &library_root).await {
         Ok(summary) => AutoSync {
             note: savesync::describe(when, &summary),
             conflicts: summary.conflicts,

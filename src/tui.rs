@@ -417,8 +417,9 @@ impl App {
         };
 
         let root = self.saves_root.clone();
+        let rom_id = rom.id;
         let result = self.rt.block_on(async move {
-            crate::savesync::run_all(&client, &candidates, &root, Path::new("."), &library_root).await
+            crate::savesync::run_for_game(&client, &candidates, rom_id, &root, Path::new("."), &library_root).await
         });
 
         match result {
