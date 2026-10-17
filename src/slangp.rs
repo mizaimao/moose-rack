@@ -136,7 +136,12 @@ impl Preset {
         self.globals()
             .filter(|(k, _)| *k != "textures" && *k != "parameters")
             .map(|(k, v)| {
-                let value = if textures.contains(&k) && !k.contains('_') {
+                // A key that is a texture's name, whatever is in it. Flags such
+                // as `LUT1_linear` are not names in `textures`, so they never
+                // match; ruling out every name with an underscore also ruled
+                // out crt-royale's `mask_grille_texture_small` and the rest,
+                // which then stayed relative and did not load.
+                let value = if textures.contains(&k) {
                     absolute(&self.dir, v)
                 } else {
                     v.to_owned()
@@ -391,6 +396,22 @@ parameters = "_ADPT_STROBE_STR"
             "the LUT path must be absolute: {out}"
         );
         assert!(out.contains("LUT1_linear = \"true\""), "flags are not paths");
+    }
+
+    /// crt-royale names its textures with underscores.
+    #[test]
+    fn a_texture_named_with_underscores_is_made_absolute() {
+        let base = Preset::parse(
+            "shaders = 1\nshader0 = a.slang\ntextures = \"mask_grille_texture_small\"\n\
+             mask_grille_texture_small = textures/grille.png\nmask_grille_texture_small_linear = true\n",
+            Path::new("/ra/crt"),
+        );
+        let out = chain(&base, &Preset::parse("shaders = 0", Path::new("/ra/bfi")));
+        assert!(
+            out.contains("mask_grille_texture_small = \"/ra/crt/textures/grille.png\""),
+            "{out}"
+        );
+        assert!(out.contains("mask_grille_texture_small_linear = \"true\""), "{out}");
     }
 
     #[test]
