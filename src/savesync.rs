@@ -266,21 +266,53 @@ pub enum Destination<'a> {
 /// punctuation, which is exactly the difference between all three spellings.
 fn core_folder(dir: &Path, core: Option<&str>) -> Option<String> {
     let core = core.filter(|s| !s.is_empty())?;
-    let wanted = saves::normalize(core);
+    // The stem, ES-DE's label and RetroArch's own name, any of which can be
+    // what is on disk: `Beetle PSX HW` normalizes to the label and not to
+    // `mednafen_psx_hw`, so matching the stem alone made a second folder.
+    let wanted: Vec<String> = [
+        Some(core.to_owned()),
+        shipped_map().label_for(core).map(str::to_owned),
+        crate::corenames::retroarch_name(core).map(str::to_owned),
+    ]
+    .into_iter()
+    .flatten()
+    .map(|n| saves::normalize(&n))
+    .collect();
     if let Ok(entries) = std::fs::read_dir(dir) {
         for entry in entries.flatten() {
             if !entry.path().is_dir() {
                 continue;
             }
             let name = entry.file_name().to_string_lossy().into_owned();
-            if saves::normalize(&name) == wanted {
+            if wanted.contains(&saves::normalize(&name)) {
                 return Some(name);
             }
         }
     }
-    // Nothing there yet, so the server's own spelling it is. RetroArch will
-    // read from it once it writes a save of its own there.
-    Some(core.to_string())
+    // Nothing there yet: the name RetroArch will give the folder, where it is
+    // known, else the server's own spelling.
+    Some(crate::corenames::retroarch_name(core).unwrap_or(core).to_string())
+}
+
+/// The shipped core map, parsed once. The sync has no `AppState` to borrow a
+/// map from, and the CLI, the TUI and the add-on all call it.
+fn shipped_map() -> &'static CoreMap {
+    static MAP: std::sync::OnceLock<CoreMap> = std::sync::OnceLock::new();
+    MAP.get_or_init(CoreMap::embedded)
+}
+
+/// The core a save belongs to, from what the server recorded about it.
+///
+/// A stem the map knows, or a RetroArch folder name an older client sent in
+/// its place. Anything else (a KNULLI device sends its system folder, `snes`)
+/// says nothing about the core.
+fn known_core(hint: Option<&str>) -> Option<String> {
+    let hint = hint.map(str::trim).filter(|s| !s.is_empty())?;
+    let map = shipped_map();
+    if map.label_for(hint).is_some() || crate::corenames::retroarch_name(hint).is_some() {
+        return Some(hint.to_owned());
+    }
+    map.core_by_display_name(hint, saves::normalize)
 }
 
 /// Where this device would file a save for one platform, given the core the
@@ -630,6 +662,18 @@ pub async fn run(
                 };
                 let name = op.file_name.clone().unwrap_or_else(|| format!("save-{save_id}"));
                 let was_reported = reported.contains(&(op.rom_id, local_name(&name)));
+                // A save this device reported goes into the file it reported,
+                // not into a folder worked out again from the core's name. For
+                // the Beetle cores, FinalBurn Neo and others the stem does not
+                // spell RetroArch's folder, so the newer copy went beside the
+                // real file and the older one went on being the save.
+                let here = was_reported
+                    .then(|| local_for(candidates, op.rom_id, &local_name(&name)))
+                    .flatten();
+                let guard = match here {
+                    Some(c) => Guard::Into(&c.path),
+                    None => Guard::Unreported { reported: was_reported, server_hash: op.server_content_hash.as_deref() },
+                };
                 match download_one(
                     client,
                     ra_root,
@@ -640,7 +684,7 @@ pub async fn run(
                     library_root,
                     op.rom_id,
                     op.slot.as_deref(),
-                    Guard::Unreported { reported: was_reported, server_hash: op.server_content_hash.as_deref() },
+                    guard,
                 )
                 .await
                 {
@@ -918,21 +962,43 @@ async fn download_one(
             // A failure is an error, not a fallback. Without the platform the
             // save was written to the top of the saves folder, where nothing
             // reads it, and counted as downloaded.
-            let platform = match crate::platform::current().save_layout() {
-                SaveLayout::ByCore => None,
+            //
+            // A device that files by core needs the core just as much. The
+            // server keeps none for a save that came from a handheld, and with
+            // none the save went to the top of `saves/`, where RetroArch does
+            // not look: the game started fresh, and its first save went up
+            // over the one that had just come down. So the core is the one the
+            // server recorded, else the one this device would launch the game
+            // with, and with neither nothing is written.
+            match crate::platform::current().save_layout() {
+                SaveLayout::ByCore => {
+                    let core = match known_core(emulator) {
+                        Some(core) => Some(core),
+                        None => {
+                            let rom = client
+                                .rom_with_files(rom_id)
+                                .await
+                                .context("asking the server which system this game is")?;
+                            core_for_here(&rom)
+                        }
+                    };
+                    let core = core.with_context(|| {
+                        format!("{file_name}: no core is set up for this game's system here, so there is no folder RetroArch would read it from")
+                    })?;
+                    download_path(root, file_name, Destination::Core { core: Some(&core) })
+                }
                 SaveLayout::BySystem => {
                     let rom = client
                         .rom_with_files(rom_id)
                         .await
                         .context("asking the server which system this game is")?;
-                    Some(
-                        rom.platform_fs_slug
-                            .filter(|s| !s.is_empty())
-                            .context("the server did not say which system this game is")?,
-                    )
+                    let platform = rom
+                        .platform_fs_slug
+                        .filter(|s| !s.is_empty())
+                        .context("the server did not say which system this game is")?;
+                    download_path(root, file_name, destination(emulator, Some(&platform)))
                 }
-            };
-            download_path(root, file_name, destination(emulator, platform.as_deref()))
+            }
         }
     };
 
@@ -969,6 +1035,21 @@ async fn download_one(
         });
     }
     Ok(Landed::Written { path, note })
+}
+
+/// The core this device would launch `rom` with: a per-game or per-system
+/// choice in config.toml, else the shipped default for its system.
+fn core_for_here(rom: &crate::api::Rom) -> Option<String> {
+    let platform = rom.platform_fs_slug.as_deref().filter(|s| !s.is_empty())?;
+    let cores = crate::config::Config::load().map(|c| c.cores).unwrap_or_default();
+    crate::coremap::resolve_core_for(
+        shipped_map(),
+        &cores.overrides,
+        &cores.per_game,
+        platform,
+        Some(&rom.fs_name),
+        |_| true,
+    )
 }
 
 /// Whether a planned download must stop because a save the device never
@@ -1247,13 +1328,40 @@ mod tests {
         assert_eq!(path, dir.join("saves/PCSX-ReARMed/Crash Bandicoot (USA).srm"));
     }
 
+    /// With no folder yet, the one RetroArch will make: `mGBA`, not `mgba`.
+    /// On a disk that tells case apart the stem was a folder RetroArch never
+    /// reads. A core RetroArch's name is not known for keeps its stem.
     #[test]
-    fn with_no_folder_yet_the_servers_spelling_is_used() {
+    fn with_no_folder_yet_retroarchs_own_name_is_used() {
         let dir = std::env::temp_dir().join("moose-rack-dl-fresh");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(dir.join("saves")).unwrap();
         let path = download_path(&dir, "Game.srm", Destination::Core { core: Some("mgba") });
-        assert_eq!(path, dir.join("saves/mgba/Game.srm"));
+        assert_eq!(path, dir.join("saves/mGBA/Game.srm"));
+        let path = download_path(&dir, "Game.srm", Destination::Core { core: Some("not_a_core") });
+        assert_eq!(path, dir.join("saves/not_a_core/Game.srm"));
+    }
+
+    /// The Beetle cores' folders match their ES-DE label, not their stem, so a
+    /// lookup by stem alone made `mednafen_psx_hw/` beside `Beetle PSX HW/`.
+    #[test]
+    fn a_download_finds_a_folder_named_after_the_label() {
+        let dir = std::env::temp_dir().join("moose-rack-dl-label");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join("saves/Beetle PSX HW")).unwrap();
+        let path = download_path(&dir, "Game.srm", Destination::Core { core: Some("mednafen_psx_hw") });
+        assert_eq!(path, dir.join("saves/Beetle PSX HW/Game.srm"));
+    }
+
+    /// What the server recorded is a core only if it names one. A KNULLI
+    /// device sends its system folder, which is not a core at all.
+    #[test]
+    fn only_a_real_core_is_taken_from_the_server() {
+        assert_eq!(known_core(Some("snes9x")).as_deref(), Some("snes9x"));
+        assert_eq!(known_core(Some("Snes9x")).as_deref(), Some("snes9x"), "a RetroArch folder name");
+        assert_eq!(known_core(Some("snes")), None);
+        assert_eq!(known_core(Some("")), None);
+        assert_eq!(known_core(None), None);
     }
 
     /// Batocera files by platform and keeps states in that same folder, so a
@@ -1292,15 +1400,15 @@ mod tests {
         let root = Path::new("/ra");
         assert_eq!(
             download_path(root, "Game.state", Destination::Core { core: Some("snes9x") }),
-            Path::new("/ra/states/snes9x/Game.state")
+            Path::new("/ra/states/Snes9x/Game.state")
         );
         assert_eq!(
             download_path(root, "Game.state3", Destination::Core { core: Some("snes9x") }),
-            Path::new("/ra/states/snes9x/Game.state3")
+            Path::new("/ra/states/Snes9x/Game.state3")
         );
         assert_eq!(
             download_path(root, "Game.srm", Destination::Core { core: Some("snes9x") }),
-            Path::new("/ra/saves/snes9x/Game.srm")
+            Path::new("/ra/saves/Snes9x/Game.srm")
         );
     }
 

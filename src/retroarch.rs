@@ -1486,7 +1486,8 @@ mod tests {
             "Chrono Trigger (USA).srm",
             crate::savesync::Destination::Core { core: Some("snes9x") },
         );
-        assert_eq!(landed, saves.join("saves/snes9x/Chrono Trigger (USA).srm"));
+        // `Snes9x`, the folder RetroArch itself makes for that core.
+        assert_eq!(landed, saves.join("saves/Snes9x/Chrono Trigger (USA).srm"));
     }
 
     #[test]
