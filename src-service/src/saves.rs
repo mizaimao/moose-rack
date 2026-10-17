@@ -1025,10 +1025,19 @@ pub mod legacy {
         let mut changed = 0;
         for (key, hash) in old {
             let mut parts = key.splitn(3, '\0');
+            // Anything that is not `device\0rom_id\0file` is kept as it is.
+            // Save units are `device\0unit:<family>\0<key>`, and dropping those
+            // here, on every start, wiped every unit's record of agreement:
+            // the next change on a device came back as a conflict, and a unit
+            // a device had deleted came back to it.
             let (Some(device), Some(rom), Some(file)) = (parts.next(), parts.next(), parts.next()) else {
+                seen.insert(key, hash);
                 continue;
             };
-            let Ok(rom) = rom.parse::<i64>() else { continue };
+            let Ok(rom) = rom.parse::<i64>() else {
+                seen.insert(key, hash);
+                continue;
+            };
             if !gameid::is_legacy(rom) {
                 seen.insert(key, hash);
                 continue;
@@ -1232,6 +1241,19 @@ pub mod legacy {
             // Idempotent: running it again against the same moves changes nothing.
             assert_eq!(remap_seen(&mut seen, &moved), 0);
             assert!(seen.contains_key(&format!("dev\u{0}{CT}\u{0}Already.srm")), "stable keys untouched");
+        }
+
+        /// Save units share the map under keys with no game id in them. The
+        /// remap runs on every start, and dropping what it could not parse
+        /// wiped every unit's record of agreement each time.
+        #[test]
+        fn keys_that_are_not_a_games_are_kept() {
+            let unit = crate::units::seen_key("dev", "ppsspp", "ULUS10041");
+            let mut seen: HashMap<String, String> = [(unit.clone(), "h".to_owned())].into_iter().collect();
+            seen.insert("odd".to_owned(), "h2".to_owned());
+            remap_seen(&mut seen, &BTreeMap::new());
+            assert_eq!(seen.get(&unit).map(String::as_str), Some("h"), "the unit's agreement was dropped");
+            assert!(seen.contains_key("odd"));
         }
     }
 }
