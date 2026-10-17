@@ -12,13 +12,16 @@
 #   ./scripts/flip-gpu-switch.sh remove     take them off, restore stock
 #
 # `/` on this device is an overlay whose writable layer is a **256 MB tmpfs** —
-# so anything written to /usr/lib is gone at the next boot. A switch that only
-# copies the file therefore appears to work and quietly reverts. The choice is
-# recorded in /userdata (which is real storage) and re-applied at every boot by
-# a hook in /boot, which is the earliest thing that runs.
+# so anything written to /usr/lib is gone at the next boot, and a switch made
+# here lasts until then. That is also the safety net: a driver that will not
+# load is undone by pulling the power.
 #
-# The same fact is the safety net: a driver that will not load is undone by
-# pulling the power, because the swap never survived on its own.
+# To keep a choice across reboots, use the "Graphics driver" patch in
+# moose-patch. It owns /boot/boot-custom.sh and the files on /boot that hook
+# reads. This script used to write its own older hook over that file, and
+# `remove` deleted it, which stopped every one of moose-patch's boot patches.
+# Its hook never worked either: it read /userdata, which is not mounted yet
+# when the hook runs. So this script leaves /boot alone.
 set -euo pipefail
 
 FLIP="${FLIP:-10.10.10.187}"
@@ -83,38 +86,10 @@ if cmp -s "$WANT" "$LIVE"; then
   sleep 3; exit 0
 fi
 cp "$WANT" "$LIVE.new" && mv "$LIVE.new" "$LIVE" \
-  && say "Applied. Reboot so everything picks it up." \
-  || say "Could not swap the live file; it will be applied at the next boot."
+  && say "Applied. Restart EmulationStation to pick it up; a reboot goes back to stock." \
+  || say "Could not swap the live file; nothing changed."
 sleep 5
 SWITCH
-}
-
-# The boot hook. /boot is vfat and read-only at runtime, so it is remounted to
-# write this once.
-boothook() {
-cat <<'HOOK'
-#!/bin/bash
-# Re-apply the chosen Mali driver at every boot.
-#
-# The writable layer of / is a tmpfs, so /usr/lib is the stock image again on
-# every start. Whatever was chosen lives in /userdata, which is real storage.
-case "$1" in
-  start)
-    GPU=/userdata/system/gpu
-    [ -s "$GPU/selected" ] || exit 0
-    WANT="$GPU/libmali-$(cat $GPU/selected 2>/dev/null | tr -d '\r\n')"
-    case "$(cat $GPU/selected 2>/dev/null | tr -d '\r\n')" in
-      wayland) WANT=$GPU/libmali-g24p0-wayland.so ;;
-      stock)   WANT=$GPU/libmali-g13p0-stock.so ;;
-      *) exit 0 ;;
-    esac
-    [ -s "$WANT" ] || exit 0
-    cp "$WANT" /usr/lib/libmali.so.1.new 2>/dev/null && \
-      mv /usr/lib/libmali.so.1.new /usr/lib/libmali.so.1 2>/dev/null
-    ;;
-esac
-exit 0
-HOOK
 }
 
 case "${1:-}" in
@@ -129,13 +104,6 @@ case "${1:-}" in
     say "sending the Wayland driver"
     send "$CACHE" "$GPU/libmali-g24p0-wayland.so"
 
-    say "installing the boot hook so the choice survives a reboot"
-    boothook > /tmp/boot-custom.sh
-    ssh_do "mount -o remount,rw /boot" >/dev/null 2>&1 || true
-    send /tmp/boot-custom.sh "/boot/boot-custom.sh"
-    rm -f /tmp/boot-custom.sh
-    ssh_do "chmod +x /boot/boot-custom.sh 2>/dev/null; ls -la /boot/boot-custom.sh; mount -o remount,ro /boot 2>/dev/null" >/dev/null
-
     say "installing the switcher and its two Ports entries"
     switcher > /tmp/gpu-switch.sh
     send /tmp/gpu-switch.sh "$GPU/gpu-switch.sh"
@@ -145,16 +113,20 @@ case "${1:-}" in
       printf '#!/bin/bash\n$GPU/gpu-switch.sh stock\n' > '$PORTS/GPU driver - stock.sh'; \
       chmod +x '$PORTS/GPU driver - Wayland.sh' '$PORTS/GPU driver - stock.sh'; \
       ls -la '$PORTS' | grep GPU" 
-    say "done — two entries under Ports. They take effect on reboot."
+    say "done — two entries under Ports. A switch lasts until the next reboot."
     ;;
   remove)
     say "restoring the stock driver and removing the entries"
-    ssh_do "[ -s $GPU/libmali-g13p0-stock.so ] && cp $GPU/libmali-g13p0-stock.so /usr/lib/libmali.so.1 && echo 'stock driver restored'; \
-      rm -f '$PORTS/GPU driver - Wayland.sh' '$PORTS/GPU driver - stock.sh'; rm -rf $GPU; \
-      mount -o remount,rw /boot 2>/dev/null; rm -f /boot/boot-custom.sh; mount -o remount,ro /boot 2>/dev/null; echo removed"
+    # Copied beside the live file and renamed over it, as the switcher does. A
+    # running ES has libmali mapped, and a plain cp rewrites those pages under
+    # it. /boot/boot-custom.sh is moose-patch's and stays where it is.
+    ssh_do "[ -s $GPU/libmali-g13p0-stock.so ] && cp $GPU/libmali-g13p0-stock.so /usr/lib/libmali.so.1.new \
+        && mv /usr/lib/libmali.so.1.new /usr/lib/libmali.so.1 && echo 'stock driver restored'; \
+      rm -f /usr/lib/libmali.so.1.new; \
+      rm -f '$PORTS/GPU driver - Wayland.sh' '$PORTS/GPU driver - stock.sh'; rm -rf $GPU; echo removed"
     ;;
   status)
-    ssh_do "if cmp -s $GPU/libmali-g24p0-wayland.so /usr/lib/libmali.so.1 2>/dev/null; then echo 'running now: g24p0 (Wayland)'; else echo 'running now: g13p0 (stock)'; fi; echo \"chosen for next boot: \$(cat $GPU/selected 2>/dev/null || echo '(none — stock)')\"; echo \"boot hook: \$([ -f /boot/boot-custom.sh ] && echo installed || echo missing)\""
+    ssh_do "if cmp -s $GPU/libmali-g24p0-wayland.so /usr/lib/libmali.so.1 2>/dev/null; then echo 'running now: g24p0 (Wayland)'; else echo 'running now: g13p0 (stock)'; fi; echo \"last chosen here: \$(cat $GPU/selected 2>/dev/null || echo '(none — stock)')\"; echo \"moose-patch boot hook: \$([ -f /boot/boot-custom.sh ] && echo present || echo missing)\""
     ;;
-  *) sed -n '3,20p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+  *) sed -n '3,24p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
 esac
