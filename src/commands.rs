@@ -2332,12 +2332,13 @@ pub fn systems(state: &AppState) -> CmdResult<Vec<SystemView>> {
 
             SystemView {
                 gun: crate::lightgun::label(&slug).map(str::to_owned),
-                gun_on: state
-                    .lightgun
-                    .lock()
-                    .unwrap_or_else(|e| e.into_inner())
-                    .get(&slug)
-                    .is_some_and(|v| v.trim() == "on"),
+                // The launch's own rule, so the box says what the launch will
+                // do: on unless switched off. Reading only "on" showed a fresh
+                // config unticked while the launch put a gun in port 2.
+                gun_on: crate::launch::gun_enabled(
+                    &state.lightgun.lock().unwrap_or_else(|e| e.into_inner()),
+                    &slug,
+                ),
                 core: resolve_core(state, &slug),
                 shader: if state.shaders_enabled {
                     crate::shaders::preset_for(
