@@ -945,7 +945,7 @@ describe("the preview toggle keeps the title that names its pane", () => {
     const btn = document.getElementById("sidebar-btn");
     btn.dataset.paneTitle = "Hide the game info pane";
     shell.chooseMode("single", { announce: false });
-    shell.enter({ title: "History", sidebar: false });
+    shell.enter({ title: "Browse by", sidebar: false });
     assert.equal(btn.title, "Nothing to preview on this screen");
     assert.equal(btn.disabled, true);
   });

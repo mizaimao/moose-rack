@@ -16,10 +16,13 @@ import { fakeBackend } from "./backend.js";
 
 const uiDir = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-let dom, backend, state, el, library, sort, filter, history, pictures, collections, keys;
+let dom, backend, state, el, library, sort, filter, history, pictures, collections, keys, detail;
 
 /// Lets the held-back search answer.
 let releaseSlow = () => {};
+
+/// What `play_history` answers. Nothing recorded, unless a test says so.
+let played = { sessions: 0 };
 
 const SNES = [
   { id: 1, name: "Zelda", platform: "snes", size_bytes: 1, downloaded: true },
@@ -61,7 +64,7 @@ before(async () => {
   const reply = async (cmd, args) => {
     if (cmd === "roms") return SNES.map((r) => ({ ...r }));
     if (cmd === "platforms") return [{ slug: "snes", name: "SNES", rom_count: 2, playable: true }];
-    if (cmd === "play_history") return { sessions: 0 };
+    if (cmd === "play_history") return played;
     if (cmd === "set_list_art") return "Miximages";
     if (cmd === "collection_roms") return MIXED.map((r) => ({ ...r }));
     if (cmd === "search") {
@@ -97,6 +100,7 @@ before(async () => {
   pictures = await import("../js/pictures.js");
   collections = await import("../js/collections.js");
   keys = await import("../js/keys.js");
+  detail = await import("../js/detail.js");
   // The tables the menus are built from, which the app fetches at startup.
   filter.setFilters((await sort.loadListControls()).filters);
 });
@@ -221,5 +225,44 @@ describe("the search box", () => {
     await new Promise((r) => setTimeout(r, 300));
     assert.equal(state.view, "platforms", "the search ran after Escape");
     assert.equal(el.search.value, "");
+  });
+});
+
+describe("History and the preview pane", () => {
+  /// The game last selected stayed in the pane beside History, Play button
+  /// and all, and in one pane the toggle that would close it was disabled.
+  test("the last game's pane does not stay beside History", async () => {
+    await library.showRoms("snes");
+    await detail.selectRom(1);
+    assert.ok(el.detail.querySelector("#play"), "the game never reached the pane");
+
+    await history.showHistory();
+    assert.equal(el.detail.hidden, true, "the last game's pane is still beside History");
+    assert.equal(el.detail.querySelector("#play"), null, "and its Play button with it");
+    assert.equal(state.selected, null, "a double-click on the page would still play it");
+  });
+
+  /// The games History lists can be picked, which opens the pane, so the
+  /// toggle has to be able to put it away and bring it back.
+  test("a game picked on History opens a pane the toggle can close", async () => {
+    played = {
+      sessions: 3,
+      total_seconds: 7200,
+      games: 1,
+      platforms: [{ name: "SNES", seconds: 7200, spelled: "2h" }],
+      top: [{ id: 1, name: "Zelda", platform: "snes", spelled: "2h" }],
+      abandoned: [],
+    };
+    try {
+      await history.showHistory();
+      assert.equal(el.sidebarBtn.disabled, false, "the toggle is dead on History");
+      await detail.selectRom(1);
+      detail.setSidebar(false, { remember: false });
+      assert.equal(el.detail.hidden, true, "the toggle did not close the pane");
+      detail.setSidebar(true, { remember: false });
+      assert.equal(el.detail.hidden, false, "the toggle could not bring it back");
+    } finally {
+      played = { sessions: 0 };
+    }
   });
 });
