@@ -558,14 +558,42 @@ fn lay_down(path: &Path, bytes: &[u8], backup: &Path) -> Result<()> {
     // second apply must not back up our own copy over the real original. A
     // backup that fails stops the apply; writing on without one would lose
     // the original for good.
-    if path.exists() && !backup.exists() {
-        if let Some(parent) = backup.parent() {
-            fs::create_dir_all(parent).ok();
+    //
+    // A file that is neither ours nor that first copy is kept as well, beside
+    // it. ES writes es_input.cfg back when a pad is set up, and applying the
+    // patch again after that used to overwrite the newer file with no copy of
+    // it anywhere. The first backup stays the one "off" puts back.
+    if let Some(now) = read_bytes(path)? {
+        let keep = if !backup.exists() {
+            Some(backup.to_path_buf())
+        } else if now != bytes && read_bytes(backup)?.as_deref() != Some(now.as_slice()) {
+            Some(later_backup(path, backup)).filter(|later| !later.exists())
+        } else {
+            None
+        };
+        if let Some(keep) = keep {
+            if let Some(parent) = keep.parent() {
+                fs::create_dir_all(parent).ok();
+            }
+            fs::copy(path, &keep)
+                .with_context(|| format!("backing up {} to {}", path.display(), keep.display()))?;
         }
-        fs::copy(path, backup)
-            .with_context(|| format!("backing up {} to {}", path.display(), backup.display()))?;
     }
     write_through(path, bytes).with_context(|| format!("writing {}", path.display()))
+}
+
+/// Where a later version of `path` is kept: beside its first backup, named
+/// `<backup>.<mtime millis>` after the file's own modification time, so the
+/// same file is never copied twice.
+fn later_backup(path: &Path, backup: &Path) -> PathBuf {
+    let stamp = fs::metadata(path)
+        .and_then(|m| m.modified())
+        .ok()
+        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+        .map_or(0, |d| d.as_millis());
+    let mut name = backup.as_os_str().to_owned();
+    name.push(format!(".{stamp}"));
+    PathBuf::from(name)
 }
 
 impl Step {
@@ -1151,6 +1179,44 @@ mod tests {
         on.apply().unwrap();
         placed(&dir, path.clone(), None).apply().unwrap();
         assert_eq!(fs::read(&path).unwrap(), b"the original");
+    }
+
+    /// ES writes es_input.cfg back when a pad is set up. Applying the patch
+    /// again after that overwrote the newer file and kept no copy of it, since
+    /// a backup already existed.
+    #[test]
+    fn a_file_rewritten_since_the_first_apply_is_kept_before_the_next() {
+        let dir = scratch("backup-later");
+        let path = dir.join("es_input.cfg");
+        fs::write(&path, b"KNULLI's own").unwrap();
+        let on = placed(&dir, path.clone(), Some(b"ours"));
+        on.apply().unwrap();
+
+        let backup = Paths::new(&dir).backup_for(&path);
+        let prefix = format!("{}.", backup.file_name().unwrap().to_string_lossy());
+        let later = || -> Vec<Vec<u8>> {
+            fs::read_dir(backup.parent().unwrap())
+                .unwrap()
+                .flatten()
+                .filter(|e| e.file_name().to_string_lossy().starts_with(prefix.as_str()))
+                .map(|e| fs::read(e.path()).unwrap())
+                .collect()
+        };
+        assert!(later().is_empty(), "the first apply only takes the first backup");
+
+        fs::write(&path, b"ES wrote this since").unwrap();
+        on.apply().unwrap();
+        assert_eq!(fs::read(&path).unwrap(), b"ours");
+        assert_eq!(later(), vec![b"ES wrote this since".to_vec()]);
+        assert_eq!(fs::read(&backup).unwrap(), b"KNULLI's own", "the first backup moved");
+
+        // Over our own copy, nothing more is kept.
+        on.apply().unwrap();
+        assert_eq!(later().len(), 1);
+
+        // And off still puts KNULLI's own back.
+        placed(&dir, path.clone(), None).apply().unwrap();
+        assert_eq!(fs::read(&path).unwrap(), b"KNULLI's own");
     }
 
     #[test]
