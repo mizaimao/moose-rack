@@ -403,10 +403,13 @@ impl Bindings {
     }
 
     pub fn set_key(&mut self, id: &str, key: Option<&str>) {
-        // A key can only drive one action; clear whoever held it.
+        // A key can only drive one action; clear whoever held it. Folded the
+        // same way `action_for` folds a press, so "A" takes the key from
+        // whoever holds "a" instead of both claiming it and one going dead.
         if let Some(key) = key {
+            let want = fold(key);
             for a in ACTIONS {
-                if a.id != id && self.key_for(a.id).as_deref() == Some(key) {
+                if a.id != id && self.key_for(a.id).is_some_and(|k| fold(&k) == want) {
                     self.keys.insert(a.id.to_owned(), String::new());
                 }
             }
@@ -708,6 +711,21 @@ mod tests {
             None,
             "the old owner kept the key too"
         );
+    }
+
+    /// A press of "S" and a press of "s" find the same action, so binding the
+    /// capital has to take the key from whoever holds the small letter.
+    #[test]
+    fn a_capital_letter_takes_the_key_from_its_small_letter() {
+        let mut b = Bindings::default();
+        assert_eq!(b.key_for("sortMenu").as_deref(), Some("s"));
+        b.set_key("random", Some("S"));
+        assert_eq!(
+            b.key_for("sortMenu"),
+            None,
+            "the small letter's owner kept the key"
+        );
+        assert_eq!(b.action_for("s"), Some("random"));
     }
 
     /// A binding works whether or not Shift is held; a named key keeps its case.
