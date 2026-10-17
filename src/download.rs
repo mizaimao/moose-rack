@@ -146,6 +146,34 @@ fn excluded(name: &str) -> bool {
 /// That is why a single-member zip appears to match "the file inside" (with one
 /// member the concatenation *is* that member) while multi-member romsets match
 /// nothing simpler.
+/// Feed everything `r` yields into both digests, a chunk at a time.
+///
+/// Archive members were read whole into memory first, which for a zipped disc
+/// image is a buffer the size of the disc on a handheld with 2 GB of RAM.
+fn digest_into(r: &mut impl std::io::Read, md5: &mut md5::Md5, sha1: &mut sha1::Sha1) -> std::io::Result<()> {
+    let mut buf = vec![0u8; 1 << 20];
+    loop {
+        let n = r.read(&mut buf)?;
+        if n == 0 {
+            return Ok(());
+        }
+        md5.update(&buf[..n]);
+        sha1.update(&buf[..n]);
+    }
+}
+
+/// How many files an archive holds, from its index alone.
+fn archive_member_count(path: &Path) -> usize {
+    if let Ok(file) = std::fs::File::open(path)
+        && let Ok(mut zip) = zip::ZipArchive::new(std::io::BufReader::new(file))
+    {
+        return (0..zip.len()).filter(|&i| zip.by_index(i).is_ok_and(|e| !e.is_dir())).count();
+    }
+    sevenz_rust2::ArchiveReader::open(path, Default::default())
+        .map(|a| a.archive().files.iter().filter(|e| e.has_stream()).count())
+        .unwrap_or(0)
+}
+
 pub fn hash_archive_composite(path: &Path) -> Option<(String, String)> {
     let mut md5 = md5::Md5::new();
     let mut sha1 = sha1::Sha1::new();
@@ -169,12 +197,10 @@ pub fn hash_archive_composite(path: &Path) -> Option<(String, String)> {
                 continue;
             }
             let Ok(mut entry) = zip.by_name(&name) else { continue };
-            let mut buf = Vec::new();
-            if std::io::Read::read_to_end(&mut entry, &mut buf).is_ok() {
-                md5.update(&buf);
-                sha1.update(&buf);
-                any = true;
-            }
+            // A member that cannot be read leaves a digest of part of it,
+            // which matches nothing; say there is no answer instead.
+            digest_into(&mut entry, &mut md5, &mut sha1).ok()?;
+            any = true;
         }
         return any.then(|| (hex::encode(md5.finalize()), hex::encode(sha1.finalize())));
     }
@@ -214,13 +240,9 @@ pub fn hash_archive_members(path: &Path) -> Vec<(String, String, String)> {
                 continue;
             }
             let name = entry.name().to_owned();
-            let mut buf = Vec::new();
-            if std::io::Read::read_to_end(&mut entry, &mut buf).is_ok() {
-                out.push((
-                    name,
-                    hex::encode(md5::Md5::digest(&buf)),
-                    hex::encode(sha1::Sha1::digest(&buf)),
-                ));
+            let (mut md5, mut sha1) = (md5::Md5::new(), sha1::Sha1::new());
+            if digest_into(&mut entry, &mut md5, &mut sha1).is_ok() {
+                out.push((name, hex::encode(md5.finalize()), hex::encode(sha1.finalize())));
             }
         }
         return out;
@@ -271,6 +293,18 @@ fn verify(path: &Path, target: &Target<'_>) -> Result<Verified> {
     let want_md5 = target.md5.filter(|h| !h.is_empty());
     let want_sha1 = target.sha1.filter(|h| !h.is_empty());
     if want_md5.is_none() && want_sha1.is_none() {
+        // "Size only" has to mean the size was looked at. It was not, so any
+        // file already at the path, an empty one or an older revision, was
+        // reported as here and verified.
+        let len = std::fs::metadata(path).with_context(|| format!("reading {}", path.display()))?.len();
+        if len == 0 {
+            bail!("{} is empty", path.display());
+        }
+        if let Some(want) = target.expected_size
+            && len != want
+        {
+            bail!("size mismatch: server {want} bytes, here {len}");
+        }
         return Ok(Verified::SizeOnly);
     }
 
@@ -290,15 +324,17 @@ fn verify(path: &Path, target: &Target<'_>) -> Result<Verified> {
     {
         return Ok(v);
     }
-    let members = hash_archive_members(path);
+    // Counted from the index: reading every member a second time only to
+    // print how many there were doubled the cost of a mismatch.
+    let members = archive_member_count(path);
 
     let want = want_md5.unwrap_or_else(|| want_sha1.unwrap_or(""));
     bail!(
         "hash mismatch: server {want}, downloaded {got_md5}{}",
-        if members.is_empty() {
+        if members == 0 {
             String::new()
         } else {
-            format!(" (composite of {} archive member(s) also checked)", members.len())
+            format!(" (composite of {members} archive member(s) also checked)")
         }
     )
 }
@@ -403,21 +439,38 @@ fn unpack_folder_rom(zip_path: &Path, dest: &Path) -> Result<()> {
     }
     std::fs::create_dir_all(dest)?;
 
+    // The paths inside, kept. Only a wrapper folder every file sits in is
+    // dropped, since `dest` is that folder already. Keeping just each file's
+    // name flattened a PS3 or Wii U game's PS3_GAME/USRDIR/... tree, and two
+    // files of one name in different folders overwrote each other.
+    let mut files: Vec<(usize, PathBuf)> = Vec::new();
     for i in 0..zip.len() {
-        let mut entry = zip.by_index(i)?;
+        let entry = zip.by_index(i)?;
         if entry.is_dir() {
             continue;
         }
-        // Keep only the leaf: entries may be prefixed with the folder name,
-        // and we already have a directory for it.
-        let name = Path::new(entry.name())
-            .file_name()
-            .map(|n| n.to_string_lossy().to_string())
-            .unwrap_or_default();
-        if name.is_empty() {
-            continue;
+        let Some(rel) = entry.enclosed_name() else {
+            bail!("{} would land outside the folder", entry.name());
+        };
+        files.push((i, rel));
+    }
+    let wrapper = files.first().and_then(|(_, p)| {
+        let first = p.components().next()?;
+        let shared = files
+            .iter()
+            .all(|(_, p)| p.components().count() > 1 && p.components().next() == Some(first));
+        shared.then(|| PathBuf::from(first.as_os_str()))
+    });
+    for (i, rel) in files {
+        let rel = match &wrapper {
+            Some(w) => rel.strip_prefix(w).map(Path::to_path_buf).unwrap_or(rel),
+            None => rel,
+        };
+        let out = dest.join(&rel);
+        if let Some(dir) = out.parent() {
+            std::fs::create_dir_all(dir).with_context(|| format!("creating {}", dir.display()))?;
         }
-        let out = dest.join(&name);
+        let mut entry = zip.by_index(i)?;
         let mut w = std::fs::File::create(&out)
             .with_context(|| format!("writing {}", out.display()))?;
         std::io::copy(&mut entry, &mut w)?;
@@ -968,6 +1021,45 @@ mod tests {
                 .to_string();
             assert!(e.contains("refusing"), "{e}");
         }
+    }
+
+    /// With no hash published, "already here" still has to be the right size:
+    /// an empty file or another revision at the path was counted as verified.
+    #[test]
+    fn with_no_hash_the_size_still_has_to_match() {
+        let dir = scratch("size-only");
+        let folder = PathBuf::from("snes");
+        let ok = write(&dir, "Game.sfc", b"twelve bytes");
+        assert!(matches!(verify(&ok, &target("Game.sfc", &folder, Some(12), None)), Ok(Verified::SizeOnly)));
+        assert!(verify(&ok, &target("Game.sfc", &folder, Some(13), None)).is_err());
+        let empty = write(&dir, "Empty.sfc", b"");
+        assert!(verify(&empty, &target("Empty.sfc", &folder, None, None)).is_err());
+    }
+
+    /// A folder game keeps its own folders; only a wrapper around everything
+    /// goes, because the destination is that folder already.
+    #[test]
+    fn a_folder_rom_keeps_its_inner_folders() {
+        let dir = scratch("nested");
+        let zip_path = dir.join("game.zip");
+        zip_of(&zip_path, &[
+            ("Game/PS3_GAME/USRDIR/EBOOT.BIN", b"a"),
+            ("Game/PS3_GAME/PARAM.SFO", b"b"),
+            ("Game/PS3_DISC.SFB", b"c"),
+        ]);
+        let dest = dir.join("out");
+        unpack_folder_rom(&zip_path, &dest).unwrap();
+        assert!(dest.join("PS3_GAME/USRDIR/EBOOT.BIN").is_file());
+        assert!(dest.join("PS3_GAME/PARAM.SFO").is_file());
+        assert!(dest.join("PS3_DISC.SFB").is_file());
+
+        // No shared wrapper: kept as it is.
+        let zip_path = dir.join("flat.zip");
+        zip_of(&zip_path, &[("disc1/track.bin", b"1"), ("disc2/track.bin", b"2"), ("game.m3u", b"m")]);
+        let dest = dir.join("flat");
+        unpack_folder_rom(&zip_path, &dest).unwrap();
+        assert_eq!(std::fs::read(dest.join("disc1/track.bin")).unwrap(), b"1");
+        assert_eq!(std::fs::read(dest.join("disc2/track.bin")).unwrap(), b"2");
     }
 
     /// The unpacked folder replaces the old one only once it is complete, and
