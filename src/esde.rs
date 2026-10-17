@@ -149,8 +149,7 @@ fn parse_gamelist(path: &Path) -> BTreeMap<String, Entry> {
         return BTreeMap::new();
     };
     let mut out = BTreeMap::new();
-    for chunk in text.split("<game>").skip(1) {
-        let body = chunk.split("</game>").next().unwrap_or("");
+    for body in game_blocks(&text) {
         let field = |tag: &str| -> Option<String> {
             let open = format!("<{tag}>");
             let close = format!("</{tag}>");
@@ -182,12 +181,66 @@ fn parse_gamelist(path: &Path) -> BTreeMap<String, Entry> {
     out
 }
 
+/// The inside of every `<game>` block, with or without attributes.
+///
+/// ES-DE writes `<game id="1234" source="ScreenScraper">` for a game it scraped
+/// itself, and splitting on the bare `<game>` skipped every one of those, so
+/// their names, ratings and descriptions never showed. `<gameList>` is not one.
+fn game_blocks(text: &str) -> Vec<&str> {
+    let mut out = Vec::new();
+    let mut from = 0;
+    while let Some(i) = text[from..].find("<game") {
+        let start = from + i + "<game".len();
+        from = start;
+        if !text[start..].starts_with(|c: char| c == '>' || c.is_whitespace()) {
+            continue;
+        }
+        let Some(open_end) = text[start..].find('>') else { break };
+        let body_start = start + open_end + 1;
+        let body_end = text[body_start..].find("</game>").map_or(text.len(), |e| body_start + e);
+        out.push(&text[body_start..body_end]);
+        from = body_end;
+    }
+    out
+}
+
+/// XML's entities, each decoded once.
+///
+/// One pass, left to right. Replacing `&amp;` first, as this did, decoded a
+/// literal `&amp;lt;` twice and turned it into `<`. Numeric references are
+/// decoded too; ES-DE writes `&#39;` for an apostrophe in some names.
 fn unescape(s: &str) -> String {
-    s.replace("&amp;", "&")
-        .replace("&lt;", "<")
-        .replace("&gt;", ">")
-        .replace("&quot;", "\"")
-        .replace("&apos;", "'")
+    let mut out = String::with_capacity(s.len());
+    let mut rest = s;
+    while let Some(i) = rest.find('&') {
+        out.push_str(&rest[..i]);
+        rest = &rest[i..];
+        let decoded = rest.find(';').filter(|&e| e <= 10).and_then(|e| {
+            let c = match &rest[1..e] {
+                "amp" => '&',
+                "lt" => '<',
+                "gt" => '>',
+                "quot" => '"',
+                "apos" => '\'',
+                n if n.starts_with("#x") || n.starts_with("#X") => char::from_u32(u32::from_str_radix(&n[2..], 16).ok()?)?,
+                n if n.starts_with('#') => char::from_u32(n[1..].parse().ok()?)?,
+                _ => return None,
+            };
+            Some((c, e + 1))
+        });
+        match decoded {
+            Some((c, len)) => {
+                out.push(c);
+                rest = &rest[len..];
+            }
+            None => {
+                out.push('&');
+                rest = &rest[1..];
+            }
+        }
+    }
+    out.push_str(rest);
+    out
 }
 
 /// Files ES-DE keeps beside games that are not games.
@@ -911,6 +964,24 @@ mod tests {
         assert_eq!(e.rating, Some(95.0), "0.95 becomes 95, not 0.95");
         assert_eq!(e.year, Some(1995));
         assert_eq!(e.players.as_deref(), Some("1"));
+    }
+
+    /// ES-DE writes attributes on a game it scraped itself, and those blocks
+    /// were skipped. An escaped ampersand before an entity name stays literal.
+    #[test]
+    fn a_scraped_entry_with_attributes_is_read_and_entities_decode_once() {
+        let dir = scratch("gamelist-attrs");
+        let path = dir.join("gamelist.xml");
+        touch(
+            &path,
+            br#"<gameList>
+              <game id="1234" source="ScreenScraper"><path>./Kirby.gba</path><name>Kirby &amp;lt;3 &#39;Mirror&#39;</name></game>
+              <game><path>./Plain.gba</path><name>Plain &amp; Simple</name></game>
+            </gameList>"#,
+        );
+        let meta = parse_gamelist(&path);
+        assert_eq!(meta.get("Kirby").and_then(|e| e.name.clone()).as_deref(), Some("Kirby &lt;3 'Mirror'"));
+        assert_eq!(meta.get("Plain").and_then(|e| e.name.clone()).as_deref(), Some("Plain & Simple"));
     }
 
     /// `<path>` is relative and prefixed in a couple of ways; all of them have
