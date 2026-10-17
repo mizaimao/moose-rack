@@ -51,7 +51,16 @@ function topBar(title, { filter = true } = {}) {
   enterView({ title, back: true, zoom: true, filter });
 }
 
+/// The collections screen on show, as a way to draw it again. A search typed
+/// over it goes back here when the box is emptied.
+let onShow = null;
+
+export function reopenCollections() {
+  return onShow?.();
+}
+
 export async function showCollectionGroups({ exclude = [] } = {}) {
+  onShow = () => showCollectionGroups({ exclude });
   trail.length = 0;
   topBar("Browse by", { filter: false });
   resetGames("Pick a group on the left.");
@@ -134,6 +143,9 @@ export function redrawCollections() {
 
 export async function showCollectionsIn(group, label, { into = "picker" } = {}) {
   lastDrawn = { group, label, into };
+  // In three columns Browse draws its groups and then this into the middle,
+  // so this is the one a search over the middle should bring back.
+  onShow = () => showCollectionsIn(group, label, { into });
   topBar(label || group);
   if (into === "picker") resetGames("Pick a collection on the left.");
   const items = await invoke("collections_in", { group });

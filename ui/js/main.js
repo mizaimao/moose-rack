@@ -12,8 +12,8 @@ import { openFilterMenu } from "./filter.js";
 import { installPageFilter } from "./pagefilter.js";
 import { chooseMode, storedMode, shellMode, installColumnResizer } from "./shell.js";
 import { human, toast, escapeHtml } from "./util.js";
-import { showPlatforms, showRoms, runSearch, setLayout, setZoom, redrawRows, randomGame,
-  applyLayoutForView, layoutKeyForView } from "./library.js";
+import { showPlatforms, showRoms, searchSoon, cancelSearch, setLayout, setZoom, redrawRows,
+  randomGame, applyLayoutForView, layoutKeyForView } from "./library.js";
 import { setSidebar, installDetailResizer } from "./detail.js";
 import { installTabs, showSection, resetSection, activeSection } from "./tabs.js";
 import { installKeys, installAndroidBack } from "./keys.js";
@@ -34,6 +34,8 @@ import {
 /// browser's own arrow. Named so all three can share it rather than each
 /// keeping its own copy of the same three lines.
 function stepBack() {
+  // The box is emptied, so a search still on its way must not land after it.
+  cancelSearch();
   el.search.value = "";
   // Collections are three levels deep, so step back through them rather than
   // dropping straight to the platform grid.
@@ -176,12 +178,7 @@ el.grabBtn.addEventListener("click", () =>
   )
 );
 
-let searchTimer;
-el.search.addEventListener("input", (e) => {
-  clearTimeout(searchTimer);
-  const v = e.target.value;
-  searchTimer = setTimeout(() => runSearch(v), 200);
-});
+el.search.addEventListener("input", (e) => searchSoon(e.target.value));
 
 // The backdrop's controls are in the Settings window and its canvas is here, so
 // the two have to talk. Without this, toggling it there rendered a shader into
