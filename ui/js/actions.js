@@ -238,8 +238,13 @@ export async function launch(
     // the conflict dialog, the BIOS and offline prompts -- is about this
     // window rather than about the emulator, which is why Android could reuse
     // it and why the browser can too.
+    //
+    // Android means the Android *app*, the one with the Kotlin bridge. MOBILE
+    // is any Android user agent, and Chrome on a phone opening the library
+    // service is one: it went this way, found no bridge and threw, so no game
+    // could be played in an Android browser at all.
     const { playHereWanted } = await import("./ejs-systems.js");
-    const result = MOBILE
+    const result = MOBILE && window.MooseAndroid?.startEmulator
       ? await launchAndroid(id, skipSync)
       // Asked for, on this game, in the Core dropdown. Ahead of everything
       // below because it is a deliberate choice rather than a fallback.
