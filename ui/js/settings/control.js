@@ -241,8 +241,11 @@ export function captureKey(ev) {
   return true;
 }
 
+// `#pane` is where every tab is drawn. These looked under `#settings`, which no
+// page has, so a rebound button went on saying "press a key…" and the row that
+// lost the key kept showing it until the tab was opened again.
 function redrawKeyRows() {
-  document.querySelectorAll("#settings tr[data-id]").forEach((row) => {
+  document.querySelectorAll("#pane tr[data-id]").forEach((row) => {
     const b = row.querySelector(".key-cell .set-key");
     if (!b || b.classList.contains("capturing")) return;
     const label = keyLabelFor(row.dataset.id);
@@ -252,7 +255,7 @@ function redrawKeyRows() {
 }
 
 function redrawPadRows() {
-  document.querySelectorAll("#settings tr[data-id]").forEach((row) => {
+  document.querySelectorAll("#pane tr[data-id]").forEach((row) => {
     const b = row.querySelector(".pad-cell .set-pad");
     if (!b || b.classList.contains("capturing")) return;
     const i = padFor(row.dataset.id);
