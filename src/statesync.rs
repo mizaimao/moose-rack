@@ -230,9 +230,14 @@ pub async fn run(
             .map(|n| n.to_string_lossy().into_owned())
             .unwrap_or_default();
         let k = key(*rom_id, &file_name);
-        let server = remote
-            .get(rom_id)
-            .and_then(|list| list.iter().find(|s| s.file_name == file_name));
+        // A ROM whose listing failed is left for next time. Read as "the
+        // server has none", every state of it planned an upload and replaced
+        // whatever newer state another device had sent. The failure is already
+        // in the summary.
+        let Some(list) = remote.get(rom_id) else {
+            continue;
+        };
+        let server = list.iter().find(|s| s.file_name == file_name);
         let print = server.map(fingerprint);
 
         match decide(
