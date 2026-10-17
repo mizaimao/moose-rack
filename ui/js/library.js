@@ -449,16 +449,94 @@ export async function showRoms(slug, prefetched = null) {
   renderRows(state.rows, grouped());
 }
 
+/// The search box's timer: a search waits for the typing to pause.
+let searchTimer = null;
+/// Which search is the latest. Each new search and each cancel moves it on,
+/// so an answer that comes back after a later one was asked for is dropped
+/// rather than drawn over it. Slow answers can land out of order.
+let searchAsked = 0;
+/// The crumb the current search left on the trail: the way back to the screen
+/// it was typed over.
+let searchCrumb = null;
+
+/// Search a beat after the typing stops.
+export function searchSoon(term) {
+  // An emptied box drops whatever was asked before it straight away, rather
+  // than letting that answer land in the 200 ms before the box is read again.
+  if (!term.trim()) cancelSearch();
+  else clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => runSearch(term), 200);
+}
+
+/// Stop any search that has not landed yet: the one waiting on the timer and
+/// the one already asked of the backend.
+///
+/// Escape and Back both empty the box, and a search still on its way arrived
+/// after that anyway, drawing a page of results under an empty box.
+export function cancelSearch() {
+  clearTimeout(searchTimer);
+  searchTimer = null;
+  searchAsked += 1;
+}
+
+/// Whether search results are on screen, with the way out of them on top of
+/// the trail.
+function searching() {
+  return (
+    state.view === "search" && searchCrumb !== null && trail[trail.length - 1] === searchCrumb
+  );
+}
+
+/// How to get back to the screen on show now, for a search about to replace
+/// it. Imported late where the module would otherwise import this one back.
+function wayBack() {
+  const { view, platform, collection, collectionName } = state;
+  if (view === "roms" && platform) return () => showRoms(platform);
+  if (view === "collection-roms" && collection) {
+    return async () =>
+      (await import("./collections.js")).showCollectionRoms(collection, collectionName);
+  }
+  if (view === "collections") {
+    return async () => (await import("./collections.js")).reopenCollections();
+  }
+  if (view === "history") return async () => (await import("./history.js")).showHistory();
+  // Continue playing is the one other screen drawn as a search.
+  if (view === "search") return () => showAllRecent();
+  return () => showPlatforms();
+}
+
 export async function runSearch(term) {
+  const asked = ++searchAsked;
   if (!term.trim()) {
-    return state.platform ? showRoms(state.platform) : showPlatforms();
+    // Back to wherever the search was typed. It went to the open console or
+    // the console grid, whichever tab it was in, so clearing a search made in
+    // My collections left you on the consoles. A box emptied before anything
+    // was drawn has nothing to undo.
+    if (!searching()) return;
+    const back = trail.pop();
+    searchCrumb = null;
+    return back();
+  }
+  // The first search over a screen leaves a crumb, so emptying the box, Back
+  // and Escape all return to that screen.
+  if (!searching()) {
+    // One left behind by an earlier search that was left some other way, such
+    // as picking a console in the left column, would lead somewhere stale.
+    const stale = trail.indexOf(searchCrumb);
+    if (stale >= 0) trail.splice(stale, 1);
+    searchCrumb = wayBack();
+    trail.push(searchCrumb);
   }
   state.view = "search";
   applyLayoutForView("search");
   restoreSidebar();
-  state.rows = await invoke("search", { term, list: listRef() });
+  const rows = await invoke("search", { term, list: listRef() });
+  // A later keystroke, an emptied box or Escape has overtaken this one.
+  if (asked !== searchAsked) return;
+  state.rows = rows;
   state.grouping = true;
   await arrangeCurrentList();
+  if (asked !== searchAsked) return;
   const consoles = new Set(state.rows.map((r) => r.platform)).size;
   enter({
     title:

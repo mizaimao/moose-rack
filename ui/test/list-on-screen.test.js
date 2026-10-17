@@ -16,7 +16,10 @@ import { fakeBackend } from "./backend.js";
 
 const uiDir = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-let dom, backend, state, el, library, sort, filter, history, pictures, collections;
+let dom, backend, state, el, library, sort, filter, history, pictures, collections, keys;
+
+/// Lets the held-back search answer.
+let releaseSlow = () => {};
 
 const SNES = [
   { id: 1, name: "Zelda", platform: "snes", size_bytes: 1, downloaded: true },
@@ -61,6 +64,12 @@ before(async () => {
     if (cmd === "play_history") return { sessions: 0 };
     if (cmd === "set_list_art") return "Miximages";
     if (cmd === "collection_roms") return MIXED.map((r) => ({ ...r }));
+    if (cmd === "search") {
+      // "slow" answers only when the test lets it, so a later search can
+      // overtake it.
+      if (args.term === "slow") await new Promise((done) => (releaseSlow = done));
+      return [{ id: 100, name: args.term, platform: "snes", size_bytes: 1, downloaded: true }];
+    }
     // The strip on the console screen asks for a handful; the page behind
     // its More button asks for 500.
     if (cmd === "recent_games") return args.limit === 500 ? MIXED.map((r) => ({ ...r })) : [];
@@ -87,6 +96,7 @@ before(async () => {
   history = await import("../js/history.js");
   pictures = await import("../js/pictures.js");
   collections = await import("../js/collections.js");
+  keys = await import("../js/keys.js");
   // The tables the menus are built from, which the app fetches at startup.
   filter.setFilters((await sort.loadListControls()).filters);
 });
@@ -158,5 +168,58 @@ describe("a redraw keeps the shape the list was opened in", () => {
     await settle();
     await settle();
     assert.equal(sections(), 2, "changing the order dropped the grouping");
+  });
+});
+
+describe("the search box", () => {
+  /// Emptying the box went to the open console or the console grid, whichever
+  /// tab the search was typed in.
+  test("emptying it goes back to the screen the search was typed over", async () => {
+    await collections.showCollectionsIn("user", "My collections");
+    await library.runSearch("zelda");
+    assert.equal(state.view, "search");
+    await library.runSearch("");
+    assert.equal(state.view, "collections", "it left My collections");
+    assert.match(el.title.textContent, /My collections/);
+  });
+
+  /// So does Back, one level at a time: the search, then the console.
+  test("Back from a search goes to where it was typed", async () => {
+    await library.showRoms("snes");
+    await library.runSearch("zelda");
+    // The pad's and the keyboard's Back; the header button runs the same walk.
+    keys.runAction("back");
+    await settle();
+    await settle();
+    assert.equal(state.view, "roms", "Back skipped the console the search was typed in");
+    assert.equal(state.platform, "snes");
+  });
+
+  /// Answers can land out of order, and the late one was drawn over the
+  /// search that replaced it.
+  test("an answer overtaken by a later search is dropped", async () => {
+    await library.showPlatforms();
+    const slow = library.runSearch("slow");
+    await settle();
+    await library.runSearch("fast");
+    assert.match(el.title.textContent, /fast/);
+    releaseSlow();
+    await slow;
+    assert.match(el.title.textContent, /fast/, "the older search was drawn over the newer one");
+    await library.runSearch("");
+  });
+
+  /// Escape emptied the box and went back, and the search waiting on the
+  /// 200 ms timer then arrived anyway, under an empty box.
+  test("Escape stops a search that is still waiting to run", async () => {
+    await library.showPlatforms();
+    keys.installKeys();
+    el.search.value = "zelda";
+    library.searchSoon("zelda");
+    el.search.focus();
+    el.search.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    await new Promise((r) => setTimeout(r, 300));
+    assert.equal(state.view, "platforms", "the search ran after Escape");
+    assert.equal(el.search.value, "");
   });
 });
