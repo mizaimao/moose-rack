@@ -1086,10 +1086,17 @@ pub fn occupied(path: &Path, guard: &Guard<'_>) -> Result<Option<Landed>> {
 ///
 /// A sync stopped part way -- the app quit, the battery died -- used to leave
 /// a truncated save where the old one was.
+///
+/// Synced before the rename: on a FAT or exFAT card a power cut can keep the
+/// rename and lose the data, which leaves an empty save where the old one was.
 pub fn write_atomically(path: &Path, bytes: &[u8]) -> Result<()> {
+    use std::io::Write as _;
     let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
     let tmp = path.with_file_name(format!(".{name}.part"));
-    std::fs::write(&tmp, bytes).with_context(|| format!("writing {}", tmp.display()))?;
+    let mut f = std::fs::File::create(&tmp).with_context(|| format!("writing {}", tmp.display()))?;
+    f.write_all(bytes).with_context(|| format!("writing {}", tmp.display()))?;
+    f.sync_all().with_context(|| format!("writing {}", tmp.display()))?;
+    drop(f);
     std::fs::rename(&tmp, path).with_context(|| format!("replacing {}", path.display()))?;
     Ok(())
 }

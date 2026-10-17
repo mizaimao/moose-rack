@@ -10,7 +10,7 @@
 //! and the zip [`pack`] makes of it hash the same, so the server can hash what
 //! it was sent without unpacking it.
 
-use std::io::{Read, Write};
+use std::io::Read;
 use std::path::{Path, PathBuf};
 
 use anyhow::{bail, Context, Result};
@@ -213,7 +213,10 @@ pub fn unpack(zip_bytes: &[u8], target: &Path) -> Result<()> {
             }
             let mut f = std::fs::File::create(&out)?;
             std::io::copy(&mut e, &mut f)?;
-            f.flush()?;
+            // Synced, not just flushed: the swap below is two renames, and on
+            // a FAT or exFAT card a power cut can keep those and lose the
+            // data, leaving empty files where the saves were.
+            f.sync_all()?;
         }
         Ok(())
     })();
@@ -313,6 +316,7 @@ mod tests {
     }
 
     fn zip_of(entries: &[(&str, &[u8])]) -> Vec<u8> {
+        use std::io::Write as _;
         let mut w = zip::ZipWriter::new(std::io::Cursor::new(Vec::new()));
         for (name, bytes) in entries {
             w.start_file(*name, zip::write::SimpleFileOptions::default()).unwrap();
