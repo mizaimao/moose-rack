@@ -134,8 +134,7 @@ fn gamelist_names(path: &Path) -> Vec<(String, String, Option<String>)> {
         return Vec::new();
     };
     let mut out = Vec::new();
-    for block in text.split("<game>").skip(1) {
-        let block = block.split("</game>").next().unwrap_or(block);
+    for block in game_blocks(&text) {
         let Some(raw) = tag(block, "path") else {
             continue;
         };
@@ -146,13 +145,59 @@ fn gamelist_names(path: &Path) -> Vec<(String, String, Option<String>)> {
     out
 }
 
+/// The inside of every `<game>` block, with or without attributes.
+///
+/// ES writes `<game id="1234" source="ScreenScraper">` for a game it scraped
+/// itself, so splitting on the bare `<game>` skipped every one of those and
+/// showed the file name instead of the scraped name and picture. The same fix
+/// as `next_game` in moose-patch's `eslist.rs`. `<gameList>` is not one.
+fn game_blocks(text: &str) -> Vec<&str> {
+    let mut out = Vec::new();
+    let mut from = 0;
+    while let Some(i) = text[from..].find("<game") {
+        let start = from + i + "<game".len();
+        from = start;
+        if !text[start..]
+            .chars()
+            .next()
+            .is_some_and(|c| c == '>' || c.is_whitespace())
+        {
+            continue;
+        }
+        let Some(open_end) = text[start..].find('>').map(|i| start + i + 1) else {
+            break;
+        };
+        // `<game id="1" />` has nothing inside, and reading on to the next
+        // `</game>` would take the following game's tags for its own.
+        if text[..open_end].ends_with("/>") {
+            continue;
+        }
+        let Some(end) = text[open_end..].find("</game>").map(|i| open_end + i) else {
+            break;
+        };
+        out.push(&text[open_end..end]);
+        from = end + "</game>".len();
+    }
+    out
+}
+
 fn tag(block: &str, name: &str) -> Option<String> {
     let open = format!("<{name}>");
     let close = format!("</{name}>");
     let start = block.find(&open)? + open.len();
     let end = block[start..].find(&close)? + start;
-    let value = block[start..end].trim();
-    (!value.is_empty()).then(|| value.to_owned())
+    let value = unescape(block[start..end].trim());
+    (!value.is_empty()).then_some(value)
+}
+
+/// The five entities ES writes. `&amp;` goes last, so `&amp;lt;` comes out as
+/// the text `&lt;` and not as `<`.
+fn unescape(s: &str) -> String {
+    s.replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", "\"")
+        .replace("&apos;", "'")
+        .replace("&amp;", "&")
 }
 
 /// Launch one, the way KNULLI does.
@@ -295,6 +340,46 @@ mod tests {
             scan_group(&all, "tools")[0].image.is_some(),
             "a real picture was dropped"
         );
+    }
+
+    /// A block ES scraped itself opens `<game id=".." source="..">`, and its
+    /// text is escaped. Both used to come out wrong: the block was skipped, so
+    /// the Port showed its file name, and a name with `&` in it showed `&amp;`.
+    #[test]
+    fn a_scraped_block_with_attributes_and_entities_is_read() {
+        let dir = scratch("gamelist-attrs");
+        let all = fixture(&dir);
+        let d = dir.join("odcommander");
+        std::fs::create_dir_all(&d).unwrap();
+        std::fs::write(d.join("Tom & Jerry.odc"), "x").unwrap();
+        std::fs::write(d.join("vaix.odc"), "x").unwrap();
+        std::fs::write(
+            d.join("gamelist.xml"),
+            "<gameList>\n\
+             \t<game id=\"4231\" source=\"ScreenScraper\">\n\
+             \t\t<path>./Tom &amp; Jerry.odc</path>\n\
+             \t\t<name>Tom &amp; Jerry &lt;Demo&gt;</name>\n\
+             \t</game>\n\
+             \t<game\tid=\"12\">\n\
+             \t\t<path>./vaix.odc</path>\n\
+             \t\t<name>Vaix</name>\n\
+             \t</game>\n\
+             </gameList>\n",
+        )
+        .unwrap();
+
+        let found = scan_group(&all, "tools");
+        let names: Vec<&str> = found.iter().map(|p| p.name.as_str()).collect();
+        assert_eq!(names, ["Tom & Jerry <Demo>", "Vaix"]);
+    }
+
+    /// `<gameList>` is not a game, and an empty `<game />` does not take the
+    /// next block's tags.
+    #[test]
+    fn only_real_game_blocks_are_read() {
+        let text = "<gameList>\n<game id=\"1\" />\n<game><path>./b.sh</path></game>\n</gameList>";
+        let blocks = game_blocks(text);
+        assert_eq!(blocks, ["<path>./b.sh</path>"]);
     }
 
     /// A group nothing belongs to is empty rather than an error, and an
