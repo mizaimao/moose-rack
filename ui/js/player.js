@@ -163,6 +163,10 @@ function openStage(title, shader, platformSlug, romId, core) {
   } else {
     wireStates(stage, romId, core);
   }
+  // Escape closes a modal dialog by default. Here that hid the stage with the
+  // game still running in it, unsaved, and DOS games press Escape all the time.
+  // Stop is the way out, because it sends the save first.
+  stage.addEventListener("cancel", (ev) => ev.preventDefault());
   document.body.appendChild(stage);
   // `showModal` where it exists; an open dialog is still a visible one where it
   // does not, and a game running is better than a correct stacking context.
@@ -393,8 +397,12 @@ export async function stopPlaying() {
   clearInterval(flushTimer);
   // The last thing before the page goes: a reload throws the emulator away, and
   // with it any save that has not been sent.
+  //
+  // Into the stage, which is modal: a conflict question put on the page behind
+  // it could be neither seen nor answered, the sync waited on it, and a second
+  // press of Stop reloaded with the save still unsent.
   const romId = globalThis.__moosePlayingId;
-  if (romId != null) await flush(null, romId, "stopping");
+  if (romId != null) await flush(document.getElementById("ejs-stage"), romId, "stopping");
   starting = false;
   location.reload();
 }

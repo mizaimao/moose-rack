@@ -56,7 +56,10 @@ pub fn keeps(id: &str, row: &Row) -> bool {
         "fav" => row.favorite,
         "unplayed" => row.last_played.is_none(),
         "played" => row.last_played.is_some(),
-        "great" => row.rating.unwrap_or(-1.0) >= 8.0,
+        // Ratings are stored out of 100 (RomM's own scale, and ES-DE's 0-1
+        // times 100), so "8 or better" is 80. Comparing with 8.0 kept nearly
+        // every rated game.
+        "great" => row.rating.unwrap_or(-1.0) >= 80.0,
         "twoplayer" => row.players.unwrap_or(0) >= 2,
         _ => true,
     }
@@ -92,9 +95,9 @@ mod tests {
     /// case decides whether the filter is useful or noise.
     fn rows() -> Vec<Row> {
         vec![
-            Row { id: 1, name: "Alpha".into(), downloaded: true, favorite: false, last_played: None, rating: Some(9.0), players: Some(1), ..Row::default() },
-            Row { id: 2, name: "Beta".into(), downloaded: false, favorite: true, last_played: Some("2026-01-01".into()), rating: Some(4.0), players: Some(2), ..Row::default() },
-            Row { id: 3, name: "Gamma".into(), downloaded: true, favorite: true, last_played: Some("2026-02-02".into()), rating: Some(8.0), players: Some(4), ..Row::default() },
+            Row { id: 1, name: "Alpha".into(), downloaded: true, favorite: false, last_played: None, rating: Some(90.0), players: Some(1), ..Row::default() },
+            Row { id: 2, name: "Beta".into(), downloaded: false, favorite: true, last_played: Some("2026-01-01".into()), rating: Some(40.0), players: Some(2), ..Row::default() },
+            Row { id: 3, name: "Gamma".into(), downloaded: true, favorite: true, last_played: Some("2026-02-02".into()), rating: Some(80.0), players: Some(4), ..Row::default() },
             Row { id: 4, name: "Delta".into(), downloaded: false, favorite: false, last_played: None, rating: None, players: None, ..Row::default() },
         ]
     }
@@ -117,6 +120,15 @@ mod tests {
         assert_eq!(names(&["unplayed"]), ["Alpha", "Delta"]);
         assert_eq!(names(&["great"]), ["Alpha", "Gamma"], "an unrated game counted as good");
         assert_eq!(names(&["twoplayer"]), ["Beta", "Gamma"], "a one-player game got through");
+    }
+
+    /// Out of 100, as the cache stores it: a game rated 20 is not "8 or better".
+    #[test]
+    fn the_rating_filter_reads_ratings_out_of_100() {
+        let low = Row { rating: Some(20.0), ..Row::default() };
+        let high = Row { rating: Some(85.0), ..Row::default() };
+        assert!(!keeps("great", &low), "a game rated 20/100 passed");
+        assert!(keeps("great", &high));
     }
 
     /// A game nothing says a player count for is not a two-player game.

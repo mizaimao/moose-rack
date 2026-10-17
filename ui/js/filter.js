@@ -10,7 +10,7 @@
 // actually played are somewhere in it. Every frontend has this and this one
 // did not.
 
-import { el, state, invoke } from "./state.js";
+import { el, invoke } from "./state.js";
 import { showMenu } from "./menu.js";
 import { listRef, applyArrangement, arrangement } from "./arrange.js";
 
@@ -93,8 +93,8 @@ export function openFilterMenu(anchor) {
 /// Redraw the current list. Imported lazily for the same reason the sort does:
 /// library.js draws the rows and this has to ask it to draw them again.
 async function redraw() {
-  const { renderRows } = await import("./library.js");
-  if (state.rows.length) renderRows(state.rows, state.view === "search");
+  const { redrawRows } = await import("./library.js");
+  redrawRows();
   refreshFilterButton();
   // Rebuild the menu in place so the ticks move as they are pressed.
   if (document.querySelector(".ctx-menu")) openFilterMenu();

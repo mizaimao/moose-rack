@@ -276,8 +276,9 @@ when it will work, because a button that answers 401 reads as a broken service
 rather than as a door nobody opened.
 
 Passwords are PBKDF2-HMAC-SHA256, 600,000 rounds, per-password salt, stored as
-`pbkdf2-sha256$<rounds>$<salt>$<key>`. `moose-service --hash-password '...'`
-prints the line. A stored hash that does not parse **fails closed** -- a typo in
+`pbkdf2-sha256$<rounds>$<salt>$<key>`. `moose-service --hash-password` asks
+for the password and prints the line; typed there, it stays out of the shell's
+history and the process list. A stored hash that does not parse **fails closed** -- a typo in
 the config must never be an open door, and there is a test for each malformed
 shape.
 

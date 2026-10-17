@@ -320,10 +320,13 @@ mod tests {
         .unwrap();
         assert!(dir.is_relative(), "the test itself has to hand over a relative path");
 
+        // Portable, so the shaders are looked for in `dir` alone. A desktop
+        // install also reads the user's own RetroArch folder, and on a machine
+        // that has one (dev.lan does) the preset was looked for there.
         let ra = crate::retroarch::RetroArch {
             root: dir.clone(),
             binary: dir.join("retroarch"),
-            portable: false,
+            portable: true,
             system_override: None,
         };
 
@@ -404,10 +407,12 @@ mod tests {
     #[test]
     fn no_shader_disables_rather_than_omitting() {
         let dir = std::env::temp_dir().join("moose-rack-test-shaders");
+        // Portable for the same reason as the test above: a machine whose own
+        // RetroArch has crt-guest-advanced would find it and fail this.
         let ra = RetroArch {
             root: dir.clone(),
             binary: dir.join("retroarch"),
-            portable: false,
+            portable: true,
             system_override: None,
         };
         assert!(config_lines(&ra, None).contains("video_shader_enable = \"false\""));

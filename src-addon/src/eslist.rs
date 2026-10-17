@@ -211,10 +211,29 @@ impl Gamelist {
     /// added; ES fills in the rest the next time it scrapes. Unstarring takes
     /// the element out rather than writing `false`, which is how ES itself
     /// leaves an unstarred game.
+    ///
+    /// Every block for the path is set, not only the first. A gamelist can
+    /// hold two for one game, and [`Self::favorites`] counts a star in either:
+    /// editing only the first left a star in the second that no unstar could
+    /// reach.
     pub fn set_favorite(&mut self, file: &str, starred: bool) -> bool {
-        let Some(entry) = self.entries().into_iter().find(|e| e.file == file) else {
+        let blocks: Vec<Entry> = self.entries().into_iter().filter(|e| e.file == file).collect();
+        if blocks.is_empty() {
             return if starred { self.append_game(file) } else { false };
-        };
+        }
+        let mut moved = false;
+        // Last first, so an edit never shifts a block still to be edited.
+        for entry in blocks.iter().rev() {
+            moved |= self.set_in_block(entry, starred);
+        }
+        if moved {
+            self.dirty = true;
+        }
+        moved
+    }
+
+    /// [`Self::set_favorite`] for one block. Says whether it changed.
+    fn set_in_block(&mut self, entry: &Entry, starred: bool) -> bool {
         if entry.is_favorite == starred {
             return false;
         }
@@ -228,27 +247,48 @@ impl Gamelist {
                     self.tidy_blank_line(a);
                 }
             }
-            // Absent and wanted: put it in front of the closing tag, indented
-            // the way the tags above it are.
+            // Absent and wanted: put it in front of the closing tag.
             (None, true) => {
-                // The start of the line `</game>` sits on, not the tag: the
-                // closing tag has its own indentation in front of it, and
-                // inserting at the tag puts the new element after it.
                 let close = entry.block.1 - "</game>".len();
-                let line = self.text[..close].rfind('\n').map_or(close, |i| i + 1);
-                let indent = block_indent(&self.text, entry.block);
-                self.text
-                    .insert_str(line, &format!("{indent}<favorite>true</favorite>\n"));
+                let line = self.text[..close].rfind('\n').map_or(0, |i| i + 1);
+                if line > entry.block.0 && self.text[line..close].trim().is_empty() {
+                    // `</game>` on a line of its own: a new line above it,
+                    // indented the way the tags above it are. The start of
+                    // that line, not the tag, or the new element goes in
+                    // after the closing tag's own indentation.
+                    let indent = block_indent(&self.text, entry.block);
+                    self.text
+                        .insert_str(line, &format!("{indent}<favorite>true</favorite>\n"));
+                } else {
+                    // `</game>` shares its line, with the last tag or with
+                    // `<game>` itself in a block written on one line. The
+                    // start of that line can be outside the block, so the
+                    // element goes straight in front of the tag.
+                    self.text.insert_str(close, "<favorite>true</favorite>");
+                }
             }
             (None, false) => return false,
         }
-        self.dirty = true;
         true
+    }
+
+    /// Where `</gameList>` is, opening a root written as `<gameList />` so
+    /// there is one. `None` when the file has no root at all.
+    fn list_close(&mut self) -> Option<usize> {
+        if let Some(close) = self.text.rfind("</gameList>") {
+            return Some(close);
+        }
+        let start = self.text.find("<gameList")?;
+        let end = self.text[start..].find('>')? + start + 1;
+        let tag = self.text[start..end].strip_suffix("/>")?;
+        let open = format!("{}>", tag.trim_end());
+        self.text.replace_range(start..end, &format!("{open}\n</gameList>"));
+        Some(start + open.len() + 1)
     }
 
     /// A `<game>` block for something ES has not scraped.
     fn append_game(&mut self, file: &str) -> bool {
-        let Some(close) = self.text.rfind("</gameList>") else {
+        let Some(close) = self.list_close() else {
             return false;
         };
         let base = file.rsplit_once('/').map_or(file, |(_, name)| name);
@@ -729,6 +769,63 @@ mod tests {
         assert_eq!(list.favorites(), ["Dr. Mario.gb".to_owned()].into());
         // `<gameList>` itself is not a game.
         assert!(loaded("attrs-empty", "<gameList>\n</gameList>\n").known().is_empty());
+    }
+
+    /// A block written on one line. The star went in at the start of the
+    /// line `</game>` is on, which here is in front of `<game>`, outside the
+    /// block, where ES does not see it.
+    #[test]
+    fn a_star_in_a_one_line_block_goes_inside_it() {
+        let text = "<gameList>\n\t<game><path>./X.sfc</path><name>X</name></game>\n</gameList>\n";
+        let mut list = loaded("one-line", text);
+        assert!(list.set_favorite("X.sfc", true));
+        assert!(
+            list.text.contains("\t<game><path>./X.sfc</path><name>X</name><favorite>true</favorite></game>\n"),
+            "{}",
+            list.text
+        );
+        assert_eq!(list.favorites(), ["X.sfc".to_owned()].into());
+        // And a block whose last tag shares the closing tag's line.
+        let text = "<gameList>\n\t<game>\n\t\t<path>./Y.sfc</path>\n\t\t<name>Y</name></game>\n</gameList>\n";
+        let mut list = loaded("shared-line", text);
+        assert!(list.set_favorite("Y.sfc", true));
+        assert!(list.text.contains("<name>Y</name><favorite>true</favorite></game>"), "{}", list.text);
+    }
+
+    /// An empty list written as `<gameList />` has no closing tag to put a
+    /// new block in front of, and starring a game in it did nothing.
+    #[test]
+    fn a_self_closing_root_still_takes_a_new_game() {
+        let mut list = loaded("self-closing", "<?xml version=\"1.0\"?>\n<gameList />\n");
+        assert!(list.set_favorite("Tetris.gb", true));
+        assert_eq!(list.favorites(), ["Tetris.gb".to_owned()].into());
+        assert!(list.text.contains("<gameList>\n\t<game>"), "{}", list.text);
+        assert!(list.text.ends_with("</gameList>\n"), "{}", list.text);
+        assert!(!list.text.contains("<gameList />"), "{}", list.text);
+        // A file with no root at all is left alone.
+        let mut bare = loaded("no-root", "<?xml version=\"1.0\"?>\n");
+        assert!(!bare.set_favorite("Tetris.gb", true));
+        assert!(!bare.changed());
+    }
+
+    /// Two blocks for one game, the second starred. `favorites` counts it, and
+    /// an unstar from the web looked only at the first block, found nothing to
+    /// take off and left the star where it was.
+    #[test]
+    fn every_block_for_a_game_is_unstarred() {
+        let text = "<gameList>\n\
+\t<game>\n\t\t<path>./A.sfc</path>\n\t</game>\n\
+\t<game>\n\t\t<path>./A.sfc</path>\n\t\t<favorite>true</favorite>\n\t</game>\n\
+</gameList>\n";
+        let mut list = loaded("twin-blocks", text);
+        assert_eq!(list.favorites(), ["A.sfc".to_owned()].into());
+        assert!(list.set_favorite("A.sfc", false));
+        assert!(list.favorites().is_empty());
+        assert!(!list.text.contains("<favorite>"), "{}", list.text);
+        // And a star goes on both, so whichever ES reads says the same.
+        assert!(list.set_favorite("A.sfc", true));
+        assert_eq!(list.text.matches("<favorite>true</favorite>").count(), 2, "{}", list.text);
+        assert!(!list.set_favorite("A.sfc", true), "starred twice");
     }
 
     /// A game in `snes/Aftermarket/` is `./Aftermarket/Foo.sfc` to ES, and

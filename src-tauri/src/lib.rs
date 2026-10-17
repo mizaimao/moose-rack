@@ -114,9 +114,7 @@ async fn sync_library(app: tauri::AppHandle, state: State<'_, AppState>, full: b
     let folded = store.on_both().unwrap_or(0);
     // Server rows are in now, so old ids that only the server's rows could
     // place are placeable; move what is still keyed by them.
-    if let Some(library_root) = state.roms_dir.parent() {
-        moose_rack::app::adopt_client_stores(&store, library_root, Path::new("."));
-    }
+    moose_rack::app::adopt_client_stores(&store, &state.library_root, Path::new("."));
 
     let total = store.rom_count().unwrap_or(0);
     let _ = app.emit("sync-progress", "done");
@@ -467,6 +465,10 @@ fn work_area(app: &tauri::AppHandle) -> Option<moose_rack::retroarch::Screen> {
     })
 }
 
+// Each argument is a key in the page's `invoke("launch_rom", {...})`, so they
+// stay separate rather than being folded into a struct the page would have to
+// match.
+#[allow(clippy::too_many_arguments)]
 #[tauri::command]
 async fn launch_rom(
     app: tauri::AppHandle,
@@ -476,6 +478,10 @@ async fn launch_rom(
     refresh: Option<f32>,
     // Set by the retry after the user answered an offline warning.
     skip_sync: Option<bool>,
+    // Set by the retry after the user said "play anyway" to a missing BIOS.
+    // Separate from `skip_sync`: that answer is about the BIOS, and taking it
+    // as "skip the save sync" lost the sync on both sides of the game.
+    skip_bios: Option<bool>,
     // A save state to start in, chosen from the shelf in the info pane.
     entry_slot: Option<u32>,
 ) -> CmdResult<String> {
@@ -496,7 +502,10 @@ async fn launch_rom(
     let shader_overrides = state.shader_overrides.lock().map_err(err)?.clone();
     let motion = state.motion_shader.lock().map_err(err)?.clone();
     let lightgun = state.lightgun.lock().map_err(err)?.clone();
-    let lib = state.roms_dir.parent().unwrap_or(Path::new("."));
+    // The app's library folder, where the CLI already put these. The folder
+    // above the ROMs, which this was, is the home folder for `~/ROMs` and the
+    // root of the card on a handheld.
+    let lib = state.library_root.as_path();
     // Read per launch rather than held on AppState: it is a path the settings
     // window can change while the app is running, and a copy taken at startup
     // would send saves to the old folder until a restart.
@@ -590,7 +599,7 @@ async fn launch_rom(
                 // got either — arrived as a black screen with the explanation
                 // scrolled past behind it. The front end offers "play anyway",
                 // because a core that wants a BIOS sometimes runs without one.
-                if !skip_sync.unwrap_or(false) {
+                if !skip_bios.unwrap_or(false) {
                     let want = moose_rack::bios::required_for(core, &row.platform_slug);
                     let missing: Vec<String> = want
                         .into_iter()
@@ -629,7 +638,7 @@ async fn launch_rom(
         AutoSync::default()
     } else {
         say("checking saves with the server…");
-        auto_sync(&state, ra, &row, savesync::When::BeforeLaunch).await
+        auto_sync(&state, &row, savesync::When::BeforeLaunch).await
     };
     if let Some(note) = pre.note {
         notes.push(note);
@@ -672,7 +681,7 @@ async fn launch_rom(
     let post = if skip_sync.unwrap_or(false) {
         AutoSync::default()
     } else {
-        auto_sync(&state, ra, &row, savesync::When::AfterExit).await
+        auto_sync(&state, &row, savesync::When::AfterExit).await
     };
     if let Some(note) = post.note {
         notes.push(note);
@@ -1638,8 +1647,13 @@ fn set_page_names(
 }
 
 #[tauri::command]
-async fn page_filter(state: State<'_, AppState>, query: String) -> CmdResult<PageFilterResult> {
-    moose_rack::commands::page_filter(&state, query)
+async fn page_filter(
+    state: State<'_, AppState>,
+    query: String,
+    names: Option<Vec<String>>,
+    groups: Option<Vec<Vec<usize>>>,
+) -> CmdResult<PageFilterResult> {
+    moose_rack::commands::page_filter(&state, query, names, groups)
 }
 
 #[tauri::command]

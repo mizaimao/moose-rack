@@ -221,6 +221,39 @@ pub struct SavesCfg {
     #[serde(default)]
     #[serde(deserialize_with = "lenient_bool")]
     pub confirm_delete_state: bool,
+
+    /// Where standalone emulators keep saves on this device, one
+    /// `[[saves.units]]` each. See [`crate::unitsync`].
+    #[serde(default)]
+    pub units: Vec<UnitSourceCfg>,
+}
+
+/// One place a standalone emulator keeps its saves, synced as save units
+/// (`docs/emulator-saves.md`):
+///
+/// ```toml
+/// [[saves.units]]
+/// family = "ppsspp"
+/// root = "/storage/A2FC-A9FB/Saves/PPSSPP"
+///
+/// [[saves.units]]
+/// family = "pcsx2"
+/// root = "/storage/A2FC-A9FB/Saves/armsx2/memcards/Mcd001.ps2"
+/// ```
+#[derive(Debug, Clone, Deserialize)]
+pub struct UnitSourceCfg {
+    /// `ppsspp`, or `pcsx2` for PCSX2, ARMSX2 and NetherSX2.
+    pub family: String,
+    /// For `ppsspp` the memory stick, the folder holding `PSP/`. For `pcsx2`
+    /// one folder memory card: an 8 MB file card cannot be synced by game.
+    pub root: String,
+    /// Units over this many MB are left alone. 64 when unset, which keeps PSP
+    /// install data off the server.
+    #[serde(default)]
+    pub max_mb: Option<u64>,
+    /// Folder names never synced from this device.
+    #[serde(default)]
+    pub skip: Vec<String>,
 }
 
 impl Default for SavesCfg {
@@ -229,6 +262,7 @@ impl Default for SavesCfg {
             root: default_saves_root(),
             auto_sync: true,
             confirm_delete_state: false,
+            units: Vec::new(),
         }
     }
 }
@@ -872,6 +906,14 @@ impl Config {
         self.esde_layout().roms
     }
 
+    /// The app's own library folder, `[library] local_root`: where its
+    /// generated RetroArch files and its save backups go. Not the folder above
+    /// the ROMs, which with `[esde] roms = "~/ROMs"` is the home folder and on
+    /// a handheld the root of the card.
+    pub fn library_dir(&self) -> PathBuf {
+        crate::util::expand_tilde(&self.library.local_root)
+    }
+
     /// Where artwork lives, for the same reason.
     ///
     /// `<esde root>/downloaded_media`, which is where ES-DE keeps it and where
@@ -1005,7 +1047,8 @@ pub fn set_settings_install(path: &str, install: Option<&str>) -> Result<()> {
     // stops the app starting. Refuse rather than write that.
     toml::from_str::<Config>(&updated)
         .with_context(|| format!("adding the RetroArch entry would break {}", file.display()))?;
-    std::fs::write(file, updated).with_context(|| format!("writing {}", file.display()))?;
+    crate::util::replace_file(file, updated.as_bytes())
+        .with_context(|| format!("writing {}", file.display()))?;
     Ok(())
 }
 
@@ -1155,7 +1198,9 @@ fn write_lines(path: &str, table: &str, entries: &[(String, Option<String>)]) ->
     if !touched {
         return Ok(());
     }
-    std::fs::write(file, lines.join("\n") + "\n")
+    // Every Settings change lands here, and a config cut short by a crash
+    // loads as the defaults: another library, another server.
+    crate::util::replace_file(file, (lines.join("\n") + "\n").as_bytes())
         .with_context(|| format!("writing {}", file.display()))?;
     Ok(())
 }

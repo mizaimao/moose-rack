@@ -45,6 +45,16 @@ let current = "";
 export async function applyPageFilter(text) {
   current = String(text ?? "").trim().toLowerCase();
 
+  // The names go with the question, every time.
+  //
+  // They were sent once per list and held by the backend between keystrokes,
+  // which saved sending 2,506 arcade names per letter. But the backend is one
+  // for every browser pointed at moose-service, so two tabs or two people
+  // filtering different pages each filtered with whichever names were sent
+  // last. The page only knew to resend when its count changed, so it went on
+  // being answered about the other page's list. Sending them each time costs
+  // one request per pause in the typing, and the answer is about this page.
+
   // A windowed list is narrowed rather than hidden: only a band of it is
   // drawn, so putting a class on the nodes that are there would search a few
   // hundred games out of two and a half thousand — a filter that finds less
@@ -53,59 +63,42 @@ export async function applyPageFilter(text) {
   // others.
   const win = windowedList();
   if (win && el.list.contains(win.container)) {
-    await sendNames(win.names());
-    const { visible, shown } = await invoke("page_filter", { query: current });
+    const { visible, shown } = await invoke("page_filter", {
+      query: current,
+      names: win.names(),
+    });
     win.narrow(current ? visible : null);
     return shown;
   }
 
   const nodes = targets();
   const heads = [...el.list.querySelectorAll(".ghead")];
-  await sendNames(nodes.map(nameOf), heads, nodes);
-
-  const { visible, headings, shown } = await invoke("page_filter", { query: current });
+  const { visible, headings, shown } = await invoke("page_filter", {
+    query: current,
+    names: nodes.map(nameOf),
+    groups: groupsOf(heads, nodes),
+  });
   nodes.forEach((node, i) => node.classList.toggle(OUT, !visible[i]));
   heads.forEach((head, i) => head.classList.toggle(OUT, !!headings[i]));
   return shown;
 }
 
-/// What is on the page, sent once per list rather than once per keystroke.
-///
-/// There are 2,506 names on the arcade console, and typing is the one thing
-/// here that happens letter by letter — sending them all again on each one is
-/// the whole page travelling across for a single character.
-let namesFor = null;
-
-/// Forget them. Called when the list is redrawn, since a redraw builds fresh
-/// nodes with fresh names.
-export function forgetPageNames() {
-  namesFor = null;
-}
-
-async function sendNames(names, heads = [], nodes = null) {
-  const now = `${names.length}:${heads.length}`;
-  if (namesFor === now) return;
-  let groups = [];
-  if (nodes) {
-    const at = new Map(nodes.map((n, i) => [n, i]));
-    // Which entries sit under each heading, so a heading with nothing left
-    // under it can go too: a search that leaves five headings and no games
-    // reads as a broken page.
-    groups = heads.map((head) =>
-      [...(head.parentElement?.querySelectorAll(".card, .row, .gcard") ?? [])]
-        .map((n) => at.get(n))
-        .filter((i) => i !== undefined)
-    );
-  }
-  await invoke("set_page_names", { names, groups });
-  namesFor = now;
+/// Which entries sit under each heading, so a heading with nothing left under
+/// it can go too: a search that leaves five headings and no games reads as a
+/// broken page.
+function groupsOf(heads, nodes) {
+  const at = new Map(nodes.map((n, i) => [n, i]));
+  return heads.map((head) =>
+    [...(head.parentElement?.querySelectorAll(".card, .row, .gcard") ?? [])]
+      .map((n) => at.get(n))
+      .filter((i) => i !== undefined)
+  );
 }
 
 /// Re-apply after a list is redrawn. A redraw builds fresh nodes, which have
 /// never seen the filter — without this, changing the order or coming back to
 /// a tab quietly undoes the search still sitting in the box.
 export function refreshPageFilter() {
-  forgetPageNames();
   if (current) return applyPageFilter(current);
 }
 
@@ -119,7 +112,6 @@ export function pageFilterText() {
 /// reason.
 export function clearPageFilter() {
   current = "";
-  forgetPageNames();
   windowedList()?.narrow(null);
   if (el.pageFilter) el.pageFilter.value = "";
   for (const node of targets()) node.classList.remove(OUT);

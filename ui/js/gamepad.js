@@ -13,7 +13,7 @@
 import { el, state, MOBILE } from "./state.js";
 import { runAction } from "./keys.js";
 import { padMap } from "./bindings.js";
-import { toast } from "./util.js";
+import { toast, playingInPage } from "./util.js";
 import { scrollDetail } from "./detail.js";
 import { scrollList } from "./library.js";
 import { closeLightbox, stepLightbox, togglePlayback } from "./lightbox.js";
@@ -187,6 +187,9 @@ function poll() {
   // another application is not aimed at this one, and the emulator owns the pad
   // anyway during the one case where this window is hidden and a pad is in use.
   if (document.hidden) return;
+  // The game in the page has the pad. Stopping it reloads the page, so there is
+  // no way back to the library with these buttons still held.
+  if (playingInPage()) return;
   try {
     step();
   } catch (e) {

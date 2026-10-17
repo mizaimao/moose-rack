@@ -5,7 +5,7 @@ import { fitted, boxSize } from "./fitpicture.js";
 import { resetNav, primeNav } from "./keys.js";
 import { currentOrder, defaultOrder, refreshSortButton, sorted } from "./sort.js";
 import { filtered, refreshFilterButton, activeFilters, clearFilters } from "./filter.js";
-import { arrangeCurrentList, applyArrangement, listRef } from "./arrange.js";
+import { arrangeCurrentList, applyArrangement, listRef, listFor, leaveList } from "./arrange.js";
 import { enter, region, showZoom, shellMode } from "./shell.js";
 import { showMenu } from "./menu.js";
 import { deleteState } from "./states.js";
@@ -43,6 +43,9 @@ export async function showPlatforms(prefetched = null) {
   trail.length = 0;
   state.platform = null;
   state.selected = null;
+  // Consoles are not games. In three columns the console chosen next fills
+  // the list again; in one pane nothing should act on the one just left.
+  leaveList();
   // In three columns the preview is a column, not something to hide, and the
   // middle is not emptied — going "back" to the consoles there is a thing that
   // does not happen.
@@ -210,10 +213,11 @@ export async function showAllRecent() {
   // (`sort: true` above), so console grouping is still a keystroke away for
   // anyone who wants it; it is no longer what you get without asking.
   state.rows = rows;
+  state.grouping = "order";
   // Most recent first unless this view has already been sorted otherwise, and
   // grouped by console only when that is what was asked for.
   await defaultOrder("played");
-  renderRows(rows, currentOrder().id === "platform");
+  renderRows(rows, grouped());
 }
 
 /// Draw the consoles, in whichever layout is selected.
@@ -328,7 +332,7 @@ export async function backToPlatforms() {
 
 function platformCard(p) {
   return `
-      <div class="card" data-slug="${p.slug}">
+      <div class="card" data-slug="${escapeHtml(p.slug)}">
         <div class="logo">${
           p.logo
             ? `<img data-fit="1" class="${p.logo_wordmark ? "wordmark" : "art"}" src="${convertFileSrc(p.logo)}" alt="" />`
@@ -353,7 +357,7 @@ function platformRow(p) {
   // core" are beside it, and a riddle in a 240px column where they are not, so
   // the row says so in words and the title says it in full.
   return `
-      <div class="row prow" data-slug="${p.slug}"
+      <div class="row prow" data-slug="${escapeHtml(p.slug)}"
         title="${escapeHtml(p.name)} — ${p.rom_count} games${
           p.playable ? "" : ", but no emulator installed for it"
         }">
@@ -390,7 +394,7 @@ function restorePlatformCursor() {
 /// grid and nothing moving. The list reference is built by hand rather than
 /// read from `state`, because state still describes the screen being left.
 export async function prefetchRoms(slug) {
-  const list = { view: "roms", platform: slug, collection: null };
+  const list = listFor("roms", slug);
   // Started here rather than in `showRoms`: it is fire-and-forget either way,
   // and a head start is free.
   invoke("warm_media", { platform: slug }).catch(() => {});
@@ -429,6 +433,7 @@ export async function showRoms(slug, prefetched = null) {
   state.folder = "";
   el.search.value = "";
   state.rows = prefetched?.rows ?? (await invoke("roms", { platform: slug, list: listRef() }));
+  state.grouping = false;
   if (prefetched?.arrangement) applyArrangement(prefetched.arrangement);
   else await arrangeCurrentList();
   enter({
@@ -441,18 +446,99 @@ export async function showRoms(slug, prefetched = null) {
     zoom: "grid",
     gridLayout: state.layout === "grid",
   });
-  renderRows(state.rows, false);
+  renderRows(state.rows, grouped());
+}
+
+/// The search box's timer: a search waits for the typing to pause.
+let searchTimer = null;
+/// Which search is the latest. Each new search and each cancel moves it on,
+/// so an answer that comes back after a later one was asked for is dropped
+/// rather than drawn over it. Slow answers can land out of order.
+let searchAsked = 0;
+/// The crumb the current search left on the trail: the way back to the screen
+/// it was typed over.
+let searchCrumb = null;
+
+/// Search a beat after the typing stops.
+export function searchSoon(term) {
+  // An emptied box drops whatever was asked before it straight away, rather
+  // than letting that answer land in the 200 ms before the box is read again.
+  if (!term.trim()) cancelSearch();
+  else clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => runSearch(term), 200);
+}
+
+/// Stop any search that has not landed yet: the one waiting on the timer and
+/// the one already asked of the backend.
+///
+/// Escape and Back both empty the box, and a search still on its way arrived
+/// after that anyway, drawing a page of results under an empty box.
+export function cancelSearch() {
+  clearTimeout(searchTimer);
+  searchTimer = null;
+  searchAsked += 1;
+}
+
+/// Whether search results are on screen, with the way out of them on top of
+/// the trail.
+function searching() {
+  return (
+    state.view === "search" && searchCrumb !== null && trail[trail.length - 1] === searchCrumb
+  );
+}
+
+/// How to get back to the screen on show now, for a search about to replace
+/// it. Imported late where the module would otherwise import this one back.
+function wayBack() {
+  const { view, platform, collection, collectionName } = state;
+  if (view === "roms" && platform) return () => showRoms(platform);
+  if (view === "collection-roms" && collection) {
+    return async () =>
+      (await import("./collections.js")).showCollectionRoms(collection, collectionName);
+  }
+  if (view === "collections") {
+    return async () => (await import("./collections.js")).reopenCollections();
+  }
+  if (view === "history") return async () => (await import("./history.js")).showHistory();
+  // Continue playing is the one other screen drawn as a search.
+  if (view === "search") return () => showAllRecent();
+  return () => showPlatforms();
 }
 
 export async function runSearch(term) {
+  const asked = ++searchAsked;
   if (!term.trim()) {
-    return state.platform ? showRoms(state.platform) : showPlatforms();
+    // Back to wherever the search was typed. It went to the open console or
+    // the console grid, whichever tab it was in, so clearing a search made in
+    // My collections left you on the consoles. A box emptied before anything
+    // was drawn has nothing to undo.
+    if (!searching()) return;
+    const back = trail.pop();
+    searchCrumb = null;
+    return back();
+  }
+  // The first search over a screen leaves a crumb, so emptying the box, Back
+  // and Escape all return to that screen.
+  if (!searching()) {
+    // One left behind by an earlier search that was left some other way, such
+    // as picking a console in the left column, would lead somewhere stale.
+    const stale = trail.indexOf(searchCrumb);
+    if (stale >= 0) trail.splice(stale, 1);
+    searchCrumb = wayBack();
+    trail.push(searchCrumb);
   }
   state.view = "search";
   applyLayoutForView("search");
   restoreSidebar();
-  state.rows = await invoke("search", { term, list: listRef() });
+  const rows = await invoke("search", { term, list: listRef() });
+  // A later keystroke, an emptied box or Escape has overtaken this one, or
+  // another screen has been opened while it was out, such as another tab.
+  const overtaken = () => asked !== searchAsked || state.view !== "search";
+  if (overtaken()) return;
+  state.rows = rows;
+  state.grouping = true;
   await arrangeCurrentList();
+  if (overtaken()) return;
   const consoles = new Set(state.rows.map((r) => r.platform)).size;
   enter({
     title:
@@ -465,7 +551,21 @@ export async function runSearch(term) {
     zoom: "grid",
     gridLayout: state.layout === "grid",
   });
-  renderRows(state.rows, true);
+  renderRows(state.rows, grouped());
+}
+
+/// Whether the list on screen is drawn one section per console, as the view
+/// that drew it first decided. See `state.grouping`.
+export function grouped() {
+  return state.grouping === "order" ? currentOrder().id === "platform" : !!state.grouping;
+}
+
+/// Draw the list on screen again, in the shape it was first drawn in.
+///
+/// For everything that changes how the list looks rather than what is in it:
+/// the sort, the filters, grid or list, the game art.
+export function redrawRows() {
+  if (state.rows.length) renderRows(state.rows, grouped());
 }
 
 /// Click, double-click and right-click on one game.
@@ -1067,8 +1167,8 @@ export function setLayout(next) {
     renderPlatforms(state.platforms);
     restorePlatformCursor();
     fitConsoleArt();
-  } else if (state.rows.length) {
-    renderRows(state.rows, state.view === "search");
+  } else {
+    redrawRows();
   }
 }
 

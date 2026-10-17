@@ -12,7 +12,7 @@ import { editServer, editAchievements, editScraper } from "../credentials.js";
 /// Text fields save on blur rather than on every keystroke: writing the file on
 /// each character would rewrite it thirty times while someone types a path, and
 /// a half-typed path saved and reloaded is worse than no path.
-export async function wireConfigFields(box) {
+export async function wireConfigFields(box, signal) {
   const fields = box.querySelectorAll("[data-field]");
   if (!fields.length) return;
 
@@ -20,12 +20,17 @@ export async function wireConfigFields(box) {
   try {
     current = await invoke("config_fields");
   } catch (e) {
+    if (signal?.aborted) return;
     box.querySelectorAll(".cf-text").forEach((i) => {
       i.disabled = true;
       i.placeholder = `unavailable — ${e}`;
     });
     return;
   }
+  // Another tab is in `box` now. Going on would wire that tab's credential
+  // buttons a second time, so "Edit…" opened two dialogs, and put this tab's
+  // missing-config warning at the top of it. See render.js.
+  if (signal?.aborted) return;
 
   if (!current.config_exists) {
     // Writing settings into a file that does not exist creates one with only

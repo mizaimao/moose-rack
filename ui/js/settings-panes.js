@@ -17,6 +17,7 @@ import * as emulators from "./settings/emulators.js";
 import * as iconsets from "./settings/iconsets.js";
 import * as about from "./settings/about.js";
 import { stopPadCapture } from "./settings/control.js";
+import { beginRender } from "./settings/render.js";
 
 /// The tabs, in the order they appear.
 ///
@@ -56,11 +57,13 @@ export function paneHtml(id) {
 /// Attach behavior to a rendered pane.
 ///
 /// Every lookup inside a pane is scoped to `box`, so a pane only ever wires its
-/// own controls and switching tabs cannot leave a listener pointing at an
-/// element that has been removed.
+/// own controls. Scoping is not enough on its own, because `box` is the same
+/// `#pane` for every tab: the pane is also handed a signal that ends when the
+/// next tab is drawn. See settings/render.js.
 export function wirePane(id, box) {
   stopPadCapture();
-  return TABS.find((t) => t.id === id)?.pane.wire(box);
+  const signal = beginRender();
+  return TABS.find((t) => t.id === id)?.pane.wire(box, signal);
 }
 
 // The key and pad capture live with the Control tab, which is the only thing

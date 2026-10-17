@@ -156,6 +156,53 @@ impl Chosen {
     }
 }
 
+/// The lists last handed to front ends, one per page.
+///
+/// Kept so a change of order or filter can be answered with ids alone, rather
+/// than the whole list travelling back. It was one list for everybody, which
+/// is right for one window and wrong for moose-service, where every browser
+/// shares one backend: the second page to open a list replaced the first
+/// one's, and the first one's next sort came back as ids from a list it was
+/// not showing. Each page now sends an id of its own with the list it asks
+/// about, and is answered from its own list.
+///
+/// Bounded, oldest out first. A page that has been closed never says so.
+#[derive(Debug, Default)]
+pub struct Held {
+    /// Newest last.
+    lists: Vec<HeldList>,
+}
+
+#[derive(Debug)]
+struct HeldList {
+    page: String,
+    scope: String,
+    rows: Vec<Row>,
+}
+
+impl Held {
+    /// How many pages are remembered at once: more than anybody has open.
+    pub const PAGES: usize = 16;
+
+    /// Keep `rows` as what `page` was last handed, for the list `scope`.
+    pub fn hold(&mut self, page: &str, scope: &str, rows: Vec<Row>) {
+        self.lists.retain(|l| l.page != page);
+        self.lists.push(HeldList { page: page.to_owned(), scope: scope.to_owned(), rows });
+        if self.lists.len() > Self::PAGES {
+            self.lists.remove(0);
+        }
+    }
+
+    /// What `page` was last handed, if that was the list `scope`. Asked about
+    /// a different list, the answer is nothing rather than the wrong rows.
+    pub fn rows(&self, page: &str, scope: &str) -> Option<&[Row]> {
+        self.lists
+            .iter()
+            .find(|l| l.page == page && l.scope == scope)
+            .map(|l| l.rows.as_slice())
+    }
+}
+
 /// Narrow, then order. Returns the ids to draw, in the order to draw them.
 ///
 /// Ids rather than rows because the caller already has the rows: this answers
@@ -172,6 +219,49 @@ pub fn arrange(rows: &[Row], order_id: &str, filters: &BTreeSet<String>) -> Vec<
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn rows_with(ids: &[i64]) -> Vec<Row> {
+        ids.iter()
+            .map(|&id| Row { id, name: format!("game {id}"), ..Default::default() })
+            .collect()
+    }
+
+    fn held_ids(held: &Held, page: &str, scope: &str) -> Option<Vec<i64>> {
+        held.rows(page, scope).map(|rows| rows.iter().map(|r| r.id).collect())
+    }
+
+    /// Two browsers on one moose-service, each with its own search open.
+    #[test]
+    fn each_page_keeps_the_list_it_was_handed() {
+        let mut held = Held::default();
+        held.hold("a", "search::", rows_with(&[1, 2]));
+        held.hold("b", "search::", rows_with(&[3]));
+        assert_eq!(
+            held_ids(&held, "a", "search::"),
+            Some(vec![1, 2]),
+            "the second page replaced the first one's list"
+        );
+        assert_eq!(held_ids(&held, "b", "search::"), Some(vec![3]));
+        // A list this page was not handed is not arranged from somebody's rows.
+        assert_eq!(held_ids(&held, "a", "roms:snes:"), None);
+        // A page's newer list replaces its own older one, and nobody else's.
+        held.hold("a", "roms:snes:", rows_with(&[7]));
+        assert_eq!(held_ids(&held, "a", "search::"), None);
+        assert_eq!(held_ids(&held, "a", "roms:snes:"), Some(vec![7]));
+        assert_eq!(held_ids(&held, "b", "search::"), Some(vec![3]));
+    }
+
+    /// A closed page never says so, so the oldest are let go.
+    #[test]
+    fn pages_long_gone_are_let_go() {
+        let mut held = Held::default();
+        for p in 0..Held::PAGES + 4 {
+            held.hold(&p.to_string(), "s", rows_with(&[p as i64]));
+        }
+        assert_eq!(held_ids(&held, "0", "s"), None, "the oldest page was kept for good");
+        let newest = (Held::PAGES + 3).to_string();
+        assert_eq!(held_ids(&held, &newest, "s"), Some(vec![(Held::PAGES + 3) as i64]));
+    }
 
     #[test]
     fn a_list_belongs_to_the_view_it_was_set_on() {

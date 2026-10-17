@@ -88,9 +88,13 @@ pub async fn ensure(
             }
             // 404 is the ordinary case for a console the icon set does not
             // cover, not a failure worth reporting.
-            Ok(_) => {
+            Ok(r) if r.status() == reqwest::StatusCode::NOT_FOUND => {
                 let _ = std::fs::write(&miss, []);
             }
+            // Anything else (401 from an expired login, 502 while a proxy
+            // restarts) says nothing about the icon, and a marker written for
+            // it stopped that console's icon from ever being asked for again.
+            Ok(_) => {}
             // A network error is not a miss: the server may be back next time,
             // so nothing is recorded and it will be retried.
             Err(_) => {}

@@ -202,12 +202,16 @@ export function fakeBackend(reply = () => []) {
     // The one predicate copied here, because it is one line and several tests
     // about the *box* need it to do something. The rule itself is asserted in
     // `pagefilter::tests`.
-    page_filter: ({ query }) => {
+    //
+    // The names come with the question, as they do to the real one; the ones
+    // `set_page_names` held are only for a page that does not send them.
+    page_filter: ({ query, names, groups }) => {
+      const asked = names ? { names, groups: groups ?? [] } : page;
       const want = String(query ?? "").trim().toLowerCase();
-      const visible = page.names.map((n) => !want || n.toLowerCase().includes(want));
+      const visible = asked.names.map((n) => !want || n.toLowerCase().includes(want));
       return {
         visible,
-        headings: page.groups.map(
+        headings: asked.groups.map(
           (g) => !!want && g.length > 0 && !g.some((i) => visible[i])
         ),
         shown: visible.filter(Boolean).length,

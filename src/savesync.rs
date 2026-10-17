@@ -74,21 +74,45 @@ impl DeviceIdentity {
 }
 
 /// Best-effort machine name, for the device list on the server.
+///
+/// The server gives one id to every device that registers under the same name,
+/// and the id carries the record of what that device last agreed on. So a name
+/// shared by two devices makes them one: each one's change then reads as the
+/// other's, and an old save is uploaded over a newer one with no conflict.
+/// macOS exports no `HOSTNAME` to an app and has no `/etc/hostname`, and nor
+/// does Android, so both registered as "unknown". When no real name can be
+/// found, the name made up is one nobody else will have.
 fn hostname() -> String {
+    let usable = |s: &str| {
+        let s = s.trim();
+        !s.is_empty() && s != "unknown" && !s.starts_with("localhost")
+    };
     for key in ["HOSTNAME", "COMPUTERNAME", "NAME"] {
-        if let Some(v) = std::env::var_os(key)
-            && !v.is_empty()
-        {
-            return v.to_string_lossy().into_owned();
+        if let Some(v) = std::env::var_os(key) {
+            let v = v.to_string_lossy();
+            if usable(&v) {
+                return v.trim().to_owned();
+            }
         }
     }
-    // gethostname without a dependency: the file exists on Linux, and the two
-    // environment variables above cover macOS and Windows.
-    std::fs::read_to_string("/etc/hostname")
-        .ok()
-        .map(|s| s.trim().to_owned())
-        .filter(|s| !s.is_empty())
-        .unwrap_or_else(|| "unknown".to_owned())
+    #[cfg(unix)]
+    {
+        let mut buf = [0u8; 256];
+        // SAFETY: the buffer is ours and its length is passed with it.
+        if unsafe { libc::gethostname(buf.as_mut_ptr().cast(), buf.len()) } == 0 {
+            let end = buf.iter().position(|&b| b == 0).unwrap_or(buf.len());
+            let name = String::from_utf8_lossy(&buf[..end]);
+            if usable(&name) {
+                return name.trim().to_owned();
+            }
+        }
+    }
+    if let Some(name) = std::fs::read_to_string("/etc/hostname").ok().filter(|s| usable(s)) {
+        return name.trim().to_owned();
+    }
+    use std::hash::{BuildHasher, Hasher};
+    let random = std::collections::hash_map::RandomState::new().build_hasher().finish();
+    format!("device-{:06x}", random & 0xff_ffff)
 }
 
 /// What a sync did, for reporting. Nothing here is a failure on its own —
@@ -242,21 +266,53 @@ pub enum Destination<'a> {
 /// punctuation, which is exactly the difference between all three spellings.
 fn core_folder(dir: &Path, core: Option<&str>) -> Option<String> {
     let core = core.filter(|s| !s.is_empty())?;
-    let wanted = saves::normalize(core);
+    // The stem, ES-DE's label and RetroArch's own name, any of which can be
+    // what is on disk: `Beetle PSX HW` normalizes to the label and not to
+    // `mednafen_psx_hw`, so matching the stem alone made a second folder.
+    let wanted: Vec<String> = [
+        Some(core.to_owned()),
+        shipped_map().label_for(core).map(str::to_owned),
+        crate::corenames::retroarch_name(core).map(str::to_owned),
+    ]
+    .into_iter()
+    .flatten()
+    .map(|n| saves::normalize(&n))
+    .collect();
     if let Ok(entries) = std::fs::read_dir(dir) {
         for entry in entries.flatten() {
             if !entry.path().is_dir() {
                 continue;
             }
             let name = entry.file_name().to_string_lossy().into_owned();
-            if saves::normalize(&name) == wanted {
+            if wanted.contains(&saves::normalize(&name)) {
                 return Some(name);
             }
         }
     }
-    // Nothing there yet, so the server's own spelling it is. RetroArch will
-    // read from it once it writes a save of its own there.
-    Some(core.to_string())
+    // Nothing there yet: the name RetroArch will give the folder, where it is
+    // known, else the server's own spelling.
+    Some(crate::corenames::retroarch_name(core).unwrap_or(core).to_string())
+}
+
+/// The shipped core map, parsed once. The sync has no `AppState` to borrow a
+/// map from, and the CLI, the TUI and the add-on all call it.
+fn shipped_map() -> &'static CoreMap {
+    static MAP: std::sync::OnceLock<CoreMap> = std::sync::OnceLock::new();
+    MAP.get_or_init(CoreMap::embedded)
+}
+
+/// The core a save belongs to, from what the server recorded about it.
+///
+/// A stem the map knows, or a RetroArch folder name an older client sent in
+/// its place. Anything else (a KNULLI device sends its system folder, `snes`)
+/// says nothing about the core.
+fn known_core(hint: Option<&str>) -> Option<String> {
+    let hint = hint.map(str::trim).filter(|s| !s.is_empty())?;
+    let map = shipped_map();
+    if map.label_for(hint).is_some() || crate::corenames::retroarch_name(hint).is_some() {
+        return Some(hint.to_owned());
+    }
+    map.core_by_display_name(hint, saves::normalize)
 }
 
 /// Where this device would file a save for one platform, given the core the
@@ -525,12 +581,20 @@ fn local_for<'a>(candidates: &'a [Candidate], rom_id: i64, name: &str) -> Option
 }
 
 /// Negotiate and carry out the plan for an already-scanned tree.
+///
+/// `only` limits it to one game, for the sync either side of a launch. That
+/// sync scans one game, and the server, told about one game's saves, plans a
+/// download of every other save it holds as one this device lacks. Carried out,
+/// that pulled every game's save before any launch, and on KNULLI turned each
+/// one that differed into a conflict that refused the launch of a different
+/// game.
 pub async fn run(
     client: &Client,
     candidates: &[Candidate],
     ra_root: &Path,
     data_dir: &Path,
     library_root: &Path,
+    only: Option<i64>,
 ) -> Result<Summary> {
     let identity = DeviceIdentity::ensure(client, data_dir).await?;
     let mut summary = Summary::default();
@@ -567,6 +631,9 @@ pub async fn run(
         .collect();
 
     for (at, op) in plan.operations.iter().enumerate() {
+        if only.is_some_and(|rom| rom != op.rom_id) {
+            continue;
+        }
         if let Some(twin) = twins.get(&at) {
             match twin {
                 Twin::Same { local, server_name } => match respell(local, server_name) {
@@ -606,6 +673,18 @@ pub async fn run(
                 };
                 let name = op.file_name.clone().unwrap_or_else(|| format!("save-{save_id}"));
                 let was_reported = reported.contains(&(op.rom_id, local_name(&name)));
+                // A save this device reported goes into the file it reported,
+                // not into a folder worked out again from the core's name. For
+                // the Beetle cores, FinalBurn Neo and others the stem does not
+                // spell RetroArch's folder, so the newer copy went beside the
+                // real file and the older one went on being the save.
+                let here = was_reported
+                    .then(|| local_for(candidates, op.rom_id, &local_name(&name)))
+                    .flatten();
+                let guard = match here {
+                    Some(c) => Guard::Into(&c.path),
+                    None => Guard::Unreported { reported: was_reported, server_hash: op.server_content_hash.as_deref() },
+                };
                 match download_one(
                     client,
                     ra_root,
@@ -616,7 +695,7 @@ pub async fn run(
                     library_root,
                     op.rom_id,
                     op.slot.as_deref(),
-                    Guard::Unreported { reported: was_reported, server_hash: op.server_content_hash.as_deref() },
+                    guard,
                 )
                 .await
                 {
@@ -751,6 +830,10 @@ pub async fn resolve(
         )
         .await;
     }
+    // A standalone emulator's save folder, named `family/key`.
+    if crate::unitsync::unit_of(&conflict.file_name).is_some() {
+        return crate::unitsync::resolve(client, conflict, keep, library_root, data_dir).await;
+    }
 
     let identity = DeviceIdentity::ensure(client, data_dir).await?;
     let slot = conflict.slot.as_deref().unwrap_or("unslotted");
@@ -763,6 +846,7 @@ pub async fn resolve(
                 .context("no local copy to keep — nothing to upload")?;
             let bytes = std::fs::read(&path)
                 .with_context(|| format!("reading {}", path.display()))?;
+            let sent = bytes.len() as i64;
             let result = client
                 .upload_save(
                     conflict.rom_id,
@@ -776,7 +860,10 @@ pub async fn resolve(
                 )
                 .await?;
             match result {
-                Ok(_) => {
+                Ok(saved) => {
+                    // As an ordinary upload checks: a copy the server cut
+                    // short is not the one that was chosen.
+                    stored_whole(&conflict.file_name, sent, saved.file_size_bytes)?;
                     // A conflict between two spellings of one file: now the
                     // bytes agree, make the names agree too, or the next sync
                     // pairs them up all over again.
@@ -890,21 +977,43 @@ async fn download_one(
             // A failure is an error, not a fallback. Without the platform the
             // save was written to the top of the saves folder, where nothing
             // reads it, and counted as downloaded.
-            let platform = match crate::platform::current().save_layout() {
-                SaveLayout::ByCore => None,
+            //
+            // A device that files by core needs the core just as much. The
+            // server keeps none for a save that came from a handheld, and with
+            // none the save went to the top of `saves/`, where RetroArch does
+            // not look: the game started fresh, and its first save went up
+            // over the one that had just come down. So the core is the one the
+            // server recorded, else the one this device would launch the game
+            // with, and with neither nothing is written.
+            match crate::platform::current().save_layout() {
+                SaveLayout::ByCore => {
+                    let core = match known_core(emulator) {
+                        Some(core) => Some(core),
+                        None => {
+                            let rom = client
+                                .rom_with_files(rom_id)
+                                .await
+                                .context("asking the server which system this game is")?;
+                            core_for_here(&rom)
+                        }
+                    };
+                    let core = core.with_context(|| {
+                        format!("{file_name}: no core is set up for this game's system here, so there is no folder RetroArch would read it from")
+                    })?;
+                    download_path(root, file_name, Destination::Core { core: Some(&core) })
+                }
                 SaveLayout::BySystem => {
                     let rom = client
                         .rom_with_files(rom_id)
                         .await
                         .context("asking the server which system this game is")?;
-                    Some(
-                        rom.platform_fs_slug
-                            .filter(|s| !s.is_empty())
-                            .context("the server did not say which system this game is")?,
-                    )
+                    let platform = rom
+                        .platform_fs_slug
+                        .filter(|s| !s.is_empty())
+                        .context("the server did not say which system this game is")?;
+                    download_path(root, file_name, destination(emulator, Some(&platform)))
                 }
-            };
-            download_path(root, file_name, destination(emulator, platform.as_deref()))
+            }
         }
     };
 
@@ -929,7 +1038,13 @@ async fn download_one(
     write_atomically(&path, &bytes)?;
     // Only after the bytes are safely on disk: telling the server first would
     // have it believe we hold a save we failed to write.
-    if let Err(e) = client.confirm_download(save_id, &identity.device_id).await {
+    // The server's hash for a save is the MD5 of its bytes, so this is the copy
+    // that was written, whatever the server holds by the time it hears.
+    let received = {
+        use md5::Digest as _;
+        hex::encode(md5::Md5::digest(&bytes))
+    };
+    if let Err(e) = client.confirm_download(save_id, &identity.device_id, &received).await {
         let n = format!(
             "{} is written, but the server did not record it, so the next change here may \
              read as a conflict: {e:#}",
@@ -941,6 +1056,21 @@ async fn download_one(
         });
     }
     Ok(Landed::Written { path, note })
+}
+
+/// The core this device would launch `rom` with: a per-game or per-system
+/// choice in config.toml, else the shipped default for its system.
+fn core_for_here(rom: &crate::api::Rom) -> Option<String> {
+    let platform = rom.platform_fs_slug.as_deref().filter(|s| !s.is_empty())?;
+    let cores = crate::config::Config::load().map(|c| c.cores).unwrap_or_default();
+    crate::coremap::resolve_core_for(
+        shipped_map(),
+        &cores.overrides,
+        &cores.per_game,
+        platform,
+        Some(&rom.fs_name),
+        |_| true,
+    )
 }
 
 /// Whether a planned download must stop because a save the device never
@@ -960,10 +1090,17 @@ pub fn occupied(path: &Path, guard: &Guard<'_>) -> Result<Option<Landed>> {
 ///
 /// A sync stopped part way -- the app quit, the battery died -- used to leave
 /// a truncated save where the old one was.
+///
+/// Synced before the rename: on a FAT or exFAT card a power cut can keep the
+/// rename and lose the data, which leaves an empty save where the old one was.
 pub fn write_atomically(path: &Path, bytes: &[u8]) -> Result<()> {
+    use std::io::Write as _;
     let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
     let tmp = path.with_file_name(format!(".{name}.part"));
-    std::fs::write(&tmp, bytes).with_context(|| format!("writing {}", tmp.display()))?;
+    let mut f = std::fs::File::create(&tmp).with_context(|| format!("writing {}", tmp.display()))?;
+    f.write_all(bytes).with_context(|| format!("writing {}", tmp.display()))?;
+    f.sync_all().with_context(|| format!("writing {}", tmp.display()))?;
+    drop(f);
     std::fs::rename(&tmp, path).with_context(|| format!("replacing {}", path.display()))?;
     Ok(())
 }
@@ -1036,6 +1173,7 @@ async fn upload_one(
         .map(|n| n.to_string_lossy().into_owned())
         .unwrap_or_default();
 
+    let sent = bytes.len() as i64;
     let result = client
         .upload_save(
             rom_id,
@@ -1048,7 +1186,21 @@ async fn upload_one(
             overwrite,
         )
         .await?;
+    if let Ok(saved) = &result {
+        stored_whole(&name, sent, saved.file_size_bytes)?;
+    }
     Ok(result.is_ok())
+}
+
+/// An error unless the server says it kept every byte it was sent.
+///
+/// moose-service up to 0.5.6 answered 200 to an upload over 2 MB and kept an
+/// empty file, so a 200 alone is not proof that a save arrived.
+pub(crate) fn stored_whole(name: &str, sent: i64, stored: i64) -> Result<()> {
+    if stored != sent {
+        anyhow::bail!("the server kept {stored} of the {sent} bytes of {name}");
+    }
+    Ok(())
 }
 
 /// A file's mtime as RFC 3339 UTC, which is the format the server compares on.
@@ -1101,7 +1253,31 @@ pub async fn run_all(
     data_dir: &Path,
     library_root: &Path,
 ) -> Result<Summary> {
-    let mut summary = run(client, candidates, ra_root, data_dir, library_root).await?;
+    run_both(client, candidates, ra_root, data_dir, library_root, None).await
+}
+
+/// As [`run_all`], for one game: the sync either side of a launch, whose
+/// candidates are that game's alone. See `only` on [`run`].
+pub async fn run_for_game(
+    client: &Client,
+    candidates: &[Candidate],
+    rom_id: i64,
+    ra_root: &Path,
+    data_dir: &Path,
+    library_root: &Path,
+) -> Result<Summary> {
+    run_both(client, candidates, ra_root, data_dir, library_root, Some(rom_id)).await
+}
+
+async fn run_both(
+    client: &Client,
+    candidates: &[Candidate],
+    ra_root: &Path,
+    data_dir: &Path,
+    library_root: &Path,
+    only: Option<i64>,
+) -> Result<Summary> {
+    let mut summary = run(client, candidates, ra_root, data_dir, library_root, only).await?;
 
     // States are best effort against the saves half: failing to sync a
     // freeze-frame should not discard a successful game-save sync.
@@ -1125,6 +1301,14 @@ pub async fn run_all(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Whatever this machine is, the name it registers under is not one that
+    /// another device would also arrive with.
+    #[test]
+    fn the_device_name_is_never_one_another_device_would_share() {
+        let name = hostname();
+        assert!(!name.is_empty() && name != "unknown" && !name.starts_with("localhost"), "{name}");
+    }
 
     /// A save that keeps the server's stamp is a save no emulator opens.
     ///
@@ -1196,13 +1380,40 @@ mod tests {
         assert_eq!(path, dir.join("saves/PCSX-ReARMed/Crash Bandicoot (USA).srm"));
     }
 
+    /// With no folder yet, the one RetroArch will make: `mGBA`, not `mgba`.
+    /// On a disk that tells case apart the stem was a folder RetroArch never
+    /// reads. A core RetroArch's name is not known for keeps its stem.
     #[test]
-    fn with_no_folder_yet_the_servers_spelling_is_used() {
+    fn with_no_folder_yet_retroarchs_own_name_is_used() {
         let dir = std::env::temp_dir().join("moose-rack-dl-fresh");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(dir.join("saves")).unwrap();
         let path = download_path(&dir, "Game.srm", Destination::Core { core: Some("mgba") });
-        assert_eq!(path, dir.join("saves/mgba/Game.srm"));
+        assert_eq!(path, dir.join("saves/mGBA/Game.srm"));
+        let path = download_path(&dir, "Game.srm", Destination::Core { core: Some("not_a_core") });
+        assert_eq!(path, dir.join("saves/not_a_core/Game.srm"));
+    }
+
+    /// The Beetle cores' folders match their ES-DE label, not their stem, so a
+    /// lookup by stem alone made `mednafen_psx_hw/` beside `Beetle PSX HW/`.
+    #[test]
+    fn a_download_finds_a_folder_named_after_the_label() {
+        let dir = std::env::temp_dir().join("moose-rack-dl-label");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join("saves/Beetle PSX HW")).unwrap();
+        let path = download_path(&dir, "Game.srm", Destination::Core { core: Some("mednafen_psx_hw") });
+        assert_eq!(path, dir.join("saves/Beetle PSX HW/Game.srm"));
+    }
+
+    /// What the server recorded is a core only if it names one. A KNULLI
+    /// device sends its system folder, which is not a core at all.
+    #[test]
+    fn only_a_real_core_is_taken_from_the_server() {
+        assert_eq!(known_core(Some("snes9x")).as_deref(), Some("snes9x"));
+        assert_eq!(known_core(Some("Snes9x")).as_deref(), Some("snes9x"), "a RetroArch folder name");
+        assert_eq!(known_core(Some("snes")), None);
+        assert_eq!(known_core(Some("")), None);
+        assert_eq!(known_core(None), None);
     }
 
     /// Batocera files by platform and keeps states in that same folder, so a
@@ -1241,15 +1452,15 @@ mod tests {
         let root = Path::new("/ra");
         assert_eq!(
             download_path(root, "Game.state", Destination::Core { core: Some("snes9x") }),
-            Path::new("/ra/states/snes9x/Game.state")
+            Path::new("/ra/states/Snes9x/Game.state")
         );
         assert_eq!(
             download_path(root, "Game.state3", Destination::Core { core: Some("snes9x") }),
-            Path::new("/ra/states/snes9x/Game.state3")
+            Path::new("/ra/states/Snes9x/Game.state3")
         );
         assert_eq!(
             download_path(root, "Game.srm", Destination::Core { core: Some("snes9x") }),
-            Path::new("/ra/saves/snes9x/Game.srm")
+            Path::new("/ra/saves/Snes9x/Game.srm")
         );
     }
 
@@ -1580,6 +1791,13 @@ mod tests {
     fn a_failure_is_never_headlined_as_in_sync() {
         let s = Summary { unchanged: 300, failed: 2, ..Default::default() };
         assert_eq!(s.headline(), "2 failed");
+    }
+
+    #[test]
+    fn a_save_the_server_kept_short_is_an_error() {
+        assert!(stored_whole("Game.state", 5_000_000, 5_000_000).is_ok());
+        let e = stored_whole("Game.state", 5_000_000, 0).unwrap_err().to_string();
+        assert!(e.contains("0 of the 5000000 bytes of Game.state"), "{e}");
     }
 
     #[test]

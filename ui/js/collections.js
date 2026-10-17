@@ -9,11 +9,11 @@ import { el, state, trail, invoke, convertFileSrc, listen } from "./state.js";
 import { enter as enterView, region, resetGames } from "./shell.js";
 import { escapeHtml } from "./util.js";
 import { pickerBar, wirePickerBar, sortPicker, loadPickerOrders } from "./picker-order.js";
-import { arrangeCurrentList, listRef } from "./arrange.js";
+import { arrangeCurrentList, listRef, leaveList } from "./arrange.js";
 import {
   setPageFilterLabel, setPageFilterExtra, refreshPageFilter,
 } from "./pagefilter.js";
-import { renderRows, applyLayoutForView } from "./library.js";
+import { renderRows, applyLayoutForView, grouped } from "./library.js";
 import { restoreSidebar } from "./detail.js";
 import { collectionArt } from "./collection-art.js";
 import { shellMode } from "./shell.js";
@@ -42,6 +42,8 @@ function topBar(title, { filter = true } = {}) {
   restoreSidebar();
   state.platform = null;
   state.selected = null;
+  // A grid of collections is not a list of games; see `leaveList`.
+  leaveList();
   el.detail.hidden = true;
   el.search.value = "";
   // The zoom slider stays: these are cards too, and sizing them is the same
@@ -49,7 +51,16 @@ function topBar(title, { filter = true } = {}) {
   enterView({ title, back: true, zoom: true, filter });
 }
 
+/// The collections screen on show, as a way to draw it again. A search typed
+/// over it goes back here when the box is emptied.
+let onShow = null;
+
+export function reopenCollections() {
+  return onShow?.();
+}
+
 export async function showCollectionGroups({ exclude = [] } = {}) {
+  onShow = () => showCollectionGroups({ exclude });
   trail.length = 0;
   topBar("Browse by", { filter: false });
   resetGames("Pick a group on the left.");
@@ -132,6 +143,9 @@ export function redrawCollections() {
 
 export async function showCollectionsIn(group, label, { into = "picker" } = {}) {
   lastDrawn = { group, label, into };
+  // In three columns Browse draws its groups and then this into the middle,
+  // so this is the one a search over the middle should bring back.
+  onShow = () => showCollectionsIn(group, label, { into });
   topBar(label || group);
   if (into === "picker") resetGames("Pick a collection on the left.");
   const items = await invoke("collections_in", { group });
@@ -216,6 +230,9 @@ export async function showCollectionRoms(id, name) {
   el.search.value = "";
 
   state.rows = await invoke("collection_roms", { id: String(id), list: listRef() });
+  // Collections mix platforms, so the games are drawn one section per console,
+  // and kept that way when the order or the layout changes.
+  state.grouping = true;
   await arrangeCurrentList();
   enterView({
     title: `${name} — ${state.rows.length} games`,
@@ -227,8 +244,7 @@ export async function showCollectionRoms(id, name) {
     zoom: "grid",
     gridLayout: state.layout === "grid",
   });
-  // Collections mix platforms, so the list view needs the platform column.
-  renderRows(state.rows, true);
+  renderRows(state.rows, grouped());
 }
 
 /// Fill collection cards with a member's cover, through the same local cache

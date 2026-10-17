@@ -135,7 +135,9 @@ export function setSidebar(on, { remember = true } = {}) {
     // cursor — so the pane is meaningful there too. It was not, which is why
     // pressing Show info on the Library screen did nothing at all.
     state.view === "platforms" ||
-    ((state.view === "roms" || state.view === "search" || state.view === "collection-roms") &&
+    // History lists games too, and picking one there opens the pane like
+    // anywhere else, so the toggle has to be able to bring it back.
+    (["roms", "search", "collection-roms", "history"].includes(state.view) &&
       state.selected !== null);
   el.detail.hidden = !(on && allowed);
 }
@@ -345,7 +347,7 @@ export async function selectRom(id) {
         ${row("Modes", d.game_modes.join(", "))}
         ${row("Region", d.regions.join(", "))}
         ${row("Also known as", d.alt_names.join(" · "))}
-        <dt>Platform</dt><dd>${d.platform}</dd>
+        <dt>Platform</dt><dd>${escapeHtml(d.platform)}</dd>
         <dt>Size</dt><dd>${human(d.size_bytes)}</dd>
         <dt>Core</dt><dd>${corePicker(cores, d)}</dd>
         <dt>Local</dt><dd>${d.downloaded ? "yes" : "no"}</dd>

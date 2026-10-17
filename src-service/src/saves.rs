@@ -87,6 +87,21 @@ fn key(device: &str, rom_id: i64, file: &str) -> (String, i64, String) {
     (device.to_owned(), rom_id, file.to_owned())
 }
 
+/// What to do with something both sides hold, given the hash this device last
+/// agreed on, as (action, reason). The rule [`plan`] applies to saves and
+/// `units::plan` to save units; the cases are explained on [`plan`].
+pub fn decide_held(client: &str, server: Option<&str>, last: Option<&str>) -> (&'static str, &'static str) {
+    if server == Some(client) {
+        ("no_op", "both sides hold the same bytes")
+    } else if last.is_some() && last == server {
+        ("upload", "changed here since this device last agreed with the server")
+    } else if last == Some(client) {
+        ("download", "changed on the server since this device last agreed")
+    } else {
+        ("conflict", "both copies changed since they last agreed; pick one")
+    }
+}
+
 /// Decide what should happen to every save, given both sides and what this
 /// device last saw.
 ///
@@ -118,20 +133,9 @@ pub fn plan(device: &str, client: &[ClientSaveState], server: &[ServerSave], see
             None => ops.push(op("upload", c.rom_id, None, &c.file_name, c, None,
                 "the server does not have this save")),
             Some(s) => {
-                let same = s.content_hash.as_deref() == Some(c.content_hash.as_str());
-                if same {
-                    ops.push(op("no_op", c.rom_id, Some(s.id), &c.file_name, c, Some(s),
-                        "both sides hold the same bytes"));
-                } else if last.map(|h| Some(h.as_str()) == s.content_hash.as_deref()).unwrap_or(false) {
-                    ops.push(op("upload", c.rom_id, Some(s.id), &c.file_name, c, Some(s),
-                        "changed here since this device last agreed with the server"));
-                } else if last.map(|h| h == &c.content_hash).unwrap_or(false) {
-                    ops.push(op("download", c.rom_id, Some(s.id), &c.file_name, c, Some(s),
-                        "changed on the server since this device last agreed"));
-                } else {
-                    ops.push(op("conflict", c.rom_id, Some(s.id), &c.file_name, c, Some(s),
-                        "both copies changed since they last agreed; pick one"));
-                }
+                let (action, reason) =
+                    decide_held(&c.content_hash, s.content_hash.as_deref(), last.map(String::as_str));
+                ops.push(op(action, c.rom_id, Some(s.id), &c.file_name, c, Some(s), reason));
             }
         }
     }
@@ -233,6 +237,35 @@ fn md5_hex(bytes: &[u8]) -> String {
     hex::encode(h.finalize())
 }
 
+/// Replace `path` with `bytes` through a file beside it, synced, then a rename.
+///
+/// A crash, a full disk or a failed upload part way leaves the file that was
+/// there, never a cut-short one that the next device to sync downloads over
+/// its good copy. The temporary name starts with a dot, which every listing
+/// here skips.
+pub fn write_atomically(path: &std::path::Path, bytes: &[u8]) -> std::io::Result<()> {
+    use std::io::Write as _;
+    let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+    let tmp = path.with_file_name(format!(".{name}.writing"));
+    let result = (|| {
+        let mut f = std::fs::File::create(&tmp)?;
+        f.write_all(bytes)?;
+        f.sync_all()?;
+        drop(f);
+        std::fs::rename(&tmp, path)
+    })();
+    if result.is_err() {
+        let _ = std::fs::remove_file(&tmp);
+    }
+    result
+}
+
+/// An emulator name fit to keep: a client's word, so bounded and on one line.
+fn emulator_name(e: Option<&str>) -> Option<&str> {
+    e.map(str::trim)
+        .filter(|e| !e.is_empty() && e.len() <= 64 && !e.chars().any(|c| c.is_control() || c == '/' || c == '\\'))
+}
+
 impl SaveStore {
     pub fn new(root: impl Into<std::path::PathBuf>) -> Self {
         Self { root: root.into() }
@@ -240,6 +273,35 @@ impl SaveStore {
 
     fn dir(&self, rom_id: i64) -> std::path::PathBuf {
         self.root.join(rom_id.to_string())
+    }
+
+    /// Where the core the save came from is kept, as for states. A device that
+    /// files saves by core has to know which core's folder a save goes in, and
+    /// without this every save from another device arrived with none.
+    fn emu_path(&self, rom_id: i64, file_name: &str) -> std::path::PathBuf {
+        self.dir(rom_id).join(format!(".{file_name}.emulator"))
+    }
+
+    /// The game and file name of a save, by id, without reading any save.
+    ///
+    /// `list` reads and hashes every save on the server, and fetching one save
+    /// by way of it did that while holding the sync lock, twice per download.
+    pub fn locate(&self, id: i64) -> Option<(i64, String)> {
+        let rd = std::fs::read_dir(&self.root).ok()?;
+        for d in rd.flatten() {
+            let Some(rid) = d.file_name().to_str().and_then(|n| n.parse::<i64>().ok()) else { continue };
+            if moose_rack::gameid::is_legacy(rid) {
+                continue;
+            }
+            let Ok(files) = std::fs::read_dir(d.path()) else { continue };
+            for f in files.flatten() {
+                let Some(name) = f.file_name().to_str().map(str::to_owned) else { continue };
+                if !name.starts_with('.') && save_id(rid, &name) == id && f.path().is_file() {
+                    return Some((rid, name));
+                }
+            }
+        }
+        None
     }
 
     /// Every save, or just one game's.
@@ -275,6 +337,11 @@ impl SaveStore {
                     continue;
                 }
                 let Some(name) = p.file_name().and_then(|n| n.to_str()) else { continue };
+                // Bookkeeping and half-written files, never saves: an upload
+                // with a leading dot is refused, so nothing else starts so.
+                if name.starts_with('.') {
+                    continue;
+                }
                 let Ok(bytes) = std::fs::read(&p) else { continue };
                 let updated = std::fs::metadata(&p)
                     .and_then(|m| m.modified())
@@ -288,7 +355,10 @@ impl SaveStore {
                     file_size_bytes: bytes.len() as i64,
                     content_hash: Some(md5_hex(&bytes)),
                     slot: None,
-                    emulator: None,
+                    emulator: std::fs::read_to_string(self.emu_path(rid, name))
+                        .ok()
+                        .map(|s| s.trim().to_owned())
+                        .filter(|s| !s.is_empty()),
                     updated_at: updated.map(|s| format!("{s}")),
                 });
             }
@@ -297,15 +367,27 @@ impl SaveStore {
         out
     }
 
-    pub fn write(&self, rom_id: i64, file_name: &str, bytes: &[u8]) -> std::io::Result<ServerSave> {
+    pub fn write(
+        &self,
+        rom_id: i64,
+        file_name: &str,
+        bytes: &[u8],
+        emulator: Option<&str>,
+    ) -> std::io::Result<ServerSave> {
         let d = self.dir(rom_id);
         std::fs::create_dir_all(&d)?;
-        std::fs::write(d.join(file_name), bytes)?;
-        Ok(self
-            .list(Some(rom_id))
+        write_atomically(&d.join(file_name), bytes)?;
+        match emulator_name(emulator) {
+            Some(e) => write_atomically(&self.emu_path(rom_id, file_name), e.as_bytes())?,
+            // As for states: no emulator clears one left by a previous upload.
+            None => {
+                let _ = std::fs::remove_file(self.emu_path(rom_id, file_name));
+            }
+        }
+        self.list(Some(rom_id))
             .into_iter()
             .find(|s| s.file_name == file_name)
-            .expect("just written"))
+            .ok_or_else(|| std::io::Error::other("save vanished after writing"))
     }
 
     /// The bytes of one save, found by id.
@@ -313,10 +395,8 @@ impl SaveStore {
     /// By id rather than by name because that is what the client holds after a
     /// negotiate, and it is the id that is stable across a rescan.
     pub fn read(&self, id: i64) -> Option<Vec<u8>> {
-        self.list(None)
-            .into_iter()
-            .find(|s| s.id == id)
-            .and_then(|s| std::fs::read(self.dir(s.rom_id).join(&s.file_name)).ok())
+        let (rom_id, name) = self.locate(id)?;
+        std::fs::read(self.dir(rom_id).join(name)).ok()
     }
 }
 
@@ -461,11 +541,25 @@ mod tests {
     #[test]
     fn a_written_save_comes_back_with_its_hash_and_size() {
         let (_d, st) = store();
-        let w = st.write(16777223, "battery.srm", b"hello").unwrap();
+        let w = st.write(16777223, "battery.srm", b"hello", None).unwrap();
         assert_eq!(w.rom_id, 16777223);
         assert_eq!(w.file_size_bytes, 5);
         assert_eq!(w.content_hash.as_deref(), Some("5d41402abc4b2a76b9719d911017c592"));
         assert_eq!(st.list(Some(16777223)).len(), 1);
+    }
+
+    /// The core a save came from is kept, so a device that files by core
+    /// knows the folder. It is bookkeeping beside the save, never a save.
+    #[test]
+    fn a_save_keeps_the_core_it_came_from() {
+        let (_d, st) = store();
+        let w = st.write(16777223, "Game.srm", b"x", Some("snes9x")).unwrap();
+        assert_eq!(w.emulator.as_deref(), Some("snes9x"));
+        assert_eq!(st.list(None).len(), 1, "the sidecar was listed as a save");
+        let w = st.write(16777223, "Game.srm", b"y", None).unwrap();
+        assert_eq!(w.emulator, None, "a stale core stuck to a newer save");
+        let w = st.write(16777223, "Game.srm", b"z", Some("bad\nname")).unwrap();
+        assert_eq!(w.emulator, None, "a name over two lines was kept");
     }
 
     /// Two games may both hold `battery.srm`. Flattening them would make one
@@ -473,11 +567,12 @@ mod tests {
     #[test]
     fn the_same_name_under_two_games_is_two_saves() {
         let (_d, st) = store();
-        st.write(16777217, "battery.srm", b"one").unwrap();
-        st.write(16777218, "battery.srm", b"two").unwrap();
+        st.write(16777217, "battery.srm", b"one", None).unwrap();
+        st.write(16777218, "battery.srm", b"two", None).unwrap();
         let all = st.list(None);
         assert_eq!(all.len(), 2);
         assert_ne!(all[0].id, all[1].id, "ids must not collide across games");
+        assert_eq!(st.read(all[1].id).as_deref(), Some(&b"two"[..]), "read finds it by id");
         assert_eq!(st.read(all[0].id).unwrap(), b"one");
         assert_eq!(st.read(all[1].id).unwrap(), b"two");
     }
@@ -496,8 +591,8 @@ mod tests {
     #[test]
     fn rewriting_a_save_changes_its_hash_but_not_its_id() {
         let (_d, st) = store();
-        let first = st.write(16777219, "a.srm", b"before").unwrap();
-        let second = st.write(16777219, "a.srm", b"after").unwrap();
+        let first = st.write(16777219, "a.srm", b"before", None).unwrap();
+        let second = st.write(16777219, "a.srm", b"after", None).unwrap();
         assert_eq!(first.id, second.id);
         assert_ne!(first.content_hash, second.content_hash);
         assert_eq!(st.read(second.id).unwrap(), b"after");
@@ -515,7 +610,7 @@ mod tests {
     #[test]
     fn a_stored_save_matching_the_client_plans_as_no_op() {
         let (_d, st) = store();
-        let s = st.write(16777221, "a.srm", b"same-bytes").unwrap();
+        let s = st.write(16777221, "a.srm", b"same-bytes", None).unwrap();
         let c = ClientSaveState {
             rom_id: 16777221,
             file_name: "a.srm".into(),
@@ -604,8 +699,9 @@ impl StateStore {
                     continue;
                 }
                 let Some(name) = p.file_name().and_then(|n| n.to_str()) else { continue };
-                // The sidecars are bookkeeping, not states.
-                if name.starts_with('.') && name.ends_with(".emulator") {
+                // The sidecars and half-written files are bookkeeping, not
+                // states.
+                if name.starts_with('.') {
                     continue;
                 }
                 let Ok(meta) = std::fs::metadata(&p) else { continue };
@@ -642,9 +738,9 @@ impl StateStore {
     ) -> std::io::Result<ServerState> {
         let d = self.dir(rom_id);
         std::fs::create_dir_all(&d)?;
-        std::fs::write(d.join(file_name), bytes)?;
-        match emulator {
-            Some(e) if !e.is_empty() => std::fs::write(self.emu_path(rom_id, file_name), e)?,
+        write_atomically(&d.join(file_name), bytes)?;
+        match emulator_name(emulator) {
+            Some(e) => write_atomically(&self.emu_path(rom_id, file_name), e.as_bytes())?,
             // An upload with no emulator clears a stale one rather than leaving
             // the previous uploader's name on somebody else's state.
             _ => {
@@ -1021,10 +1117,19 @@ pub mod legacy {
         let mut changed = 0;
         for (key, hash) in old {
             let mut parts = key.splitn(3, '\0');
+            // Anything that is not `device\0rom_id\0file` is kept as it is.
+            // Save units are `device\0unit:<family>\0<key>`, and dropping those
+            // here, on every start, wiped every unit's record of agreement:
+            // the next change on a device came back as a conflict, and a unit
+            // a device had deleted came back to it.
             let (Some(device), Some(rom), Some(file)) = (parts.next(), parts.next(), parts.next()) else {
+                seen.insert(key, hash);
                 continue;
             };
-            let Ok(rom) = rom.parse::<i64>() else { continue };
+            let Ok(rom) = rom.parse::<i64>() else {
+                seen.insert(key, hash);
+                continue;
+            };
             if !gameid::is_legacy(rom) {
                 seen.insert(key, hash);
                 continue;
@@ -1228,6 +1333,19 @@ pub mod legacy {
             // Idempotent: running it again against the same moves changes nothing.
             assert_eq!(remap_seen(&mut seen, &moved), 0);
             assert!(seen.contains_key(&format!("dev\u{0}{CT}\u{0}Already.srm")), "stable keys untouched");
+        }
+
+        /// Save units share the map under keys with no game id in them. The
+        /// remap runs on every start, and dropping what it could not parse
+        /// wiped every unit's record of agreement each time.
+        #[test]
+        fn keys_that_are_not_a_games_are_kept() {
+            let unit = crate::units::seen_key("dev", "ppsspp", "ULUS10041");
+            let mut seen: HashMap<String, String> = [(unit.clone(), "h".to_owned())].into_iter().collect();
+            seen.insert("odd".to_owned(), "h2".to_owned());
+            remap_seen(&mut seen, &BTreeMap::new());
+            assert_eq!(seen.get(&unit).map(String::as_str), Some("h"), "the unit's agreement was dropped");
+            assert!(seen.contains_key("odd"));
         }
     }
 }

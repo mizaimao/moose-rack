@@ -9,6 +9,7 @@ import {
 } from "../bindings.js";
 import { toast, escapeHtml } from "../util.js";
 import { wireConfigFields } from "./fields.js";
+import { beginRender, listenWhile } from "./render.js";
 
 /// Set while waiting for a keypress to assign, so the window's own key handler
 /// gets out of the way.
@@ -68,7 +69,7 @@ export const html = () => `      <h4>Players</h4>
         <button class="set-pad-reset">Reset controller</button>
       </footer>`;
 
-export function wire(box) {
+export function wire(box, signal) {
   box.querySelectorAll("tr[data-id]").forEach((row) => {
     const btn = row.querySelector(".key-cell .set-key");
     if (!btn) return;
@@ -129,8 +130,9 @@ export function wire(box) {
         : "");
   };
   drawList();
-  window.addEventListener("gamepadconnected", drawList);
-  window.addEventListener("gamepaddisconnected", drawList);
+  // On the window, which outlives this tab, so they go when the tab does.
+  listenWhile(signal, window, "gamepadconnected", drawList);
+  listenWhile(signal, window, "gamepaddisconnected", drawList);
 
   const live = box.querySelector(".pad-live");
   // Twice the rate a button can be pressed and released is fast enough to look
@@ -140,10 +142,12 @@ export function wire(box) {
   // when a thumb moves.
   let lastLine = "";
   const readPad = () => {
-    // `box.isConnected`, not a lookup for an element id that no longer exists
-    // anywhere in either document — that check was always false, so this
-    // readout stopped after one frame and reported "no controller" for good.
-    if (!box.isConnected) return;
+    // Stops when this drawing of the tab ends. Two checks were tried before
+    // this one: an element id that no longer exists anywhere, which was always
+    // false and stopped the readout after one frame, and `box.isConnected`,
+    // which is always true because `box` is the `#pane` every tab is drawn
+    // into, so each visit to this tab started another loop that never ended.
+    if (signal?.aborted || !live?.isConnected) return;
     const pad = (navigator.getGamepads?.() ?? []).find(Boolean);
     const line = !pad
       ? "No controller detected — press a button to wake it."
@@ -176,7 +180,7 @@ export function wire(box) {
 
 
   // The mirror toggle is a config.toml field like the ones in General.
-  wireConfigFields(box);
+  wireConfigFields(box, signal);
 
 }
 
@@ -241,8 +245,11 @@ export function captureKey(ev) {
   return true;
 }
 
+// `#pane` is where every tab is drawn. These looked under `#settings`, which no
+// page has, so a rebound button went on saying "press a key…" and the row that
+// lost the key kept showing it until the tab was opened again.
 function redrawKeyRows() {
-  document.querySelectorAll("#settings tr[data-id]").forEach((row) => {
+  document.querySelectorAll("#pane tr[data-id]").forEach((row) => {
     const b = row.querySelector(".key-cell .set-key");
     if (!b || b.classList.contains("capturing")) return;
     const label = keyLabelFor(row.dataset.id);
@@ -252,7 +259,7 @@ function redrawKeyRows() {
 }
 
 function redrawPadRows() {
-  document.querySelectorAll("#settings tr[data-id]").forEach((row) => {
+  document.querySelectorAll("#pane tr[data-id]").forEach((row) => {
     const b = row.querySelector(".pad-cell .set-pad");
     if (!b || b.classList.contains("capturing")) return;
     const i = padFor(row.dataset.id);
@@ -274,5 +281,6 @@ export function isCapturing() {
 /// pane is what "show me the new bindings" means.
 function redraw(box) {
   box.innerHTML = html();
-  wire(box);
+  // A new drawing of the tab, so the old one's readout and listeners stop.
+  wire(box, beginRender());
 }

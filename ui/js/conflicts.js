@@ -316,6 +316,11 @@ export function askConfigPatch(findings) {
       resolve(ok);
     };
     const onKey = (ev) => {
+      // Stopped here, or the library behind hears it too: Escape became its
+      // Back, and Enter on the focused button opened whatever the library's
+      // cursor was on and kept the button from being pressed. The button's
+      // own press is a default action, which stopping the event leaves alone.
+      ev.stopPropagation();
       if (ev.key === "Escape") {
         ev.preventDefault();
         finish(false);
@@ -423,7 +428,14 @@ export function askBios(detail) {
     let at = 0;
     const paint = () => sides().forEach((b, i) => b.classList.toggle("sel", i === at));
     const onKey = (ev) => {
-      if (ev.key === "Escape") return finish(false);
+      // Every key stops here, as in the conflict dialog. The library listens
+      // on the window, so the Escape that cancelled this went on to be its
+      // Back as well, and Enter pressed Play on the game behind the dialog.
+      ev.stopPropagation();
+      if (ev.key === "Escape") {
+        ev.preventDefault();
+        return finish(false);
+      }
       if (ev.key === "ArrowLeft" || ev.key === "ArrowRight") {
         at = at === 0 ? 1 : 0;
         paint();
@@ -483,7 +495,12 @@ export function askNoCore(platform, core) {
     let at = 0;
     const paint = () => sides().forEach((b, i) => b.classList.toggle("sel", i === at));
     const onKey = (ev) => {
-      if (ev.key === "Escape") return finish(false);
+      // Stopped here for the same reason as in `askBios`.
+      ev.stopPropagation();
+      if (ev.key === "Escape") {
+        ev.preventDefault();
+        return finish(false);
+      }
       if (ev.key === "ArrowLeft" || ev.key === "ArrowRight") {
         at = at === 0 ? 1 : 0;
         paint();

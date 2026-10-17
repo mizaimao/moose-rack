@@ -28,13 +28,14 @@ mod auth;
 mod collections;
 mod web;
 mod saves;
+mod units;
 
 use std::net::SocketAddr;
 use std::sync::Arc;
 
-use anyhow::{Context as _, Result};
+use anyhow::{Context as _, Result, bail};
 use axum::{
-    extract::{Path as AxPath, Query, State},
+    extract::{DefaultBodyLimit, Path as AxPath, Query, State},
     response::IntoResponse,
     routing::get,
     Json, Router,
@@ -136,9 +137,10 @@ struct Args {
     /// to do that is a good way to bind to localhost by accident.
     #[arg(short, long, env = "MOOSE_SERVICE_PORT")]
     port: Option<u16>,
-    /// Hash a password for `[[auth.users]]`, print it, and exit. The plain
-    /// password is never stored anywhere; paste the printed line into the config.
-    #[arg(long, value_name = "PASSWORD")]
+    /// Hash a password for `[[auth.users]]`, print it, and exit. With no
+    /// value it is read from the terminal, which keeps it out of the shell's
+    /// history and the process list; paste the printed line into the config.
+    #[arg(long, value_name = "PASSWORD", num_args = 0..=1, default_missing_value = "-")]
     hash_password: Option<String>,
     /// Print where saves stored under old positional game ids would move, and
     /// exit without moving anything. The move itself happens once, at the
@@ -249,6 +251,8 @@ struct SyncState {
     /// sync by a different rule: `crate::statesync` decides what to send before
     /// it sends, so there is no conflict to answer and nothing to merge.
     states: saves::StateStore,
+    /// Standalone emulators' saves, a folder each. `units.rs`.
+    units: units::UnitStore,
     path: std::path::PathBuf,
     data: Persisted,
 }
@@ -268,15 +272,24 @@ impl SyncState {
     }
 
     fn agree(&mut self, device: &str, rom_id: i64, file: &str, hash: &str) {
-        self.data
-            .seen
-            .insert(format!("{device}\0{rom_id}\0{file}"), hash.to_owned());
+        self.note(device, rom_id, file, hash);
         self.flush();
     }
 
+    /// Record agreement without writing it out. True when it changed anything.
+    fn note(&mut self, device: &str, rom_id: i64, file: &str, hash: &str) -> bool {
+        self.data
+            .seen
+            .insert(format!("{device}\0{rom_id}\0{file}"), hash.to_owned())
+            .as_deref()
+            != Some(hash)
+    }
+
+    /// Through a file beside it and a rename: a crash part way through left
+    /// a torn file, which the next start read as no state at all.
     fn flush(&self) {
         if let Ok(j) = serde_json::to_vec_pretty(&self.data) {
-            let _ = std::fs::write(&self.path, j);
+            let _ = saves::write_atomically(&self.path, &j);
         }
     }
 }
@@ -891,13 +904,164 @@ async fn negotiate(
     if let Some(no) = refuse_legacy(req.saves.iter().map(|s| s.rom_id)) {
         return no;
     }
-    let st = lib.sync.lock().unwrap();
+    let mut st = lib.sync.lock().unwrap();
     let server = st.store.list(None);
     let mut plan = saves::plan(&req.device_id, &req.saves, &server, &st.seen_map());
+    // Holding the same bytes is agreeing on them. Unrecorded, a device whose
+    // copy matched on first contact had nothing on file, and its next change
+    // came back as a conflict instead of an upload: 268 of the Nova's saves.
+    let mut noted = false;
+    for o in plan.operations.iter().filter(|o| o.action == "no_op") {
+        if let (Some(file), Some(hash)) = (&o.file_name, &o.server_content_hash) {
+            noted |= st.note(&req.device_id, o.rom_id, file, hash);
+        }
+    }
+    if noted {
+        st.flush();
+    }
     // A session id the client can quote back. Nothing is reserved by it -- it
     // exists so `complete_session` has something to close.
     plan.session_id = Some(1);
     Json(plan).into_response()
+}
+
+#[derive(Deserialize)]
+struct UnitNegotiateReq {
+    device_id: String,
+    /// The families this device has an adapter for. Only units in these are
+    /// offered to it.
+    families: Vec<String>,
+    #[serde(default)]
+    units: Vec<units::ClientUnit>,
+}
+
+/// The plan for a device's save units. Same rules as `negotiate`, and like it,
+/// matching copies are recorded as agreed.
+async fn negotiate_units(
+    State(lib): State<Arc<Library>>,
+    Json(req): Json<UnitNegotiateReq>,
+) -> axum::response::Response {
+    let bad = req
+        .families
+        .iter()
+        .find(|f| !moose_rack::saveunit::valid_family(f))
+        .map(|f| format!("no such save family: {f}"))
+        .or_else(|| {
+            req.units
+                .iter()
+                .find(|u| !moose_rack::saveunit::valid_family(&u.family) || !moose_rack::saveunit::valid_key(&u.key))
+                .map(|u| format!("not a usable unit: {}/{:?}", u.family, u.key))
+        });
+    if let Some(why) = bad {
+        return (axum::http::StatusCode::BAD_REQUEST, why).into_response();
+    }
+    let mut st = lib.sync.lock().unwrap();
+    let server = st.units.list(None);
+    let plan = {
+        let seen = &st.data.seen;
+        units::plan(&req.families, &req.units, &server, &|f, k| {
+            seen.get(&units::seen_key(&req.device_id, f, k)).cloned()
+        })
+    };
+    let mut noted = false;
+    for o in plan.operations.iter().filter(|o| o.action == "no_op") {
+        if let Some(hash) = &o.server_content_hash {
+            let k = units::seen_key(&req.device_id, &o.family, &o.key);
+            noted |= st.data.seen.insert(k, hash.clone()).as_ref() != Some(hash);
+        }
+    }
+    if noted {
+        st.flush();
+    }
+    Json(plan).into_response()
+}
+
+#[derive(Deserialize)]
+struct UnitListQuery {
+    #[serde(default)]
+    family: Option<String>,
+}
+
+async fn list_units(State(lib): State<Arc<Library>>, Query(q): Query<UnitListQuery>) -> axum::response::Response {
+    Json(lib.sync.lock().unwrap().units.list(q.family.as_deref())).into_response()
+}
+
+#[derive(Deserialize)]
+struct UnitUploadQuery {
+    family: String,
+    key: String,
+    device_id: String,
+    #[serde(default)]
+    overwrite: Option<bool>,
+}
+
+/// Take a unit's zip, unless the server's copy moved since this device last
+/// agreed: the `upload_save` rule, 409 included.
+async fn upload_unit(
+    State(lib): State<Arc<Library>>,
+    Query(q): Query<UnitUploadQuery>,
+    mut form: axum::extract::Multipart,
+) -> axum::response::Response {
+    let bytes = match file_part(&mut form, "unitFile").await {
+        Ok(Some((_, bytes))) => bytes,
+        Ok(None) => return (axum::http::StatusCode::BAD_REQUEST, "no usable unitFile").into_response(),
+        Err(no) => return no,
+    };
+    let mut st = lib.sync.lock().unwrap();
+    let k = units::seen_key(&q.device_id, &q.family, &q.key);
+    if !q.overwrite.unwrap_or(false)
+        && let Some(cur) = st.units.get(&q.family, &q.key)
+    {
+        let agreed = st.data.seen.get(&k).cloned();
+        if agreed.as_deref() != Some(cur.content_hash.as_str()) {
+            return (
+                axum::http::StatusCode::CONFLICT,
+                format!(
+                    "the server copy of {}/{} changed since this device last agreed (server {}, last agreed {})",
+                    q.family,
+                    q.key,
+                    cur.content_hash,
+                    agreed.unwrap_or_else(|| "never".into())
+                ),
+            )
+                .into_response();
+        }
+    }
+    match st.units.write(&q.family, &q.key, &bytes) {
+        Ok(u) => {
+            st.data.seen.insert(k, u.content_hash.clone());
+            st.flush();
+            Json(u).into_response()
+        }
+        Err(units::WriteError::Refused(why)) => (axum::http::StatusCode::BAD_REQUEST, why).into_response(),
+        Err(units::WriteError::Io(e)) => {
+            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response()
+        }
+    }
+}
+
+async fn unit_content(State(lib): State<Arc<Library>>, AxPath(id): AxPath<i64>) -> axum::response::Response {
+    match lib.sync.lock().unwrap().units.read(id) {
+        Some((_, b)) => ([(axum::http::header::CONTENT_TYPE, "application/zip")], b).into_response(),
+        None => axum::http::StatusCode::NOT_FOUND.into_response(),
+    }
+}
+
+/// The device unpacked the server's copy: it now agrees with it.
+async fn unit_downloaded(
+    State(lib): State<Arc<Library>>,
+    AxPath(id): AxPath<i64>,
+    Query(q): Query<DownloadedQuery>,
+) -> axum::response::Response {
+    let mut st = lib.sync.lock().unwrap();
+    let Some(u) = st.units.list(None).into_iter().find(|u| u.id == id) else {
+        return axum::http::StatusCode::NOT_FOUND.into_response();
+    };
+    // What the device unpacked, when it says; see `DownloadedQuery`.
+    let hash = q.content_hash.clone().filter(|h| !h.is_empty()).unwrap_or_else(|| u.content_hash.clone());
+    st.data.seen.insert(units::seen_key(&q.device_id, &u.family, &u.key), hash);
+    st.flush();
+    Json(u).into_response()
 }
 
 async fn save_content(
@@ -913,6 +1077,12 @@ async fn save_content(
 #[derive(Deserialize)]
 struct DownloadedQuery {
     device_id: String,
+    /// The hash of the copy the device received. Recording the server's hash
+    /// at the time of this call instead made a device that fetched one copy,
+    /// while another device uploaded a newer one, agree with the newer: its
+    /// next upload then replaced that copy with no conflict.
+    #[serde(default)]
+    content_hash: Option<String>,
 }
 
 /// A device took a save: it now holds the server's copy, so record that it
@@ -928,11 +1098,21 @@ async fn save_downloaded(
     Query(q): Query<DownloadedQuery>,
 ) -> axum::http::StatusCode {
     let mut st = lib.sync.lock().unwrap();
-    let Some(s) = st.store.list(None).into_iter().find(|s| s.id == id) else {
+    let Some((rom_id, file_name)) = st.store.locate(id) else {
         return axum::http::StatusCode::NOT_FOUND;
     };
-    let hash = s.content_hash.clone().unwrap_or_default();
-    st.agree(&q.device_id, s.rom_id, &s.file_name, &hash);
+    let hash = match q.content_hash.filter(|h| !h.is_empty()) {
+        Some(h) => h,
+        // An older client says nothing about what it got.
+        None => match st.store.read(id) {
+            Some(bytes) => {
+                use md5::Digest as _;
+                hex::encode(md5::Md5::digest(&bytes))
+            }
+            None => return axum::http::StatusCode::NOT_FOUND,
+        },
+    };
+    st.agree(&q.device_id, rom_id, &file_name, &hash);
     axum::http::StatusCode::NO_CONTENT
 }
 
@@ -960,6 +1140,42 @@ async fn state_content(
     }
 }
 
+/// The largest upload either store takes.
+///
+/// axum's default is 2 MB, and a save state is often bigger: a PS1 state is
+/// about 5 MB, a PS2 one tens of MB. 256 MB leaves room for those and for a
+/// whole memory card, and still bounds what one request can hold in memory.
+const UPLOAD_LIMIT: usize = 256 * 1024 * 1024;
+
+/// The `part` file of an upload as (bare file name, bytes).
+///
+/// `Ok(None)` when the form has no such part or its name is unusable; `Err`
+/// with the response to send when the body could not be read. A failed read is
+/// refused, never stored: taking it as empty bytes is how 30 save states over
+/// the old 2 MB limit reached the server as empty files on 2026-10-14, and the
+/// client was told they had arrived.
+async fn file_part(
+    form: &mut axum::extract::Multipart,
+    part: &str,
+) -> std::result::Result<Option<(String, Vec<u8>)>, axum::response::Response> {
+    let refuse =
+        |e: axum::extract::multipart::MultipartError| (e.status(), e.body_text()).into_response();
+    let mut found = None;
+    while let Some(field) = form.next_field().await.map_err(refuse)? {
+        if field.name() != Some(part) {
+            continue;
+        }
+        let name = field.file_name().unwrap_or_default().to_owned();
+        let bytes = field.bytes().await.map_err(refuse)?.to_vec();
+        found = Some((name, bytes));
+    }
+    // A path separator in the name would write outside the store.
+    Ok(found.and_then(|(name, bytes)| {
+        let bare = std::path::Path::new(&name).file_name()?.to_str()?.to_owned();
+        (!bare.starts_with('.')).then_some((bare, bytes))
+    }))
+}
+
 #[derive(Deserialize)]
 struct StateUploadQuery {
     rom_id: i64,
@@ -981,25 +1197,15 @@ async fn upload_state(
     if let Some(no) = refuse_legacy([q.rom_id]) {
         return no;
     }
-    let mut file_name = String::new();
-    let mut bytes: Vec<u8> = Vec::new();
-    while let Ok(Some(field)) = form.next_field().await {
-        // `stateFile`, the name `upload_state` sends. Anything else is ignored
-        // rather than guessed at.
-        if field.name() == Some("stateFile") {
-            file_name = field.file_name().unwrap_or_default().to_owned();
-            bytes = field.bytes().await.unwrap_or_default().to_vec();
+    // `stateFile`, the name `upload_state` sends. Anything else is ignored
+    // rather than guessed at.
+    let (safe, bytes) = match file_part(&mut form, "stateFile").await {
+        Ok(Some(part)) => part,
+        Ok(None) => {
+            return (axum::http::StatusCode::BAD_REQUEST, "no usable stateFile").into_response()
         }
-    }
-    // A path separator in the name would write outside the store.
-    let safe = std::path::Path::new(&file_name)
-        .file_name()
-        .and_then(|n| n.to_str())
-        .unwrap_or_default()
-        .to_owned();
-    if safe.is_empty() || safe.starts_with('.') {
-        return (axum::http::StatusCode::BAD_REQUEST, "no usable stateFile").into_response();
-    }
+        Err(no) => return no,
+    };
     let store = lib.sync.lock().unwrap();
     match store.states.write(q.rom_id, &safe, q.emulator.as_deref(), &bytes) {
         Ok(st) => Json(st).into_response(),
@@ -1013,6 +1219,10 @@ struct UploadQuery {
     device_id: String,
     #[serde(default)]
     overwrite: Option<bool>,
+    /// The core the save came from. Kept beside it, so a device that files
+    /// saves by core knows which folder it goes in.
+    #[serde(default)]
+    emulator: Option<String>,
 }
 
 /// Accept a save, unless the server's copy moved since this device last agreed.
@@ -1028,17 +1238,13 @@ async fn upload_save(
     if let Some(no) = refuse_legacy([q.rom_id]) {
         return no;
     }
-    let mut name = String::new();
-    let mut bytes = Vec::new();
-    while let Ok(Some(field)) = form.next_field().await {
-        if field.name() == Some("saveFile") {
-            name = field.file_name().unwrap_or("save.srm").to_owned();
-            bytes = field.bytes().await.map(|b| b.to_vec()).unwrap_or_default();
+    let (name, bytes) = match file_part(&mut form, "saveFile").await {
+        Ok(Some(part)) => part,
+        Ok(None) => {
+            return (axum::http::StatusCode::BAD_REQUEST, "no usable saveFile").into_response()
         }
-    }
-    if name.is_empty() {
-        return (axum::http::StatusCode::BAD_REQUEST, "no saveFile part").into_response();
-    }
+        Err(no) => return no,
+    };
 
     let mut st = lib.sync.lock().unwrap();
     let existing = st.store.list(Some(q.rom_id)).into_iter().find(|s| s.file_name == name);
@@ -1063,7 +1269,7 @@ async fn upload_save(
             }
         }
 
-    match st.store.write(q.rom_id, &name, &bytes) {
+    match st.store.write(q.rom_id, &name, &bytes, q.emulator.as_deref()) {
         Ok(s) => {
             let h = s.content_hash.clone().unwrap_or_default();
             st.agree(&q.device_id, q.rom_id, &name, &h);
@@ -1114,14 +1320,21 @@ async fn require_auth(
     next: axum::middleware::Next,
 ) -> axum::response::Response {
     if guard.cfg.open() || is_public(req.uri().path()) {
-        req.extensions_mut().insert(auth::Identity::Owner);
+        // `/whoami` answers everybody and says who they are. Giving it the
+        // owner's identity, as the other open routes get, made it tell a
+        // visitor with no credentials, or the guest, that they were the owner,
+        // so the page never offered a way to sign in.
+        let who = if !guard.cfg.open() && req.uri().path() == "/whoami" {
+            identify(&guard, &req)
+        } else {
+            Some(auth::Identity::Owner)
+        };
+        if let Some(w) = who {
+            req.extensions_mut().insert(w);
+        }
         return next.run(req).await;
     }
-    let header = req.headers().get(axum::http::header::AUTHORIZATION).and_then(|v| v.to_str().ok());
-    let cookie = req.headers().get(axum::http::header::COOKIE).and_then(|v| v.to_str().ok());
-    let who = auth::from_header(&guard.cfg, header).or_else(|| {
-        auth::session_from_cookies(cookie).and_then(|id| guard.sessions.get(id))
-    });
+    let who = identify(&guard, &req);
     let wants_html = req
         .headers()
         .get(axum::http::header::ACCEPT)
@@ -1191,14 +1404,25 @@ async fn require_auth(
     res
 }
 
+/// Who the request says it is, by its `Authorization` header or its session
+/// cookie, without refusing anybody.
+fn identify(guard: &Guard, req: &axum::extract::Request) -> Option<auth::Identity> {
+    let header = req.headers().get(axum::http::header::AUTHORIZATION).and_then(|v| v.to_str().ok());
+    let cookie = req.headers().get(axum::http::header::COOKIE).and_then(|v| v.to_str().ok());
+    auth::from_header(&guard.cfg, header)
+        .or_else(|| auth::session_from_cookies(cookie).and_then(|id| guard.sessions.get(id)))
+}
+
 /// Who the caller is, for a page that wants to offer a way to be somebody else.
 async fn whoami(
     who: Option<axum::extract::Extension<auth::Identity>>,
     State(guard): State<std::sync::Arc<Guard>>,
 ) -> Json<serde_json::Value> {
+    // No identity means credentials are configured and the request had none:
+    // the middleware gives one to everybody when nothing is configured.
     let (name, owner) = match who {
         Some(axum::extract::Extension(w)) => (w.name().to_owned(), w.is_owner()),
-        None => ("owner".to_owned(), true),
+        None => (String::new(), false),
     };
     Json(serde_json::json!({
         "name": name,
@@ -1480,12 +1704,25 @@ fn app(lib: Arc<Library>, media_dir: std::path::PathBuf, with_index: bool) -> Ro
         .route("/api/firmware", get(firmware))
         .route("/api/firmware/{id}/content/{*name}", get(firmware_content))
         .route("/api/devices", axum::routing::post(register_device))
-        .route("/api/saves", get(list_saves).post(upload_save))
+        .route(
+            "/api/saves",
+            get(list_saves).post(upload_save).layer(DefaultBodyLimit::max(UPLOAD_LIMIT)),
+        )
         .route("/api/saves/{id}/content", get(save_content))
         .route("/api/saves/{id}/downloaded", axum::routing::post(save_downloaded))
-        .route("/api/states", get(list_states).post(upload_state))
+        .route(
+            "/api/states",
+            get(list_states).post(upload_state).layer(DefaultBodyLimit::max(UPLOAD_LIMIT)),
+        )
         .route("/api/states/{id}/content", get(state_content))
         .route("/api/sync/negotiate", axum::routing::post(negotiate))
+        .route("/api/units/negotiate", axum::routing::post(negotiate_units))
+        .route(
+            "/api/units",
+            get(list_units).post(upload_unit).layer(DefaultBodyLimit::max(UPLOAD_LIMIT)),
+        )
+        .route("/api/units/{id}/content", get(unit_content))
+        .route("/api/units/{id}/downloaded", axum::routing::post(unit_downloaded))
         .route("/api/sync/sessions/{id}/complete", axum::routing::post(complete_session))
             // Artwork straight off the tree. ES-DE and Skraper already scraped it;
             // re-serving it through a database would gain nothing.
@@ -1508,8 +1745,26 @@ async fn main() -> Result<()> {
     let args = Args::parse();
 
     // Before the library is even looked at: this is a calculator, not a server.
-    if let Some(plain) = args.hash_password.as_deref() {
-        println!("{}", auth::hash_password(plain));
+    if let Some(given) = args.hash_password.as_deref() {
+        let plain = if given == "-" {
+            use std::io::IsTerminal as _;
+            if std::io::stdin().is_terminal() {
+                eprint!("Password: ");
+            }
+            let mut line = String::new();
+            std::io::stdin().read_line(&mut line).context("reading the password")?;
+            line.trim_end_matches(['\r', '\n']).to_owned()
+        } else {
+            eprintln!(
+                "note: a password given on the command line stays in the shell's history; \
+                 run --hash-password with no value to type it instead"
+            );
+            given.to_owned()
+        };
+        if plain.is_empty() {
+            bail!("no password given");
+        }
+        println!("{}", auth::hash_password(&plain));
         return Ok(());
     }
     let cfg = load_config(std::path::Path::new(&args.config))?;
@@ -1685,6 +1940,7 @@ async fn main() -> Result<()> {
         sync: std::sync::Mutex::new(SyncState {
             store: saves::SaveStore::new(&saves_root),
             states: saves::StateStore::new(saves_root.join("_states")),
+            units: units::UnitStore::new(saves_root.join("_units")),
             path: state_path,
             data,
         }),
@@ -1867,6 +2123,7 @@ mod tests {
             sync: std::sync::Mutex::new(SyncState {
                 store: saves::SaveStore::new(&saves_root),
                 states: saves::StateStore::new(saves_root.join("_states")),
+            units: units::UnitStore::new(saves_root.join("_units")),
                 path: saves_root.join("sync-state.json"),
                 data: Default::default(),
             }),
@@ -2203,6 +2460,191 @@ mod tests {
         }
     }
 
+    /// One multipart request with a single file part. `whole: false` leaves
+    /// off the closing boundary, which is what a body cut short looks like.
+    async fn post_part(app: &Router, uri: &str, part: &str, name: &str, bytes: &[u8], whole: bool) -> StatusCode {
+        let mut body = format!(
+            "--X\r\nContent-Disposition: form-data; name=\"{part}\"; filename=\"{name}\"\r\n\r\n"
+        )
+        .into_bytes();
+        body.extend_from_slice(bytes);
+        if whole {
+            body.extend_from_slice(b"\r\n--X--\r\n");
+        }
+        let r = app.clone().oneshot(
+            Request::builder().method("POST").uri(uri)
+                .header("content-type", "multipart/form-data; boundary=X")
+                .body(Body::from(body)).unwrap()).await.unwrap();
+        r.status()
+    }
+
+    /// axum takes 2 MB by default. Over that, the old handlers stored an empty
+    /// file and answered 200, which is how 30 PS1 and Dreamcast states were
+    /// lost on the way to the server.
+    #[tokio::test]
+    async fn an_upload_bigger_than_two_megabytes_arrives_whole() {
+        let (_d, app) = built();
+        let big = vec![b'x'; 5 * 1024 * 1024];
+        for (uri, part, list) in [
+            ("/api/saves?rom_id=16777217&device_id=dev", "saveFile", "/api/saves?rom_id=16777217"),
+            ("/api/states?rom_id=16777217", "stateFile", "/api/states?rom_id=16777217"),
+        ] {
+            assert_eq!(post_part(&app, uri, part, "Big.state", &big, true).await, StatusCode::OK, "{part}");
+            let (_, listed) = get(&app, list).await;
+            let v: serde_json::Value = serde_json::from_str(&listed).unwrap();
+            assert_eq!(v[0]["file_size_bytes"], big.len(), "{part}");
+            let id = v[0]["id"].as_i64().unwrap();
+            let kind = if part == "saveFile" { "saves" } else { "states" };
+            let (_, content) = get(&app, &format!("/api/{kind}/{id}/content")).await;
+            assert_eq!(content.len(), big.len(), "{part}");
+        }
+    }
+
+    /// A body that cannot be read is refused, and nothing is written in its
+    /// place: an empty file would read as a save that was agreed on.
+    #[tokio::test]
+    async fn an_upload_cut_short_is_refused_and_stores_nothing() {
+        let (_d, app) = built();
+        for (uri, part, list) in [
+            ("/api/saves?rom_id=16777217&device_id=dev", "saveFile", "/api/saves?rom_id=16777217"),
+            ("/api/states?rom_id=16777217", "stateFile", "/api/states?rom_id=16777217"),
+        ] {
+            let status = post_part(&app, uri, part, "Game.state", b"half", false).await;
+            assert!(status.is_client_error(), "{part}: {status}");
+            assert_eq!(get(&app, list).await.1, "[]", "{part}");
+        }
+    }
+
+    /// One PSP save made on the Nova reaches the Mac, the Mac's change goes
+    /// back, and the Nova's stale copy is refused rather than written over it.
+    #[tokio::test]
+    async fn a_save_unit_travels_both_ways_and_a_stale_copy_is_refused() {
+        use std::io::Write as _;
+        let zip = |bytes: &[u8]| {
+            let mut w = zip::ZipWriter::new(std::io::Cursor::new(Vec::new()));
+            w.start_file("DATA.BIN", zip::write::SimpleFileOptions::default()).unwrap();
+            w.write_all(bytes).unwrap();
+            w.finish().unwrap().into_inner()
+        };
+        let (_d, app) = built();
+        let up = |dev: &str| format!("/api/units?family=ppsspp&key=UCUS98653DATA00&device_id={dev}");
+        assert_eq!(post_part(&app, &up("nova"), "unitFile", "u.zip", &zip(b"nova 1"), true).await, StatusCode::OK);
+
+        let ask = |dev: &str, held: Option<String>| serde_json::json!({
+            "device_id": dev, "families": ["ppsspp"],
+            "units": held.map(|h| vec![serde_json::json!({"family": "ppsspp", "key": "UCUS98653DATA00", "content_hash": h})]).unwrap_or_default(),
+        });
+        let (_, body) = post_json(&app, "/api/units/negotiate", ask("mac", None)).await;
+        let plan: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(plan["operations"][0]["action"], "download", "{body}");
+        let id = plan["operations"][0]["unit_id"].as_i64().unwrap();
+        let (s, _) = get(&app, &format!("/api/units/{id}/content")).await;
+        assert_eq!(s, StatusCode::OK);
+        let (s, _) = post_json(&app, &format!("/api/units/{id}/downloaded?device_id=mac"), serde_json::json!({})).await;
+        assert_eq!(s, StatusCode::OK);
+
+        // The Mac plays and uploads. It agreed on the server's copy, so it may.
+        assert_eq!(post_part(&app, &up("mac"), "unitFile", "u.zip", &zip(b"mac 2"), true).await, StatusCode::OK);
+        // The Nova still holds its first copy and changes it: both moved.
+        assert_eq!(post_part(&app, &up("nova"), "unitFile", "u.zip", &zip(b"nova 3"), true).await, StatusCode::CONFLICT);
+        let nova_1 = moose_rack::saveunit::check(&zip(b"nova 1")).unwrap();
+        let (_, body) = post_json(&app, "/api/units/negotiate", ask("nova", Some(nova_1))).await;
+        assert!(body.contains("\"download\""), "a Nova that had not changed it takes the Mac's copy: {body}");
+        let (_, body) = post_json(&app, "/api/units/negotiate", ask("nova", Some("nova 3".into()))).await;
+        assert!(body.contains("\"conflict\""), "one that had is asked which to keep: {body}");
+
+        // Nothing of another family is offered.
+        let (_, body) = post_json(&app, "/api/units/negotiate", serde_json::json!({"device_id": "flip", "families": ["pcsx2"]})).await;
+        assert!(body.contains("\"operations\":[]"), "{body}");
+    }
+
+    /// The app's own unit sync, over a real socket, between two devices: a
+    /// PSP save from the Nova reaches the Mac, the Mac's change comes back,
+    /// and both changing is a conflict that keeping the server's copy settles,
+    /// with the Nova's copy backed up first.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn the_app_syncs_a_psp_save_through_the_service() {
+        use moose_rack::savesync::{Keep, Summary};
+        let (d, app) = built();
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+        let client = moose_rack::api::Client::new(&format!("http://{addr}"), "frank", "pw").unwrap();
+
+        // Each device: its own data folder (and so its own device id), memory
+        // stick and library.
+        let device = |name: &str| {
+            let home = d.path().join(name);
+            std::fs::create_dir_all(home.join("stick/PSP/SAVEDATA")).unwrap();
+            std::fs::write(home.join("state.json"), format!(r#"{{"device_id":"{name}","name":"{name}"}}"#)).unwrap();
+            let cfg = moose_rack::config::UnitSourceCfg {
+                family: "ppsspp".into(),
+                root: home.join("stick").to_string_lossy().into_owned(),
+                max_mb: None,
+                skip: vec![],
+            };
+            (home, cfg)
+        };
+        let (nova, nova_cfg) = device("nova");
+        let (mac, mac_cfg) = device("mac");
+        let save = |home: &std::path::Path| home.join("stick/PSP/SAVEDATA/UCUS98653DATA00");
+        let write = |home: &std::path::Path, bytes: &str| {
+            std::fs::create_dir_all(save(home)).unwrap();
+            std::fs::write(save(home).join("PARAM.SFO"), b"\0PSF").unwrap();
+            std::fs::write(save(home).join("DATA.BIN"), bytes).unwrap();
+        };
+        let data = |home: &std::path::Path| std::fs::read_to_string(save(home).join("DATA.BIN")).unwrap();
+        let sync = |home: std::path::PathBuf, cfg: moose_rack::config::UnitSourceCfg| {
+            let client = &client;
+            async move {
+                let mut s = Summary::default();
+                let sources = moose_rack::unitsync::sources(std::slice::from_ref(&cfg), &mut s);
+                moose_rack::unitsync::run(client, &sources, &home, &home.join("lib"), &mut s).await.unwrap();
+                assert!(s.problems.is_empty(), "{:?}", s.problems);
+                s
+            }
+        };
+
+        write(&nova, "nova 1");
+        assert_eq!(sync(nova.clone(), nova_cfg.clone()).await.uploaded, 1);
+        assert_eq!(sync(mac.clone(), mac_cfg.clone()).await.downloaded, 1);
+        assert_eq!(data(&mac), "nova 1");
+        assert_eq!(sync(mac.clone(), mac_cfg.clone()).await.unchanged, 1, "a second run moves nothing");
+
+        write(&mac, "mac 2");
+        assert_eq!(sync(mac.clone(), mac_cfg.clone()).await.uploaded, 1);
+        assert_eq!(sync(nova.clone(), nova_cfg.clone()).await.downloaded, 1);
+        assert_eq!(data(&nova), "mac 2");
+
+        write(&nova, "nova 3");
+        write(&mac, "mac 3");
+        assert_eq!(sync(mac.clone(), mac_cfg.clone()).await.uploaded, 1);
+        let s = sync(nova.clone(), nova_cfg.clone()).await;
+        assert_eq!(s.conflicts.len(), 1, "both moved: {:?}", s.notes);
+        assert_eq!(data(&nova), "nova 3", "nothing is written for a conflict");
+
+        let said = moose_rack::savesync::resolve(&client, &s.conflicts[0], Keep::Server, &nova, &nova.join("lib"), &nova).await.unwrap();
+        assert!(said.contains("kept the server's ppsspp/UCUS98653DATA00"), "{said}");
+        assert_eq!(data(&nova), "mac 3");
+        let kept = nova.join("lib/saves-backup/units/ppsspp/UCUS98653DATA00");
+        assert!(std::fs::read_dir(&kept).unwrap().count() >= 1, "the Nova's own copy was backed up first");
+        assert_eq!(sync(nova.clone(), nova_cfg.clone()).await.unchanged, 1);
+    }
+
+    /// The same rule `upload_state` already kept, for saves.    /// The same rule `upload_state` already kept, for saves.    /// The same rule `upload_state` already kept, for saves.
+    #[tokio::test]
+    async fn an_uploaded_save_cannot_escape_its_directory() {
+        let (d, app) = built();
+        for name in ["../../escape.srm", "/etc/passwd", ".hidden"] {
+            let status = post_part(&app, "/api/saves?rom_id=16777217&device_id=dev", "saveFile", name, b"x", true).await;
+            if status == StatusCode::OK {
+                let (_, listed) = get(&app, "/api/saves?rom_id=16777217").await;
+                assert!(!listed.contains('/') && !listed.contains("\".hidden"), "{name}: {listed}");
+            }
+        }
+        assert!(!d.path().join("escape.srm").exists());
+    }
+
     fn with_guest() -> auth::AuthConfig {
         let mut c = locked();
         c.guest = true;
@@ -2290,6 +2732,21 @@ mod tests {
         let (_d2, open) = guarded(auth::AuthConfig::default());
         let (_, body) = req(&open, "GET", "/whoami", &[]).await;
         assert!(body.contains(r#""auth":false"#), "{body}");
+        assert!(body.contains(r#""owner":true"#), "{body}");
+    }
+
+    /// Nobody, and the guest, are not the owner. `/whoami` said they were, so
+    /// the page never drew its Sign in button.
+    #[tokio::test]
+    async fn whoami_does_not_call_a_visitor_the_owner() {
+        let (_d, app) = guarded(with_guest());
+        let (s, body) = req(&app, "GET", "/whoami", &[]).await;
+        assert_eq!(s, StatusCode::OK, "whoami has to answer everybody");
+        assert!(body.contains(r#""owner":false"#), "no credentials: {body}");
+
+        let (_, cookie, _) = post_login(&app, "/login", r#"{"guest":true}"#).await;
+        let (_, body) = req(&app, "GET", "/whoami", &[("cookie", &cookie.unwrap())]).await;
+        assert!(body.contains(r#""owner":false"#), "the guest: {body}");
     }
 
     /// The shared account: one button, no password, and it reads the library.
@@ -2739,6 +3196,24 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(r.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn a_copy_that_matched_on_first_contact_uploads_its_next_change() {
+        let (_d, app) = built();
+        let (_, up) = post_save(&app, "/api/saves?rom_id=16777217&device_id=alice", "a.srm", b"v1").await;
+        let v1 = serde_json::from_str::<serde_json::Value>(&up).unwrap()["content_hash"].clone();
+        let ask = |hash: serde_json::Value| serde_json::json!({"device_id": "nova", "saves": [{
+            "rom_id": 16777217, "file_name": "a.srm", "content_hash": hash,
+            "updated_at": "2026-10-15T00:00:00Z", "file_size_bytes": 2}]});
+        let (_, first) = post_json(&app, "/api/sync/negotiate", ask(v1)).await;
+        assert!(first.contains("\"no_op\""), "{first}");
+
+        let (_, next) = post_json(&app, "/api/sync/negotiate", ask("changed".into())).await;
+        let plan: serde_json::Value = serde_json::from_str(&next).unwrap();
+        assert_eq!(plan["operations"][0]["action"], "upload", "{next}");
+        let (s, body) = post_save(&app, "/api/saves?rom_id=16777217&device_id=nova", "a.srm", b"v2").await;
+        assert_eq!(s, StatusCode::OK, "{body}");
     }
 
     #[tokio::test]

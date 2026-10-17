@@ -1327,6 +1327,7 @@ mod tests {
         f.0.stage = Stage::Ready(Review {
             lines: vec![Line { action: A::Upload, title: "a.srm".into(), reason: None, rom_id: 1, save_id: None }],
             agreed: 0,
+            notes: vec![],
         });
         press(&mut f, Press::TabLeft); // refresh
         assert!(f.0.plan_to_confirm().is_none());
@@ -1387,6 +1388,7 @@ mod tests {
                 save_id: None,
             }],
             agreed: 0,
+            notes: vec![],
         });
         press(&mut f, Press::TabLeft);
         press(&mut f, Press::Down); // past refresh, onto "see what would sync"
@@ -1398,7 +1400,7 @@ mod tests {
     fn an_empty_plan_offers_to_look_again_rather_than_run_nothing() {
         use moose_patch::sync::Review;
         let mut f = fixture("sync-empty-plan");
-        f.0.stage = Stage::Ready(Review { lines: vec![], agreed: 380 });
+        f.0.stage = Stage::Ready(Review { lines: vec![], agreed: 380, notes: vec![] });
         press(&mut f, Press::TabLeft);
         press(&mut f, Press::Down); // past refresh, onto "see what would sync"
         press(&mut f, Press::Accept);

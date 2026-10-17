@@ -262,7 +262,23 @@ impl Fonts {
         let mut lines = 0usize;
         // Where the last line we are allowed to draw runs past its box.
         let mut cut: Option<usize> = None;
+        // A glyph's `end` counts bytes from the start of its own paragraph
+        // (the text between two line breaks, which is `run.text`), and the cut
+        // is used on the whole string. So each paragraph's start in the whole
+        // string is found and added on. Searching from where the previous one
+        // ended only skips the line break between them, and a paragraph cannot
+        // begin with a line break, so the first match is the right one.
+        let mut para: Option<usize> = None;
+        let mut para_start = 0usize;
+        let mut para_end = 0usize;
         for run in buffer.layout_runs() {
+            if para != Some(run.line_i) {
+                para = Some(run.line_i);
+                para_start = spec.text[para_end..]
+                    .find(run.text)
+                    .map_or(para_end, |i| para_end + i);
+                para_end = para_start + run.text.len();
+            }
             lines += 1;
             width = width.max(run.line_w);
             for glyph in run.glyphs {
@@ -272,7 +288,10 @@ impl Fonts {
                 }
             }
             if lines == spec.lines as usize {
-                cut = run.glyphs.last().map(|g| g.end);
+                // The furthest end rather than the last glyph's: a
+                // right-to-left line lists its glyphs in the order they are
+                // drawn, so its last glyph is the start of the text.
+                cut = run.glyphs.iter().map(|g| para_start + g.end).max();
             }
         }
         Laid { glyphs, missing, width, lines, cut }
@@ -291,10 +310,15 @@ impl Fonts {
         // strings that actually overflow.
         //
         // Cut on a byte offset the shaper gave us, which is a character
-        // boundary in the *original string*. Dropping glyphs instead would cut
+        // boundary in the *original string* once `lay_out` has moved it from
+        // its paragraph to the whole text. Dropping glyphs instead would cut
         // inside a cluster, and half of a composed character is not a
-        // character.
-        let cut = laid.cut.unwrap_or(spec.text.len()).min(spec.text.len());
+        // character. Stepped back to a boundary all the same, because slicing
+        // inside a character panics and takes the front end down with it.
+        let mut cut = laid.cut.unwrap_or(spec.text.len()).min(spec.text.len());
+        while !spec.text.is_char_boundary(cut) {
+            cut -= 1;
+        }
         let head = spec.text[..cut].trim_end();
         let shortened = trim_to_fit(self, spec, head);
         self.raster(&shortened, spec, true)
@@ -622,6 +646,30 @@ mod tests {
         let out = f.render(&Spec::new(&long, 14.0, 1.0).wrapped(150.0, 2));
         assert!(out.width <= 151, "ran off the card: {} points", out.width);
         assert!(out.clipped);
+    }
+
+    /// A label of two paragraphs that overflows in the second.
+    ///
+    /// The shaper counts a glyph's offset from the start of its own paragraph,
+    /// and that number used to be applied to the whole string. Here the first
+    /// paragraph is 8 bytes and the second is all three-byte characters, so
+    /// the old cut landed inside a character and the slice panicked.
+    #[test]
+    fn a_cut_in_the_second_paragraph_lands_in_the_second_paragraph() {
+        let mut f = fonts();
+        let first = "Zelda 2\n";
+        let text = format!("{first}{}", "ゼルダの伝説神々のトライフォース".repeat(2));
+        let spec = Spec::new(&text, 14.0, 1.0).wrapped(150.0, 2);
+
+        let cut = f.lay_out(&spec).cut.expect("the second line has glyphs");
+        assert!(text.is_char_boundary(cut), "cut at {cut}, inside a character");
+        assert!(
+            cut > first.len() && text[..cut].starts_with(first),
+            "cut at {cut} is not in the second paragraph"
+        );
+
+        let out = f.render(&spec);
+        assert!(out.clipped, "three lines of text in two were not cut");
     }
 
     /// Two lines is two lines. A title that spills onto a third is a card that

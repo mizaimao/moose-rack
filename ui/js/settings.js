@@ -50,6 +50,17 @@ export function settingsOpen() {
 
 export function closeSettings() {}
 
+/// Where the library page is, for leaving settings on Android.
+///
+/// The Android app loads its pages as files, and there the library is
+/// index.html. moose-service serves the library at "/" and has no route for
+/// /index.html, so leaving settings in a phone's browser landed on a 404 page.
+/// The shim that service puts in front of the page sets `__MOOSE_WEB`; see
+/// src-service/src/web.rs.
+export function libraryAddress() {
+  return globalThis.__MOOSE_WEB ? "/" : "index.html";
+}
+
 export async function toggleSettings() {
   if (MOBILE) {
     window.location.href = "settings.html";

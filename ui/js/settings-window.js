@@ -12,6 +12,7 @@
 import { TABS, paneHtml, wirePane, isCapturing, captureKey } from "./settings-panes.js";
 import { applyStoredGlassTint } from "./backdrop.js";
 import { loadBindings } from "./bindings.js";
+import { libraryAddress } from "./settings.js";
 
 const tabsEl = document.getElementById("tabs");
 const paneEl = document.getElementById("pane");
@@ -89,7 +90,7 @@ function close() {
   // opening a window Tauri cannot close afterwards. Going back is a navigation
   // too. See settings.js for the two approaches this replaced.
   if (/\bAndroid\b/.test(navigator.userAgent)) {
-    window.location.href = "index.html";
+    window.location.href = libraryAddress();
     return;
   }
   // A real window, which is every desktop build. getCurrentWindow rather than a

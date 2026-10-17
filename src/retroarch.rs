@@ -1061,11 +1061,18 @@ input_player2_gun_start_mbtn = \"3\"
     /// Compares by key rather than against a list of interesting settings, so
     /// a clash in anything we set is reported rather than only the ones
     /// somebody thought to check.
-    pub fn override_clash(&self, core_label: Option<&str>, ours: &Path) -> Vec<String> {
-        let Some(label) = core_label else {
+    ///
+    /// `core` is the core's file stem, `snes9x`. The folder is found the way
+    /// [`Self::core_config_dir`] finds it: RetroArch names it after the core's
+    /// own name, `config/Snes9x/`, while ES-DE's label for the same core is
+    /// "Snes9x - Current", and looking under the label found nothing for
+    /// Snes9x, MAME, Nestopia or PCSX ReARMed.
+    pub fn override_clash(&self, core: &str, ours: &Path) -> Vec<String> {
+        let Some(dir) = self.core_config_dir(core) else {
             return Vec::new();
         };
-        let theirs = self.config_dir().join(label).join(format!("{label}.cfg"));
+        let name = dir.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+        let theirs = dir.join(format!("{name}.cfg"));
         let (Ok(ours), Ok(theirs)) =
             (std::fs::read_to_string(ours), std::fs::read_to_string(theirs))
         else {
@@ -1111,8 +1118,27 @@ input_player2_gun_start_mbtn = \"3\"
     }
 
     /// RetroArch's own system directory, where cores look for BIOS files.
+    ///
+    /// Its own `system_directory` first, as [`Self::shaders_dir`] asks, then
+    /// `system/` in its data folder. The install root was the guess before,
+    /// which is RetroArch's answer only when it is portable: with RetroArch in
+    /// /Applications and no BIOS folder of ours yet, a Neo Geo launch copied
+    /// neogeo.zip into /Applications/system, where nothing looks.
     pub fn system_dir(&self) -> PathBuf {
-        self.system_override.clone().unwrap_or_else(|| self.root.join("system"))
+        if let Some(dir) = &self.system_override {
+            return dir.clone();
+        }
+        if let Some(dir) = self
+            .config_value("system_directory")
+            .filter(|d| !d.is_empty() && d != "default")
+        {
+            // `:/system` is RetroArch's way of saying "beside me".
+            return match dir.strip_prefix(":/").or_else(|| dir.strip_prefix(":\\")) {
+                Some(rest) => self.root.join(rest),
+                None => crate::util::expand_tilde(&dir),
+            };
+        }
+        self.data_dir().join("system")
     }
 
     /// Point BIOS lookups at a folder we control instead of RetroArch's own.
@@ -1301,17 +1327,23 @@ input_player2_gun_start_mbtn = \"3\"
             return String::new();
         }
 
-        [
-                "",
-                "# Project-local core options and remaps, so the user's own",
-                "# config/<Core>/<Core>.opt is never touched. global_core_options",
-                "# is required: without it the per-core file wins and this is ignored.",
-                "global_core_options = \"true\"",
-                &format!("core_options_path = \"{}\"", opts_path.display()),
-                &format!("input_remapping_directory = \"{}\"", remaps_dir.display()),
-                "",
-            ]
-            .join("\n").to_string()
+        let mut out = vec![
+            String::new(),
+            "# Project-local core options and remaps, so the user's own".to_owned(),
+            "# config/<Core>/<Core>.opt is never touched.".to_owned(),
+        ];
+        // Only when a file was written. mGBA and Nestopia have a remap and no
+        // options, and pointing RetroArch at a shared options file that was
+        // not written, or was left by another core, set aside the user's own
+        // `.opt` for those cores on every launch.
+        if !opts.is_empty() {
+            out.push("# global_core_options is required: without it the per-core file wins.".to_owned());
+            out.push("global_core_options = \"true\"".to_owned());
+            out.push(format!("core_options_path = \"{}\"", opts_path.display()));
+        }
+        out.push(format!("input_remapping_directory = \"{}\"", remaps_dir.display()));
+        out.push(String::new());
+        out.join("\n")
     }
     /// As [`Self::launch`], with an override config appended.
     pub fn launch_with(
@@ -1454,7 +1486,8 @@ mod tests {
             "Chrono Trigger (USA).srm",
             crate::savesync::Destination::Core { core: Some("snes9x") },
         );
-        assert_eq!(landed, saves.join("saves/snes9x/Chrono Trigger (USA).srm"));
+        // `Snes9x`, the folder RetroArch itself makes for that core.
+        assert_eq!(landed, saves.join("saves/Snes9x/Chrono Trigger (USA).srm"));
     }
 
     #[test]
@@ -1517,6 +1550,30 @@ mod tests {
             portable: true,
             system_override: None,
         }
+    }
+
+    /// Where BIOS go when we have no folder of our own: RetroArch's setting,
+    /// else its data folder, which is the install root only when portable.
+    #[test]
+    fn the_system_folder_is_retroarchs_own() {
+        let dir = scratch("system-dir");
+        let ra = fake(&dir);
+        assert_eq!(ra.system_dir(), dir.join("system"), "portable: beside the install");
+
+        std::fs::write(dir.join("retroarch.cfg"), "system_directory = \"default\"\n").unwrap();
+        assert_eq!(ra.system_dir(), dir.join("system"), "\"default\" is not a folder");
+
+        std::fs::write(dir.join("retroarch.cfg"), "system_directory = \":/bios\"\n").unwrap();
+        assert_eq!(ra.system_dir(), dir.join("bios"));
+
+        let elsewhere = dir.join("elsewhere");
+        std::fs::write(dir.join("retroarch.cfg"), format!("system_directory = \"{}\"\n", elsewhere.display())).unwrap();
+        assert_eq!(ra.system_dir(), elsewhere);
+
+        let ours = dir.join("0_BIOS");
+        std::fs::create_dir_all(&ours).unwrap();
+        let ra = ra.with_system_dir(Some(ours.clone()));
+        assert_eq!(ra.system_dir(), ours.canonicalize().unwrap(), "ours wins when there is one");
     }
 
     /// Give a scratch RetroArch an autoconfig profile, in every driver
@@ -1913,6 +1970,24 @@ input_r2_axis = "+5"
         assert!(body.contains("input_player1_btn_x"), "the swap was not written: {body}");
     }
 
+    /// mGBA has a remap and no core options. Turning on the shared options
+    /// file for it pointed RetroArch at a file nothing wrote, in place of the
+    /// user's own `config/mGBA/mGBA.opt`.
+    #[test]
+    fn a_core_with_only_a_remap_keeps_the_users_own_options() {
+        let dir = scratch("remap-only");
+        let lib = dir.join("lib");
+        let ra = fake(&dir);
+        let mgba = ra.prepare_tweaks(&lib, "gba", "mgba", crate::tweaks::AutoFire::Off);
+        assert!(mgba.contains("input_remapping_directory"), "{mgba}");
+        assert!(!mgba.contains("global_core_options"), "{mgba}");
+        assert!(!mgba.contains("core_options_path"), "{mgba}");
+
+        // A core that does have options still gets the shared file.
+        let fceumm = ra.prepare_tweaks(&lib, "nes", "fceumm", crate::tweaks::AutoFire::Off);
+        assert!(fceumm.contains("global_core_options = \"true\""), "{fceumm}");
+    }
+
     /// RetroArch 1.20.0 calls this `input_duty_cycle`. The *variable* behind it
     /// is `input_turbo_duty_cycle`, which is what the previous reading latched
     /// onto — so the app wrote a key RetroArch has never had and the duty
@@ -2044,7 +2119,7 @@ input_r2_axis = "+5"
         )
         .unwrap();
 
-        let clash = ra.override_clash(Some("Geolith"), &ours);
+        let clash = ra.override_clash("geolith", &ours);
         assert_eq!(clash, vec!["input_turbo_mode", "input_turbo_period"]);
         // Only what both set *differently*: their video_smooth is theirs to
         // keep, and our turbo button is not contested.
@@ -2058,11 +2133,24 @@ input_r2_axis = "+5"
             "input_turbo_mode = \"3\"\ninput_turbo_period = \"15\"\n",
         )
         .unwrap();
-        assert!(ra.override_clash(Some("Geolith"), &ours).is_empty());
+        assert!(ra.override_clash("geolith", &ours).is_empty());
 
-        // A core with no override of its own, and a core we have no name for.
-        assert!(ra.override_clash(Some("SwanStation"), &ours).is_empty());
-        assert!(ra.override_clash(None, &ours).is_empty());
+        // A core with no override of its own.
+        assert!(ra.override_clash("swanstation", &ours).is_empty());
+    }
+
+    /// RetroArch's folder is the core's own name, and ES-DE's label for the
+    /// same core is something else: "Snes9x - Current" for `config/Snes9x/`.
+    #[test]
+    fn a_core_override_is_found_under_retroarchs_folder_name() {
+        let dir = scratch("override-clash-name");
+        let ra = fake(&dir);
+        let core_cfg = ra.config_dir().join("Snes9x");
+        std::fs::create_dir_all(&core_cfg).unwrap();
+        std::fs::write(core_cfg.join("Snes9x.cfg"), "savefile_directory = \"/elsewhere\"\n").unwrap();
+        let ours = dir.join("ours.cfg");
+        std::fs::write(&ours, "savefile_directory = \"/saves\"\n").unwrap();
+        assert_eq!(ra.override_clash("snes9x", &ours), vec!["savefile_directory"]);
     }
 
     /// Nothing is moved, cleared or swapped. That is the whole reason this

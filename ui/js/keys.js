@@ -7,9 +7,9 @@
 import { el, state, trail, invoke } from "./state.js";
 import { selectRom, setSidebar, play, playVideo, showPlatformInfo } from "./detail.js";
 import {
-  showPlatforms, setLayout, setZoom, openPlatform, scrollList, randomGame,
+  showPlatforms, setLayout, setZoom, openPlatform, scrollList, randomGame, cancelSearch,
 } from "./library.js";
-import { escapeHtml, toast } from "./util.js";
+import { escapeHtml, toast, playingInPage } from "./util.js";
 import {
   closeLightbox, zoomLightbox, stepLightbox, isLightboxOpen, togglePlayback,
 } from "./lightbox.js";
@@ -227,6 +227,9 @@ function activate() {
 }
 
 function goBack() {
+  // First, and on the console grid too: Escape in the search box comes here
+  // as well, and a search waiting on its timer would otherwise still arrive.
+  cancelSearch();
   if (state.view === "platforms") return;
   el.search.value = "";
   // Same one-level-at-a-time walk the Back button does, so a controller
@@ -451,6 +454,9 @@ export function installKeys() {
   });
 
   window.addEventListener("keydown", (ev) => {
+    // The game in the page has the keyboard, and its defaults (Enter, Escape,
+    // the letters) are the library's too.
+    if (playingInPage()) return;
     // Rebinding swallows everything, so any key can be assigned.
     if (isCapturing() && captureKey(ev)) return;
 

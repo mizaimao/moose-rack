@@ -230,9 +230,14 @@ pub async fn run(
             .map(|n| n.to_string_lossy().into_owned())
             .unwrap_or_default();
         let k = key(*rom_id, &file_name);
-        let server = remote
-            .get(rom_id)
-            .and_then(|list| list.iter().find(|s| s.file_name == file_name));
+        // A ROM whose listing failed is left for next time. Read as "the
+        // server has none", every state of it planned an upload and replaced
+        // whatever newer state another device had sent. The failure is already
+        // in the summary.
+        let Some(list) = remote.get(rom_id) else {
+            continue;
+        };
+        let server = list.iter().find(|s| s.file_name == file_name);
         let print = server.map(fingerprint);
 
         match decide(
@@ -250,11 +255,20 @@ pub async fn run(
                         continue;
                     }
                 };
+                let sent = bytes.len() as i64;
                 match client
                     .upload_state(*rom_id, &file_name, bytes, c.core.as_deref())
                     .await
                 {
                     Ok(saved) => {
+                        if let Err(e) =
+                            crate::savesync::stored_whole(&file_name, sent, saved.file_size_bytes)
+                        {
+                            // Not recorded, so the next run sees it unsynced
+                            // and tries again.
+                            summary.fail(format!("{e}"));
+                            continue;
+                        }
                         summary.uploaded += 1;
                         summary.notes.push(format!("uploaded state {file_name}"));
                         // The fingerprint has to come from the same endpoint the
@@ -334,6 +348,11 @@ pub async fn run(
     match client.all_states().await {
         Ok(all) => {
             for (s, dest) in incoming(&all, candidates, &ledger) {
+                // `states/<core>/` need not exist yet on a device that has
+                // only ever saved this game.
+                if let Some(dir) = dest.parent() {
+                    let _ = std::fs::create_dir_all(dir);
+                }
                 match client.state_content(s.id).await {
                     Ok(bytes) => match crate::savesync::write_atomically(&dest, &bytes) {
                         Ok(()) => {
@@ -484,6 +503,16 @@ pub fn incoming<'a>(
     candidates: &[Candidate],
     ledger: &Ledger,
 ) -> Vec<(&'a crate::api::SaveState, PathBuf)> {
+    incoming_in(crate::platform::current().save_layout(), server, candidates, ledger)
+}
+
+/// As [`incoming`], for a device whose saves are laid out as `layout`.
+fn incoming_in<'a>(
+    layout: crate::platform::SaveLayout,
+    server: &'a [crate::api::SaveState],
+    candidates: &[Candidate],
+    ledger: &Ledger,
+) -> Vec<(&'a crate::api::SaveState, PathBuf)> {
     let resolved = |c: &Candidate| match &c.resolution {
         Resolution::Resolved { rom_id, .. } => Some(*rom_id),
         _ => None,
@@ -506,15 +535,49 @@ pub fn incoming<'a>(
         if !named_for_the_game {
             continue;
         }
+        // Without regard to case, as the name test above is. A state held here
+        // as `Kirby & The Amazing Mirror (USA).state1` and on the server in
+        // lower case is the same file on APFS, NTFS and exFAT, and writing
+        // the server's over it took no backup.
         let held = here.iter().any(|c| {
-            c.kind == Kind::State && c.path.file_name().is_some_and(|n| n.to_string_lossy() == s.file_name)
+            c.kind == Kind::State
+                && c.path.file_name().is_some_and(|n| n.to_string_lossy().to_lowercase() == s.file_name.to_lowercase())
         });
         if held || ledger.seen.contains_key(&key(s.rom_id, &s.file_name)) {
             continue;
         }
-        out.push((s, beside.path.with_file_name(&s.file_name)));
+        // Beside one of this game's states if there is one. The first file by
+        // path is the save on a by-core device, `saves/<core>/`, and a state
+        // put there is one RetroArch never loads; the next scan then read it
+        // as a game save and uploaded it to the saves endpoint.
+        let dest = match here.iter().find(|c| c.kind == Kind::State) {
+            Some(state) => state.path.with_file_name(&s.file_name),
+            None => state_beside_save(layout, &beside.path, &s.file_name),
+        };
+        // Something already there that the scan did not count as this
+        // game's state is not replaced: there is no backup on this path.
+        if dest.exists() {
+            continue;
+        }
+        out.push((s, dest));
     }
     out
+}
+
+/// Where a state goes on a device that holds only the game's save.
+///
+/// By core, states have their own tree: `<root>/states/<core>/` beside
+/// `<root>/saves/<core>/`. By system they share the save's folder.
+fn state_beside_save(layout: crate::platform::SaveLayout, save: &Path, file_name: &str) -> PathBuf {
+    if layout == crate::platform::SaveLayout::ByCore
+        && let Some(core_dir) = save.parent()
+        && let Some(saves_dir) = core_dir.parent()
+        && saves_dir.file_name().is_some_and(|n| n == "saves")
+        && let (Some(root), Some(core)) = (saves_dir.parent(), core_dir.file_name())
+    {
+        return root.join("states").join(core).join(file_name);
+    }
+    save.with_file_name(file_name)
 }
 
 fn mtime_secs(path: &Path) -> i64 {
@@ -552,7 +615,8 @@ pub async fn resolve_one(
                 .context("no local copy to keep — nothing to upload")?;
             let bytes = std::fs::read(&path)
                 .with_context(|| format!("reading {}", path.display()))?;
-            client
+            let sent = bytes.len() as i64;
+            let saved = client
                 .upload_state(
                     conflict.rom_id,
                     &conflict.file_name,
@@ -560,6 +624,9 @@ pub async fn resolve_one(
                     conflict.emulator.as_deref(),
                 )
                 .await?;
+            // The same check an ordinary upload makes: a state the server cut
+            // short is not one to record as agreed.
+            crate::savesync::stored_whole(&conflict.file_name, sent, saved.file_size_bytes)?;
             let hash = crate::savehash::compute(&path).unwrap_or_default();
             let print = server_print(client, conflict.rom_id, &conflict.file_name).await;
             ledger.record(conflict.rom_id, &conflict.file_name, &hash, print.as_deref());
@@ -575,13 +642,17 @@ pub async fn resolve_one(
                 std::fs::create_dir_all(dir).ok();
             }
             let slot = conflict.slot.as_deref().unwrap_or("unslotted");
-            crate::savebackup::keep(library_root, conflict.rom_id, slot, &dest).ok();
+            // Said rather than dropped: a backup that failed is the one thing
+            // that makes picking the wrong side unrecoverable.
+            let backup = crate::savebackup::keep(library_root, conflict.rom_id, slot, &dest)
+                .err()
+                .map(|e| format!(" (could not back up the copy it replaced: {e:#})"));
             crate::savesync::write_atomically(&dest, &bytes)?;
 
             let hash = crate::savehash::compute(&dest).unwrap_or_default();
             let print = server_print(client, conflict.rom_id, &conflict.file_name).await;
             ledger.record(conflict.rom_id, &conflict.file_name, &hash, print.as_deref());
-            format!("{}: kept the server's copy", dest.display())
+            format!("{}: kept the server's copy{}", dest.display(), backup.unwrap_or_default())
         }
     };
 
@@ -625,6 +696,7 @@ async fn server_print(client: &Client, rom_id: i64, file_name: &str) -> Option<S
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::platform::SaveLayout;
 
     #[test]
     fn ledger_entries_follow_their_game_to_its_stable_id() {
@@ -778,25 +850,52 @@ mod tests {
     fn a_state_only_on_the_server_comes_down_beside_the_games_save() {
         let here = [local("/userdata/saves/snes/ActRaiser (USA).srm", 7, Kind::Save)];
         let server = [on_server(1, 7, "ActRaiser (USA).state1")];
-        let got = incoming(&server, &here, &Ledger::default());
+        let got = incoming_in(SaveLayout::BySystem, &server, &here, &Ledger::default());
         assert_eq!(got.len(), 1);
         assert_eq!(got[0].1, std::path::PathBuf::from("/userdata/saves/snes/ActRaiser (USA).state1"));
+    }
+
+    /// By core, a state goes in `states/<core>/`, where RetroArch looks, not
+    /// beside the save in `saves/<core>/`, where it does not.
+    #[test]
+    fn a_state_only_on_the_server_goes_to_the_states_tree_by_core() {
+        let here = [local("/lib/Saves/saves/Snes9x/ActRaiser (USA).srm", 7, Kind::Save)];
+        let server = [on_server(1, 7, "ActRaiser (USA).state1")];
+        let got = incoming_in(SaveLayout::ByCore, &server, &here, &Ledger::default());
+        assert_eq!(got.len(), 1);
+        assert_eq!(got[0].1, std::path::PathBuf::from("/lib/Saves/states/Snes9x/ActRaiser (USA).state1"));
+
+        // Beside a state of the game when there is one.
+        let here = [
+            local("/lib/Saves/saves/Snes9x/ActRaiser (USA).srm", 7, Kind::Save),
+            local("/lib/Saves/states/Snes9x/ActRaiser (USA).state2", 7, Kind::State),
+        ];
+        let got = incoming_in(SaveLayout::ByCore, &server, &here, &Ledger::default());
+        assert_eq!(got[0].1, std::path::PathBuf::from("/lib/Saves/states/Snes9x/ActRaiser (USA).state1"));
+    }
+
+    /// The same state under another case is held, not brought down over it.
+    #[test]
+    fn a_state_held_under_another_case_is_not_brought_down_over_it() {
+        let here = [local("/userdata/saves/snes/ActRaiser (USA).state1", 7, Kind::State)];
+        let server = [on_server(1, 7, "actraiser (usa).state1")];
+        assert!(incoming_in(SaveLayout::BySystem, &server, &here, &Ledger::default()).is_empty());
     }
 
     #[test]
     fn a_state_this_emulator_would_never_load_stays_on_the_server() {
         let here = [local("/userdata/saves/snes/ActRaiser (USA).srm", 7, Kind::Save)];
         let server = [on_server(1, 7, "2026-09-08T04-25-32-465Z.state")];
-        assert!(incoming(&server, &here, &Ledger::default()).is_empty());
+        assert!(incoming_in(SaveLayout::BySystem, &server, &here, &Ledger::default()).is_empty());
     }
 
     #[test]
     fn nothing_comes_down_for_a_game_never_played_here_or_already_held() {
         let here = [local("/userdata/saves/snes/ActRaiser (USA).state1", 7, Kind::State)];
         // Held already: the ordinary three-way rule handles it.
-        assert!(incoming(&[on_server(1, 7, "ActRaiser (USA).state1")], &here, &Ledger::default()).is_empty());
+        assert!(incoming_in(SaveLayout::BySystem, &[on_server(1, 7, "ActRaiser (USA).state1")], &here, &Ledger::default()).is_empty());
         // A game with nothing on this device.
-        assert!(incoming(&[on_server(2, 8, "Other.state1")], &here, &Ledger::default()).is_empty());
+        assert!(incoming_in(SaveLayout::BySystem, &[on_server(2, 8, "Other.state1")], &here, &Ledger::default()).is_empty());
     }
 
     /// Deleted here after it last agreed with the server: gone on purpose.
@@ -805,7 +904,7 @@ mod tests {
         let here = [local("/userdata/saves/snes/ActRaiser (USA).srm", 7, Kind::Save)];
         let mut ledger = Ledger::default();
         ledger.record(7, "ActRaiser (USA).state2", "h", Some("p"));
-        assert!(incoming(&[on_server(3, 7, "ActRaiser (USA).state2")], &here, &ledger).is_empty());
+        assert!(incoming_in(SaveLayout::BySystem, &[on_server(3, 7, "ActRaiser (USA).state2")], &here, &ledger).is_empty());
     }
 
     /// Keeping the server's copy writes into the conflicting file, which is the

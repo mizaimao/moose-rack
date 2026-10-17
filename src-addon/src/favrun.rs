@@ -8,7 +8,8 @@
 //! name, because that is how this card is already arranged:
 //!
 //! * `★ Best of snes` — the stars in `/userdata/roms/snes/gamelist.xml`
-//! * `★ Favourites` — the stars in every gamelist on the card
+//! * `★ Favourites` — the stars in every other gamelist on the card: the
+//!   systems with no `★ Best of …` list of their own (see [`claimed_folders`])
 //! * anything else — `collections/custom-<name>.cfg`
 //!
 //! Only hand-made collections take part. A smart collection is a stored filter
@@ -58,8 +59,9 @@ const FEW: usize = 2;
 
 /// Which kind of ES list a collection maps onto.
 ///
-/// `folders` is what the card actually has, so the library-wide list covers
-/// exactly the systems present rather than every system the server knows.
+/// `folders` are the systems the library-wide list covers: the ones on the
+/// card, rather than every system the server knows, less the ones a
+/// `★ Best of …` list already speaks for (see [`claimed_folders`]).
 ///
 /// The platform is passed in rather than read from `platform::current()`: a
 /// test built on this Mac *is* the macOS platform, so a global lookup would
@@ -73,6 +75,28 @@ pub fn held_as(c: &Collection, folders: &[String], platform: &dyn Platform) -> H
         return Held::Stars(folders.to_vec());
     }
     Held::File
+}
+
+/// The system folders a `★ Best of …` list speaks for.
+///
+/// ES has one star per game, and both kinds of starred list are held in it.
+/// When `★ Favourites` and `★ Best of snes` both read the SNES stars, each
+/// leaked into the other: a game taken out of one lost its star and came out
+/// of the other on the next run, and a first sync of `★ Favourites` starred
+/// its SNES games and so grew `★ Best of snes` to hold them all.
+///
+/// So a system with a list of its own keeps its stars there, and
+/// `★ Favourites` covers the systems that have none. It is the rule a star
+/// from the desktop app already follows (`Cache::starred_collection` takes
+/// the system's own list first), so a star lands in the list the handheld
+/// reads it back from.
+fn claimed_folders(collections: &[Collection], platform: &dyn Platform) -> BTreeSet<String> {
+    collections
+        .iter()
+        .filter(|c| !c.is_smart && !c.is_virtual)
+        .filter_map(|c| c.name.strip_prefix(PER_SYSTEM))
+        .map(|slug| platform.save_folder(slug.trim()))
+        .collect()
 }
 
 /// What one collection needs doing.
@@ -258,7 +282,11 @@ pub fn plan_from(
     baseline: &Baseline,
     platform: &dyn Platform,
 ) -> Plan {
-    let folders: Vec<String> = crate::favmap::by_folder(known).into_keys().collect();
+    let claimed = claimed_folders(&collections, platform);
+    let folders: Vec<String> = crate::favmap::by_folder(known)
+        .into_keys()
+        .filter(|f| !claimed.contains(f))
+        .collect();
     let on_card = crate::favmap::ids(known);
     let index = crate::favmap::by_file(known);
 
@@ -270,6 +298,18 @@ pub fn plan_from(
             continue;
         }
         let held = held_as(&c, &folders, platform);
+        // The games this list can reach here. A list held as stars reaches
+        // only the games in its own folders: a NES game put in
+        // `★ Best of snes` is starred in the NES gamelist, and
+        // `★ Best of nes` then reads it as a star made on the handheld.
+        let reach: BTreeSet<i64> = match &held {
+            Held::Stars(in_folders) => known
+                .iter()
+                .filter(|k| in_folders.contains(&k.folder))
+                .map(|k| k.rom_id)
+                .collect(),
+            Held::File => on_card.clone(),
+        };
         let here = match &held {
             Held::Stars(in_folders) => stars_on_card(es, in_folders, &index),
             Held::File => members_of_file(es, &c.name, &index),
@@ -283,14 +323,14 @@ pub fn plan_from(
         };
         let server: BTreeSet<i64> = c.rom_ids.iter().copied().collect();
         let base = if baseline.seen(&c.id) { baseline.of(&c.id) } else { BTreeSet::new() };
-        let moves = reconcile(&here, &server, &base, &on_card);
+        let moves = reconcile(&here, &server, &base, &reach);
         plan.surveyed.push(Survey {
             name: c.name.clone(),
             here: here.len(),
             server: server.len(),
-            reachable: server.intersection(&on_card).count(),
+            reachable: server.intersection(&reach).count(),
         });
-        let agreed = settled(&here, &server, &moves, &on_card);
+        let agreed = settled(&here, &server, &moves, &reach);
         if moves.is_empty() {
             plan.agreeing += 1;
             plan.already.push((c.id.clone(), agreed));
@@ -423,10 +463,22 @@ pub async fn carry_out(
         report.sent += item.to_server().len() + item.off_server().len();
 
         match apply_here(es, &by_id, item, backups) {
-            Ok(written) => {
+            Ok(Applied { written, missed }) => {
                 report.files_written += written;
-                report.applied_here += item.moves.iter().filter(|m| !m.touches_server()).count();
-                baseline.agreed.insert(item.id.clone(), item.agreed.clone());
+                report.applied_here += item
+                    .moves
+                    .iter()
+                    .filter(|m| !m.touches_server())
+                    .count()
+                    .saturating_sub(missed.len());
+                baseline.agreed.insert(item.id.clone(), agreed_after(item, &missed));
+                if !missed.is_empty() {
+                    report.failed.push(format!(
+                        "{}: {} of its stars could not be written to the card",
+                        item.name,
+                        missed.len()
+                    ));
+                }
                 if item.held == Held::File {
                     files.push(item.name.clone());
                 }
@@ -447,21 +499,56 @@ async fn send(client: &Client, item: &Item) -> Result<()> {
     Ok(())
 }
 
-/// Write the handheld's half. Returns how many files were rewritten.
+/// What the handheld's half of a list came to.
+struct Applied {
+    /// How many files were rewritten.
+    written: usize,
+    /// Moves for this card that are not true of it afterwards: a gamelist ES
+    /// wrote in a shape the star could not be put into, or a game whose path
+    /// was not known.
+    missed: Vec<Move>,
+}
+
+/// What the baseline for `item` becomes, given the moves that did not land.
+///
+/// `item.agreed` assumes every move landed. A star that was not written,
+/// recorded as agreed, reads on the next run as one taken off here, and that
+/// unstar goes to the server. So each one that missed is put back the way the
+/// next run needs it to try again: a star not written is left out, and an
+/// unstar not written is kept in.
+fn agreed_after(item: &Item, missed: &[Move]) -> BTreeSet<i64> {
+    let mut agreed = item.agreed.clone();
+    for m in missed {
+        match m {
+            Move::StarHere(id) => {
+                agreed.remove(id);
+            }
+            Move::UnstarHere(id) => {
+                agreed.insert(*id);
+            }
+            Move::StarOnServer(_) | Move::UnstarOnServer(_) => {}
+        }
+    }
+    agreed
+}
+
+/// Write the handheld's half.
 fn apply_here(
     es: &EsPaths,
     by_id: &BTreeMap<i64, &Known>,
     item: &Item,
     backups: &Path,
-) -> Result<usize> {
-    let wanted: Vec<(&Known, bool)> = item
-        .moves
-        .iter()
-        .filter(|m| !m.touches_server())
-        .filter_map(|m| by_id.get(&m.rom_id()).map(|k| (*k, matches!(m, Move::StarHere(_)))))
-        .collect();
+) -> Result<Applied> {
+    let mut missed = Vec::new();
+    let mut wanted: Vec<(Move, &Known, bool)> = Vec::new();
+    for m in item.moves.iter().filter(|m| !m.touches_server()) {
+        match by_id.get(&m.rom_id()) {
+            Some(k) => wanted.push((*m, *k, matches!(m, Move::StarHere(_)))),
+            None => missed.push(*m),
+        }
+    }
     if wanted.is_empty() {
-        return Ok(0);
+        return Ok(Applied { written: 0, missed });
     }
 
     match &item.held {
@@ -469,24 +556,33 @@ fn apply_here(
             // Grouped by folder so each gamelist is read and written once,
             // however many of its games moved.
             let mut written = 0;
-            let mut folders: BTreeMap<String, Vec<(&Known, bool)>> = BTreeMap::new();
-            for (k, on) in wanted {
-                folders.entry(k.folder.clone()).or_default().push((k, on));
+            let mut folders: BTreeMap<String, Vec<(Move, &Known, bool)>> = BTreeMap::new();
+            for (m, k, on) in wanted {
+                folders.entry(k.folder.clone()).or_default().push((m, k, on));
             }
             for (folder, games) in folders {
                 let mut list = Gamelist::load_or_empty(&es.gamelist(&folder))?;
-                for (k, on) in games {
-                    list.set_favorite(&k.rel_path(), on);
+                for (_, k, on) in &games {
+                    list.set_favorite(&k.rel_path(), *on);
                 }
+                // Read back rather than trusted from `set_favorite`, which
+                // also says "nothing moved" for a star that was already there.
+                let stars = list.favorites();
+                missed.extend(
+                    games
+                        .iter()
+                        .filter(|(_, k, on)| stars.contains(&k.rel_path()) != *on)
+                        .map(|(m, ..)| *m),
+                );
                 if list.save(backups)? {
                     written += 1;
                 }
             }
-            Ok(written)
+            Ok(Applied { written, missed })
         }
         Held::File => {
             let mut file = CollectionFile::load(&es.collection(&item.name))?;
-            for (k, on) in wanted {
+            for (_, k, on) in wanted {
                 let full = k.full_path(&es.roms);
                 if on {
                     file.entries.insert(full);
@@ -494,7 +590,7 @@ fn apply_here(
                     file.entries.remove(&full);
                 }
             }
-            Ok(file.save(backups)? as usize)
+            Ok(Applied { written: file.save(backups)? as usize, missed })
         }
     }
 }
@@ -761,6 +857,53 @@ mod tests {
         assert_eq!(plan.items[0].moves, vec![Move::StarOnServer(3)]);
     }
 
+    fn gb(rom_id: i64, file: &str) -> Known {
+        Known { rom_id, folder: "gb".into(), rel_dir: String::new(), file: file.into() }
+    }
+
+    /// ES has one star per game. With `★ Favourites` and `★ Best of snes`
+    /// both read from the SNES stars, a game taken out of one came out of the
+    /// other on the next run, and the first sync of `★ Favourites` starred its
+    /// SNES games and so grew `★ Best of snes` to hold them.
+    #[test]
+    fn favourites_leaves_a_system_with_its_own_list_alone() {
+        let (es, mut known) = card("partition");
+        known.push(gb(3, "Tetris.gb"));
+        set_star(&es, "snes", "Chrono Trigger (USA).sfc", true);
+        let lists = vec![
+            collection("34", "★ Best of snes", true, &[1]),
+            collection("7", ALL_STARS, true, &[2, 3]),
+        ];
+        let plan = plan_from(lists, &es, &known, &Baseline::default(), &FLIP);
+        assert_eq!(plan.agreeing, 1, "★ Best of snes already agrees");
+        assert_eq!(plan.items.len(), 1, "{:?}", plan.items);
+        let fav = &plan.items[0];
+        assert_eq!(fav.name, ALL_STARS);
+        assert_eq!(fav.held, Held::Stars(vec!["gb".to_owned()]));
+        assert_eq!(fav.moves, vec![Move::StarHere(3)], "a SNES game was starred for ★ Favourites");
+        assert!(!fav.agreed.contains(&2), "{:?}", fav.agreed);
+        assert!(!fav.agreed.contains(&1), "{:?}", fav.agreed);
+
+        // With no list of its own, a system's stars are ★ Favourites' again.
+        let lists = vec![collection("7", ALL_STARS, true, &[2, 3])];
+        let plan = plan_from(lists, &es, &known, &Baseline::default(), &FLIP);
+        assert_eq!(plan.items[0].held, Held::Stars(vec!["gb".to_owned(), "snes".to_owned()]));
+    }
+
+    /// A game from another system put in `★ Best of snes` is not that list's
+    /// to star: it would land in its own system's gamelist, where that
+    /// system's list reads it as a star made on the handheld.
+    #[test]
+    fn a_best_of_list_does_not_star_another_systems_game() {
+        let (es, mut known) = card("other-system");
+        known.push(gb(3, "Tetris.gb"));
+        let lists = vec![collection("34", "★ Best of snes", true, &[1, 3])];
+        let plan = plan_from(lists, &es, &known, &Baseline::default(), &FLIP);
+        assert_eq!(plan.items[0].moves, vec![Move::StarHere(1)]);
+        assert_eq!(plan.surveyed[0].reachable, 1);
+        assert!(!plan.items[0].agreed.contains(&3), "{:?}", plan.items[0].agreed);
+    }
+
     // --- carrying it out -------------------------------------------------------
 
     #[tokio::test]
@@ -809,6 +952,30 @@ mod tests {
         // The gamelist it replaced was kept.
         let kept = std::fs::read_dir(backups(&es).join("snes")).unwrap().count();
         assert_eq!(kept, 1, "no backup of the gamelist that was rewritten");
+    }
+
+    /// A star the gamelist would not take used to be recorded as agreed all
+    /// the same. The next run then read "in the baseline, on the server, not
+    /// starred here" as an unstar made on the handheld, and took the star off
+    /// the server.
+    #[tokio::test]
+    async fn a_star_that_was_not_written_is_not_recorded_as_agreed() {
+        let (es, known) = card("not-written");
+        // No root to add a block to, so Secret of Mana cannot be starred.
+        std::fs::write(es.gamelist("snes"), "<?xml version=\"1.0\"?>\n").unwrap();
+        let plan = card_plan(known, vec![best_of_snes(vec![Move::StarHere(2)], &[1, 2])]);
+        let mut baseline = Baseline::default();
+        let report =
+            carry_out(&nowhere(), &es, &plan, &mut baseline, &backups(&es), false).await.unwrap();
+        assert_eq!(report.applied_here, 0, "{report:?}");
+        assert_eq!(report.failed.len(), 1, "{report:?}");
+        assert!(report.failed[0].starts_with("★ Best of snes: 1 of its stars"), "{}", report.failed[0]);
+        assert_eq!(
+            baseline.of("★ Best of snes"),
+            [1i64].into(),
+            "recorded a star the card does not have"
+        );
+        assert_eq!(std::fs::read_to_string(es.gamelist("snes")).unwrap(), "<?xml version=\"1.0\"?>\n");
     }
 
     #[tokio::test]
