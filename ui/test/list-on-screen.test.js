@@ -146,6 +146,19 @@ describe("a screen that is not a list of games", () => {
   });
 });
 
+describe("which page is asking", () => {
+  /// The backend keeps the list it last handed out, one per page, so two
+  /// browsers on one moose-service do not sort each other's lists. That only
+  /// works if every question about a list says which page it comes from.
+  test("every question about a list names the same page", async () => {
+    const { listRef, listFor } = await import("../js/arrange.js");
+    const page = listRef().page;
+    assert.ok(page, "the list reference does not say which page is asking");
+    assert.equal(listRef().page, page, "the page changed its name between questions");
+    assert.equal(listFor("roms", "snes").page, page, "opening a console asks as another page");
+  });
+});
+
 describe("a redraw keeps the shape the list was opened in", () => {
   const sections = () => el.list.querySelectorAll(".pgroup").length;
 

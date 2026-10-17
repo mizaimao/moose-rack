@@ -611,7 +611,7 @@ pub fn recent_games(
         let cache = state.cache.lock().map_err(err)?;
         cache.recently_played(limit.unwrap_or(8)).map_err(err)?
     };
-    Ok(to_views(state, rows, list.map(|l| l.scope()).as_deref()))
+    Ok(to_views(state, rows, list.as_ref()))
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -865,7 +865,7 @@ impl Listings {
 pub fn to_views(
     state: &AppState,
     rows: Vec<cache::RomRow>,
-    stash: Option<&str>,
+    stash: Option<&ListRef>,
 ) -> Vec<RomView> {
     // One query for the whole list rather than one per row.
     let favorites = state
@@ -903,11 +903,10 @@ pub fn to_views(
             }
         })
         .collect();
-    if let Some(scope) = stash
-        && let (Ok(mut held), Ok(mut at)) = (state.list_rows.lock(), state.list_scope.lock())
+    if let Some(list) = stash
+        && let Ok(mut held) = state.list_rows.lock()
     {
-        *held = views.iter().map(RomView::as_row).collect();
-        *at = scope.to_owned();
+        held.hold(list.page(), &list.scope(), views.iter().map(RomView::as_row).collect());
     }
     views
 }
@@ -946,7 +945,7 @@ pub fn roms(
         let cache = state.cache.lock().map_err(err)?;
         cache.roms_for(&platform).map_err(err)?
     };
-    Ok(to_views(state, rows, list.map(|l| l.scope()).as_deref()))
+    Ok(to_views(state, rows, list.as_ref()))
 }
 
 #[derive(serde::Serialize)]
@@ -1041,7 +1040,7 @@ pub fn collection_roms(
         let cache = state.cache.lock().map_err(err)?;
         cache.roms_in_collection(&id).map_err(err)?
     };
-    Ok(to_views(state, rows, list.map(|l| l.scope()).as_deref()))
+    Ok(to_views(state, rows, list.as_ref()))
 }
 
 pub fn search(
@@ -1053,7 +1052,7 @@ pub fn search(
         let cache = state.cache.lock().map_err(err)?;
         cache.search(&term, 200).map_err(err)?
     };
-    Ok(to_views(state, rows, list.map(|l| l.scope()).as_deref()))
+    Ok(to_views(state, rows, list.as_ref()))
 }
 
 pub async fn rom_detail(state: &AppState, id: i64) -> CmdResult<RomDetail> {
@@ -3115,11 +3114,20 @@ pub struct ListRef {
     pub platform: Option<String>,
     #[serde(default)]
     pub collection: Option<String>,
+    /// Which page asked, so each keeps its own list; see
+    /// `crate::gamelist::Held`. A page from before this field sends none and
+    /// shares one unnamed list, which is how every page worked until then.
+    #[serde(default)]
+    pub page: Option<String>,
 }
 
 impl ListRef {
     fn scope(&self) -> String {
         crate::gamelist::scope(&self.view, self.platform.as_deref(), self.collection.as_deref())
+    }
+
+    fn page(&self) -> &str {
+        self.page.as_deref().unwrap_or_default()
     }
 }
 
@@ -3264,8 +3272,9 @@ pub fn arrangement(state: &AppState, list: &ListRef) -> Result<Arrangement, Stri
     let order = chosen.order(&scope);
     let filters = chosen.filters(&scope);
     let held = state.list_rows.lock().map_err(err)?;
-    let ids = (*state.list_scope.lock().map_err(err)? == scope)
-        .then(|| crate::gamelist::arrange(&held, order.id, &filters));
+    let ids = held
+        .rows(list.page(), &scope)
+        .map(|rows| crate::gamelist::arrange(rows, order.id, &filters));
     Ok(Arrangement {
         ids,
         order: order.id,
@@ -3385,12 +3394,25 @@ pub fn set_page_names(
     Ok(())
 }
 
-pub fn page_filter(state: &AppState, query: String) -> CmdResult<PageFilterResult> {
-    let held = state.page_names.lock().map_err(err)?;
-    let (names, groups) = &*held;
-    let visible = crate::pagefilter::visible(names, &query);
+/// Filter the names a page sends with the question.
+///
+/// They used to be sent once per list by `set_page_names` and held here, one
+/// set for everybody, so two browsers on one moose-service filtered with
+/// whichever names arrived last. The page sends them every time now. Without
+/// them, from a page loaded before this, the held ones are used as before.
+pub fn page_filter(
+    state: &AppState,
+    query: String,
+    names: Option<Vec<String>>,
+    groups: Option<Vec<Vec<usize>>>,
+) -> CmdResult<PageFilterResult> {
+    let (names, groups) = match names {
+        Some(names) => (names, groups.unwrap_or_default()),
+        None => state.page_names.lock().map_err(err)?.clone(),
+    };
+    let visible = crate::pagefilter::visible(&names, &query);
     Ok(PageFilterResult {
-        headings: crate::pagefilter::empty_groups(groups, &visible, &query),
+        headings: crate::pagefilter::empty_groups(&groups, &visible, &query),
         shown: visible.iter().filter(|v| **v).count(),
         visible,
     })

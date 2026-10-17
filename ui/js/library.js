@@ -5,7 +5,7 @@ import { fitted, boxSize } from "./fitpicture.js";
 import { resetNav, primeNav } from "./keys.js";
 import { currentOrder, defaultOrder, refreshSortButton, sorted } from "./sort.js";
 import { filtered, refreshFilterButton, activeFilters, clearFilters } from "./filter.js";
-import { arrangeCurrentList, applyArrangement, listRef, leaveList } from "./arrange.js";
+import { arrangeCurrentList, applyArrangement, listRef, listFor, leaveList } from "./arrange.js";
 import { enter, region, showZoom, shellMode } from "./shell.js";
 import { showMenu } from "./menu.js";
 import { deleteState } from "./states.js";
@@ -394,7 +394,7 @@ function restorePlatformCursor() {
 /// grid and nothing moving. The list reference is built by hand rather than
 /// read from `state`, because state still describes the screen being left.
 export async function prefetchRoms(slug) {
-  const list = { view: "roms", platform: slug, collection: null };
+  const list = listFor("roms", slug);
   // Started here rather than in `showRoms`: it is fire-and-forget either way,
   // and a head start is free.
   invoke("warm_media", { platform: slug }).catch(() => {});

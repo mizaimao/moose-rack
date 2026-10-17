@@ -95,19 +95,19 @@ pub struct AppState {
     /// `crate::gamelist::Chosen` for why this one is memory and
     /// `picker_order` is a file.
     pub chosen: Mutex<crate::gamelist::Chosen>,
-    /// The list last handed to a front end.
+    /// The list last handed to each front end, and which view it was for.
     ///
     /// Kept so `arrange_list` can answer "which of these, and in what order"
     /// without the whole list travelling back here: 2,506 rows leave for the
     /// arcade console, and every change of sort or filter would otherwise
-    /// return all of them to be handed straight back.
-    pub list_rows: Mutex<Vec<crate::gamelist::Row>>,
-    /// Which view `list_rows` was filled for, so an arrangement asked for a
-    /// different one is refused rather than answered with the wrong list.
-    pub list_scope: Mutex<String>,
+    /// return all of them to be handed straight back. One per page, because
+    /// moose-service is one backend for every browser; see
+    /// `crate::gamelist::Held`.
+    pub list_rows: Mutex<crate::gamelist::Held>,
     /// The names on the page and the groups they sit under, for the filter box
-    /// above them. Sent once per list rather than once per keystroke: there are
-    /// 2,506 of them on the arcade console.
+    /// above them, from a page that sent them ahead of the question. The page
+    /// sends them with each question now, so this is only read for a page
+    /// loaded before that, and it is one for everybody; see `page_filter`.
     pub page_names: Mutex<(Vec<String>, Vec<Vec<usize>>)>,
 }
 
@@ -282,8 +282,7 @@ impl AppState {
         bindings: Mutex::new(cfg.bindings.clone()),
         picker_order: Mutex::new(cfg.picker_order.clone()),
         chosen: Mutex::new(Default::default()),
-        list_rows: Mutex::new(Vec::new()),
-        list_scope: Mutex::new(String::new()),
+        list_rows: Mutex::new(Default::default()),
         page_names: Mutex::new((Vec::new(), Vec::new())),
         })
     }
