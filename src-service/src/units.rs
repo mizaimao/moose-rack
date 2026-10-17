@@ -18,6 +18,7 @@
 use std::path::PathBuf;
 
 use moose_rack::saveunit::{self, unit_id};
+use crate::saves::write_atomically;
 use serde::{Deserialize, Serialize};
 
 /// Replaced copies kept per unit, the same count `savebackup.rs` keeps on a
@@ -153,12 +154,6 @@ impl From<std::io::Error> for WriteError {
     }
 }
 
-fn write_atomically(path: &std::path::Path, bytes: &[u8]) -> std::io::Result<()> {
-    let part = path.with_extension("part");
-    std::fs::write(&part, bytes)?;
-    std::fs::rename(&part, path)
-}
-
 impl UnitStore {
     pub fn new(root: impl Into<PathBuf>) -> Self {
         Self { root: root.into() }
@@ -171,7 +166,10 @@ impl UnitStore {
     /// Every unit, or one family's.
     pub fn list(&self, family: Option<&str>) -> Vec<ServerUnit> {
         let families: Vec<&str> = match family {
-            Some(f) => vec![f],
+            // A family from the request is one of ours or nothing: `?family=`
+            // went straight into a path, so `/some/dir` listed that folder.
+            Some(f) if saveunit::valid_family(f) => vec![f],
+            Some(_) => Vec::new(),
             None => saveunit::FAMILIES.to_vec(),
         };
         let mut out = Vec::new();
@@ -189,6 +187,11 @@ impl UnitStore {
     }
 
     pub fn get(&self, family: &str, key: &str) -> Option<ServerUnit> {
+        // Checked before either reaches a path: both come from the request,
+        // and `../ppsspp/X` read another unit's record into a 409.
+        if !saveunit::valid_family(family) || !saveunit::valid_key(key) {
+            return None;
+        }
         let meta = std::fs::read(self.dir(family, key).join("unit.json")).ok()?;
         serde_json::from_slice(&meta).ok()
     }
@@ -226,7 +229,13 @@ impl UnitStore {
             && current.is_file()
         {
             let short: String = old.content_hash.chars().take(8).collect();
-            std::fs::rename(&current, history.join(format!("{now:011}-{short}.zip")))?;
+            // Copied, not moved: the old copy stays current until the new one
+            // is written. Moving it first left a unit listed with no content
+            // when the write then failed, and every device was offered a 404.
+            let kept = history.join(format!("{now:011}-{short}.zip"));
+            if std::fs::hard_link(&current, &kept).is_err() {
+                std::fs::copy(&current, &kept)?;
+            }
             let mut kept: Vec<PathBuf> = std::fs::read_dir(&history)?
                 .flatten()
                 .map(|e| e.path())
@@ -348,6 +357,9 @@ mod tests {
         assert!(matches!(store.write("ppsspp", "../x", &ok), Err(WriteError::Refused(_))));
         assert!(matches!(store.write("ppsspp", "K", b"not a zip"), Err(WriteError::Refused(_))));
         assert!(matches!(store.write("ppsspp", "K", &zip_of(&[("../x", b"1")])), Err(WriteError::Refused(_))));
+        // Read paths refuse the same names.
+        assert!(store.list(Some("/etc")).is_empty());
+        assert!(store.get("ppsspp", "../ppsspp/K").is_none());
         assert!(store.list(None).is_empty());
     }
 }
