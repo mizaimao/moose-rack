@@ -1287,7 +1287,7 @@ fn cmd_scan_esde(root: Option<&str>, roms: Option<&str>, media: Option<&str>) ->
     let mut store = cache::Cache::open(Path::new(CACHE_DB))?;
     // Shared with the service -- see `moose_rack::app::scan_into`.
     let moose_rack::app::Scan { written: n, on_server, games, skipped } =
-        moose_rack::app::scan_into(&mut store, &layout, &map)?;
+        moose_rack::app::scan_into(&mut store, &layout, &map, &cfg.library_dir())?;
     if games.is_empty() {
         bail!("found no games under {}", layout.roms.display());
     }

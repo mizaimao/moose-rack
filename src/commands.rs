@@ -496,7 +496,7 @@ pub fn game_states(state: &AppState, id: i64) -> CmdResult<Vec<StateView>> {
 }
 
 pub fn delete_state(state: &AppState, id: i64, slot: String) -> CmdResult<String> {
-    let library_root = state.roms_dir.parent().unwrap_or(Path::new(".")).to_path_buf();
+    let library_root = state.library_root.clone();
     let cache = state.cache.lock().map_err(err)?;
     let row = cache.rom_by_id(id).map_err(err)?.ok_or("no such game")?;
     let shelf = crate::states::shelf(&saves_root(state), &cache, &state.map, &row.fs_name)
@@ -1919,7 +1919,7 @@ pub async fn auto_sync(
     let Some(client) = state.client.clone() else {
         return AutoSync::default();
     };
-    let library_root = state.roms_dir.parent().unwrap_or(Path::new(".")).to_path_buf();
+    let library_root = state.library_root.clone();
     // The folder the launch told RetroArch to save into, which is where the
     // manual sync looks too. This used to be RetroArch's install folder, so
     // the pull before a game and the push after it both looked somewhere the
@@ -1964,7 +1964,7 @@ pub async fn resolve_save_conflict(
     keep: crate::savesync::Keep,
 ) -> CmdResult<String> {
     let client = state.client.clone().ok_or("not connected to a server")?;
-    let library_root = state.roms_dir.parent().unwrap_or(Path::new(".")).to_path_buf();
+    let library_root = state.library_root.clone();
 
     let conflict = {
         let pending = state.pending_conflicts.lock().map_err(err)?;
@@ -2596,7 +2596,7 @@ pub async fn sync_saves(state: &AppState) -> CmdResult<SyncRun> {
         crate::savesync::scan(&cache, &state.map, &root).map_err(err)?
     };
 
-    let library_root = state.roms_dir.parent().unwrap_or(Path::new("."));
+    let library_root = state.library_root.as_path();
     let mut summary = crate::savesync::run_all(
         &client,
         &candidates,
