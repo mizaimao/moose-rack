@@ -846,6 +846,7 @@ pub async fn resolve(
                 .context("no local copy to keep — nothing to upload")?;
             let bytes = std::fs::read(&path)
                 .with_context(|| format!("reading {}", path.display()))?;
+            let sent = bytes.len() as i64;
             let result = client
                 .upload_save(
                     conflict.rom_id,
@@ -859,7 +860,10 @@ pub async fn resolve(
                 )
                 .await?;
             match result {
-                Ok(_) => {
+                Ok(saved) => {
+                    // As an ordinary upload checks: a copy the server cut
+                    // short is not the one that was chosen.
+                    stored_whole(&conflict.file_name, sent, saved.file_size_bytes)?;
                     // A conflict between two spellings of one file: now the
                     // bytes agree, make the names agree too, or the next sync
                     // pairs them up all over again.
