@@ -1118,8 +1118,27 @@ input_player2_gun_start_mbtn = \"3\"
     }
 
     /// RetroArch's own system directory, where cores look for BIOS files.
+    ///
+    /// Its own `system_directory` first, as [`Self::shaders_dir`] asks, then
+    /// `system/` in its data folder. The install root was the guess before,
+    /// which is RetroArch's answer only when it is portable: with RetroArch in
+    /// /Applications and no BIOS folder of ours yet, a Neo Geo launch copied
+    /// neogeo.zip into /Applications/system, where nothing looks.
     pub fn system_dir(&self) -> PathBuf {
-        self.system_override.clone().unwrap_or_else(|| self.root.join("system"))
+        if let Some(dir) = &self.system_override {
+            return dir.clone();
+        }
+        if let Some(dir) = self
+            .config_value("system_directory")
+            .filter(|d| !d.is_empty() && d != "default")
+        {
+            // `:/system` is RetroArch's way of saying "beside me".
+            return match dir.strip_prefix(":/").or_else(|| dir.strip_prefix(":\\")) {
+                Some(rest) => self.root.join(rest),
+                None => crate::util::expand_tilde(&dir),
+            };
+        }
+        self.data_dir().join("system")
     }
 
     /// Point BIOS lookups at a folder we control instead of RetroArch's own.
@@ -1530,6 +1549,30 @@ mod tests {
             portable: true,
             system_override: None,
         }
+    }
+
+    /// Where BIOS go when we have no folder of our own: RetroArch's setting,
+    /// else its data folder, which is the install root only when portable.
+    #[test]
+    fn the_system_folder_is_retroarchs_own() {
+        let dir = scratch("system-dir");
+        let ra = fake(&dir);
+        assert_eq!(ra.system_dir(), dir.join("system"), "portable: beside the install");
+
+        std::fs::write(dir.join("retroarch.cfg"), "system_directory = \"default\"\n").unwrap();
+        assert_eq!(ra.system_dir(), dir.join("system"), "\"default\" is not a folder");
+
+        std::fs::write(dir.join("retroarch.cfg"), "system_directory = \":/bios\"\n").unwrap();
+        assert_eq!(ra.system_dir(), dir.join("bios"));
+
+        let elsewhere = dir.join("elsewhere");
+        std::fs::write(dir.join("retroarch.cfg"), format!("system_directory = \"{}\"\n", elsewhere.display())).unwrap();
+        assert_eq!(ra.system_dir(), elsewhere);
+
+        let ours = dir.join("0_BIOS");
+        std::fs::create_dir_all(&ours).unwrap();
+        let ra = ra.with_system_dir(Some(ours.clone()));
+        assert_eq!(ra.system_dir(), ours.canonicalize().unwrap(), "ours wins when there is one");
     }
 
     /// Give a scratch RetroArch an autoconfig profile, in every driver
