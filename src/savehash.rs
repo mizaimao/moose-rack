@@ -34,8 +34,18 @@
 use std::io::Read;
 use std::path::Path;
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 use md5::Digest as _;
+
+/// The most a zip may unpack to while it is hashed.
+///
+/// The server hashes every unit a device uploads, and a zip's sizes are
+/// whatever its headers claim. Reading each entry into a buffer of the claimed
+/// size let one small upload claiming 2^64 bytes panic the server while it
+/// held the sync lock, and a real zip bomb inflate until memory ran out. The
+/// hash is streamed now, and this caps the work. Saves are kilobytes, a PS2
+/// folder card is 8 MB, and the client leaves units over 64 MB alone.
+const MAX_INFLATED: u64 = 1 << 30;
 
 /// Whether the file parses as a zip archive.
 ///
@@ -82,6 +92,13 @@ fn zip_manifest_hash(path: &Path) -> Result<String> {
 /// The manifest hash of an open archive. Shared with [`crate::saveunit`],
 /// which hashes zips it holds in memory and has to agree with this exactly.
 pub(crate) fn manifest<R: Read + std::io::Seek>(archive: &mut zip::ZipArchive<R>) -> Result<String> {
+    manifest_within(archive, MAX_INFLATED)
+}
+
+fn manifest_within<R: Read + std::io::Seek>(
+    archive: &mut zip::ZipArchive<R>,
+    cap: u64,
+) -> Result<String> {
     // Collect names first: sorting must happen over the whole namelist before
     // any entry is read, exactly as `sorted(zf.namelist())` does.
     let mut names: Vec<String> = (0..archive.len())
@@ -90,14 +107,28 @@ pub(crate) fn manifest<R: Read + std::io::Seek>(archive: &mut zip::ZipArchive<R>
     names.sort();
 
     let mut parts: Vec<String> = Vec::with_capacity(names.len());
+    let mut total = 0u64;
+    let mut buf = vec![0u8; 64 * 1024];
     for name in names {
         if name.ends_with('/') {
             continue; // directory entry
         }
-        let mut entry = archive.by_name(&name)?;
-        let mut bytes = Vec::with_capacity(entry.size() as usize);
-        entry.read_to_end(&mut bytes)?;
-        parts.push(format!("{name}:{}", md5_hex(&bytes)));
+        let entry = archive.by_name(&name)?;
+        // One past what is left, so going over is seen rather than cut off.
+        let mut entry = entry.take(cap - total + 1);
+        let mut hasher = md5::Md5::new();
+        loop {
+            let n = entry.read(&mut buf)?;
+            if n == 0 {
+                break;
+            }
+            total += n as u64;
+            if total > cap {
+                bail!("the zip unpacks to more than {} bytes", cap);
+            }
+            hasher.update(&buf[..n]);
+        }
+        parts.push(format!("{name}:{}", hex::encode(hasher.finalize())));
     }
 
     Ok(md5_hex(parts.join("\n").as_bytes()))
@@ -140,5 +171,29 @@ mod tests {
         );
         assert_eq!(compute(&p).unwrap(), expect);
         std::fs::remove_dir_all(&dir).ok();
+    }
+
+    /// A zip that unpacks to more than the cap is refused part way, not
+    /// inflated, and one inside it hashes as before. Tested with a small cap:
+    /// the real one is a gigabyte.
+    #[test]
+    fn a_zip_that_unpacks_past_the_cap_is_refused() {
+        let zip_of = |sizes: &[usize]| {
+            let mut w = zip::ZipWriter::new(std::io::Cursor::new(Vec::new()));
+            let opts = zip::write::SimpleFileOptions::default()
+                .compression_method(zip::CompressionMethod::Deflated);
+            for (i, n) in sizes.iter().enumerate() {
+                w.start_file(format!("{i}.bin"), opts).unwrap();
+                w.write_all(&vec![0u8; *n]).unwrap();
+            }
+            zip::ZipArchive::new(std::io::Cursor::new(w.finish().unwrap().into_inner())).unwrap()
+        };
+        // Over the cap across two entries, as well as within one.
+        for sizes in [&[3000][..], &[600, 600]] {
+            let e = manifest_within(&mut zip_of(sizes), 1000).unwrap_err().to_string();
+            assert!(e.contains("more than"), "{e}");
+        }
+        let fits = manifest_within(&mut zip_of(&[500, 500]), 1000).unwrap();
+        assert_eq!(fits, manifest(&mut zip_of(&[500, 500])).unwrap());
     }
 }
