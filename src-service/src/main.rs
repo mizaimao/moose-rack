@@ -33,7 +33,7 @@ mod units;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
-use anyhow::{Context as _, Result};
+use anyhow::{Context as _, Result, bail};
 use axum::{
     extract::{DefaultBodyLimit, Path as AxPath, Query, State},
     response::IntoResponse,
@@ -137,9 +137,10 @@ struct Args {
     /// to do that is a good way to bind to localhost by accident.
     #[arg(short, long, env = "MOOSE_SERVICE_PORT")]
     port: Option<u16>,
-    /// Hash a password for `[[auth.users]]`, print it, and exit. The plain
-    /// password is never stored anywhere; paste the printed line into the config.
-    #[arg(long, value_name = "PASSWORD")]
+    /// Hash a password for `[[auth.users]]`, print it, and exit. With no
+    /// value it is read from the terminal, which keeps it out of the shell's
+    /// history and the process list; paste the printed line into the config.
+    #[arg(long, value_name = "PASSWORD", num_args = 0..=1, default_missing_value = "-")]
     hash_password: Option<String>,
     /// Print where saves stored under old positional game ids would move, and
     /// exit without moving anything. The move itself happens once, at the
@@ -1056,7 +1057,9 @@ async fn unit_downloaded(
     let Some(u) = st.units.list(None).into_iter().find(|u| u.id == id) else {
         return axum::http::StatusCode::NOT_FOUND.into_response();
     };
-    st.data.seen.insert(units::seen_key(&q.device_id, &u.family, &u.key), u.content_hash.clone());
+    // What the device unpacked, when it says; see `DownloadedQuery`.
+    let hash = q.content_hash.clone().filter(|h| !h.is_empty()).unwrap_or_else(|| u.content_hash.clone());
+    st.data.seen.insert(units::seen_key(&q.device_id, &u.family, &u.key), hash);
     st.flush();
     Json(u).into_response()
 }
