@@ -91,6 +91,12 @@ pub fn classify(fs_name: &str) -> Kind {
         if UNOFFICIAL_TAGS.contains(&tag) {
             return Kind::Unofficial;
         }
+        // GoodTools and fan sites mark a translation `[T+Eng]`, `[T-En by X]`
+        // or `(T)`. None of those is a word, so none was matched, and every
+        // translation counted as a released game with no art.
+        if tag == "t" || tag.starts_with("t+") || tag.starts_with("t-") {
+            return Kind::Unofficial;
+        }
         // `(Hack by Someone)`, `(Beta 2)`, `(Proto 1)` — the first word carries
         // it, and a trailing qualifier does not change what the dump is.
         if let Some(first) = tag.split(' ').next()
@@ -175,6 +181,9 @@ mod tests {
             "Super Mario Bros (Hack by Someone).nes",
             "Rockman 4 (Japan) (Translation).nes",
             "Thing (Aftermarket).zip",
+            "Mother 3 (J) [T+Eng1.2_Tomato].gba",
+            "Seiken Densetsu 3 (J) [T-En by Neill Corlett].sfc",
+            "Tengai Makyou (J) (T).zip",
         ] {
             assert_eq!(classify(name), Kind::Unofficial, "{name}");
         }
