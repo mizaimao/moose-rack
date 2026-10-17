@@ -615,7 +615,8 @@ pub async fn resolve_one(
                 .context("no local copy to keep — nothing to upload")?;
             let bytes = std::fs::read(&path)
                 .with_context(|| format!("reading {}", path.display()))?;
-            client
+            let sent = bytes.len() as i64;
+            let saved = client
                 .upload_state(
                     conflict.rom_id,
                     &conflict.file_name,
@@ -623,6 +624,9 @@ pub async fn resolve_one(
                     conflict.emulator.as_deref(),
                 )
                 .await?;
+            // The same check an ordinary upload makes: a state the server cut
+            // short is not one to record as agreed.
+            crate::savesync::stored_whole(&conflict.file_name, sent, saved.file_size_bytes)?;
             let hash = crate::savehash::compute(&path).unwrap_or_default();
             let print = server_print(client, conflict.rom_id, &conflict.file_name).await;
             ledger.record(conflict.rom_id, &conflict.file_name, &hash, print.as_deref());
@@ -638,13 +642,17 @@ pub async fn resolve_one(
                 std::fs::create_dir_all(dir).ok();
             }
             let slot = conflict.slot.as_deref().unwrap_or("unslotted");
-            crate::savebackup::keep(library_root, conflict.rom_id, slot, &dest).ok();
+            // Said rather than dropped: a backup that failed is the one thing
+            // that makes picking the wrong side unrecoverable.
+            let backup = crate::savebackup::keep(library_root, conflict.rom_id, slot, &dest)
+                .err()
+                .map(|e| format!(" (could not back up the copy it replaced: {e:#})"));
             crate::savesync::write_atomically(&dest, &bytes)?;
 
             let hash = crate::savehash::compute(&dest).unwrap_or_default();
             let print = server_print(client, conflict.rom_id, &conflict.file_name).await;
             ledger.record(conflict.rom_id, &conflict.file_name, &hash, print.as_deref());
-            format!("{}: kept the server's copy", dest.display())
+            format!("{}: kept the server's copy{}", dest.display(), backup.unwrap_or_default())
         }
     };
 
