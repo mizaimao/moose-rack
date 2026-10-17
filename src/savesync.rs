@@ -74,21 +74,45 @@ impl DeviceIdentity {
 }
 
 /// Best-effort machine name, for the device list on the server.
+///
+/// The server gives one id to every device that registers under the same name,
+/// and the id carries the record of what that device last agreed on. So a name
+/// shared by two devices makes them one: each one's change then reads as the
+/// other's, and an old save is uploaded over a newer one with no conflict.
+/// macOS exports no `HOSTNAME` to an app and has no `/etc/hostname`, and nor
+/// does Android, so both registered as "unknown". When no real name can be
+/// found, the name made up is one nobody else will have.
 fn hostname() -> String {
+    let usable = |s: &str| {
+        let s = s.trim();
+        !s.is_empty() && s != "unknown" && !s.starts_with("localhost")
+    };
     for key in ["HOSTNAME", "COMPUTERNAME", "NAME"] {
-        if let Some(v) = std::env::var_os(key)
-            && !v.is_empty()
-        {
-            return v.to_string_lossy().into_owned();
+        if let Some(v) = std::env::var_os(key) {
+            let v = v.to_string_lossy();
+            if usable(&v) {
+                return v.trim().to_owned();
+            }
         }
     }
-    // gethostname without a dependency: the file exists on Linux, and the two
-    // environment variables above cover macOS and Windows.
-    std::fs::read_to_string("/etc/hostname")
-        .ok()
-        .map(|s| s.trim().to_owned())
-        .filter(|s| !s.is_empty())
-        .unwrap_or_else(|| "unknown".to_owned())
+    #[cfg(unix)]
+    {
+        let mut buf = [0u8; 256];
+        // SAFETY: the buffer is ours and its length is passed with it.
+        if unsafe { libc::gethostname(buf.as_mut_ptr().cast(), buf.len()) } == 0 {
+            let end = buf.iter().position(|&b| b == 0).unwrap_or(buf.len());
+            let name = String::from_utf8_lossy(&buf[..end]);
+            if usable(&name) {
+                return name.trim().to_owned();
+            }
+        }
+    }
+    if let Some(name) = std::fs::read_to_string("/etc/hostname").ok().filter(|s| usable(s)) {
+        return name.trim().to_owned();
+    }
+    use std::hash::{BuildHasher, Hasher};
+    let random = std::collections::hash_map::RandomState::new().build_hasher().finish();
+    format!("device-{:06x}", random & 0xff_ffff)
 }
 
 /// What a sync did, for reporting. Nothing here is a failure on its own —
@@ -1144,6 +1168,14 @@ pub async fn run_all(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Whatever this machine is, the name it registers under is not one that
+    /// another device would also arrive with.
+    #[test]
+    fn the_device_name_is_never_one_another_device_would_share() {
+        let name = hostname();
+        assert!(!name.is_empty() && name != "unknown" && !name.starts_with("localhost"), "{name}");
+    }
 
     /// A save that keeps the server's stamp is a save no emulator opens.
     ///
