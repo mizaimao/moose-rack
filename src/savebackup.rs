@@ -94,7 +94,7 @@ pub fn keep(library_root: &Path, rom_id: i64, slot: &str, save: &Path) -> Result
     std::fs::copy(save, &dest)
         .with_context(|| format!("copying {} to {}", save.display(), dest.display()))?;
 
-    prune(&dir)?;
+    prune(&dir, &dest)?;
     Ok(Some(dest))
 }
 
@@ -122,19 +122,25 @@ pub fn keep_folder(library_root: &Path, family: &str, key: &str, folder: &Path) 
     }
     let zip = crate::saveunit::pack(folder)?;
     std::fs::write(&dest, zip).with_context(|| format!("writing {}", dest.display()))?;
-    prune(&dir)?;
+    prune(&dir, &dest)?;
     Ok(Some(dest))
 }
 
-/// Drop the oldest copies until at most [`KEEP`] remain.
-fn prune(dir: &Path) -> Result<()> {
+/// Drop the oldest copies until at most [`KEEP`] remain, never `just_taken`.
+///
+/// The stamp is the save's own mtime, not the time of the backup. A save with
+/// an older mtime than every copy held (a handheld with no clock, a file
+/// copied with its date kept) sorted last, so the copy just taken was the one
+/// evicted, and the overwrite it was taken for went ahead with no backup.
+fn prune(dir: &Path, just_taken: &Path) -> Result<()> {
     let mut found = list_dir(dir);
     if found.len() <= KEEP {
         return Ok(());
     }
-    // Newest first, so everything past KEEP is the oldest.
+    found.retain(|b| b.path != just_taken);
+    // Newest first, so everything past the rest of KEEP is the oldest.
     found.sort_by(|a, b| b.stamp.cmp(&a.stamp).then_with(|| b.path.cmp(&a.path)));
-    for old in found.into_iter().skip(KEEP) {
+    for old in found.into_iter().skip(KEEP - 1) {
         std::fs::remove_file(&old.path).ok();
     }
     Ok(())
@@ -199,6 +205,23 @@ mod tests {
         let t = std::time::SystemTime::UNIX_EPOCH + std::time::Duration::from_millis(millis);
         let f = std::fs::File::options().write(true).open(path).unwrap();
         f.set_modified(t).unwrap();
+    }
+
+    /// A save older than every copy held is still kept: the stamp is its
+    /// mtime, and pruning by stamp alone deleted the copy just taken.
+    #[test]
+    fn the_copy_just_taken_survives_pruning_whatever_its_date() {
+        let dir = scratch("old-mtime");
+        let save = dir.join("saves/snes9x/Zelda.srm");
+        for i in 0..KEEP as u64 {
+            write_save(&save, format!("v{i}").as_bytes(), 10_000 + i);
+            keep(&dir, 7, "autosave", &save).unwrap();
+        }
+        // A clock that reset to the epoch.
+        write_save(&save, b"the one about to be replaced", 5);
+        let kept = keep(&dir, 7, "autosave", &save).unwrap().expect("something to keep");
+        assert_eq!(std::fs::read(&kept).unwrap(), b"the one about to be replaced");
+        assert_eq!(list_dir(kept.parent().unwrap()).len(), KEEP);
     }
 
     #[test]
