@@ -19,6 +19,7 @@ pub mod configpatch;
 // with, which on Android is the only way a config can appear at all.
 pub mod config_files;
 pub mod coremap;
+pub mod corenames;
 pub mod coverage;
 pub mod cores;
 pub mod datadir;
