@@ -531,12 +531,14 @@ export async function runSearch(term) {
   applyLayoutForView("search");
   restoreSidebar();
   const rows = await invoke("search", { term, list: listRef() });
-  // A later keystroke, an emptied box or Escape has overtaken this one.
-  if (asked !== searchAsked) return;
+  // A later keystroke, an emptied box or Escape has overtaken this one, or
+  // another screen has been opened while it was out, such as another tab.
+  const overtaken = () => asked !== searchAsked || state.view !== "search";
+  if (overtaken()) return;
   state.rows = rows;
   state.grouping = true;
   await arrangeCurrentList();
-  if (asked !== searchAsked) return;
+  if (overtaken()) return;
   const consoles = new Set(state.rows.map((r) => r.platform)).size;
   enter({
     title:
