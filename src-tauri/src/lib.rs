@@ -1647,8 +1647,13 @@ fn set_page_names(
 }
 
 #[tauri::command]
-async fn page_filter(state: State<'_, AppState>, query: String) -> CmdResult<PageFilterResult> {
-    moose_rack::commands::page_filter(&state, query)
+async fn page_filter(
+    state: State<'_, AppState>,
+    query: String,
+    names: Option<Vec<String>>,
+    groups: Option<Vec<Vec<usize>>>,
+) -> CmdResult<PageFilterResult> {
+    moose_rack::commands::page_filter(&state, query, names, groups)
 }
 
 #[tauri::command]
