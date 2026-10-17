@@ -345,7 +345,7 @@ export async function selectRom(id) {
         ${row("Modes", d.game_modes.join(", "))}
         ${row("Region", d.regions.join(", "))}
         ${row("Also known as", d.alt_names.join(" · "))}
-        <dt>Platform</dt><dd>${d.platform}</dd>
+        <dt>Platform</dt><dd>${escapeHtml(d.platform)}</dd>
         <dt>Size</dt><dd>${human(d.size_bytes)}</dd>
         <dt>Core</dt><dd>${corePicker(cores, d)}</dd>
         <dt>Local</dt><dd>${d.downloaded ? "yes" : "no"}</dd>
