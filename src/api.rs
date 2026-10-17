@@ -975,11 +975,15 @@ impl Client {
     /// without checking the status a missing route read as success: moose-service
     /// had no such route, so no download was ever recorded, and the next change
     /// on the device read as a conflict.
-    pub async fn confirm_download(&self, save_id: i64, device_id: &str) -> Result<()> {
+    /// `content_hash` is the hash of the copy this device received, so the
+    /// server records agreement with that copy rather than whatever it holds
+    /// by the time this arrives.
+    pub async fn confirm_download(&self, save_id: i64, device_id: &str, content_hash: &str) -> Result<()> {
         let url = format!(
-            "{}/api/saves/{save_id}/downloaded?device_id={}",
+            "{}/api/saves/{save_id}/downloaded?device_id={}&content_hash={}",
             self.base,
-            urlencode(device_id)
+            urlencode(device_id),
+            urlencode(content_hash)
         );
         let resp = self
             .http
@@ -1123,8 +1127,14 @@ impl Client {
 
     /// Tell the server a unit's download was put in place, so this device now
     /// agrees with its copy.
-    pub async fn confirm_unit(&self, unit_id: i64, device_id: &str) -> Result<()> {
-        let url = format!("{}/api/units/{unit_id}/downloaded?device_id={}", self.base, urlencode(device_id));
+    /// As [`Self::confirm_download`], for a unit.
+    pub async fn confirm_unit(&self, unit_id: i64, device_id: &str, content_hash: &str) -> Result<()> {
+        let url = format!(
+            "{}/api/units/{unit_id}/downloaded?device_id={}&content_hash={}",
+            self.base,
+            urlencode(device_id),
+            urlencode(content_hash)
+        );
         let resp = self
             .http
             .post(&url)

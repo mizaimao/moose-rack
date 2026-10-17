@@ -238,7 +238,7 @@ async fn download(
     }
     crate::savebackup::keep_folder(library_root, family, key, target)?;
     saveunit::unpack(&zip, target)?;
-    client.confirm_unit(id, device_id).await
+    client.confirm_unit(id, device_id, &hash).await
 }
 
 /// Ask the server and do what it says, into `summary`.

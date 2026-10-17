@@ -1074,6 +1074,12 @@ async fn save_content(
 #[derive(Deserialize)]
 struct DownloadedQuery {
     device_id: String,
+    /// The hash of the copy the device received. Recording the server's hash
+    /// at the time of this call instead made a device that fetched one copy,
+    /// while another device uploaded a newer one, agree with the newer: its
+    /// next upload then replaced that copy with no conflict.
+    #[serde(default)]
+    content_hash: Option<String>,
 }
 
 /// A device took a save: it now holds the server's copy, so record that it
@@ -1089,11 +1095,21 @@ async fn save_downloaded(
     Query(q): Query<DownloadedQuery>,
 ) -> axum::http::StatusCode {
     let mut st = lib.sync.lock().unwrap();
-    let Some(s) = st.store.list(None).into_iter().find(|s| s.id == id) else {
+    let Some((rom_id, file_name)) = st.store.locate(id) else {
         return axum::http::StatusCode::NOT_FOUND;
     };
-    let hash = s.content_hash.clone().unwrap_or_default();
-    st.agree(&q.device_id, s.rom_id, &s.file_name, &hash);
+    let hash = match q.content_hash.filter(|h| !h.is_empty()) {
+        Some(h) => h,
+        // An older client says nothing about what it got.
+        None => match st.store.read(id) {
+            Some(bytes) => {
+                use md5::Digest as _;
+                hex::encode(md5::Md5::digest(&bytes))
+            }
+            None => return axum::http::StatusCode::NOT_FOUND,
+        },
+    };
+    st.agree(&q.device_id, rom_id, &file_name, &hash);
     axum::http::StatusCode::NO_CONTENT
 }
 
@@ -1726,8 +1742,26 @@ async fn main() -> Result<()> {
     let args = Args::parse();
 
     // Before the library is even looked at: this is a calculator, not a server.
-    if let Some(plain) = args.hash_password.as_deref() {
-        println!("{}", auth::hash_password(plain));
+    if let Some(given) = args.hash_password.as_deref() {
+        let plain = if given == "-" {
+            use std::io::IsTerminal as _;
+            if std::io::stdin().is_terminal() {
+                eprint!("Password: ");
+            }
+            let mut line = String::new();
+            std::io::stdin().read_line(&mut line).context("reading the password")?;
+            line.trim_end_matches(['\r', '\n']).to_owned()
+        } else {
+            eprintln!(
+                "note: a password given on the command line stays in the shell's history; \
+                 run --hash-password with no value to type it instead"
+            );
+            given.to_owned()
+        };
+        if plain.is_empty() {
+            bail!("no password given");
+        }
+        println!("{}", auth::hash_password(&plain));
         return Ok(());
     }
     let cfg = load_config(std::path::Path::new(&args.config))?;

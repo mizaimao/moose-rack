@@ -1034,7 +1034,13 @@ async fn download_one(
     write_atomically(&path, &bytes)?;
     // Only after the bytes are safely on disk: telling the server first would
     // have it believe we hold a save we failed to write.
-    if let Err(e) = client.confirm_download(save_id, &identity.device_id).await {
+    // The server's hash for a save is the MD5 of its bytes, so this is the copy
+    // that was written, whatever the server holds by the time it hears.
+    let received = {
+        use md5::Digest as _;
+        hex::encode(md5::Md5::digest(&bytes))
+    };
+    if let Err(e) = client.confirm_download(save_id, &identity.device_id, &received).await {
         let n = format!(
             "{} is written, but the server did not record it, so the next change here may \
              read as a conflict: {e:#}",
