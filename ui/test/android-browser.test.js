@@ -61,3 +61,20 @@ test("Play in an Android browser goes to the page, not to the app's bridge", asy
     /no way to start an emulator/,
   );
 });
+
+// Leaving Settings went to /index.html, which the service does not route, so
+// the phone showed a 404 page instead of the library.
+test("leaving Settings in a browser goes to the address the library is served at", async () => {
+  const { libraryAddress } = await import("../js/settings.js");
+  globalThis.__MOOSE_WEB = true;
+  try {
+    assert.equal(libraryAddress(), "/");
+  } finally {
+    delete globalThis.__MOOSE_WEB;
+  }
+  // The Android app loads its pages as files, and there it is index.html.
+  assert.equal(libraryAddress(), "index.html");
+  // And it is where the settings window actually goes.
+  const src = readFileSync(join(uiDir, "js", "settings-window.js"), "utf8");
+  assert.match(src, /location\.href = libraryAddress\(\)/);
+});
