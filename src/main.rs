@@ -1989,9 +1989,13 @@ async fn cmd_sync_saves(dry_run: bool, keep: Option<&str>, root: Option<&str>) -
     // identity and the state ledger are the device's as well. The layout under
     // the root is the one this build was compiled for, which is why a card is
     // synced with a build for its handheld.
+    //
+    // Without it, `[saves] root`: the folder a launch from here tells
+    // RetroArch to save into. RetroArch's install folder was the default
+    // before, and that is not where the games write (on KNULLI it is `/usr`).
     let root = match root {
         Some(path) => std::path::PathBuf::from(path),
-        None => RetroArch::locate_in(&cfg.retroarch.ordered_paths())?.root,
+        None => moose_rack::util::expand_tilde(&cfg.saves.root),
     };
 
     if dry_run {

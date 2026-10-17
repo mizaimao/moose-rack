@@ -629,7 +629,7 @@ async fn launch_rom(
         AutoSync::default()
     } else {
         say("checking saves with the server…");
-        auto_sync(&state, ra, &row, savesync::When::BeforeLaunch).await
+        auto_sync(&state, &row, savesync::When::BeforeLaunch).await
     };
     if let Some(note) = pre.note {
         notes.push(note);
@@ -672,7 +672,7 @@ async fn launch_rom(
     let post = if skip_sync.unwrap_or(false) {
         AutoSync::default()
     } else {
-        auto_sync(&state, ra, &row, savesync::When::AfterExit).await
+        auto_sync(&state, &row, savesync::When::AfterExit).await
     };
     if let Some(note) = post.note {
         notes.push(note);
