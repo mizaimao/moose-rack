@@ -423,7 +423,11 @@ pub fn open_link(url: String) -> CmdResult<()> {
     }
     #[cfg(target_os = "macos")]
     let mut cmd = std::process::Command::new("open");
-    #[cfg(not(target_os = "macos"))]
+    // Explorer opens a web link in the default browser. Not `cmd /C start`,
+    // which would read the `&` in a query string as a second command.
+    #[cfg(windows)]
+    let mut cmd = std::process::Command::new("explorer");
+    #[cfg(not(any(target_os = "macos", windows)))]
     let mut cmd = std::process::Command::new("xdg-open");
     cmd.arg(&url).spawn().map_err(err)?;
     Ok(())
