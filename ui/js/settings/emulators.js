@@ -92,7 +92,7 @@ export const html = `${MOBILE ? "" : `      <h4>Game window</h4>
 /// because it needs two round trips — the systems themselves and the list of
 /// motion shaders — and a tab that waited on those before drawing anything
 /// would look like a tab that does not open.
-export async function wire(box) {
+export async function wire(box, signal) {
   const table = box.querySelector(".sys-table");
   let rows, motion;
   try {
@@ -101,14 +101,17 @@ export async function wire(box) {
     table.textContent = String(e);
     return;
   }
-  // A slow answer that arrives after the tab was left has nowhere to go, and
-  // writing to a detached node would leave the next tab looking fine while its
-  // controls belong to a pane that is gone.
-  if (!box.isConnected) return;
+  // A slow answer that arrives after the tab was left has nowhere to go.
+  // This asked `box.isConnected`, which is always true: `box` is the `#pane`
+  // every tab draws into. So an answer that came back after a switch wired
+  // the next tab's fields a second time and then threw on the `.sys-motion`
+  // that tab does not have. See settings/render.js.
+  if (signal?.aborted) return;
 
-  await wireGameDisplay(box);
+  await wireGameDisplay(box, signal);
+  if (signal?.aborted) return;
   // The two window toggles are config.toml fields, like the ones in General.
-  wireConfigFields(box);
+  wireConfigFields(box, signal);
   box.querySelector(".sys-motion").innerHTML = motionMarkup(motion);
   table.innerHTML = `
     <table class="systbl">
@@ -166,7 +169,7 @@ export async function wire(box) {
 /// Hidden entirely with one display attached: a dropdown with a single entry is
 /// a question that has one answer, and this is the settings pane rather than an
 /// inventory of the machine.
-async function wireGameDisplay(box) {
+async function wireGameDisplay(box, signal) {
   const row = box.querySelector(".sys-screen");
   const hint = box.querySelector(".sys-screen-hint");
   const sel = box.querySelector(".game-display");
@@ -178,7 +181,7 @@ async function wireGameDisplay(box) {
   } catch {
     return;
   }
-  if (!screens.length || !box.isConnected) return;
+  if (!screens.length || signal?.aborted) return;
 
   row.hidden = false;
   hint.hidden = false;

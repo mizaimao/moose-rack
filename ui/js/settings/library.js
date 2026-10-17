@@ -6,6 +6,7 @@
 import { invoke, listen } from "../state.js";
 import { toast } from "../util.js";
 import { wireConfigFields } from "./fields.js";
+import { listenWhile } from "./render.js";
 
 export const html = `      <h4>Library</h4>
       <div class="srow">
@@ -102,7 +103,7 @@ export const html = `      <h4>Library</h4>
 /// The tab that fetches things: the game index, BIOS, and artwork the
 /// scrapers missed. Each reports before it works and while it works, because a
 /// button that goes quiet for a minute reads as one that does nothing.
-export function wire(box) {
+export function wire(box, signal) {
   // Missing artwork.
   const scrapeBtn = box.querySelector(".set-scrape");
   const scrapeStatus = box.querySelector(".set-scrape-status");
@@ -259,9 +260,10 @@ export function wire(box) {
       }
     });
     // Coming back from system settings is a resume, not a reload, so the
-    // answer is asked for again rather than remembered.
-    window.addEventListener("focus", paint);
-    document.addEventListener("visibilitychange", () => {
+    // answer is asked for again rather than remembered. For as long as this
+    // tab is drawn: every visit used to add two more listeners for good.
+    listenWhile(signal, window, "focus", paint);
+    listenWhile(signal, document, "visibilitychange", () => {
       if (!document.hidden) paint();
     });
   }
@@ -337,5 +339,5 @@ export function wire(box) {
   // (general, control, emulators) all call it; this one was overlooked, and a
   // field that shows its placeholder looks exactly like a field that is simply
   // empty, which is why it went unnoticed.
-  wireConfigFields(box);
+  wireConfigFields(box, signal);
 }
