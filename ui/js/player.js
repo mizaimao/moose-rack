@@ -163,6 +163,10 @@ function openStage(title, shader, platformSlug, romId, core) {
   } else {
     wireStates(stage, romId, core);
   }
+  // Escape closes a modal dialog by default. Here that hid the stage with the
+  // game still running in it, unsaved, and DOS games press Escape all the time.
+  // Stop is the way out, because it sends the save first.
+  stage.addEventListener("cancel", (ev) => ev.preventDefault());
   document.body.appendChild(stage);
   // `showModal` where it exists; an open dialog is still a visible one where it
   // does not, and a game running is better than a correct stacking context.

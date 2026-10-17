@@ -2,6 +2,14 @@
 
 import { el } from "./state.js";
 
+/// Whether a game is playing in the page. The stage is a modal over the
+/// library, and the library's own pad and key handlers do not know that: a
+/// game's Y opened the gameplay video behind it, B stepped the library back
+/// and the d-pad moved the cursor, all while the game was being played.
+export function playingInPage() {
+  return Boolean(document.getElementById("ejs-stage"));
+}
+
 export function human(bytes) {
   if (!bytes) return "—";
   const units = ["B", "KB", "MB", "GB", "TB"];
