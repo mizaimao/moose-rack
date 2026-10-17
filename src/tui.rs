@@ -73,6 +73,8 @@ pub struct App {
     user_ra_cfg: PathBuf,
     /// Where RetroArch is told to keep saves and states, from `[saves] root`.
     saves_root: PathBuf,
+    /// `[library] local_root`, for generated RetroArch files and save backups.
+    library_root: PathBuf,
     shaders_enabled: bool,
     achievements: crate::achievements::Settings,
     auto_sync: bool,
@@ -153,6 +155,9 @@ impl App {
             saves_root: crate::config::Config::load()
                 .map(|c| crate::util::expand_tilde(&c.saves.root))
                 .unwrap_or_default(),
+            library_root: crate::config::Config::load()
+                .map(|c| c.library_dir())
+                .unwrap_or_else(|_| PathBuf::from("./library")),
             shaders_enabled: crate::config::Config::load()
                 .map(|c| c.shaders.enabled)
                 .unwrap_or(true),
@@ -303,7 +308,7 @@ impl App {
             rom: &path,
             platform: &rom.platform_slug,
             fs_name: &rom.fs_name,
-            library_root: self.local_roms.parent().unwrap_or(Path::new(".")),
+            library_root: &self.library_root,
             user_cfg: &self.user_ra_cfg,
             shaders_enabled: self.shaders_enabled,
             shader_overrides: &self.shader_overrides,
@@ -399,7 +404,7 @@ impl App {
         let Some(client) = self.client.clone() else {
             return SyncOutcome::Ok(None);
         };
-        let library_root = self.local_roms.parent().unwrap_or(Path::new(".")).to_path_buf();
+        let library_root = self.library_root.clone();
 
         let Some(cache) = self.save_cache.as_ref() else {
             return SyncOutcome::Ok(None);

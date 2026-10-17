@@ -906,6 +906,14 @@ impl Config {
         self.esde_layout().roms
     }
 
+    /// The app's own library folder, `[library] local_root`: where its
+    /// generated RetroArch files and its save backups go. Not the folder above
+    /// the ROMs, which with `[esde] roms = "~/ROMs"` is the home folder and on
+    /// a handheld the root of the card.
+    pub fn library_dir(&self) -> PathBuf {
+        crate::util::expand_tilde(&self.library.local_root)
+    }
+
     /// Where artwork lives, for the same reason.
     ///
     /// `<esde root>/downloaded_media`, which is where ES-DE keeps it and where

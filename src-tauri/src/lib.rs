@@ -114,9 +114,7 @@ async fn sync_library(app: tauri::AppHandle, state: State<'_, AppState>, full: b
     let folded = store.on_both().unwrap_or(0);
     // Server rows are in now, so old ids that only the server's rows could
     // place are placeable; move what is still keyed by them.
-    if let Some(library_root) = state.roms_dir.parent() {
-        moose_rack::app::adopt_client_stores(&store, library_root, Path::new("."));
-    }
+    moose_rack::app::adopt_client_stores(&store, &state.library_root, Path::new("."));
 
     let total = store.rom_count().unwrap_or(0);
     let _ = app.emit("sync-progress", "done");
@@ -504,7 +502,10 @@ async fn launch_rom(
     let shader_overrides = state.shader_overrides.lock().map_err(err)?.clone();
     let motion = state.motion_shader.lock().map_err(err)?.clone();
     let lightgun = state.lightgun.lock().map_err(err)?.clone();
-    let lib = state.roms_dir.parent().unwrap_or(Path::new("."));
+    // The app's library folder, where the CLI already put these. The folder
+    // above the ROMs, which this was, is the home folder for `~/ROMs` and the
+    // root of the card on a handheld.
+    let lib = state.library_root.as_path();
     // Read per launch rather than held on AppState: it is a path the settings
     // window can change while the app is running, and a copy taken at startup
     // would send saves to the old folder until a restart.

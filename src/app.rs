@@ -30,6 +30,8 @@ pub struct AppState {
     /// nothing about the machine itself distinguishes the two.
     pub can_launch: bool,
     pub roms_dir: PathBuf,
+    /// `[library] local_root`. See `Config::library_dir`.
+    pub library_root: PathBuf,
     pub media_dir: PathBuf,
     /// Artwork of a locally scanned ES-DE library. Keyed by ES-DE *system*
     /// name rather than RomM slug, so it needs its own lookup rather than
@@ -123,7 +125,7 @@ impl AppState {
     /// Returns the rows written and how many of those the server also lists.
     pub fn rescan(&self, layout: &crate::esde::Layout) -> anyhow::Result<(usize, usize)> {
         let mut store = self.cache.lock().map_err(|e| anyhow::anyhow!("{e}"))?;
-        let scan = scan_into(&mut store, layout, &self.map)?;
+        let scan = scan_into(&mut store, layout, &self.map, &self.library_root)?;
         Ok((scan.written, scan.on_server))
     }
 
@@ -250,6 +252,7 @@ impl AppState {
         // service turns it off in `serve_only`.
         can_launch: true,
         roms_dir,
+        library_root: cfg.library_dir(),
         media_dir,
         esde_media: cfg.esde.media_dir(),
         legacy_bios: cfg.legacy_bios_dirs(),
@@ -309,6 +312,7 @@ pub fn scan_into(
     store: &mut cache::Cache,
     layout: &crate::esde::Layout,
     map: &CoreMap,
+    library_root: &std::path::Path,
 ) -> anyhow::Result<Scan> {
     let (games, skipped) = crate::esde::scan(layout, map)?;
     let written = store.replace_from_esde(&games)?;
@@ -327,9 +331,7 @@ pub fn scan_into(
         .collect();
     store.name_platforms(&names)?;
     let on_server = store.on_both()?;
-    if let Some(library_root) = layout.roms.parent() {
-        adopt_client_stores(store, library_root, std::path::Path::new("."));
-    }
+    adopt_client_stores(store, library_root, std::path::Path::new("."));
     Ok(Scan { written, on_server, games, skipped })
 }
 
@@ -505,7 +507,7 @@ mod scan_tests {
     fn consoles_get_their_real_names_from_the_core_map() {
         let (root, layout) = tree("names");
         let mut store = cache::Cache::open(&root.join("cache.sqlite3")).unwrap();
-        scan_into(&mut store, &layout, &map()).unwrap();
+        scan_into(&mut store, &layout, &map(), &root).unwrap();
         let shown: Vec<String> =
             store.platforms().unwrap().into_iter().map(|p| p.display_name).collect();
         assert_eq!(shown, ["Super Nintendo"], "the console is still named after its folder");
@@ -517,7 +519,7 @@ mod scan_tests {
     fn a_name_already_set_is_left_alone() {
         let (root, layout) = tree("keepname");
         let mut store = cache::Cache::open(&root.join("cache.sqlite3")).unwrap();
-        scan_into(&mut store, &layout, &map()).unwrap();
+        scan_into(&mut store, &layout, &map(), &root).unwrap();
         store.name_platforms(&[("snes".into(), "Something Else".into())]).unwrap();
         let shown: Vec<String> =
             store.platforms().unwrap().into_iter().map(|p| p.display_name).collect();
@@ -529,7 +531,7 @@ mod scan_tests {
     fn a_scan_lands_in_the_cache_the_ui_reads() {
         let (root, layout) = tree("basic");
         let mut store = cache::Cache::open(&root.join("cache.sqlite3")).unwrap();
-        let scan = scan_into(&mut store, &layout, &map()).unwrap();
+        let scan = scan_into(&mut store, &layout, &map(), &root).unwrap();
         assert_eq!(scan.written, 2, "both games should be stored");
         assert_eq!(scan.games.len(), 2);
         assert_eq!(store.rom_count().unwrap(), 2);
@@ -543,8 +545,8 @@ mod scan_tests {
     fn scanning_twice_does_not_double_the_library() {
         let (root, layout) = tree("twice");
         let mut store = cache::Cache::open(&root.join("cache.sqlite3")).unwrap();
-        scan_into(&mut store, &layout, &map()).unwrap();
-        scan_into(&mut store, &layout, &map()).unwrap();
+        scan_into(&mut store, &layout, &map(), &root).unwrap();
+        scan_into(&mut store, &layout, &map(), &root).unwrap();
         assert_eq!(store.rom_count().unwrap(), 2);
         std::fs::remove_dir_all(&root).ok();
     }
