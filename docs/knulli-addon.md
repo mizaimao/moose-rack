@@ -259,13 +259,20 @@ which is the server:
 | Server | On the card |
 | --- | --- |
 | `★ Best of snes` | `<favorite>true</favorite>` in `/userdata/roms/snes/gamelist.xml` |
-| `★ Favourites` | the stars in every gamelist on the card |
+| `★ Favourites` | the stars in every gamelist whose system has no `★ Best of …` list |
 | `Arcade Fighting` | `collections/custom-Arcade Fighting.cfg`, one absolute path per line |
 
 `favrun::held_as` decides which by the name, and `★ Favourites` only by that
 exact name. It used to be any list the server flags `is_favorite`, and
 moose-service flags every list starting with ★, so a new `★ Shmups` would have
 been synced against every star on the card. Any other name is a collection file.
+
+ES has one star per game, so each system's stars belong to one list. A system
+with a `★ Best of …` list keeps them there and `★ Favourites` has the rest,
+which is also where the desktop app puts a new star. When both read the same
+stars, a game taken out of one came out of the other on the next run. A
+starred list also stars only games of its own systems: a NES game in
+`★ Best of snes` is left off the card.
 
 A `custom-*.cfg` is invisible until its name is also in
 `CollectionSystemsCustom` in `es_settings.cfg`, so the sync writes that too —
