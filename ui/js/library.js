@@ -213,10 +213,11 @@ export async function showAllRecent() {
   // (`sort: true` above), so console grouping is still a keystroke away for
   // anyone who wants it; it is no longer what you get without asking.
   state.rows = rows;
+  state.grouping = "order";
   // Most recent first unless this view has already been sorted otherwise, and
   // grouped by console only when that is what was asked for.
   await defaultOrder("played");
-  renderRows(rows, currentOrder().id === "platform");
+  renderRows(rows, grouped());
 }
 
 /// Draw the consoles, in whichever layout is selected.
@@ -432,6 +433,7 @@ export async function showRoms(slug, prefetched = null) {
   state.folder = "";
   el.search.value = "";
   state.rows = prefetched?.rows ?? (await invoke("roms", { platform: slug, list: listRef() }));
+  state.grouping = false;
   if (prefetched?.arrangement) applyArrangement(prefetched.arrangement);
   else await arrangeCurrentList();
   enter({
@@ -444,7 +446,7 @@ export async function showRoms(slug, prefetched = null) {
     zoom: "grid",
     gridLayout: state.layout === "grid",
   });
-  renderRows(state.rows, false);
+  renderRows(state.rows, grouped());
 }
 
 export async function runSearch(term) {
@@ -455,6 +457,7 @@ export async function runSearch(term) {
   applyLayoutForView("search");
   restoreSidebar();
   state.rows = await invoke("search", { term, list: listRef() });
+  state.grouping = true;
   await arrangeCurrentList();
   const consoles = new Set(state.rows.map((r) => r.platform)).size;
   enter({
@@ -468,7 +471,21 @@ export async function runSearch(term) {
     zoom: "grid",
     gridLayout: state.layout === "grid",
   });
-  renderRows(state.rows, true);
+  renderRows(state.rows, grouped());
+}
+
+/// Whether the list on screen is drawn one section per console, as the view
+/// that drew it first decided. See `state.grouping`.
+export function grouped() {
+  return state.grouping === "order" ? currentOrder().id === "platform" : !!state.grouping;
+}
+
+/// Draw the list on screen again, in the shape it was first drawn in.
+///
+/// For everything that changes how the list looks rather than what is in it:
+/// the sort, the filters, grid or list, the game art.
+export function redrawRows() {
+  if (state.rows.length) renderRows(state.rows, grouped());
 }
 
 /// Click, double-click and right-click on one game.
@@ -1070,8 +1087,8 @@ export function setLayout(next) {
     renderPlatforms(state.platforms);
     restorePlatformCursor();
     fitConsoleArt();
-  } else if (state.rows.length) {
-    renderRows(state.rows, state.view === "search");
+  } else {
+    redrawRows();
   }
 }
 
