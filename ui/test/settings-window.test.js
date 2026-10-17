@@ -29,6 +29,10 @@ const uiDir = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 let dom, panes, asked;
 
+/// When set, the answer `systems` waits on, so a tab can be left before its
+/// table arrives.
+let holdSystems = null;
+
 before(async () => {
   dom = new JSDOM(readFileSync(join(uiDir, "settings.html"), "utf8"), {
     url: "http://localhost/",
@@ -40,6 +44,9 @@ before(async () => {
   global.localStorage = dom.window.localStorage;
   global.getComputedStyle = dom.window.getComputedStyle.bind(dom.window);
   global.requestAnimationFrame = dom.window.requestAnimationFrame.bind(dom.window);
+  // The page's own: Node has a CustomEvent of its own, which jsdom's
+  // dispatchEvent refuses, and a toast in this window is one.
+  global.CustomEvent = dom.window.CustomEvent;
   Object.defineProperty(global, "navigator", {
     value: dom.window.navigator,
     configurable: true,
@@ -52,6 +59,7 @@ before(async () => {
     if (cmd === "motion_options") return { current: null, options: [] };
     if (cmd === "bios_status") return [0, 0, 0];
     if (cmd === "versions") return ["0.1.87", "3.4.0"];
+    if (cmd === "systems" && holdSystems) return holdSystems;
     return [];
   });
   dom.window.__TAURI__ = {
@@ -282,5 +290,65 @@ describe("the console pictures row", () => {
     const tag = html.slice(at, html.indexOf(">", at));
     assert.match(tag, /max="60"/);
     assert.match(tag, /min="0"/, "at 0 the glass is clear, and that has to be reachable");
+  });
+});
+
+describe("a tab that has been left lets go", () => {
+  /// Every tab is drawn into the same `#pane`, so the panes' check that their
+  /// box was still on the page was always true. One box here, the way the
+  /// window has one.
+  const settle = () => new Promise((r) => setTimeout(r, 0));
+
+  test("a slow answer for a tab already left does not wire the next one", async () => {
+    const box = dom.window.document.createElement("div");
+    dom.window.document.body.appendChild(box);
+    let answer;
+    holdSystems = new Promise((done) => (answer = () => done([])));
+    try {
+      box.innerHTML = panes.paneHtml("systems");
+      const slow = panes.wirePane("systems", box);
+      // Off to General while Emulators is still waiting for its table.
+      box.innerHTML = panes.paneHtml("general");
+      await panes.wirePane("general", box);
+      answer();
+      await assert.doesNotReject(slow, "the late answer threw on the next tab's markup");
+      await settle();
+      await settle();
+
+      // Wired once, so one press is one save.
+      asked.length = 0;
+      box.querySelector('button[data-field="confirm_delete_state"]').click();
+      await settle();
+      const saves = asked.filter((c) => c === "set_config_field").length;
+      assert.equal(saves, 1, `one press of a toggle saved ${saves} times`);
+    } finally {
+      holdSystems = null;
+      box.remove();
+    }
+  });
+
+  /// Each visit to Control started a 60 ms controller readout, and none of
+  /// them ever stopped.
+  test("leaving Control stops its controller readout", async () => {
+    let reads = 0;
+    Object.defineProperty(dom.window.navigator, "getGamepads", {
+      value: () => (reads++, []),
+      configurable: true,
+    });
+    const box = dom.window.document.createElement("div");
+    dom.window.document.body.appendChild(box);
+    try {
+      box.innerHTML = panes.paneHtml("control");
+      await panes.wirePane("control", box);
+      box.innerHTML = panes.paneHtml("about");
+      await panes.wirePane("about", box);
+      await new Promise((r) => setTimeout(r, 100));
+      const after = reads;
+      await new Promise((r) => setTimeout(r, 200));
+      assert.equal(reads, after, "the readout went on polling after the tab was left");
+    } finally {
+      delete dom.window.navigator.getGamepads;
+      box.remove();
+    }
   });
 });

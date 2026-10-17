@@ -112,7 +112,7 @@ export const html = `      <h4>RetroArch</h4>
 
 `;
 
-export function wire(box) {
+export function wire(box, signal) {
   wireAchievementCheck(box);
   // RetroArch location. The backend verifies the path before writing it to
   // config.toml, so an invalid one is reported here rather than failing later
@@ -243,7 +243,7 @@ export function wire(box) {
     }
   }
 
-  wireConfigFields(box);
+  wireConfigFields(box, signal);
 }
 
 
