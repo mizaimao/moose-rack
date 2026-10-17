@@ -175,17 +175,64 @@ pub fn from_header(cfg: &AuthConfig, header: Option<&str>) -> Option<Identity> {
         let raw = b64().decode(rest.trim()).ok()?;
         let text = String::from_utf8(raw).ok()?;
         let (name, pass) = text.split_once(':')?;
-        // Every configured user is checked even after a match, so the time
-        // taken does not say which name exists.
-        let mut found = None;
-        for u in &cfg.users {
-            if u.name == name && verify_password(&u.password, pass) {
-                found = Some(Identity::User(u.name.clone()));
-            }
+        let Some(u) = cfg.users.iter().find(|u| u.name == name) else {
+            // One derivation either way, so the time taken does not say which
+            // names exist. The `&&` that was here skipped it for a name with
+            // no account, which answered at once.
+            let _ = verify_password(dummy_hash(), pass);
+            return None;
+        };
+        // A device sends Basic on every request, and each check is 600,000
+        // rounds. Remembered for a while once it has passed, keyed by the
+        // header and the stored hash, so a changed password is checked anew.
+        let key = cache_key(header, &u.password);
+        if recently_verified(&key) {
+            return Some(Identity::User(u.name.clone()));
         }
-        return found;
+        if verify_password(&u.password, pass) {
+            remember_verified(key);
+            return Some(Identity::User(u.name.clone()));
+        }
+        return None;
     }
     None
+}
+
+/// How long a password that passed is taken on trust.
+const VERIFIED_FOR: std::time::Duration = std::time::Duration::from_secs(15 * 60);
+
+fn verified() -> &'static Mutex<HashMap<[u8; 32], std::time::Instant>> {
+    static CACHE: std::sync::OnceLock<Mutex<HashMap<[u8; 32], std::time::Instant>>> = std::sync::OnceLock::new();
+    CACHE.get_or_init(Default::default)
+}
+
+/// A digest rather than the header itself, so the credentials are not what is
+/// kept.
+fn cache_key(header: &str, stored: &str) -> [u8; 32] {
+    use sha2::Digest as _;
+    let mut h = sha2::Sha256::new();
+    h.update(stored.as_bytes());
+    h.update([0u8]);
+    h.update(header.as_bytes());
+    h.finalize().into()
+}
+
+fn recently_verified(key: &[u8; 32]) -> bool {
+    let Ok(cache) = verified().lock() else { return false };
+    cache.get(key).is_some_and(|at| at.elapsed() < VERIFIED_FOR)
+}
+
+fn remember_verified(key: [u8; 32]) {
+    if let Ok(mut cache) = verified().lock() {
+        cache.retain(|_, at| at.elapsed() < VERIFIED_FOR);
+        cache.insert(key, std::time::Instant::now());
+    }
+}
+
+/// A stored hash no password matches, at the real cost.
+fn dummy_hash() -> &'static str {
+    static DUMMY: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+    DUMMY.get_or_init(|| hash_password("not a password anybody has"))
 }
 
 /// Browser sessions: a random id in a cookie, the identity kept here.
@@ -267,6 +314,24 @@ mod tests {
             users: vec![User { name: "guest".into(), password: hash_password("hunter2") }],
             guest: false,
         }
+    }
+
+    /// A password that passed is not derived again on the next request, a
+    /// wrong one is never remembered, and a name with no account is refused
+    /// the same way as a wrong password.
+    #[test]
+    fn a_checked_password_is_remembered_and_a_wrong_one_is_not() {
+        let c = cfg();
+        let basic = |s: &str| format!("Basic {}", b64().encode(s));
+        let right = basic("guest:hunter2");
+        assert_eq!(from_header(&c, Some(&right)), Some(Identity::User("guest".into())));
+        assert!(recently_verified(&cache_key(&right, &c.users[0].password)));
+        assert_eq!(from_header(&c, Some(&right)), Some(Identity::User("guest".into())));
+
+        let wrong = basic("guest:hunter3");
+        assert_eq!(from_header(&c, Some(&wrong)), None);
+        assert!(!recently_verified(&cache_key(&wrong, &c.users[0].password)));
+        assert_eq!(from_header(&c, Some(&basic("nobody:hunter2"))), None);
     }
 
     #[test]
