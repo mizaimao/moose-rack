@@ -338,6 +338,20 @@ fn extension_of(server_path: &str) -> &str {
 }
 
 /// Fetch one artwork file from the server and store it in the media tree.
+/// The server answered that a file does not exist, which is a real miss. Any
+/// other failure, a 401 or a server that did not answer, says nothing about
+/// whether the game has art.
+#[derive(Debug)]
+struct NotOnServer;
+
+impl std::fmt::Display for NotOnServer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("not on the server")
+    }
+}
+
+impl std::error::Error for NotOnServer {}
+
 pub async fn fetch(
     client: &api::Client,
     server_path: &str,
@@ -360,6 +374,9 @@ pub async fn fetch(
         .await
         .with_context(|| format!("GET {url}"))?;
 
+    if resp.status() == reqwest::StatusCode::NOT_FOUND {
+        return Err(anyhow::Error::new(NotOnServer).context(format!("GET {url} -> 404")));
+    }
     if !resp.status().is_success() {
         bail!("GET {url} -> {}", resp.status());
     }
@@ -387,12 +404,29 @@ pub async fn ensure_esde(
     stem: &str,
     kind: &str,
 ) -> Option<PathBuf> {
-    if let Some(local) = find_local(media_root, platform, stem, kind) {
-        return Some(local);
-    }
-    let client = client?;
-    let exts = ESDE_TYPES.iter().find(|(k, _)| *k == kind).map(|(_, e)| *e)?;
+    lookup_esde(client, media_root, platform, stem, kind).await.0
+}
 
+/// As [`ensure_esde`], and whether every miss was the server saying "no such
+/// file". Only then is "this game has none" known rather than guessed.
+async fn lookup_esde(
+    client: Option<&api::Client>,
+    media_root: &Path,
+    platform: &str,
+    stem: &str,
+    kind: &str,
+) -> (Option<PathBuf>, bool) {
+    if let Some(local) = find_local(media_root, platform, stem, kind) {
+        return (Some(local), true);
+    }
+    let Some(client) = client else {
+        return (None, false);
+    };
+    let Some(exts) = ESDE_TYPES.iter().find(|(k, _)| *k == kind).map(|(_, e)| *e) else {
+        return (None, true);
+    };
+
+    let mut sure = true;
     for dir in esde_dirs_learned(media_root, platform) {
         for ext in exts {
             let server_path = format!("{ESDE_BASE}/{dir}/{kind}/{stem}.{ext}");
@@ -403,15 +437,15 @@ pub async fn ensure_esde(
                     // Remember which name answered, so the alias that never
                     // does stops being tried first.
                     with_index(media_root, platform, |i| i.dir = Some(dir.clone()));
-                    return Some(p);
+                    return (Some(p), true);
                 }
                 // A miss here is ordinary: not every game has every media
                 // type, and we are probing extensions.
-                Err(_) => continue,
+                Err(e) => sure &= e.downcast_ref::<NotOnServer>().is_some(),
             }
         }
     }
-    None
+    (None, sure)
 }
 
 /// Everything this app scraped itself, as paths relative to the media root.
@@ -534,14 +568,18 @@ pub async fn ensure_art(
         return None;
     }
 
+    let mut sure = true;
     for kind in art_chain(preferred) {
-        if let Some(p) = ensure_esde(client, media_root, platform, stem, kind).await {
-            return Some(p);
+        let (found, answered) = lookup_esde(client, media_root, platform, stem, kind).await;
+        if found.is_some() {
+            return found;
         }
+        sure &= answered;
     }
-    // Only worth recording when there was a server to ask. Offline, everything
-    // would look absent and the whole library would be written off.
-    if client.is_some() {
+    // Only when the server answered "not found" to every ask. Offline, or with
+    // a login the server refused, everything looks absent, and a handheld
+    // opened away from home wrote off every cover it scrolled past for good.
+    if sure {
         with_index(media_root, platform, |i| i.no_art.insert(stem.to_owned()));
     }
     None
@@ -1138,6 +1176,41 @@ mod tests {
 
         clear_art_index(&root, "snes");
         assert!(!root.join("snes").join(".art-index.json").exists());
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    /// A server that did not answer is not a server that said "none". Only a
+    /// 404 for every ask is written down; a refused connection is not.
+    #[tokio::test]
+    async fn only_a_server_that_said_not_found_marks_a_game_as_having_no_art() {
+        use std::io::{Read, Write};
+        let root = std::env::temp_dir().join("moose-rack-art-index-offline");
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(root.join("snes")).unwrap();
+        crate::util::install_tls();
+
+        // Nothing listens on port 9.
+        let away = api::Client::new("http://127.0.0.1:9", "u", "p").unwrap();
+        assert!(ensure_art(Some(&away), &root, "snes", "Away", MIXIMAGES).await.is_none());
+        assert!(
+            !with_index(&root, "snes", |i| i.no_art.contains("Away")),
+            "a server that did not answer wrote the game off"
+        );
+
+        // A server that answers 404 to everything.
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let base = format!("http://{}", listener.local_addr().unwrap());
+        std::thread::spawn(move || {
+            for sock in listener.incoming() {
+                let Ok(mut sock) = sock else { break };
+                let mut buf = [0u8; 4096];
+                let _ = sock.read(&mut buf);
+                let _ = sock.write_all(b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
+            }
+        });
+        let home = api::Client::new(&base, "u", "p").unwrap();
+        assert!(ensure_art(Some(&home), &root, "snes", "Nope", MIXIMAGES).await.is_none());
+        assert!(with_index(&root, "snes", |i| i.no_art.contains("Nope")));
         let _ = std::fs::remove_dir_all(&root);
     }
 
