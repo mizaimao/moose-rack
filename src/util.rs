@@ -29,6 +29,33 @@ pub fn expand_tilde(path: &str) -> PathBuf {
     }
 }
 
+/// Replace `path` with `bytes` through a file beside it and a rename, so a
+/// crash or a full disk part way leaves the old file, never half of the new.
+///
+/// The old file's permissions are kept: config.toml holds tokens and may be
+/// readable by its owner only, and a fresh file would be readable by everyone.
+/// A symlink is followed, so the file it points at is the one replaced.
+pub fn replace_file(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
+    use std::io::Write as _;
+    let path = std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
+    let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+    let tmp = path.with_file_name(format!(".{name}.writing"));
+    let result = (|| {
+        let mut f = std::fs::File::create(&tmp)?;
+        f.write_all(bytes)?;
+        f.sync_all()?;
+        drop(f);
+        if let Ok(meta) = std::fs::metadata(&path) {
+            std::fs::set_permissions(&tmp, meta.permissions())?;
+        }
+        std::fs::rename(&tmp, &path)
+    })();
+    if result.is_err() {
+        let _ = std::fs::remove_file(&tmp);
+    }
+    result
+}
+
 /// Total size of everything under `dir`. Missing directories count as zero, so
 /// callers can ask about a cache that does not exist yet.
 pub fn dir_size(dir: &Path) -> u64 {
@@ -399,5 +426,33 @@ mod clock_tests {
         assert_eq!(twelve(11), "11:00 AM");
         assert_eq!(twelve(13), "1:00 PM");
         assert_eq!(twelve(23), "11:00 PM");
+    }
+}
+
+#[cfg(test)]
+mod replace_tests {
+    /// config.toml holds tokens. Replacing it must not make it readable by
+    /// everyone, and must replace the file a symlink points at, not the link.
+    #[cfg(unix)]
+    #[test]
+    fn a_replaced_file_keeps_its_permissions_and_its_symlink() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = std::env::temp_dir().join("moose-rack-util-test-replace");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let real = dir.join("real.toml");
+        std::fs::write(&real, "old").unwrap();
+        std::fs::set_permissions(&real, std::fs::Permissions::from_mode(0o600)).unwrap();
+        let link = dir.join("config.toml");
+        std::os::unix::fs::symlink(&real, &link).unwrap();
+
+        super::replace_file(&link, b"new").unwrap();
+
+        assert!(std::fs::symlink_metadata(&link).unwrap().file_type().is_symlink());
+        assert_eq!(std::fs::read_to_string(&real).unwrap(), "new");
+        let mode = std::fs::metadata(&real).unwrap().permissions().mode() & 0o777;
+        assert_eq!(mode, 0o600, "the file is now {mode:o}");
+        assert_eq!(std::fs::read_dir(&dir).unwrap().count(), 2, "a temporary file was left behind");
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

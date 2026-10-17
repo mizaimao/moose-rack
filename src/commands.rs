@@ -2089,7 +2089,7 @@ pub fn config_patch() -> CmdResult<String> {
     }
     let backup = path.with_extension("toml.before-patch");
     std::fs::copy(path, &backup).map_err(err)?;
-    std::fs::write(path, &patched).map_err(err)?;
+    crate::util::replace_file(path, patched.as_bytes()).map_err(err)?;
     let had_password = applied.iter().any(|f| f.what.ends_with("password"));
     Ok(format!(
         "Updated {}: {}. The file as it was is in {}{}",

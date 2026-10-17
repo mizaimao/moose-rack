@@ -1039,7 +1039,8 @@ pub fn set_settings_install(path: &str, install: Option<&str>) -> Result<()> {
     // stops the app starting. Refuse rather than write that.
     toml::from_str::<Config>(&updated)
         .with_context(|| format!("adding the RetroArch entry would break {}", file.display()))?;
-    std::fs::write(file, updated).with_context(|| format!("writing {}", file.display()))?;
+    crate::util::replace_file(file, updated.as_bytes())
+        .with_context(|| format!("writing {}", file.display()))?;
     Ok(())
 }
 
@@ -1189,7 +1190,9 @@ fn write_lines(path: &str, table: &str, entries: &[(String, Option<String>)]) ->
     if !touched {
         return Ok(());
     }
-    std::fs::write(file, lines.join("\n") + "\n")
+    // Every Settings change lands here, and a config cut short by a crash
+    // loads as the defaults: another library, another server.
+    crate::util::replace_file(file, (lines.join("\n") + "\n").as_bytes())
         .with_context(|| format!("writing {}", file.display()))?;
     Ok(())
 }
