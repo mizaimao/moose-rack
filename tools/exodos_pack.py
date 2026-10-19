@@ -18,8 +18,9 @@ fetched into eXoDOS/eXo/eXoDOS/ first. For each one it writes:
 Those three are the DOS side's to write by agreement ("Working with the other
 session" in docs/dos.md). Nothing else is touched.
 
-Games whose [autoexec] mounts a CD image are refused for now: whether Pure
-wants the imgmount line dropped is untested.
+A game that mounts a CD image gets it mounted in both places it runs: in the
+browser by the image's own path, before C: exists; on the desktop by DOSBox
+Pure, which mounts the first CD image it finds in the zip as D: by itself.
 """
 
 from __future__ import annotations
@@ -33,7 +34,9 @@ import xml.etree.ElementTree as ET
 import zipfile
 from pathlib import Path
 
-LIBRARY = Path("/home/frank/moose-library")
+# On the NAS since 2026-10-11: ROMs, ES-DE and eXoDOS all live on the
+# GameFiles share, mounted here on the server.
+LIBRARY = Path("/mnt/gamefiles")
 
 # LaunchBox image type -> ES-DE media folder, in the order they are reported.
 MEDIA = {
@@ -79,13 +82,20 @@ def adapt_autoexec(conf: str) -> str:
     after that, its own `cd` included, lands where it always did. Both were
     checked with DOOM: the desktop through RetroArch, the browser through
     EmulatorJS, the same zip.
+
+    A CD image (`imgmount d .\\eXoDOS\\kknd\\cd\\kknd.cue -t cdrom`) is mounted
+    under the same guard, by its path in the unpacked zip, and before C: is:
+    after it, the guard can no longer tell the two places apart. On the
+    desktop the guard is false and Pure has already mounted the image as D:.
     """
     nl = "\r\n" if "\r\n" in conf else "\n"
     out: list[str] = []
     in_autoexec = False
     target: str | None = None
     switched = False
-    for line in conf.splitlines():
+    lines = conf.splitlines()
+    cd_mounts = [cd_mount(l.strip()) for l in lines if re.match(r"(?i)@?\s*imgmount\s", l.strip())]
+    for line in lines:
         stripped = line.strip()
         if stripped.startswith("[") and stripped.endswith("]"):
             in_autoexec = stripped.lower() == "[autoexec]"
@@ -103,10 +113,13 @@ def adapt_autoexec(conf: str) -> str:
                 else:
                     raise Refused(f"mounts C: outside eXoDOS: {stripped}")
                 # 8.3, which is how Pure itself looks for it in a zip.
+                for m in cd_mounts:
+                    out.append(f"@if not exist C:\\DOSBOX.CON {m}")
                 out.append("@if not exist C:\\DOSBOX.CON mount c /")
                 continue
             if re.match(r"(?i)imgmount\s", cmd):
-                raise Refused(f"mounts a CD image, untested in Pure: {stripped}")
+                # Written above, with the C: mount.
+                continue
             if cmd.lower() == "c:":
                 if target is None:
                     raise Refused("switches to C: without mounting it")
@@ -121,6 +134,31 @@ def adapt_autoexec(conf: str) -> str:
     return nl.join(out) + nl
 
 
+def cd_mount(line: str) -> str:
+    """eXo's `imgmount` line with its image paths made paths in the unpacked zip.
+
+    `.\\eXoDOS\\kknd\\cd\\kknd.cue` is `/kknd/cd/kknd.cue` there, because the zip's
+    root stands in for eXoDOS. Only CD images: a floppy or a hard disk image is
+    refused, as nothing has tried one.
+    """
+    cmd = line.lstrip("@").strip()
+    if not re.search(r"(?i)-t\s+(cdrom|iso)\b", cmd):
+        raise Refused(f"mounts an image that is not a CD, untested: {line}")
+    parts = re.findall(r'"[^"]+"|\S+', cmd)
+    out = []
+    for part in parts:
+        bare = part.strip('"')
+        low = bare.lower().replace("/", "\\")
+        if low.startswith(".\\exodos\\"):
+            path = "/" + bare.replace("\\", "/")[len(".\\eXoDOS\\"):]
+            out.append(f'"{path}"' if " " in path else path)
+        elif low.startswith(".\\"):
+            raise Refused(f"mounts an image outside eXoDOS: {line}")
+        else:
+            out.append(part)
+    return " ".join(out)
+
+
 def short_name(game_zip: Path) -> str:
     """The game's folder inside its zip, which is also its eXo `!dos` name."""
     with zipfile.ZipFile(game_zip) as z:
@@ -130,17 +168,30 @@ def short_name(game_zip: Path) -> str:
     return tops.pop()
 
 
-def record_for(metadata_zip: Path, stem: str) -> dict[str, str]:
-    """The game's LaunchBox record, found by its launcher `<stem>.bat`."""
+def record_for(metadata_zip: Path, stem: str, short: str) -> dict[str, str]:
+    """The game's LaunchBox record, found by its launcher.
+
+    By the game's `!dos` folder first: the launcher is named after the full
+    title, `KKND - Krush, Kill 'N' Destroy (1997).bat`, while the zip drops
+    the punctuation, `KKND - Krush Kill N Destroy (1997).zip`. `<stem>.bat`
+    is the fallback for a record filed some other way.
+    """
+    folder = f"\\!dos\\{short}\\".lower()
     want = f"\\{stem}.bat"
+    fallback = None
     with zipfile.ZipFile(metadata_zip) as z, z.open("xml/all/MS-DOS.xml") as f:
         for _, el in ET.iterparse(f):
             if el.tag != "Game":
                 continue
-            if (el.findtext("ApplicationPath") or "").endswith(want):
+            path = el.findtext("ApplicationPath") or ""
+            if folder in path.lower():
                 return {c.tag: (c.text or "").strip() for c in el}
+            if fallback is None and path.endswith(want):
+                fallback = {c.tag: (c.text or "").strip() for c in el}
             el.clear()
-    raise Refused(f"no LaunchBox record launches {stem}.bat")
+    if fallback is not None:
+        return fallback
+    raise Refused(f"no LaunchBox record launches !dos/{short} or {stem}.bat")
 
 
 def gamelist_entry(file_name: str, rec: dict[str, str]) -> ET.Element:
@@ -224,7 +275,7 @@ def pack(stem: str, library: Path, apply: bool, art_names: list[str]) -> None:
         except KeyError:
             raise Refused(f"no dosbox.conf for !dos/{short}") from None
     adapted = adapt_autoexec(conf)
-    rec = record_for(exo / "Content" / "XODOSMetadata.zip", stem)
+    rec = record_for(exo / "Content" / "XODOSMetadata.zip", stem, short)
     art = media_for(art_names, rec.get("Title", stem))
 
     out_zip = library / "ROMs" / "dos" / f"{stem}.zip"
