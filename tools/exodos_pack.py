@@ -169,7 +169,7 @@ def cd_mount(line: str) -> str:
 
 
 # A track in a CD sheet: `FILE "name" BINARY`, the name quoted or one word.
-FILE_LINE = re.compile(r'(?im)^(\s*FILE\s+)(?:"([^"\r\n]+)"|(\S+))([^\r\n]*)$')
+FILE_LINE = re.compile(r'(?im)^(\s*FILE\s+)(?:"([^"\r\n]+)"|(\S+))([^\r\n]*?)(\r?)$')
 
 
 def spell_cds(adapted: str, game_zip: Path) -> tuple[str, dict[str, bytes]]:
@@ -222,7 +222,7 @@ def fixed_sheet(z: zipfile.ZipFile, cue: str, members: dict[str, str]) -> bytes 
         if got is None:
             raise Refused(f"{cue} names {track}, which is not in the zip")
         changed = True
-        return f'{m.group(1)}"{got[len(folder):]}"{m.group(4)}'
+        return f'{m.group(1)}"{got[len(folder):]}"{m.group(4)}{m.group(5)}'
 
     out = FILE_LINE.sub(spell, text)
     return bom + out.encode("latin-1") if changed else None
