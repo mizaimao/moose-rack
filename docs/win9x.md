@@ -216,9 +216,13 @@ rewritten for the page:
 
 The paths are names in the game's zip, spelled as the zip spells them. Its
 first lines, comments to DOSBox-X, name the zip and the disk, and carry any
-corrected CD sheets: 45 of eXo's name `GAME.BIN` beside `game.bin`, which only
-works where file names ignore case. The page writes the corrected sheet beside
-the original as `<name>.moose.cue`, and the mount names that.
+corrected CD sheets: 46 sheets in 37 of the packed games name `GAME.BIN`
+beside `game.bin`, which only works where file names ignore case. The page
+writes the corrected sheet beside the original as `<name>.moose.cue`, and the
+mount names that. Every run says how many it corrected; a repack on
+2026-10-20 with a pattern that missed CRLF lines dropped to 15 and broke the
+other 22 for an hour, which is why. 94 of eXo's configs start with a
+byte-order mark, which is dropped.
 
 Of eXo's 664 games, 544 pack. Refused, 2026-10-19:
 
@@ -239,13 +243,24 @@ speed, and the network ones differ in network settings.
 (`OWN_PLAYER` in `ejs-systems.js`):
 
 1. The `.w9x` from `/rom`, like any game.
-2. The Windows 98 disk from `/win9x?path=moose/moose98-2.vhd`, kept in Cache
-   Storage after the first time.
-3. The game's zip from `/win9x?path=eXo/eXoWin9x/...`. `/win9x` serves files
-   inside eXoWin9x and nothing else (`resolve_win9x` in src-service/src/web.rs).
-4. js-dos with the `.w9x` as its config and three kinds of file: the disk as
+2. js-dos itself, and a HEAD of the game's zip: the cheap failures before the
+   big downloads.
+3. The Windows 98 disk from `/win9x?path=moose/moose98-2.vhd`, kept in Cache
+   Storage after the first time with its length beside it. A kept copy that
+   cannot be read back, or comes back short, is thrown away and fetched again.
+4. The game's zip from `/win9x?path=eXo/eXoWin9x/<year>/<game>.zip`. `/win9x`
+   serves those two kinds of file and nothing else in eXoWin9x, not the CD or
+   eXo's tools (`resolve_win9x` in src-service/src/web.rs), and finds the
+   folder per request, so a NAS that mounts late still works.
+5. js-dos with the `.w9x` as its config and three kinds of file: the disk as
    `c.vhd`, the zip as a bundle it unpacks itself, the corrected CD sheets.
-   DOSBox-X backend, no js-dos cloud, no network relay.
+   DOSBox-X backend, no js-dos cloud (`setNoCloud`), and `fsChanges.local`
+   off, so nothing saved in this browser comes back into the next game.
+
+Until js-dos runs, Stop takes the stage away and Play works again; after, it
+reloads the page, as the EmulatorJS player does. Both players open with focus
+on the game rather than on Stop, and put themselves back if the browser closes
+them on a second Escape.
 
 js-dos 8.4.1 is vendored like EmulatorJS: `scripts/fetch-jsdos.sh`, pinned in
 `assets/jsdos/MANIFEST.tsv`, served at `/jsdos/8.4.1/` and marked immutable.
@@ -256,8 +271,10 @@ it. A game that unpacks to more than 1.5 GB is warned about: it may not fit in
 a tab. 50 of the 544 unpack to over 1 GB, the largest to 4.8 GB.
 
 The desktop app has no route to eXoWin9x and no core for the system, so Play
-there says the games play in a browser from the library server, and the
-platform shows "no core". On the service it shows as playable.
+there, and on the Android app, says the games play in a browser from the
+library server. The detail pane names js-dos as the emulator instead of
+pointing at Settings for a core. On the service the platform is playable.
+Plays in the page are not recorded in History, the same as EmulatorJS's.
 
 ## Still not built
 
