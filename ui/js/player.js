@@ -167,6 +167,16 @@ function openStage(title, shader, platformSlug, romId, core) {
   // game still running in it, unsaved, and DOS games press Escape all the time.
   // Stop is the way out, because it sends the save first.
   stage.addEventListener("cancel", (ev) => ev.preventDefault());
+  // And put it back if the browser closes it anyway (see `keepOpen` in
+  // win9x-player.js).
+  stage.addEventListener("close", () => {
+    if (!stage.isConnected) return;
+    try {
+      stage.showModal();
+    } catch {
+      stage.setAttribute("open", "");
+    }
+  });
   document.body.appendChild(stage);
   // `showModal` where it exists; an open dialog is still a visible one where it
   // does not, and a game running is better than a correct stacking context.

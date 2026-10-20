@@ -125,7 +125,9 @@ async function baseStillToFetch(url) {
   if (await (await bucket())?.match(url)) return 0;
   try {
     const r = await fetch(url, { method: "HEAD", credentials: "same-origin" });
-    return Number(r.headers.get("content-length")) || 0;
+    // A 404's length is the length of "not found", not of a disk. The fetch
+    // that follows says what went wrong.
+    return r.ok ? Number(r.headers.get("content-length")) || 0 : 0;
   } catch {
     return 0;
   }
@@ -164,6 +166,7 @@ function openStage(title) {
   stage.querySelector(".ejs-close").addEventListener("click", () => location.reload());
   // Escape is a key Windows games use. Stop is the way out.
   stage.addEventListener("cancel", (ev) => ev.preventDefault());
+  keepOpen(stage);
   document.body.appendChild(stage);
   try {
     stage.showModal?.();
@@ -172,6 +175,23 @@ function openStage(title) {
   }
   if (!stage.hasAttribute("open")) stage.setAttribute("open", "");
   return stage;
+}
+
+/// Put the stage back if the browser closes it anyway.
+///
+/// Chrome honours a prevented `cancel` once: a second Escape, or Android's
+/// Back, with no other input in between closes the dialog regardless. The game
+/// went on running behind the library with no Stop button, and the library's
+/// keys stayed off because the stage was still in the page.
+export function keepOpen(stage) {
+  stage.addEventListener("close", () => {
+    if (!stage.isConnected) return;
+    try {
+      stage.showModal();
+    } catch {
+      stage.setAttribute("open", "");
+    }
+  });
 }
 
 function note(stage, text, bad = false) {
@@ -203,10 +223,17 @@ function ask(message, choices) {
 }
 
 /// The question before a big download, or `null` when there is nothing to ask.
-export function heavyQuestion(name, zipBytes, baseBytes, unpacked) {
+export function heavyQuestion(name, zipBytes, baseBytes, unpacked, keeps = true) {
   if (zipBytes + baseBytes < ASK_ABOVE) return null;
   const parts = [`${name} is ${mb(zipBytes)}`];
-  if (baseBytes) parts.push(`plus the ${mb(baseBytes)} Windows 98 disk this browser keeps after the first game`);
+  // Kept only where the browser has Cache Storage, which needs HTTPS.
+  if (baseBytes) {
+    parts.push(
+      keeps
+        ? `plus the ${mb(baseBytes)} Windows 98 disk this browser keeps after the first game`
+        : `plus the ${mb(baseBytes)} Windows 98 disk, every time on a page that is not HTTPS`
+    );
+  }
   let q = `${parts.join(", ")}. Playing it here downloads that into this tab before Windows starts.`;
   // Measured nowhere yet: where a tab gives up depends on the browser and the
   // machine, so this says what is known and lets the person decide.
@@ -235,7 +262,7 @@ export async function playWin9x(rom) {
     const zipUrl = win9xUrl(game.zip);
     const baseUrl = win9xUrl(game.base);
 
-    const q = heavyQuestion(rom.name, game.bytes, await baseStillToFetch(baseUrl), game.unpacked);
+    const q = heavyQuestion(rom.name, game.bytes, await baseStillToFetch(baseUrl), game.unpacked, Boolean(await bucket()));
     if (q && (await ask(q, [["yes", "Play it"], ["", "Cancel"]])) !== "yes") return "Cancelled";
 
     stage = openStage(rom.name);
@@ -268,13 +295,13 @@ export async function playWin9x(rom) {
       pathPrefix: `/jsdos/${JSDOS}/emulators/`,
       autoStart: true,
       mouseCapture: true,
-      // Nothing leaves the LAN: no js-dos cloud for saves, no network relay.
-      noCloud: true,
-      noNetworking: true,
       thinSidebar: true,
+      // Read in js-dos 8.4.1: with `local` false it loads no changes it saved
+      // in this browser, so every start is the disk as the server has it.
       fsChanges: { local: false },
     });
-    // The setters as well, for a build that reads them only after start.
+    // No js-dos cloud for saves. In 8.4.1 this is a setter only, not an
+    // option. Its network relay connects only when asked from its own menu.
     dos?.setNoCloud?.(true);
     return `Playing ${rom.name}`;
   } catch (e) {
