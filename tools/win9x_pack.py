@@ -100,7 +100,9 @@ def quoted(name: str) -> str:
     return f'"{name}"' if " " in name else name
 
 
-FILE_LINE = re.compile(r'(?im)^(\s*FILE\s+)"?([^"\r\n]+?)"?(\s+\S+\s*)$')
+# A track: `FILE "name" BINARY`. The name is quoted or one word, and the type
+# is not always one word: Bad Mojo's sheet says `BINARY BINARY`.
+FILE_LINE = re.compile(r'(?im)^(\s*FILE\s+)(?:"([^"\r\n]+)"|(\S+))([^\r\n]*)$')
 
 
 def fixed_cue(z: zipfile.ZipFile, cue: str, members: dict[str, str]) -> str | None:
@@ -112,22 +114,31 @@ def fixed_cue(z: zipfile.ZipFile, cue: str, members: dict[str, str]) -> str | No
     original, under a new name, and the mount names that.
     """
     folder = cue.rsplit("/", 1)[0] + "/" if "/" in cue else ""
-    text = z.read(cue).decode("latin-1")
+    raw = z.read(cue)
+    # A byte-order mark would hide the first FILE line from the pattern.
+    text = raw.removeprefix(b"\xef\xbb\xbf").decode("latin-1")
     changed = False
 
     def spell(m: re.Match) -> str:
         nonlocal changed
-        track = m.group(2).replace("\\", "/")
+        track = (m.group(2) or m.group(3)).replace("\\", "/")
         if folder + track in z.NameToInfo:
             return m.group(0)
         got = members.get((folder + track).lower())
         if got is None:
             raise Refused(f"{cue} names {track}, which is not in the zip")
         changed = True
-        return f'{m.group(1)}"{got[len(folder):]}"{m.group(3)}'
+        return f'{m.group(1)}"{got[len(folder):]}"{m.group(4)}'
 
     out = FILE_LINE.sub(spell, text)
-    return out if changed else None
+    if not changed:
+        return None
+    # The .w9x is UTF-8 and the page writes the sheet back as UTF-8, so any
+    # other byte would come out as two. None of eXo's 45 has one; refusing is
+    # better than a sheet that silently names a file that is not there.
+    if not out.isascii():
+        raise Refused(f"{cue} needs correcting and is not plain ASCII")
+    return out
 
 
 def adapt(conf: str, year: str, z: zipfile.ZipFile) -> tuple[list[str], dict[str, str]]:
@@ -146,8 +157,11 @@ def adapt(conf: str, year: str, z: zipfile.ZipFile) -> tuple[list[str], dict[str
     section = ""
     parent = None
     booted = False
-    for raw in conf.splitlines():
-        line = raw.split("#", 1)[0].strip() if section != "autoexec" else raw.strip()
+    # Split on line ends only: `splitlines` also breaks at \x85 and \x0c,
+    # which latin-1 can produce. And only whole-line comments go, because
+    # DOSBox-X keeps a `#` later in a line as part of the value.
+    for raw in re.split(r"\r?\n", conf):
+        line = raw.strip()
         if not line or line.startswith("#"):
             continue
         head = re.fullmatch(r"\[(.+)\]", line)
@@ -245,20 +259,60 @@ def gamelist_entry(file_name: str, rec: dict[str, str]) -> ET.Element:
     return game
 
 
-def media_for(names: list[str], title: str) -> dict[str, str]:
-    """ES-DE folder -> the archive member holding that art, first image only."""
+def media_for(by_kind: dict[str, list[str]], title: str, stem: str, game_id: str = "") -> dict[str, str]:
+    """ES-DE folder -> the archive member holding that art, one image each.
+
+    eXoWin9x names a picture two ways: after the game's zip, `Afterlife
+    (1996).png`, 889 of them, or after its LaunchBox title as eXoDOS does,
+    `ZuluWar!-01.jpg`, where the lowest number is not always 01 (`ACME-02.png`
+    is ACME's only cover). Matching the title with -01 alone left 118 of 544
+    games without a cover. The zip's name is the exact one, so it wins.
+
+    `game_id` is the LaunchBox record's `ID`. Two games with one title are told
+    apart by it in the file name (`Mastermind.c682f3a7-...-01.png` is the BBC
+    one), so a picture carrying another game's id is never taken.
+    """
     lb = LB_UNSAFE.sub("_", title)
+    rank = {None: -1, **{r: i for i, r in enumerate(REGIONS)}}
+    loose = {loose_name(title), loose_name(stem)}
     found: dict[str, str] = {}
     for kind, folder in MEDIA.items():
-        base = f"Images/Windows 9x/{kind}/"
-        pattern = re.compile(re.escape(base) + r"(?:([^/]+)/)?" + re.escape(lb) + r"-01\.(png|jpg|jpeg)$")
-        hits = [(m.group(1), n) for n in names if (m := pattern.match(n))]
-        if not hits:
-            continue
-        rank = {None: -1, **{r: i for i, r in enumerate(REGIONS)}}
-        hits.sort(key=lambda h: rank.get(h[0], len(REGIONS)))
-        found[folder] = hits[0][1]
+        base = re.escape(f"Images/Windows 9x/{kind}/") + r"(?:([^/]+)/)?"
+        by_stem = re.compile(base + re.escape(stem) + r"\.(png|jpe?g)$", re.I)
+        by_title = re.compile(base + re.escape(lb) + r"-(\d+)\.(png|jpe?g)$", re.I)
+        hits = []
+        for n in by_kind.get(kind, []):
+            if m := by_stem.match(n):
+                hits.append((0, rank.get(m.group(1), len(REGIONS)), 0, n))
+            elif m := by_title.match(n):
+                hits.append((1, rank.get(m.group(1), len(REGIONS)), int(m.group(2)), n))
+            elif n.lower().endswith((".png", ".jpg", ".jpeg")) and loose_name(n.rsplit("/", 1)[-1]) in loose:
+                tagged = re.search(r"\.([0-9a-f]{8}-[0-9a-f-]{27})-\d+\.\w+$", n, re.I)
+                if tagged and tagged.group(1).lower() != game_id.lower():
+                    continue
+                region = n.split("/")[3] if n.count("/") > 3 else None
+                hits.append((2, rank.get(region, len(REGIONS)), 0, n))
+        if hits:
+            found[folder] = min(hits)[3]
     return found
+
+
+def loose_name(name: str) -> str:
+    """A name with what eXo varies between its pictures taken out, for the
+    last try when neither exact form is there (13 games on 2026-10-19).
+
+    The extension, `-01`, a LaunchBox id (`Lighthouse_ The Dark
+    Being.1d464c53-...-01.png`), a year or a tag in brackets (`Creatures (1996)
+    [us].png`), "the" wherever it sits (`The Incredible Machine 2 (1995).png`
+    for `Incredible Machine 2, The (1995)`), and every character that is not a
+    letter or a digit.
+    """
+    s = re.sub(r"\.(png|jpe?g)$", "", name, flags=re.I)
+    s = re.sub(r"-\d+$", "", s)
+    s = re.sub(r"\.[0-9a-f]{8}-[0-9a-f-]{27}$", "", s, flags=re.I)
+    s = re.sub(r"\(\d{4}\)|\[[^\]]*\]", "", s)
+    s = re.sub(r"\bthe\b", "", s, flags=re.I)
+    return re.sub(r"[^a-z0-9]", "", s.lower())
 
 
 def write_atomically(dest: Path, write) -> None:
@@ -306,7 +360,13 @@ class Library:
         }
         art = self.exo / "Content" / "XOWin9xMetadata.zip"
         with zipfile.ZipFile(art) as z:
-            self.art_names = [n for n in z.namelist() if n.startswith("Images/Windows 9x/")]
+            # By type folder, so each game searches its eight folders and not
+            # all 4,900 pictures eight times.
+            self.art_by_kind: dict[str, list[str]] = collections.defaultdict(list)
+            for n in z.namelist():
+                parts = n.split("/")
+                if len(parts) > 3 and parts[0] == "Images" and parts[1] == "Windows 9x":
+                    self.art_by_kind[parts[2]].append(n)
         self.records = load_records(art)
 
     def game_zip(self, year: str, stem: str) -> Path:
@@ -331,7 +391,7 @@ def pack(stem: str, lib: Library) -> tuple[str, ET.Element, dict[str, str], dict
     zip_rel = game_zip.relative_to(lib.exo).as_posix()
     # Files for the page to write, each as `# file = <path>` and its lines as
     # `# | <line>`. In comments, so DOSBox-X reads past them.
-    files = [l for name, body in extra.items() for l in [f"# file = {name}", *(f"# | {x}" for x in body.splitlines())]]
+    files = [l for name, body in extra.items() for l in [f"# file = {name}", *(f"# | {x}" for x in re.split(r"\r?\n", body.rstrip("\r\n")))]]
     text = "\n".join(
         [
             "# Windows 9x game for the browser, written by tools/win9x_pack.py from",
@@ -347,7 +407,7 @@ def pack(stem: str, lib: Library) -> tuple[str, ET.Element, dict[str, str], dict
     ) + "\n"
     facts = {"zip": game_zip.stat().st_size, "unpacked": unpacked,
              "autoexec": [l for l in lines[lines.index("[autoexec]") + 1:]]}
-    return text, gamelist_entry(f"{stem}.w9x", rec), media_for(lib.art_names, rec.get("Title", stem)), facts
+    return text, gamelist_entry(f"{stem}.w9x", rec), media_for(lib.art_by_kind, rec.get("Title", stem), stem, rec.get("ID", "")), facts
 
 
 def kind(reason: str) -> str:
@@ -389,6 +449,12 @@ def main() -> int:
             reasons[kind(str(e))] += 1
             print(f"{stem}\n  refused: {e}")
             continue
+        except (zipfile.BadZipFile, OSError, KeyError, ValueError, IndexError) as e:
+            # A zip aria2c left full-size and mostly empty, a bad CRC, a field
+            # that is not a number: this game, not all 664.
+            reasons[f"could not be read ({type(e).__name__})"] += 1
+            print(f"{stem}\n  refused: could not be read: {e}")
+            continue
         packed.append((stem, text, entry, art))
         print(f"{stem}\n  {facts['zip'] / 1e6:.0f} MB zip, {facts['unpacked'] / 1e6:.0f} MB unpacked: {' | '.join(facts['autoexec'])}")
         print(f"  gamelist: {entry.findtext('name')}; art: {', '.join(art) or 'none'}")
@@ -402,13 +468,30 @@ def main() -> int:
 
     roms = args.library / "ROMs" / "windows9x"
     es = args.library / "ES-DE"
+    # The gamelist first: an entry whose .w9x is not written yet is ignored by
+    # the scan, while a .w9x with no entry shows up under its file name.
+    write_gamelist(es / "gamelists" / "windows9x" / "gamelist.xml", [e for _, _, e, _ in packed])
     with zipfile.ZipFile(lib.exo / "Content" / "XOWin9xMetadata.zip") as z:
         for stem, text, _, art in packed:
             write_atomically(roms / f"{stem}.w9x", lambda part, t=text: part.write_text(t, encoding="utf-8"))
             for folder, member in art.items():
                 dest = es / "downloaded_media" / "windows9x" / folder / f"{stem}{Path(member).suffix.lower()}"
                 write_atomically(dest, lambda part, m=member: part.write_bytes(z.read(m)))
-    write_gamelist(es / "gamelists" / "windows9x" / "gamelist.xml", [e for _, _, e, _ in packed])
+                # This game's picture in another format from an earlier run
+                # would win over this one: the library tries .png first.
+                for ext in (".png", ".jpg", ".jpeg"):
+                    old = dest.with_suffix(ext)
+                    if old != dest and old.is_file():
+                        old.unlink()
+    # Reported, not removed: a .w9x from an earlier run for a game that no
+    # longer packs. Taking games out of somebody's library is theirs to decide.
+    if args.all:
+        done = {stem for stem, *_ in packed}
+        stale = sorted(p.stem for p in roms.glob("*.w9x") if p.stem not in done)
+        if stale:
+            print(f"\n{len(stale)} .w9x left from an earlier run, for games that did not pack now:")
+            for s in stale:
+                print(f"  {s}")
     return 0
 
 
