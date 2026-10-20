@@ -78,6 +78,14 @@ struct LibraryPaths {
     /// Where EmulatorJS was unpacked. Defaults to `assets/emulatorjs` beside
     /// the `ui` directory, which is where the fetch script puts it.
     emulatorjs: Option<String>,
+    /// Where js-dos was unpacked, for Windows 9x games. Defaults to
+    /// `assets/jsdos` beside the `ui` directory, where `scripts/fetch-jsdos.sh`
+    /// puts it.
+    jsdos: Option<String>,
+    /// eXoWin9x: the games' zips and our Windows 98 disk, which `/win9x` serves
+    /// to the page. Defaults to `eXoWin9x` beside the ROMs folder, which is
+    /// where docs/win9x.md has it.
+    win9x: Option<String>,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -1621,12 +1629,14 @@ async fn isolation_headers(
 ///
 /// EmulatorJS is the exception. It is 296 MB pinned to a version in
 /// `assets/emulatorjs/MANIFEST.tsv`, so the bytes at a given path never change
-/// and re-checking them is pure waste.
+/// and re-checking them is pure waste. js-dos is the same, with its version in
+/// the path.
 async fn cache_headers(
     req: axum::extract::Request,
     next: axum::middleware::Next,
 ) -> axum::response::Response {
-    let immutable = req.uri().path().starts_with("/emulatorjs/");
+    let path = req.uri().path();
+    let immutable = path.starts_with("/emulatorjs/") || path.starts_with("/jsdos/");
     let mut res = next.run(req).await;
     let v = if immutable {
         "public, max-age=31536000, immutable"
@@ -1670,6 +1680,12 @@ fn web_app(st: Arc<web::WebState>) -> Router {
             "/emulatorjs",
             tower_http::services::ServeDir::new(st.emulatorjs.clone()),
         )
+        // js-dos, for Windows 9x games, vendored the same way by
+        // scripts/fetch-jsdos.sh, under a folder named for its version.
+        .nest_service("/jsdos", tower_http::services::ServeDir::new(st.jsdos.clone()))
+        // A Windows 9x game's zip and the Windows 98 disk it boots, by their
+        // path in eXoWin9x. See `win9x_file`.
+        .route("/win9x", get(web::win9x_file))
         .with_state(st)
         // Last, and it has to be last: `layer` wraps the routes already in the
         // router and nothing added after it. Placed mid-chain it covered
@@ -2016,7 +2032,37 @@ async fn main() -> Result<()> {
                 emulatorjs.display()
             ),
         }
-        let web_state = Arc::new(web::WebState { state, ui_dir, emulatorjs });
+        let jsdos = cfg
+            .library
+            .jsdos
+            .clone()
+            .map(std::path::PathBuf::from)
+            .unwrap_or_else(|| {
+                ui_dir
+                    .parent()
+                    .map(|r| r.join("assets/jsdos"))
+                    .unwrap_or_else(|| std::path::PathBuf::from("assets/jsdos"))
+            });
+        if !jsdos.is_dir() {
+            println!(
+                "jsdos      not installed at {} -- run scripts/fetch-jsdos.sh",
+                jsdos.display()
+            );
+        }
+        // Only a folder that is there: without one, `/win9x` answers 404 and
+        // the page says the game's files are not on the server.
+        let win9x = cfg
+            .library
+            .win9x
+            .clone()
+            .map(std::path::PathBuf::from)
+            .or_else(|| layout.roms.parent().map(|p| p.join("eXoWin9x")))
+            .filter(|p| p.is_dir());
+        match &win9x {
+            Some(p) => println!("win9x      {}", p.display()),
+            None => println!("win9x      none (no eXoWin9x beside the ROMs folder)"),
+        }
+        let web_state = Arc::new(web::WebState { state, ui_dir, emulatorjs, jsdos, win9x });
         // A device starring a game changes a list file. The UI in this process
         // reads its own copy of the lists, so it is told to read them again.
         let (ui, dir) = (web_state.clone(), col_dir.clone());
@@ -2827,6 +2873,8 @@ mod tests {
                 .expect("state"),
             ui_dir: ui.clone(),
             emulatorjs: ui.parent().unwrap().join("assets/emulatorjs"),
+            jsdos: ui.parent().unwrap().join("assets/jsdos"),
+            win9x: None,
         }));
         for path in ["/js/main.js", "/style.css", "/__shim.js"] {
             let r = web
@@ -2851,6 +2899,21 @@ mod tests {
             "296 MB pinned to a version is re-checked on every load: {}",
             hdr(&r)
         );
+        // js-dos too, by the version in its path. Whatever the answer: the
+        // header is the router's, not the file's.
+        let r = web
+            .clone()
+            .oneshot(Request::builder().uri("/jsdos/8.4.1/js-dos.js").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert!(hdr(&r).contains("immutable"), "js-dos is re-checked on every load: {}", hdr(&r));
+        // A game's zip is not pinned to anything.
+        let r = web
+            .clone()
+            .oneshot(Request::builder().uri("/win9x?path=x.zip").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(hdr(&r), "no-cache");
     }
 
     /// The page and everything it loads are cross-origin isolated, or the
@@ -2866,8 +2929,10 @@ mod tests {
                 .expect("state"),
             ui_dir: ui.clone(),
             emulatorjs: ui.parent().unwrap().join("assets/emulatorjs"),
+            jsdos: ui.parent().unwrap().join("assets/jsdos"),
+            win9x: None,
         }));
-        for path in ["/", "/js/main.js", "/emulatorjs/data/loader.js"] {
+        for path in ["/", "/js/main.js", "/emulatorjs/data/loader.js", "/jsdos/8.4.1/js-dos.js", "/win9x?path=x"] {
             let r = web
                 .clone()
                 .oneshot(Request::builder().uri(path).body(Body::empty()).unwrap())

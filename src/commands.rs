@@ -718,6 +718,10 @@ pub async fn download_estimate(
     Ok((summary, fits, note))
 }
 
+/// Platforms the web page plays with an emulator of its own rather than a
+/// RetroArch core, so the library service can play them and nothing else can.
+pub const BROWSER_ONLY: &[&str] = &["windows9x"];
+
 pub fn platforms(state: &AppState) -> CmdResult<Vec<PlatformView>> {
     let cache = state.cache.lock().map_err(err)?;
     let rows = cache.platforms().map_err(err)?;
@@ -739,7 +743,11 @@ pub fn platforms(state: &AppState) -> CmdResult<Vec<PlatformView>> {
     let views: Vec<PlatformView> = rows
         .into_iter()
         .map(|p| PlatformView {
-            playable: resolve_core(state, &p.fs_slug).is_some(),
+            // Windows 9x has no core and plays in the page through js-dos,
+            // which only the library service can feed (docs/win9x.md). So it
+            // is playable there and nowhere else.
+            playable: resolve_core(state, &p.fs_slug).is_some()
+                || (!state.can_launch && BROWSER_ONLY.contains(&p.fs_slug.as_str())),
             // A theme, if one is installed, then the console picture from the
             // server. The theme wins because installing one is a deliberate
             // choice and this is the fallback that means nobody has to.

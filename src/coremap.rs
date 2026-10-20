@@ -359,6 +359,7 @@ mod tests {
             ("saturn", "saturn"),
             ("xbox360", "xbox360"),
             ("naomi", "naomi"),
+            ("windows9x", "windows9x"),
         ] {
             // Through `name_for`, which is what the scan calls. Asserting the
             // two halves separately passed with the fallback ripped out.
