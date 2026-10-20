@@ -10,7 +10,7 @@ import { shellMode } from "./shell.js";
 import { deleteState } from "./states.js";
 import { launch, download } from "./actions.js";
 import { askDownload } from "./bulk.js";
-import { browserPlay, playHereWanted, setPlayHere, BROWSER_CHOICE } from "./ejs-systems.js";
+import { browserPlay, playHereWanted, setPlayHere, BROWSER_CHOICE, OWN_PLAYER } from "./ejs-systems.js";
 
 /// A video source the webview will actually play.
 ///
@@ -183,12 +183,18 @@ export async function showPlatformInfo(slug) {
       <dl>
         ${facts}
         <dt>Games</dt><dd>${p.rom_count}</dd>
-        <dt>Emulator</dt><dd class="pf-core">${p.playable ? "…" : "none installed"}</dd>
+        <dt>Emulator</dt><dd class="pf-core">${
+          OWN_PLAYER[p.slug] ? JS_DOS : p.playable ? "…" : "none installed"
+        }</dd>
         <dt>Shader</dt><dd class="pf-shader">…</dd>
       </dl>
       ${
         p.playable
           ? ""
+          : OWN_PLAYER[p.slug]
+          ? // There is no core to install for these: the advice below would
+            // send somebody looking for one that does not exist.
+            `<p class="warn">${escapeHtml(OWN_PLAYER[p.slug])}.</p>`
           : `<p class="warn">No core for this console is installed, so nothing here
                will start. Settings → Emulators installs one.</p>`
       }
@@ -213,7 +219,7 @@ export async function showPlatformInfo(slug) {
   if (!sys) return;
   const label = (list, want) => list?.find((o) => o.core === want || o.key === want)?.label;
   const core = el.detail.querySelector(".pf-core");
-  if (core && p.playable) {
+  if (core && p.playable && !OWN_PLAYER[slug]) {
     core.textContent = label(sys.emulators, sys.core) ?? sys.core ?? "default";
   }
   const shader = el.detail.querySelector(".pf-shader");
@@ -555,6 +561,9 @@ function stateMenu(d, btn, x, y) {
   );
 }
 
+/// What runs a Windows 9x game, wherever it is shown.
+const JS_DOS = "js-dos, in a web browser";
+
 /// A dropdown of the cores this game can run under.
 ///
 /// Per-game rather than per-platform because arcade romsets are mixed: the
@@ -563,7 +572,10 @@ function corePicker(cores, d) {
   // "This window" is offered even when RetroArch has nothing: a system with no
   // installed core is exactly the case the in-page emulator is for, and the
   // sentence "none installed" with no way out of it is not much help.
-  const here = browserPlay(d.platform_slug ?? d.platform, globalThis.crossOriginIsolated);
+  const slug = d.platform_slug ?? d.platform;
+  // Not a core and not a choice: js-dos is the only thing that runs these.
+  if (OWN_PLAYER[slug]) return JS_DOS;
+  const here = browserPlay(slug, globalThis.crossOriginIsolated);
   const canPlayHere = !here.refuse;
   const wanted = canPlayHere && playHereWanted(d.id);
   if (!cores.length && !canPlayHere) {

@@ -8,7 +8,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
-const { parseW9x, win9xUrl, heavyQuestion, JSDOS } = await import("../js/win9x-player.js");
+const { parseW9x, win9xUrl, heavyQuestion, JSDOS, keptDisk, KEPT_BYTES } = await import("../js/win9x-player.js");
 
 const W9X = `# Windows 9x game for the browser, written by tools/win9x_pack.py from
 # eXo's !win9x/1996/AMBER - Journeys Beyond (1996)/Play.conf. The page fetches the files named
@@ -128,6 +128,24 @@ describe("the stage stays up while a game runs", () => {
     assert.ok(stage.hasAttribute("open"));
   });
 
+  /// `showModal` focuses Stop, and the game's next Enter pressed it.
+  test("reopened, focus goes back to the game, not to Stop", async () => {
+    const { JSDOM } = await import("jsdom");
+    const { keepOpen } = await import("../js/win9x-player.js");
+    const doc = new JSDOM(`<dialog open>
+      <div class="ejs-bar"><button class="ejs-close">Stop</button></div>
+      <div class="ejs-frame" tabindex="-1"><canvas tabindex="0"></canvas></div>
+    </dialog>`).window.document;
+    const stage = doc.querySelector("dialog");
+    keepOpen(stage);
+    const canvas = doc.querySelector("canvas");
+    canvas.focus();
+    doc.querySelector(".ejs-close").focus();
+    stage.removeAttribute("open");
+    stage.dispatchEvent(new doc.defaultView.Event("close"));
+    assert.equal(doc.activeElement, canvas);
+  });
+
   test("taken out of the page, it stays closed", async () => {
     const { JSDOM } = await import("jsdom");
     const { keepOpen } = await import("../js/win9x-player.js");
@@ -138,5 +156,49 @@ describe("the stage stays up while a game runs", () => {
     stage.removeAttribute("open");
     stage.dispatchEvent(new doc.defaultView.Event("close"));
     assert.ok(!stage.hasAttribute("open"));
+  });
+});
+
+describe("the Windows disk this browser kept", () => {
+  /// A stand-in for one Cache Storage bucket holding one response.
+  const bucketWith = (res) => {
+    const gone = [];
+    return {
+      gone,
+      match: async () => res,
+      delete: async (url) => gone.push(url),
+    };
+  };
+  const stored = (n, len = n) =>
+    new Response(new Uint8Array(n), { headers: { [KEPT_BYTES]: String(len) } });
+
+  test("a whole copy is used", async () => {
+    const c = bucketWith(stored(16));
+    assert.equal((await keptDisk(c, "/d")).length, 16);
+    assert.deepEqual(c.gone, []);
+  });
+
+  /// Handed to DOSBox-X, a short disk stops every game at a Z:\ prompt.
+  test("a short copy is thrown away, to be fetched again", async () => {
+    const c = bucketWith(stored(10, 16));
+    assert.equal(await keptDisk(c, "/d"), null);
+    assert.deepEqual(c.gone, ["/d"]);
+  });
+
+  test("a copy the browser cannot read back is thrown away", async () => {
+    const broken = { headers: new Headers({ [KEPT_BYTES]: "16" }), arrayBuffer: async () => { throw new Error("blob gone"); } };
+    const c = bucketWith(broken);
+    assert.equal(await keptDisk(c, "/d"), null);
+    assert.deepEqual(c.gone, ["/d"]);
+  });
+
+  test("a copy kept before lengths were stored is fetched again once", async () => {
+    const c = bucketWith(new Response(new Uint8Array(16)));
+    assert.equal(await keptDisk(c, "/d"), null);
+    assert.deepEqual(c.gone, ["/d"]);
+  });
+
+  test("no bucket at all is simply nothing kept", async () => {
+    assert.equal(await keptDisk(null, "/d"), null);
   });
 });

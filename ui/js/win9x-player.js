@@ -68,8 +68,8 @@ function mb(n) {
 ///
 /// Into one buffer of the announced size when there is one: a game zip is
 /// hundreds of megabytes, and collecting chunks first would hold it twice.
-async function fetchBytes(url, onProgress) {
-  const res = await fetch(url, { credentials: "same-origin" });
+async function fetchBytes(url, onProgress, signal) {
+  const res = await fetch(url, { credentials: "same-origin", signal });
   if (!res.ok) {
     throw new Error(`${res.status} for ${url}: ${(await res.text().catch(() => "")).slice(0, 200)}`);
   }
@@ -79,7 +79,16 @@ async function fetchBytes(url, onProgress) {
   const reader = res.body.getReader();
   let got = 0;
   for (;;) {
-    const { done, value } = await reader.read();
+    let step;
+    try {
+      step = await reader.read();
+    } catch (e) {
+      // The browser's own words here are "network error", which says
+      // neither which file nor how far it got.
+      if (signal?.aborted) throw e;
+      throw new Error(`${url} broke off at ${mb(got)} of ${mb(total)} (${e?.message ?? e})`);
+    }
+    const { done, value } = step;
     if (done) break;
     if (got + value.length > total) throw new Error(`${url} is longer than it said`);
     out.set(value, got);
@@ -105,24 +114,62 @@ async function bucket() {
 /// Kept by name, and a new build has a new name (`BASE` in win9x_pack.py), so
 /// a disk in here is never stale. Any other name in the bucket is an older
 /// build no game boots any more, and goes when the new one comes in.
-async function baseDisk(url, onProgress) {
+async function baseDisk(url, onProgress, signal) {
   const cache = await bucket();
-  const hit = await cache?.match(url);
-  if (hit) return new Uint8Array(await hit.arrayBuffer());
-  const bytes = await fetchBytes(url, onProgress);
+  const kept = await keptDisk(cache, url);
+  if (kept) return kept;
+  const bytes = await fetchBytes(url, onProgress, signal);
   try {
     const keep = new URL(url, location.href).href;
     for (const req of await cache.keys()) if (req.url !== keep) await cache.delete(req);
-    await cache.put(url, new Response(bytes, { headers: { "content-type": "application/octet-stream" } }));
+    await cache.put(
+      url,
+      new Response(bytes, {
+        headers: { "content-type": "application/octet-stream", [KEPT_BYTES]: String(bytes.length) },
+      })
+    );
   } catch {
     // Not kept, so fetched again next time. Still plays.
   }
   return bytes;
 }
 
+/// The header a kept disk carries its length in.
+export const KEPT_BYTES = "x-moose-bytes";
+
+/// The disk this browser kept, if it is whole, or `null`.
+///
+/// Checked against the length it was stored with. A copy the browser cannot
+/// read back, or that comes back short, is thrown away and fetched again
+/// rather than handed to DOSBox-X, which would stop at a Z:\ prompt for every
+/// game until somebody cleared the site's data. A copy kept before the length
+/// was stored has none and is fetched again once.
+export async function keptDisk(cache, url) {
+  try {
+    const hit = await cache?.match(url);
+    if (!hit) return null;
+    const want = Number(hit.headers.get(KEPT_BYTES));
+    const bytes = new Uint8Array(await hit.arrayBuffer());
+    if (want > 0 && bytes.length === want) return bytes;
+  } catch {
+    // Unreadable: same as not kept.
+  }
+  try {
+    await cache?.delete(url);
+  } catch {
+    // Nothing to do; the fetch below still works.
+  }
+  return null;
+}
+
 /// The disk's size if it is not in this browser yet, for the question below.
 async function baseStillToFetch(url) {
-  if (await (await bucket())?.match(url)) return 0;
+  try {
+    const hit = await (await bucket())?.match(url);
+    if (hit?.headers.get(KEPT_BYTES)) return 0;
+  } catch {
+    // Asked as if it were not kept.
+  }
   try {
     const r = await fetch(url, { method: "HEAD", credentials: "same-origin" });
     // A 404's length is the length of "not found", not of a disk. The fetch
@@ -151,8 +198,9 @@ function loadJsdos() {
 
 /// The overlay, the same `<dialog>` the EmulatorJS player uses and for the
 /// same reasons (see `openStage` in player.js), with only Stop in its bar:
-/// there are no save states or shaders to offer here.
-function openStage(title) {
+/// there are no save states or shaders to offer here. `onStop` is what Stop
+/// does, which depends on how far the start got.
+function openStage(title, onStop) {
   const stage = document.createElement("dialog");
   stage.id = "ejs-stage";
   stage.innerHTML = `
@@ -160,10 +208,9 @@ function openStage(title) {
       <button class="ejs-close" aria-label="Stop">Stop</button>
       <span class="ejs-title"></span>
     </div>
-    <div class="ejs-frame"><div class="ejs-note"></div></div>`;
+    <div class="ejs-frame" tabindex="-1" autofocus><div class="ejs-note"></div></div>`;
   stage.querySelector(".ejs-title").textContent = title;
-  // A reload, as in player.js: js-dos has no supported teardown either.
-  stage.querySelector(".ejs-close").addEventListener("click", () => location.reload());
+  stage.querySelector(".ejs-close").addEventListener("click", onStop);
   // Escape is a key Windows games use. Stop is the way out.
   stage.addEventListener("cancel", (ev) => ev.preventDefault());
   keepOpen(stage);
@@ -183,7 +230,14 @@ function openStage(title) {
 /// Back, with no other input in between closes the dialog regardless. The game
 /// went on running behind the library with no Stop button, and the library's
 /// keys stayed off because the stage was still in the page.
+///
+/// Focus goes back where it was. `showModal` focuses the first thing it can,
+/// which is Stop, and the game's next Enter would have pressed it.
 export function keepOpen(stage) {
+  let last = null;
+  stage.addEventListener("focusin", (ev) => {
+    if (!ev.target.closest?.(".ejs-bar")) last = ev.target;
+  });
   stage.addEventListener("close", () => {
     if (!stage.isConnected) return;
     try {
@@ -191,6 +245,7 @@ export function keepOpen(stage) {
     } catch {
       stage.setAttribute("open", "");
     }
+    (last?.isConnected ? last : stage.querySelector(".ejs-frame"))?.focus?.();
   });
 }
 
@@ -248,6 +303,7 @@ export async function playWin9x(rom) {
   if (starting || document.getElementById("ejs-stage")) return "Already playing";
   starting = true;
   let stage = null;
+  let running = false;
   try {
     // Here rather than at the top, so the parsing above can be tested without
     // a page: state.js reads the document as it loads.
@@ -265,14 +321,26 @@ export async function playWin9x(rom) {
     const q = heavyQuestion(rom.name, game.bytes, await baseStillToFetch(baseUrl), game.unpacked, Boolean(await bucket()));
     if (q && (await ask(q, [["yes", "Play it"], ["", "Cancel"]])) !== "yes") return "Cancelled";
 
-    stage = openStage(rom.name);
+    // Until js-dos runs there is nothing to tear down: Stop takes the stage
+    // away, ends the downloads, and Play works again. After, it is a reload,
+    // as in player.js, because js-dos has no supported teardown either.
+    const abort = new AbortController();
+    stage = openStage(rom.name, () => {
+      if (running) return location.reload();
+      abort.abort();
+      stage.remove();
+    });
     const progress = (what) => (got, total) => note(stage, `${what}: ${mb(got)} of ${mb(total)}`);
-    note(stage, "Windows 98…");
-    const base = await baseDisk(baseUrl, progress("Windows 98 disk"));
-    note(stage, "The game…");
-    const zip = await fetchBytes(zipUrl, progress(rom.name));
-    note(stage, "Starting js-dos…");
+    // The cheap failures first, before 254 MB and a game's zip have come
+    // down: js-dos missing on the server, the zip missing from the NAS.
+    note(stage, "Loading js-dos…");
     await loadJsdos();
+    const head = await fetch(zipUrl, { method: "HEAD", credentials: "same-origin", signal: abort.signal });
+    if (!head.ok) throw new Error(`${head.status} for the game's zip, ${game.zip}`);
+    note(stage, "Windows 98…");
+    const base = await baseDisk(baseUrl, progress("Windows 98 disk"), abort.signal);
+    note(stage, "The game…");
+    const zip = await fetchBytes(zipUrl, progress(rom.name), abort.signal);
 
     // Made now, not with the stage: js-dos paints its own background at once,
     // and the note behind it is the only progress there is until then.
@@ -280,6 +348,7 @@ export async function playWin9x(rom) {
     el.id = "ejs-player";
     stage.querySelector(".ejs-frame").appendChild(el);
     const text = new TextEncoder();
+    running = true;
     const dos = globalThis.Dos(el, {
       dosboxConf: game.conf,
       // The disk as `c.vhd`, which is what the config mounts as C:. The zip as
@@ -305,7 +374,9 @@ export async function playWin9x(rom) {
     dos?.setNoCloud?.(true);
     return `Playing ${rom.name}`;
   } catch (e) {
+    if (stage && !stage.isConnected) return "Stopped";
     const msg = `Could not start: ${e?.message ?? e}`;
+    // Left up with the reason in it; Stop takes it away.
     if (stage) note(stage, msg, true);
     return msg;
   } finally {
