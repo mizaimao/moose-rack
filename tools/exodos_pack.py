@@ -94,7 +94,13 @@ def adapt_autoexec(conf: str) -> str:
     target: str | None = None
     switched = False
     lines = conf.splitlines()
-    cd_mounts = [cd_mount(l.strip()) for l in lines if re.match(r"(?i)@?\s*imgmount\s", l.strip())]
+    autoexec = re.split(r"(?mi)^\s*\[autoexec\]\s*$", conf, maxsplit=1)[-1].splitlines()
+    cd_mounts = [cd_mount(l.strip()) for l in autoexec if re.match(r"(?i)@?\s*imgmount\s", l.strip())]
+    # Moved ahead of C:, a mount stops being conditional. Under a menu that
+    # mounts one disc or another, both would run and the choice would be lost.
+    if cd_mounts and any(re.match(r"(?i)@?\s*(goto\b|choice\b|if\s+errorlevel\b|:\w)", l.strip()) for l in autoexec):
+        raise Refused("mounts a CD from inside a menu, which nothing has tried")
+    cds_written = False
     for line in lines:
         stripped = line.strip()
         if stripped.startswith("[") and stripped.endswith("]"):
@@ -102,7 +108,7 @@ def adapt_autoexec(conf: str) -> str:
             out.append(line)
             continue
         if in_autoexec:
-            cmd = stripped.lstrip("@")
+            cmd = stripped.lstrip("@").strip()
             mount = re.match(r'(?i)mount\s+c\s+("[^"]+"|\S+)', cmd)
             if mount:
                 path = mount.group(1).strip('"').replace("/", "\\").rstrip("\\")
@@ -112,9 +118,12 @@ def adapt_autoexec(conf: str) -> str:
                     target = path[len(".\\eXoDOS\\"):]
                 else:
                     raise Refused(f"mounts C: outside eXoDOS: {stripped}")
-                # 8.3, which is how Pure itself looks for it in a zip.
-                for m in cd_mounts:
-                    out.append(f"@if not exist C:\\DOSBOX.CON {m}")
+                # 8.3, which is how Pure itself looks for it in a zip. Once,
+                # however many times eXo mounts C:.
+                if not cds_written:
+                    for m in cd_mounts:
+                        out.append(f"@if not exist C:\\DOSBOX.CON {m}")
+                    cds_written = True
                 out.append("@if not exist C:\\DOSBOX.CON mount c /")
                 continue
             if re.match(r"(?i)imgmount\s", cmd):
@@ -157,6 +166,66 @@ def cd_mount(line: str) -> str:
         else:
             out.append(part)
     return " ".join(out)
+
+
+# A track in a CD sheet: `FILE "name" BINARY`, the name quoted or one word.
+FILE_LINE = re.compile(r'(?im)^(\s*FILE\s+)(?:"([^"\r\n]+)"|(\S+))([^\r\n]*)$')
+
+
+def spell_cds(adapted: str, game_zip: Path) -> tuple[str, dict[str, bytes]]:
+    """The CD mounts with their images named as the zip names them, and the
+    sheets whose tracks needed the same, corrected.
+
+    eXo's configs and sheets were written on Windows, where `KKND.CUE` finds
+    `kknd.cue`. EmulatorJS unpacks the zip into a filesystem that does not
+    ignore case, so there a mount or a track can miss: 45 of eXoWin9x's sheets
+    do. The zip written below is ours, so a sheet is corrected inside it.
+    """
+    sheets: dict[str, bytes] = {}
+    with zipfile.ZipFile(game_zip) as z:
+        members = {n.lower(): n for n in z.namelist() if not n.endswith("/")}
+
+        def image(m: re.Match) -> str:
+            want = m.group(0).strip('"').lstrip("/")
+            got = members.get(want.lower())
+            if got is None:
+                raise Refused(f"mounts {want}, which is not in the zip")
+            if got.lower().endswith(".cue"):
+                sheet = fixed_sheet(z, got, members)
+                if sheet is not None:
+                    sheets[got] = sheet
+            return f'"/{got}"' if " " in got else f"/{got}"
+
+        out = []
+        for line in adapted.splitlines(keepends=True):
+            if re.search(r"(?i)\bimgmount\s", line):
+                line = re.sub(r'(?<=\s)("/[^"]+"|/[^\s"]+)', image, line)
+            out.append(line)
+    return "".join(out), sheets
+
+
+def fixed_sheet(z: zipfile.ZipFile, cue: str, members: dict[str, str]) -> bytes | None:
+    """`cue` with its tracks spelled as the zip spells them, or `None` when it
+    needs nothing. Bytes in, bytes out, so nothing else in it changes."""
+    folder = cue.rsplit("/", 1)[0] + "/" if "/" in cue else ""
+    raw = z.read(cue)
+    bom = b"\xef\xbb\xbf" if raw.startswith(b"\xef\xbb\xbf") else b""
+    text = raw[len(bom):].decode("latin-1")
+    changed = False
+
+    def spell(m: re.Match) -> str:
+        nonlocal changed
+        track = (m.group(2) or m.group(3)).replace("\\", "/")
+        if folder + track in z.NameToInfo:
+            return m.group(0)
+        got = members.get((folder + track).lower())
+        if got is None:
+            raise Refused(f"{cue} names {track}, which is not in the zip")
+        changed = True
+        return f'{m.group(1)}"{got[len(folder):]}"{m.group(4)}'
+
+    out = FILE_LINE.sub(spell, text)
+    return bom + out.encode("latin-1") if changed else None
 
 
 def short_name(game_zip: Path) -> str:
@@ -274,7 +343,7 @@ def pack(stem: str, library: Path, apply: bool, art_names: list[str]) -> None:
             conf = z.read(f"eXo/eXoDOS/!dos/{short}/dosbox.conf").decode("utf-8", "replace")
         except KeyError:
             raise Refused(f"no dosbox.conf for !dos/{short}") from None
-    adapted = adapt_autoexec(conf)
+    adapted, sheets = spell_cds(adapt_autoexec(conf), game_zip)
     rec = record_for(exo / "Content" / "XODOSMetadata.zip", stem, short)
     art = media_for(art_names, rec.get("Title", stem))
 
@@ -295,6 +364,9 @@ def pack(stem: str, library: Path, apply: bool, art_names: list[str]) -> None:
             for info in src.infolist():
                 if info.is_dir():
                     z.writestr(info, b"")
+                    continue
+                if info.filename in sheets:
+                    z.writestr(info, sheets[info.filename])
                     continue
                 with src.open(info) as f, z.open(info, "w") as g:
                     shutil.copyfileobj(f, g, 1 << 20)

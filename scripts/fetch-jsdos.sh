@@ -53,13 +53,20 @@ tar xzf "$tmp/js-dos.tgz" -C "$tmp"
 # runs only when somebody opens that window, but this is a LAN library that
 # keeps to the LAN, so the address is pointed at nothing: the fetch fails and
 # the window says so. Checked, not assumed, as in fetch-emulatorjs.sh.
+# Counted as matches, not lines: minified, two copies would be one line.
 beacon='https://d5dn8hh4ivlobv6682ep.apigw.yandexcloud.net/perf/set'
-before=$(grep -c -F "$beacon" "$tmp/package/dist/js-dos.js" || true)
+count() { { grep -o -F "$1" "$tmp/package/dist/js-dos.js" || true; } | wc -l | tr -d ' '; }
+before=$(count "$beacon")
 [ "$before" = "1" ] || { echo "  benchmark upload not where expected ($before matches) -- not patched" >&2; exit 1; }
-sed -i.bak "s|$beacon|perf-set-disabled|" "$tmp/package/dist/js-dos.js"
+sed -i.bak "s|$beacon|perf-set-disabled|g" "$tmp/package/dist/js-dos.js"
 rm -f "$tmp/package/dist/js-dos.js.bak"
+[ "$(count "$beacon")" = "0" ] || { echo "  benchmark upload still there after patching" >&2; exit 1; }
+# The package has no licence file; its package.json names the licence.
+cp "$tmp/package/package.json" "$tmp/package/dist/package.json"
 
-rm -rf "$out.part"
+# Replaced whole. A folder that is there but failed the check above is a
+# broken copy, and `mv` onto an existing folder would put the new one inside it.
+rm -rf "$out" "$out.part"
 mv "$tmp/package/dist" "$out.part"
 mv "$out.part" "$out"
 echo "  js-dos $version ready in $out"
