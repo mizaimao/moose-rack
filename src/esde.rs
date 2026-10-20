@@ -47,6 +47,9 @@ const SYSTEM_ALIASES: &[(&str, &str)] = &[
     ("saturn", "saturn"),
     ("xbox360", "xbox360"),
     ("naomi", "naomi"),
+    // eXoWin9x games, packed by tools/win9x_pack.py. Played in the browser only,
+    // through js-dos rather than a libretro core; see docs/win9x.md.
+    ("windows9x", "windows9x"),
 ];
 
 /// Directories inside the ROMs folder that are not systems.

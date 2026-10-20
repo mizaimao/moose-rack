@@ -290,6 +290,10 @@ pub struct WebState {
     pub ui_dir: std::path::PathBuf,
     /// Where `scripts/fetch-emulatorjs.sh` unpacked the cores.
     pub emulatorjs: std::path::PathBuf,
+    /// Where `scripts/fetch-jsdos.sh` unpacked js-dos, for Windows 9x games.
+    pub jsdos: std::path::PathBuf,
+    /// eXoWin9x, if the server has it: what `win9x_file` serves from.
+    pub win9x: Option<std::path::PathBuf>,
 }
 
 pub async fn invoke(
@@ -405,6 +409,46 @@ pub async fn rom_bytes(
         Ok(r) => r.into_response(),
         Err(e) => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
     }
+}
+
+/// A file in eXoWin9x, by its path there: a game's zip, or our Windows 98 disk.
+///
+/// A Windows 9x game in the library is a `.w9x` file of a few kilobytes, which
+/// `/rom` serves. It names the two big files the game needs, and the page asks
+/// for those here. They are played where eXo keeps them rather than copied in
+/// beside the ROMs, which would be another 248 GB.
+///
+/// Confined to eXoWin9x the way `/media` is confined to the media roots, after
+/// refusing anything that is not a plain relative path: an absolute path or a
+/// `..` is never something the page has a reason to ask for.
+pub async fn win9x_file(
+    State(st): State<Arc<WebState>>,
+    axum::extract::Query(q): axum::extract::Query<std::collections::HashMap<String, String>>,
+    req: axum::http::Request<axum::body::Body>,
+) -> axum::response::Response {
+    let Some(asked) = q.get("path") else {
+        return (axum::http::StatusCode::BAD_REQUEST, "no path").into_response();
+    };
+    let Some(full) = resolve_win9x(st.win9x.as_deref(), asked) else {
+        return (axum::http::StatusCode::NOT_FOUND, "not in eXoWin9x on this server").into_response();
+    };
+    use tower::ServiceExt as _;
+    match tower_http::services::ServeFile::new(full).oneshot(req).await {
+        Ok(r) => r.into_response(),
+        Err(e) => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+    }
+}
+
+/// `asked`, relative to eXoWin9x, as a file inside it, or nothing.
+pub fn resolve_win9x(root: Option<&std::path::Path>, asked: &str) -> Option<std::path::PathBuf> {
+    use std::path::Component;
+    let root = std::fs::canonicalize(root?).ok()?;
+    let rel = std::path::Path::new(asked);
+    if asked.is_empty() || !rel.components().all(|c| matches!(c, Component::Normal(_))) {
+        return None;
+    }
+    let full = std::fs::canonicalize(root.join(rel)).ok()?;
+    (full.is_file() && full.starts_with(&root)).then_some(full)
 }
 
 /// `index.html` with the shim injected ahead of the app's own scripts.
@@ -659,6 +703,38 @@ mod tests {
         // A directory is not media.
         assert!(resolve_media(&roots, root.join("snes").to_str().unwrap()).is_none());
         assert!(resolve_media(&roots, "/nope/nothing.png").is_none());
+        std::fs::remove_dir_all(&tmp).ok();
+    }
+
+    /// `/win9x` takes a path from the page, so the same question: can it be
+    /// made to serve something that is not in eXoWin9x?
+    #[test]
+    fn win9x_files_are_confined_to_exowin9x() {
+        let tmp = std::env::temp_dir().join(format!("moose-win9x-{}", std::process::id()));
+        let root = tmp.join("eXoWin9x");
+        std::fs::create_dir_all(root.join("eXo/eXoWin9x/1996")).unwrap();
+        std::fs::create_dir_all(root.join("moose")).unwrap();
+        std::fs::write(root.join("eXo/eXoWin9x/1996/ZuluWar (1996).zip"), b"x").unwrap();
+        std::fs::write(root.join("moose/moose98-1.vhd"), b"x").unwrap();
+        std::fs::write(tmp.join("secret"), b"x").unwrap();
+        let r = Some(root.as_path());
+
+        assert!(resolve_win9x(r, "eXo/eXoWin9x/1996/ZuluWar (1996).zip").is_some());
+        assert!(resolve_win9x(r, "moose/moose98-1.vhd").is_some());
+        assert!(resolve_win9x(r, "../secret").is_none());
+        assert!(resolve_win9x(r, "moose/../../secret").is_none());
+        assert!(resolve_win9x(r, tmp.join("secret").to_str().unwrap()).is_none());
+        assert!(resolve_win9x(r, "moose").is_none(), "a folder is not a file");
+        assert!(resolve_win9x(r, "").is_none());
+        assert!(resolve_win9x(r, "moose/nothing.vhd").is_none());
+        // Out by a link inside it, which no `..` check sees.
+        #[cfg(unix)]
+        {
+            std::os::unix::fs::symlink(tmp.join("secret"), root.join("moose/link")).unwrap();
+            assert!(resolve_win9x(r, "moose/link").is_none());
+        }
+        // A server without eXoWin9x serves nothing from it.
+        assert!(resolve_win9x(None, "moose/moose98-1.vhd").is_none());
         std::fs::remove_dir_all(&tmp).ok();
     }
 }

@@ -69,6 +69,17 @@ export const UNSUPPORTED = {
   dreamcast: "Dreamcast has no browser core in this build",
 };
 
+/// Platforms the page plays without EmulatorJS, each with what to say where
+/// they cannot be played.
+///
+/// Windows 9x runs in js-dos (`win9x-player.js`), which needs the game's zip
+/// and a Windows 98 disk from the library service's `/win9x`. The desktop
+/// window has neither, and RetroArch has no core for it, so there the answer
+/// is to open the library in a browser. See docs/win9x.md.
+export const OWN_PLAYER = {
+  windows9x: "Windows 9x games play in a web browser, from the library server",
+};
+
 /// Typical bytes per game, measured on the library rather than guessed. Used to
 /// warn before a browser downloads a disc image into memory.
 ///
@@ -94,6 +105,8 @@ export const ASK_ABOVE = 64e6;
 export function browserPlay(platformSlug, isolated = true) {
   const slug = String(platformSlug ?? "").toLowerCase();
   if (UNSUPPORTED[slug]) return { refuse: UNSUPPORTED[slug] };
+  // Not EmulatorJS's, so never offered as "this window" with one of its cores.
+  if (OWN_PLAYER[slug]) return { refuse: OWN_PLAYER[slug] };
   const core = PLAYABLE[slug];
   if (!core) return { refuse: `No browser core for ${slug || "this platform"}` };
   const threads = THREADED.has(core);

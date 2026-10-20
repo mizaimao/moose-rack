@@ -66,3 +66,13 @@ If this app is ever distributed with EmulatorJS inside it, three things follow:
 The third is the one to think about before shipping a binary rather than after.
 Today nothing ships it: the script fetches it onto a machine that already has
 the app, and the archive is gitignored.
+
+## js-dos — GPL-2.0
+
+[js-dos](https://github.com/caiiiycuk/js-dos) 8.4.1, with DOSBox and DOSBox-X
+compiled to WebAssembly. It plays Windows 9x games in the web UI
+(`ui/js/win9x-player.js`). Fetched the same way as EmulatorJS: the npm package,
+pinned by URL and SHA-256 in `assets/jsdos/MANIFEST.tsv`, unpacked by
+`scripts/fetch-jsdos.sh`, gitignored. The script points one address inside it,
+a benchmark's results upload, at nothing, so the copy served here is modified;
+the script is the record of how. The same note about distribution applies.

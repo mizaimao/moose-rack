@@ -1,0 +1,11 @@
+# js-dos, fetched at deploy time and never committed. It plays Windows 9x
+# games in the page: ui/js/win9x-player.js, docs/win9x.md.
+#
+# The npm package, pinned by URL and verified by SHA-256 like EmulatorJS
+# beside it. 14 MB; its dist/ is unpacked under a folder named for the
+# version, which is what lets the service mark it immutable.
+#
+# GPL-2.0, per its package.json. See LICENSES.md.
+#
+# url	sha256	version
+https://registry.npmjs.org/js-dos/-/js-dos-8.4.1.tgz	e8e45ce111c5c536105f067d983bc58a4e8f53a32db6ffadc7098ac07d936c1a	8.4.1

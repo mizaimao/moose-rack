@@ -76,10 +76,17 @@ async function playHere(id) {
   // branch was never reached, or it was reached and failed -- and they need
   // completely different fixes. Without a word here they look identical.
   toast("Starting in the browser…");
-  const [{ playInBrowser }, detail] = await Promise.all([
-    import("./player.js"),
+  const [{ OWN_PLAYER }, detail] = await Promise.all([
+    import("./ejs-systems.js"),
     invoke("rom_detail", { id }),
   ]);
+  // Windows 9x is js-dos's, not EmulatorJS's: its own module, loaded only for
+  // it, the way the emulator's module graph is only loaded for a game.
+  if (OWN_PLAYER[detail.platform_slug ?? detail.platform]) {
+    const { playWin9x } = await import("./win9x-player.js");
+    return playWin9x(detail);
+  }
+  const { playInBrowser } = await import("./player.js");
   return playInBrowser(detail);
 }
 
@@ -290,7 +297,10 @@ export async function launch(
     // be a surprise.
     const missing = noCoreFrom(e);
     if (missing) {
-      const { browserPlay } = await import("./ejs-systems.js");
+      const { browserPlay, OWN_PLAYER } = await import("./ejs-systems.js");
+      // No core is expected here, and "no installed core" would send somebody
+      // to Settings to install one that does not exist.
+      if (OWN_PLAYER[missing]) return toast(OWN_PLAYER[missing], 8000);
       const verdict = browserPlay(missing, globalThis.crossOriginIsolated);
       if (!verdict.refuse) {
         const go = await askNoCore(missing, verdict.core);
