@@ -25,6 +25,9 @@ row=$(grep -v '^#' "$MANIFEST" | grep -v '^$' | head -1)
 url=$(echo "$row" | cut -f1)
 want=$(echo "$row" | cut -f2)
 version=$(echo "$row" | cut -f3)
+# All three or nothing: an empty version would make `out` the folder holding
+# the manifest, and the replace below would delete it.
+[ -n "$url" ] && [ -n "$want" ] && [ -n "$version" ] || { echo "  $MANIFEST: a row needs url, sha256 and version" >&2; exit 1; }
 out="$DIR/$version"
 
 # `js-dos.js` is what the page loads and `wdosbox-x.wasm` is the emulator it

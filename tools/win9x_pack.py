@@ -29,6 +29,7 @@ import re
 import sys
 import xml.etree.ElementTree as ET
 import zipfile
+import zlib
 from pathlib import Path
 
 # On the NAS, beside ROMs and ES-DE (docs/win9x.md).
@@ -93,6 +94,11 @@ def in_zip(path: str, year: str, members: dict[str, str]) -> str:
     got = members.get(want.lower())
     if got is None:
         raise Refused(f"names {want}, which is not in the zip")
+    # zipfile reads a name without the UTF-8 flag as cp437 and the .w9x is
+    # UTF-8, so a non-ASCII name could miss the one js-dos unpacks. None of
+    # eXo's do today.
+    if not got.isascii():
+        raise Refused(f"names {got}, which is not plain ASCII")
     return got
 
 
@@ -101,8 +107,11 @@ def quoted(name: str) -> str:
 
 
 # A track: `FILE "name" BINARY`. The name is quoted or one word, and the type
-# is not always one word: Bad Mojo's sheet says `BINARY BINARY`.
-FILE_LINE = re.compile(r'(?im)^(\s*FILE\s+)(?:"([^"\r\n]+)"|(\S+))([^\r\n]*)$')
+# is not always one word: Bad Mojo's sheet says `BINARY BINARY`. eXo's sheets
+# end their lines in CRLF, and `$` only stands before the \n, so the \r is
+# matched on its own and put back: without it no line matched, and 30 of the
+# 45 corrected sheets went missing from a repack on 2026-10-20.
+FILE_LINE = re.compile(r'(?im)^(\s*FILE\s+)(?:"([^"\r\n]+)"|(\S+))([^\r\n]*?)(\r?)$')
 
 
 def fixed_cue(z: zipfile.ZipFile, cue: str, members: dict[str, str]) -> str | None:
@@ -128,7 +137,7 @@ def fixed_cue(z: zipfile.ZipFile, cue: str, members: dict[str, str]) -> str | No
         if got is None:
             raise Refused(f"{cue} names {track}, which is not in the zip")
         changed = True
-        return f'{m.group(1)}"{got[len(folder):]}"{m.group(4)}'
+        return f'{m.group(1)}"{got[len(folder):]}"{m.group(4)}{m.group(5)}'
 
     out = FILE_LINE.sub(spell, text)
     if not changed:
@@ -259,7 +268,9 @@ def gamelist_entry(file_name: str, rec: dict[str, str]) -> ET.Element:
     return game
 
 
-def media_for(by_kind: dict[str, list[str]], title: str, stem: str, game_id: str = "") -> dict[str, str]:
+def media_for(
+    by_kind: dict[str, list[str]], title: str, stem: str, game_id: str = "", shared: bool = False
+) -> dict[str, str]:
     """ES-DE folder -> the archive member holding that art, one image each.
 
     eXoWin9x names a picture two ways: after the game's zip, `Afterlife
@@ -270,11 +281,15 @@ def media_for(by_kind: dict[str, list[str]], title: str, stem: str, game_id: str
 
     `game_id` is the LaunchBox record's `ID`. Two games with one title are told
     apart by it in the file name (`Mastermind.c682f3a7-...-01.png` is the BBC
-    one), so a picture carrying another game's id is never taken.
+    one), so a picture carrying another game's id is never taken. `shared` says
+    another game has this title too, and then a picture named after the title
+    alone could be either's: only the zip's name or this game's id will do.
+    A picture whose name carries a year other than the game's is never taken.
     """
     lb = LB_UNSAFE.sub("_", title)
     rank = {None: -1, **{r: i for i, r in enumerate(REGIONS)}}
     loose = {loose_name(title), loose_name(stem)}
+    year = m.group(1) if (m := re.search(r"\((\d{4})\)\s*$", stem)) else None
     found: dict[str, str] = {}
     for kind, folder in MEDIA.items():
         base = re.escape(f"Images/Windows 9x/{kind}/") + r"(?:([^/]+)/)?"
@@ -284,11 +299,16 @@ def media_for(by_kind: dict[str, list[str]], title: str, stem: str, game_id: str
         for n in by_kind.get(kind, []):
             if m := by_stem.match(n):
                 hits.append((0, rank.get(m.group(1), len(REGIONS)), 0, n))
-            elif m := by_title.match(n):
+            elif not shared and (m := by_title.match(n)):
                 hits.append((1, rank.get(m.group(1), len(REGIONS)), int(m.group(2)), n))
             elif n.lower().endswith((".png", ".jpg", ".jpeg")) and loose_name(n.rsplit("/", 1)[-1]) in loose:
-                tagged = re.search(r"\.([0-9a-f]{8}-[0-9a-f-]{27})-\d+\.\w+$", n, re.I)
+                leaf = n.rsplit("/", 1)[-1]
+                tagged = re.search(r"\.([0-9a-f]{8}-[0-9a-f-]{27})-\d+\.\w+$", leaf, re.I)
                 if tagged and tagged.group(1).lower() != game_id.lower():
+                    continue
+                if shared and not tagged:
+                    continue
+                if year and (y := re.search(r"\((\d{4})\)", leaf)) and y.group(1) != year:
                     continue
                 region = n.split("/")[3] if n.count("/") > 3 else None
                 hits.append((2, rank.get(region, len(REGIONS)), 0, n))
@@ -368,6 +388,10 @@ class Library:
                 if len(parts) > 3 and parts[0] == "Images" and parts[1] == "Windows 9x":
                     self.art_by_kind[parts[2]].append(n)
         self.records = load_records(art)
+        # Titles more than one game has, which a picture named after the
+        # title alone cannot tell apart (`media_for`).
+        titles = collections.Counter(r.get("Title", "").lower() for r in self.records.values())
+        self.shared_titles = {t for t, n in titles.items() if n > 1}
 
     def game_zip(self, year: str, stem: str) -> Path:
         return self.exo / "eXo" / "eXoWin9x" / year / f"{stem}.zip"
@@ -383,7 +407,9 @@ def pack(stem: str, lib: Library) -> tuple[str, ET.Element, dict[str, str], dict
     game_zip = lib.game_zip(year, stem)
     if not game_zip.is_file():
         raise Refused(f"no zip at {game_zip}")
-    conf = lib.meta.read(member).decode("latin-1")
+    # 94 of eXo's start with a byte-order mark, which came through as a line
+    # of its own ahead of the first section.
+    conf = lib.meta.read(member).removeprefix(b"\xef\xbb\xbf").decode("latin-1")
     with zipfile.ZipFile(game_zip) as z:
         lines, extra = adapt(conf, year, z)
         unpacked = sum(i.file_size for i in z.infolist())
@@ -405,9 +431,15 @@ def pack(stem: str, lib: Library) -> tuple[str, ET.Element, dict[str, str], dict
             *lines,
         ]
     ) + "\n"
-    facts = {"zip": game_zip.stat().st_size, "unpacked": unpacked,
+    facts = {"zip": game_zip.stat().st_size, "unpacked": unpacked, "sheets": len(extra),
              "autoexec": [l for l in lines[lines.index("[autoexec]") + 1:]]}
-    return text, gamelist_entry(f"{stem}.w9x", rec), media_for(lib.art_by_kind, rec.get("Title", stem), stem, rec.get("ID", "")), facts
+    return text, gamelist_entry(f"{stem}.w9x", rec), media_for(
+        lib.art_by_kind,
+        rec.get("Title", stem),
+        stem,
+        rec.get("ID", ""),
+        rec.get("Title", "").lower() in lib.shared_titles,
+    ), facts
 
 
 def kind(reason: str) -> str:
@@ -442,6 +474,7 @@ def main() -> int:
 
     reasons: collections.Counter[str] = collections.Counter()
     packed: list[tuple[str, str, ET.Element, dict[str, str]]] = []
+    sheets = 0
     for stem in dict.fromkeys(games):
         try:
             text, entry, art, facts = pack(stem, lib)
@@ -449,17 +482,19 @@ def main() -> int:
             reasons[kind(str(e))] += 1
             print(f"{stem}\n  refused: {e}")
             continue
-        except (zipfile.BadZipFile, OSError, KeyError, ValueError, IndexError) as e:
+        except (zipfile.BadZipFile, zlib.error, OSError, KeyError, ValueError, IndexError) as e:
             # A zip aria2c left full-size and mostly empty, a bad CRC, a field
             # that is not a number: this game, not all 664.
             reasons[f"could not be read ({type(e).__name__})"] += 1
             print(f"{stem}\n  refused: could not be read: {e}")
             continue
         packed.append((stem, text, entry, art))
+        sheets += facts["sheets"]
         print(f"{stem}\n  {facts['zip'] / 1e6:.0f} MB zip, {facts['unpacked'] / 1e6:.0f} MB unpacked: {' | '.join(facts['autoexec'])}")
         print(f"  gamelist: {entry.findtext('name')}; art: {', '.join(art) or 'none'}")
 
-    print(f"\n{len(packed)} packed, {sum(reasons.values())} refused")
+    # Said every run, so a change in it shows: 45 on 2026-10-19.
+    print(f"\n{len(packed)} packed, {sum(reasons.values())} refused, {sheets} CD sheets corrected")
     for why, n in reasons.most_common():
         print(f"  {n:4}  {why}")
     if not args.apply:
