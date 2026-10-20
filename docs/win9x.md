@@ -126,6 +126,12 @@ images or zip. They are played where they are and never copied.
 | `ES-DE/gamelists/windows9x/gamelist.xml` | names, descriptions, dates | `tools/win9x_pack.py` |
 | `ES-DE/downloaded_media/windows9x/<type>/` | eXo's artwork | `tools/win9x_pack.py` |
 | `eXoWin9x/moose/moose98-2.vhd` | our Windows 98 disk, 254 MB | by hand, below |
+| `eXoWin9x/moose/moose98-1.vhd` | the build before it, kept | by hand |
+| `eXoWin9x/moose/w98.iso` | the Windows 98 SE CD it was installed from | copied, 2026-10-19 |
+
+eXo's own Windows 98 disks are on the NAS too, inside
+`eXoWin9x/eXo/util/utilWin9x.zip` -> `EXTWin9x.zip` ->
+`emulators/dosbox/x98/parent/`.
 
 Those four are the Windows side's to write; nothing else under the library is.
 
