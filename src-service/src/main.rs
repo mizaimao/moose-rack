@@ -1638,7 +1638,11 @@ async fn cache_headers(
     let path = req.uri().path();
     let immutable = path.starts_with("/emulatorjs/") || path.starts_with("/jsdos/");
     let mut res = next.run(req).await;
-    let v = if immutable {
+    // Only an answer worth keeping. A 404 is cacheable too, and one marked
+    // immutable -- js-dos asked for before its fetch script ran -- stayed in
+    // the browser for a year after the files arrived.
+    let keep = res.status().is_success() || res.status() == axum::http::StatusCode::NOT_MODIFIED;
+    let v = if immutable && keep {
         "public, max-age=31536000, immutable"
     } else {
         "no-cache"
@@ -2868,12 +2872,21 @@ mod tests {
                 .unwrap_or("")
                 .to_owned()
         };
+        // The vendored emulators as files that are there, in a folder of the
+        // test's own: on a machine that never ran the fetch scripts, the real
+        // folders answer 404, and what a 404 gets is a separate question.
+        let ejs = d.path().join("emulatorjs");
+        std::fs::create_dir_all(ejs.join("data")).unwrap();
+        std::fs::write(ejs.join("data/loader.js"), b"//").unwrap();
+        let jsdos = d.path().join("jsdos");
+        std::fs::create_dir_all(jsdos.join("8.4.1")).unwrap();
+        std::fs::write(jsdos.join("8.4.1/js-dos.js"), b"//").unwrap();
         let web = web_app(std::sync::Arc::new(web::WebState {
             state: moose_rack::app::AppState::from_config_at(&d.path().join("none.toml"))
                 .expect("state"),
             ui_dir: ui.clone(),
-            emulatorjs: ui.parent().unwrap().join("assets/emulatorjs"),
-            jsdos: ui.parent().unwrap().join("assets/jsdos"),
+            emulatorjs: ejs,
+            jsdos,
             win9x: None,
         }));
         for path in ["/js/main.js", "/style.css", "/__shim.js"] {
@@ -2899,14 +2912,24 @@ mod tests {
             "296 MB pinned to a version is re-checked on every load: {}",
             hdr(&r)
         );
-        // js-dos too, by the version in its path. Whatever the answer: the
-        // header is the router's, not the file's.
+        // js-dos too, by the version in its path.
         let r = web
             .clone()
             .oneshot(Request::builder().uri("/jsdos/8.4.1/js-dos.js").body(Body::empty()).unwrap())
             .await
             .unwrap();
         assert!(hdr(&r).contains("immutable"), "js-dos is re-checked on every load: {}", hdr(&r));
+        // But never a file that is not there. Kept for a year, a 404 outlived
+        // the fetch script that would have fixed it.
+        for path in ["/jsdos/8.4.1/missing.js", "/emulatorjs/data/missing.js"] {
+            let r = web
+                .clone()
+                .oneshot(Request::builder().uri(path).body(Body::empty()).unwrap())
+                .await
+                .unwrap();
+            assert_eq!(r.status(), StatusCode::NOT_FOUND, "{path}");
+            assert_eq!(hdr(&r), "no-cache", "a 404 for {path} would be kept for a year");
+        }
         // A game's zip is not pinned to anything.
         let r = web
             .clone()
