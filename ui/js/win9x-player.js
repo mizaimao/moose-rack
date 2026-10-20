@@ -7,7 +7,7 @@
 // A game is three files. Its `.w9x`, from `/rom` like any other game: eXo's
 // config for it, rewritten by tools/win9x_pack.py, with the names of the other
 // two in its first lines. Its zip, from eXoWin9x where it sits, which js-dos
-// unpacks itself. And the Windows 98 disk it boots, 252 MB, kept in this
+// unpacks itself. And the Windows 98 disk it boots, 254 MB, kept in this
 // browser after the first time, because every game boots the same one.
 //
 // Nothing a game writes is kept. Its saves are on its D: disk, which here is a
