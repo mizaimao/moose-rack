@@ -1533,6 +1533,12 @@ pub fn android_launch_plan(
     }
     .ok_or_else(|| format!("no rom with id {id}"))?;
 
+    // Ahead of everything else: the core map has no entry for these, and
+    // saying so would read as a core this phone is missing.
+    if BROWSER_ONLY.contains(&row.platform_slug.as_str()) {
+        return Err("Windows 9x games play in a web browser, from the library server".into());
+    }
+
     let rom = row_path(state, &row).ok_or("not downloaded yet")?;
 
     // The user's own choice of core, where they made one. The `resolve_core_for`

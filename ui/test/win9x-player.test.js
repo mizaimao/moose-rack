@@ -104,4 +104,39 @@ describe("asking before a big download", () => {
     assert.match(heavyQuestion("Big", 900e6, 0, 4.8e9), /4800 MB/);
     assert.doesNotMatch(heavyQuestion("Big", 900e6, 0, 1e9), /more than a tab/);
   });
+
+  /// Over plain HTTP there is no Cache Storage, so "keeps" would be a promise
+  /// the next game breaks.
+  test("a browser that cannot keep the disk is not told it will", () => {
+    const q = heavyQuestion("ZuluWar!", 4e6, 264e6, 11e6, false);
+    assert.doesNotMatch(q, /keeps/);
+    assert.match(q, /every time/);
+  });
+});
+
+describe("the stage stays up while a game runs", () => {
+  /// Chrome closes a dialog on a second Escape even when `cancel` is
+  /// prevented, and the game then ran on with no way to stop it.
+  test("closed by the browser, it opens again", async () => {
+    const { JSDOM } = await import("jsdom");
+    const { keepOpen } = await import("../js/win9x-player.js");
+    const doc = new JSDOM("<dialog open></dialog>").window.document;
+    const stage = doc.querySelector("dialog");
+    keepOpen(stage);
+    stage.removeAttribute("open");
+    stage.dispatchEvent(new doc.defaultView.Event("close"));
+    assert.ok(stage.hasAttribute("open"));
+  });
+
+  test("taken out of the page, it stays closed", async () => {
+    const { JSDOM } = await import("jsdom");
+    const { keepOpen } = await import("../js/win9x-player.js");
+    const doc = new JSDOM("<dialog open></dialog>").window.document;
+    const stage = doc.querySelector("dialog");
+    keepOpen(stage);
+    stage.remove();
+    stage.removeAttribute("open");
+    stage.dispatchEvent(new doc.defaultView.Event("close"));
+    assert.ok(!stage.hasAttribute("open"));
+  });
 });
