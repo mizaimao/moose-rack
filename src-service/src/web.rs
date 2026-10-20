@@ -440,11 +440,29 @@ pub async fn win9x_file(
 }
 
 /// `asked`, relative to eXoWin9x, as a file inside it, or nothing.
+///
+/// Only the two kinds of file the page fetches: a Windows disk in `moose/`
+/// and a game's zip under `eXo/eXoWin9x/<year>/`. The rest of the folder is
+/// eXo's tools and metadata, the Windows CD, and whatever eXo ships beside
+/// them; a guest has no reason to read those, and an `.html` among them would
+/// run on this page's origin.
 pub fn resolve_win9x(root: Option<&std::path::Path>, asked: &str) -> Option<std::path::PathBuf> {
     use std::path::Component;
     let root = std::fs::canonicalize(root?).ok()?;
     let rel = std::path::Path::new(asked);
     if asked.is_empty() || !rel.components().all(|c| matches!(c, Component::Normal(_))) {
+        return None;
+    }
+    let parts: Vec<&str> = asked.split('/').collect();
+    let lower = asked.to_ascii_lowercase();
+    let allowed = match parts.as_slice() {
+        ["moose", _] => lower.ends_with(".vhd"),
+        ["eXo", "eXoWin9x", year, _] => {
+            year.len() == 4 && year.bytes().all(|b| b.is_ascii_digit()) && lower.ends_with(".zip")
+        }
+        _ => false,
+    };
+    if !allowed {
         return None;
     }
     let full = std::fs::canonicalize(root.join(rel)).ok()?;
@@ -727,11 +745,23 @@ mod tests {
         assert!(resolve_win9x(r, "moose").is_none(), "a folder is not a file");
         assert!(resolve_win9x(r, "").is_none());
         assert!(resolve_win9x(r, "moose/nothing.vhd").is_none());
+        // Only disks and game zips, even inside eXoWin9x.
+        std::fs::write(root.join("moose/w98.iso"), b"x").unwrap();
+        std::fs::create_dir_all(root.join("Content")).unwrap();
+        std::fs::write(root.join("Content/XOWin9xMetadata.zip"), b"x").unwrap();
+        std::fs::write(root.join("eXo/eXoWin9x/1996/readme.html"), b"x").unwrap();
+        for other in [
+            "moose/w98.iso",
+            "Content/XOWin9xMetadata.zip",
+            "eXo/eXoWin9x/1996/readme.html",
+        ] {
+            assert!(resolve_win9x(r, other).is_none(), "{other} is served");
+        }
         // Out by a link inside it, which no `..` check sees.
         #[cfg(unix)]
         {
-            std::os::unix::fs::symlink(tmp.join("secret"), root.join("moose/link")).unwrap();
-            assert!(resolve_win9x(r, "moose/link").is_none());
+            std::os::unix::fs::symlink(tmp.join("secret"), root.join("moose/link.vhd")).unwrap();
+            assert!(resolve_win9x(r, "moose/link.vhd").is_none());
         }
         // A server without eXoWin9x serves nothing from it.
         assert!(resolve_win9x(None, "moose/moose98-1.vhd").is_none());

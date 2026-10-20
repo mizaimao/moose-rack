@@ -2053,18 +2053,18 @@ async fn main() -> Result<()> {
                 jsdos.display()
             );
         }
-        // Only a folder that is there: without one, `/win9x` answers 404 and
-        // the page says the game's files are not on the server.
+        // Kept even when it is not there yet: the NAS can mount after this
+        // starts, and `resolve_win9x` looks for the folder on every request.
         let win9x = cfg
             .library
             .win9x
             .clone()
             .map(std::path::PathBuf::from)
-            .or_else(|| layout.roms.parent().map(|p| p.join("eXoWin9x")))
-            .filter(|p| p.is_dir());
+            .or_else(|| layout.roms.parent().map(|p| p.join("eXoWin9x")));
         match &win9x {
-            Some(p) => println!("win9x      {}", p.display()),
-            None => println!("win9x      none (no eXoWin9x beside the ROMs folder)"),
+            Some(p) if p.is_dir() => println!("win9x      {}", p.display()),
+            Some(p) => println!("win9x      {} (not there yet)", p.display()),
+            None => println!("win9x      none"),
         }
         let web_state = Arc::new(web::WebState { state, ui_dir, emulatorjs, jsdos, win9x });
         // A device starring a game changes a list file. The UI in this process
