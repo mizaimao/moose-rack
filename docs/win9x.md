@@ -125,7 +125,7 @@ images or zip. They are played where they are and never copied.
 | `ROMs/windows9x/<Title (Year)>.w9x` | one per game, a few KB | `tools/win9x_pack.py` |
 | `ES-DE/gamelists/windows9x/gamelist.xml` | names, descriptions, dates | `tools/win9x_pack.py` |
 | `ES-DE/downloaded_media/windows9x/<type>/` | eXo's artwork | `tools/win9x_pack.py` |
-| `eXoWin9x/moose/moose98-1.vhd` | our Windows 98 disk, 252 MB | by hand, below |
+| `eXoWin9x/moose/moose98-2.vhd` | our Windows 98 disk, 254 MB | by hand, below |
 
 Those four are the Windows side's to write; nothing else under the library is.
 
@@ -161,10 +161,19 @@ The scripts are in `tools/win98-image/`; they were run by hand, on macserver
    start-up entry), `NOWELCOME.VBS` (the Welcome screen and its music start
    from a `Run` entry that a `.reg` file cannot delete), then it shuts down.
    The two last ran as separate boots; the folder has them combined.
-6. Remove `IMPORT.BAT` and the files it used, `zerofree.py` to zero the
-   space deleted files left, then `VHDMAKE -convert` in DOSBox-X for a fixed
-   VHD with DOSBox-X's own geometry, and `vhddyn.py` to make it a dynamic
-   VHD that stores only the blocks in use: 252 MB, against eXo's 396.
+6. js-dos's DOSBox-X is an older build than the 2026.01.02 one on macserver,
+   and its plug-and-play BIOS numbers devices one lower. In the browser,
+   Windows found a "new" COM1 and IDE controller on every start and asked to
+   restart; eXo's disk does the same there. `jsdos-capture.mjs` boots the disk
+   in headless Chrome with no game, answers Yes, and saves the disk blocks
+   that changed; `patchvhd.py` puts them onto a copy, and the registry diff
+   (`regdiff.py`) gave `JSDOS.REG`: those two devices and COM2's new name.
+   `JSDOS.BAT` imports it in one more native boot. Redo this step whenever
+   js-dos moves to a new version.
+7. Remove the import files, `zerofree.py` to zero the space deleted files
+   left, then `VHDMAKE -convert` in DOSBox-X for a fixed VHD with DOSBox-X's
+   own geometry, and `vhddyn.py` to make it a dynamic VHD that stores only the
+   blocks in use: 254 MB, against eXo's 396.
 
 `START.VBS` runs at every logon and does what eXo's `Setup.vbs` did: copies
 `D:\Windows` over `C:\Windows`, imports `D:\reg.reg`, and starts the one
@@ -174,10 +183,13 @@ resolution tools at the paths game shortcuts use.
 Checked on macserver: a boot with the Voodoo on reached the desktop with no
 new hardware, and the registry's PCI keys did not change. Zulu War booted the
 eXo way, its fonts and shortcut were copied across, and the log switched to
-640x480. Frank tried it in the browser and it worked.
+640x480. In headless Chrome against the service, `moose98-2.vhd` reached the
+desktop with no dialog, and with Zulu War's zip it went straight to the
+game's title screen.
 
-A new build of the disk gets a new name, `moose98-2.vhd`, and `BASE` in
-`win9x_pack.py` moves with it: the browser keeps the disk by name.
+`moose98-1.vhd` was the build before step 6. A new build gets a new name and
+`BASE` in `win9x_pack.py` moves with it, because the browser keeps the disk by
+name.
 
 ### Packing
 
@@ -221,7 +233,7 @@ speed, and the network ones differ in network settings.
 (`OWN_PLAYER` in `ejs-systems.js`):
 
 1. The `.w9x` from `/rom`, like any game.
-2. The Windows 98 disk from `/win9x?path=moose/moose98-1.vhd`, kept in Cache
+2. The Windows 98 disk from `/win9x?path=moose/moose98-2.vhd`, kept in Cache
    Storage after the first time.
 3. The game's zip from `/win9x?path=eXo/eXoWin9x/...`. `/win9x` serves files
    inside eXoWin9x and nothing else (`resolve_win9x` in src-service/src/web.rs).

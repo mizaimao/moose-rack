@@ -14,7 +14,7 @@ const W9X = `# Windows 9x game for the browser, written by tools/win9x_pack.py f
 # eXo's !win9x/1996/AMBER - Journeys Beyond (1996)/Play.conf. The page fetches the files named
 # below from eXoWin9x/ and boots this config in js-dos.
 # zip = eXo/eXoWin9x/1996/AMBER - Journeys Beyond (1996).zip
-# base = moose/moose98-1.vhd
+# base = moose/moose98-2.vhd
 # bytes = 564000000
 # unpacked = 732000000
 # file = AMBER - Journeys Beyond (1996)/AMBER_JB.moose.cue
@@ -34,7 +34,7 @@ describe("reading a .w9x", () => {
   test("the files to fetch and their sizes", () => {
     const g = parseW9x(W9X);
     assert.equal(g.zip, "eXo/eXoWin9x/1996/AMBER - Journeys Beyond (1996).zip");
-    assert.equal(g.base, "moose/moose98-1.vhd");
+    assert.equal(g.base, "moose/moose98-2.vhd");
     assert.equal(g.bytes, 564e6);
     assert.equal(g.unpacked, 732e6);
   });

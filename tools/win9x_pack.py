@@ -37,7 +37,7 @@ LIBRARY = Path("/mnt/gamefiles")
 # The Windows 98 disk every game boots, inside eXoWin9x/. Ours, not eXo's: a
 # clean install with eXo's add-ons moved across (docs/win9x.md). A new build
 # gets a new name, because the page keeps the disk and asks for it by name.
-BASE = "moose/moose98-1.vhd"
+BASE = "moose/moose98-2.vhd"
 
 # The only parent our disk stands in for. The rest are eXo's Windows 98 with
 # networking, Japanese and Chinese Windows 98, and Windows 95.
