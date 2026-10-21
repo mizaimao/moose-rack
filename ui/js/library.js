@@ -9,7 +9,8 @@ import { arrangeCurrentList, applyArrangement, listRef, listFor, leaveList } fro
 import { enter, region, showZoom, shellMode } from "./shell.js";
 import { showMenu } from "./menu.js";
 import { deleteState } from "./states.js";
-import { human, escapeHtml, toast } from "./util.js";
+import { human, escapeHtml, toast, playingInPage } from "./util.js";
+import { OWN_PLAYER } from "./ejs-systems.js";
 import { setPageFilterLabel, refreshPageFilter } from "./pagefilter.js";
 import { followSections } from "./sections.js";
 import { doubleClickTarget } from "./dblclick-target.js";
@@ -460,6 +461,15 @@ let searchAsked = 0;
 let searchCrumb = null;
 
 /// Search a beat after the typing stops.
+/// A row's size as the list shows it.
+///
+/// A Windows 9x row is its .w9x, a few kilobytes that name a zip somewhere
+/// else, so its own size says nothing true about the game. The detail pane
+/// reads the zip's size from the .w9x (`game_bytes` in src/commands.rs).
+function sizeText(r) {
+  return OWN_PLAYER[r.platform] ? "" : human(r.size_bytes);
+}
+
 export function searchSoon(term) {
   // An emptied box drops whatever was asked before it straight away, rather
   // than letting that answer land in the 200 ms before the box is read again.
@@ -659,6 +669,11 @@ export function delegateGames(container) {
     // `collections` shows lists, and in both `state.selected` may still hold a
     // game from earlier -- which would launch something you cannot even see.
     if (!["roms", "search", "history"].includes(state.view)) return;
+    // Nor inside a game playing in the page. Windows games are double-clicked
+    // all the time, js-dos lets the event through, and it reached here with
+    // the game selected behind the stage: Play again, and a view transition
+    // that froze the running game for a quarter of a second each time.
+    if (playingInPage()) return;
     if (ev.target.closest?.("button, input, select, textarea, a, #detail")) return;
     const id = doubleClickTarget(idOf(ev), state.selected);
     if (id === null) return;
@@ -1024,7 +1039,7 @@ function rowMarkup(r, showPlatform, at) {
         <span class="have">${here(r)}</span>
         <span class="nm">${r.favorite ? `<span class="star" title="Starred — in one of your starred collections">★</span>` : ""}${escapeHtml(r.name)}</span>
         ${showPlatform ? `<span class="pf">${r.platform}</span>` : ""}
-        <span class="sz">${human(r.size_bytes)}</span>
+        <span class="sz">${sizeText(r)}</span>
       </div>`;
 }
 
@@ -1075,7 +1090,7 @@ function cardMarkup(r, uniform, at) {
             : ""
         }</div>
         <div class="gname">${escapeHtml(r.name)}</div>
-        <div class="gmeta">${here(r)}${human(r.size_bytes)}</div>
+        <div class="gmeta">${here(r)}${sizeText(r)}</div>
       </div>`;
 }
 

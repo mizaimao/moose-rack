@@ -155,3 +155,5 @@ assets/fonts/*
 # Fetched by scripts/fetch-emulatorjs.sh, 283 MB of vendored WebAssembly.
 assets/emulatorjs/data/
 assets/emulatorjs/LICENSE
+# Fetched by scripts/fetch-jsdos.sh, one folder per version.
+assets/jsdos/*/

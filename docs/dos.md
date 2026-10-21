@@ -24,8 +24,11 @@ built](#not-built) what is still open.
 
 ## eXoDOS Lite on the server
 
-`dev.lan:/home/frank/moose-library/eXoDOS`: version 6.04 Lite, 11 files,
-6.6 GB, checksums verified against the copy it came from. Kept there.
+`GameFiles/eXoDOS` on the NAS, `/mnt/gamefiles/eXoDOS` on the server, since
+2026-10-11, when ROMs and ES-DE moved there too; it was
+`dev.lan:/home/frank/moose-library/eXoDOS` before. Version 6.04 Lite, 11
+files, 6.6 GB, checksums verified against the copy it came from.
+`tools/exodos_pack.py` looks there by default (`--library`).
 
 Lite holds the metadata for 7,666 games and one game. The rest are fetched one
 at a time from the full collection's torrent (697.6 GB, 14,011 files):
@@ -66,7 +69,7 @@ The loaded zip already is C:, so eXo's own mount has to go:
 | --- | --- |
 | `mount c .\eXoDOS\DOOM` (with or without `@`) | removed |
 | `c:` | `c:` then `cd \DOOM` |
-| `imgmount d .\eXoDOS\dune2\cd\dune2-tbod.cue -t cdrom` | **untested.** Pure mounts the first CD image it finds on C: by itself, which suggests dropping the line |
+| `imgmount d .\eXoDOS\dune2\cd\dune2-tbod.cue -t cdrom` | moved ahead of the C: mount, under the same guard, by its path in the zip (since 2026-10-19; see `adapt_autoexec`) |
 
 eXoDOS's `run.bat` often asks questions before the game starts. DOOM's asks
 Y/N, then offers a sound card menu. That needs a keyboard, or Pure's on-screen
@@ -127,9 +130,15 @@ Pentium II are not, which is why those went to DOSBox-X.
   `dos` for next time.
 - `tools/exodos_pack.py`, run on the server. It packs a game that is already
   downloaded: the eXo zip with `DOSBOX.CONF` written first, its gamelist entry
-  from `MS-DOS.xml`, and eight kinds of artwork. 6,187 of the 7,666 configs
-  adapt. 1,438 mount a CD image and 41 never switch to C:, and those are
-  refused until someone tries one.
+  from `MS-DOS.xml`, and eight kinds of artwork. Counted on 2026-10-21, 7,379
+  of the 7,666 configs adapt, 1,200 of them mounting a CD: the mount moves
+  ahead of C:, with the image and its sheet's tracks spelled as the zip
+  spells them, because the browser's filesystem does not ignore case. Before
+  2026-10-19 every CD game was refused. Refused now: 147 that mount a floppy
+  or hard-disk image, 139 that never switch to C:, and one that mounts an
+  image from outside eXoDOS. A CD mount under a menu (`goto`, `choice`, a
+  label) would be refused as well; no config has one. KKND is the one CD game
+  packed so far.
 - The desktop launch (`src/tweaks.rs`, `src/keyboard.rs`): `dosbox_pure_conf
   = inside`, MIDI on `SoundCanvas.sf2`, all thirty default keyboard hotkeys
   unbound, the menu on F12 and the mouse grabbed. No shader by default: VGA
@@ -188,9 +197,10 @@ In the order they would be needed:
 2. Fetching by torrent index in `tools/exodos_pack.py`. It packs only what has
    already been downloaded: 28 games on 2026-10-12, 26 of them fetched by hand
    with aria2c from a list of 30.
-3. Games that mount CD images: 1,438 of them, Dune II among them. Pure mounts
-   the first CD image it finds on C: by itself, which suggests dropping the
-   line, untested.
+3. Games that mount CD images pack since 2026-10-19 (KKND). On the desktop
+   Pure mounts the first CD image it finds as D: by itself, so a game eXo
+   mounts on another letter, or one with several discs, may behave
+   differently there than in the browser. Not tried.
 4. Save sync for `.pure.zip`. In the browser Pure keeps no save at all: a
    `.conf` loaded alone runs without Pure's save file.
 5. A game that is in the catalogue but not downloaded: a third state beside

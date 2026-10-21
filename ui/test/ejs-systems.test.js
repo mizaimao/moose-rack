@@ -11,7 +11,7 @@ import { browserPlay, shouldWarn, PLAYABLE, UNSUPPORTED, THREADED } from "../js/
 const SERVED = [
   "arcade", "dc", "dos", "famicom", "gamegear", "gb", "gba", "gbc", "megadrive", "n64",
   "nds", "neo-geo-pocket", "neogeoaes", "nes", "ngc", "pcengine", "psx",
-  "saturn", "sfc", "snes", "wonderswan", "wonderswancolor",
+  "saturn", "sfc", "snes", "wonderswan", "wonderswancolor", "windows9x",
 ];
 
 describe("what the browser can play", () => {

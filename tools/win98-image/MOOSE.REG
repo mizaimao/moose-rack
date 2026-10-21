@@ -1,0 +1,5 @@
+REGEDIT4
+
+[HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\Run]
+"MooseStart"="C:\\WINDOWS\\WSCRIPT.EXE C:\\MOOSE\\START.VBS"
+
