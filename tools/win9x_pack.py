@@ -113,6 +113,9 @@ def quoted(name: str) -> str:
 # `system.ini` from D:\Windows (`adapt`).
 INI_COPY = re.compile(r'(?i)xcopy\s+"?d:\\windows\\(\*|system)\.ini"?\s')
 
+# A pre-boot copy of something Windows loads at boot: a VxD, a 16-bit driver.
+DRIVER_COPY = re.compile(r"(?i)\.(vxd|386|drv)\b")
+
 # A track: `FILE "name" BINARY`. The name is quoted or one word, and the type
 # is not always one word: Bad Mojo's sheet says `BINARY BINARY`. eXo's sheets
 # end their lines in CRLF, and `$` only stands before the \n, so the \r is
@@ -173,6 +176,13 @@ def adapt(conf: str, year: str, z: zipfile.ZipFile) -> tuple[list[str], dict[str
     section = ""
     parent = None
     booted = False
+    # A driver copied in before Windows starts is one SYSTEM.INI loads at
+    # boot (FlagTower's CDAINT2F.VxD), so that game's SYSTEM.INI has to be in
+    # place at boot as eXo has it, and keeping ours (below) would lose it.
+    boot_driver = any(
+        re.match(r"(?i)\s*xcopy\s", l) and not INI_COPY.match(l.strip()) and DRIVER_COPY.search(l)
+        for l in re.split(r"\r?\n", conf)
+    )
     # Split on line ends only: `splitlines` also breaks at \x85 and \x0c,
     # which latin-1 can produce. And only whole-line comments go, because
     # DOSBox-X keeps a `#` later in a line as part of the value.
@@ -215,14 +225,16 @@ def adapt(conf: str, year: str, z: zipfile.ZipFile) -> tuple[list[str], dict[str
             booted = True
             out.append(line)
             continue
-        if cmd == "xcopy" and INI_COPY.match(line):
+        if cmd == "xcopy" and INI_COPY.match(line) and not boot_driver:
             # eXo copies the game's INI files over C:'s before Windows starts.
             # They are eXo's own with the game's lines added, and SYSTEM.INI's
             # [Password Lists] names eXo's user: with it, Windows asked for a
             # logon. So ours is put back straight after. START.VBS copies the
             # game's SYSTEM.INI again after logon, keeping our password list,
             # and what games add there (media drivers, codecs) is read at run
-            # time, before the game starts.
+            # time, before the game starts. Not for a game that also copies a
+            # driver in (`boot_driver`): it keeps eXo's SYSTEM.INI at boot and
+            # asks for a logon once, which Enter answers.
             out += [
                 "xcopy c:\\windows\\system.ini c:\\moose\\ /Y",
                 line,
