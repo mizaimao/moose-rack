@@ -1,3 +1,7 @@
+// The js-dos it boots is the one the player uses (`JSDOS` in win9x-player.js),
+// so after an upgrade this tests the new emulator, not the old folder that is
+// still served beside it.
+//
 // Boot our Windows 98 disk in js-dos with no game, say Yes to the restart
 // Windows asks for, and save the disk blocks that changed, so the registry it
 // wrote can be read outside the browser.
@@ -36,10 +40,10 @@ console.log("start:", await js(`(async () => {
   const conf = g.conf.replace(/\\[autoexec\\][\\s\\S]*$/i, "[autoexec]\\nimgmount c c.vhd\\nBOOT -l c\\n");
   const base = new Uint8Array(await (await fetch(m.win9xUrl(g.base))).arrayBuffer());
   window.__base = base.slice();
-  await new Promise((res, rej) => { const s = document.createElement("script"); s.src = "/jsdos/8.4.1/js-dos.js"; s.onload = res; s.onerror = rej; document.body.appendChild(s); });
+  await new Promise((res, rej) => { const s = document.createElement("script"); s.src = "/jsdos/" + m.JSDOS + "/js-dos.js"; s.onload = res; s.onerror = rej; document.body.appendChild(s); });
   const el = document.createElement("div"); el.style.cssText = "position:fixed;inset:0;"; document.body.appendChild(el);
   Dos(el, { dosboxConf: conf, initFs: [{ path: "c.vhd", contents: base }], backend: "dosboxX", backendLocked: true,
-    pathPrefix: "/jsdos/8.4.1/emulators/", autoStart: true, noCloud: true, noNetworking: true, thinSidebar: true,
+    pathPrefix: "/jsdos/" + m.JSDOS + "/emulators/", autoStart: true, thinSidebar: true,
     fsChanges: { local: false }, onEvent: (e, ci) => { if (e === "ci-ready") window.__ci = ci; } });
   return "base " + base.length + " bytes";
 })()`));
