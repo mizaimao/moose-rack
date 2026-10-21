@@ -722,6 +722,24 @@ pub async fn download_estimate(
 /// RetroArch core, so the library service can play them and nothing else can.
 pub const BROWSER_ONLY: &[&str] = &["windows9x"];
 
+/// What a device that is not the service's page says about them. The same
+/// words as `OWN_PLAYER` in ui/js/ejs-systems.js.
+pub const PLAYS_IN_A_BROWSER: &str = "Windows 9x games play in a web browser, from the library server";
+
+/// The size of the game a `.w9x` names, from its `# bytes = ` line.
+///
+/// tools/win9x_pack.py writes it near the top: the zip the page downloads.
+/// `None` for a file that is not there or does not say.
+pub fn game_bytes(w9x: &std::path::Path) -> Option<i64> {
+    use std::io::BufRead;
+    let f = std::fs::File::open(w9x).ok()?;
+    std::io::BufReader::new(f)
+        .lines()
+        .take(64)
+        .map_while(Result::ok)
+        .find_map(|l| l.strip_prefix("# bytes = ").and_then(|n| n.trim().parse().ok()))
+}
+
 pub fn platforms(state: &AppState) -> CmdResult<Vec<PlatformView>> {
     let cache = state.cache.lock().map_err(err)?;
     let rows = cache.platforms().map_err(err)?;
@@ -1165,6 +1183,14 @@ pub async fn rom_detail(state: &AppState, id: i64) -> CmdResult<RomDetail> {
         .flatten()
         .filter(|s| !s.is_empty() && s != "none");
 
+    // The game's own size, not its .w9x's: a few kilobytes that name a zip of
+    // hundreds of megabytes (`game_bytes`).
+    let size_bytes = BROWSER_ONLY
+        .contains(&row.platform_slug.as_str())
+        .then(|| row_path(state, &row).and_then(|p| game_bytes(&p)))
+        .flatten()
+        .unwrap_or(row.fs_size_bytes);
+
     Ok(RomDetail {
         shader,
         cover: as_url(cover),
@@ -1183,8 +1209,8 @@ pub async fn rom_detail(state: &AppState, id: i64) -> CmdResult<RomDetail> {
         id: row.id,
         name: row.name,
         fs_name: row.fs_name,
+        size_bytes,
         platform: row.platform_slug,
-        size_bytes: row.fs_size_bytes,
         core,
         core_label,
         summary: row.summary.clone().filter(|s| !s.is_empty()),
@@ -1536,7 +1562,7 @@ pub fn android_launch_plan(
     // Ahead of everything else: the core map has no entry for these, and
     // saying so would read as a core this phone is missing.
     if BROWSER_ONLY.contains(&row.platform_slug.as_str()) {
-        return Err("Windows 9x games play in a web browser, from the library server".into());
+        return Err(PLAYS_IN_A_BROWSER.into());
     }
 
     let rom = row_path(state, &row).ok_or("not downloaded yet")?;
@@ -1635,6 +1661,12 @@ pub async fn android_sync_before(state: &AppState, id: i64) -> CmdResult<String>
         cache.rom_by_id(id).map_err(err)?
     }
     .ok_or_else(|| format!("no rom with id {id}"))?;
+    // Before the sync, which runs ahead of `android_launch_plan`: offline it
+    // asked whether to play without syncing saves, for a game the plan then
+    // refused, and online it made a pointless round trip first.
+    if BROWSER_ONLY.contains(&row.platform_slug.as_str()) {
+        return Err(PLAYS_IN_A_BROWSER.into());
+    }
     if state.retroarch.is_none() {
         return Ok(String::new());
     }
@@ -3544,5 +3576,34 @@ mod listing_tests {
         let mut here = super::Listings::default();
         let shouty = dir.join("ACTRAISER (USA).SFC");
         assert_eq!(here.has(&shouty), shouty.is_file());
+    }
+}
+
+#[cfg(test)]
+mod game_bytes_tests {
+    /// A Windows 9x game showed the size of its .w9x, a few kilobytes, for a
+    /// zip of hundreds of megabytes.
+    #[test]
+    fn the_size_is_the_zip_the_w9x_names() {
+        let d = std::env::temp_dir().join(format!("moose-w9x-size-{}", std::process::id()));
+        std::fs::create_dir_all(&d).unwrap();
+        let f = d.join("AMBER (1996).w9x");
+        std::fs::write(
+            &f,
+            "# Windows 9x game for the browser\n\
+             # zip = eXo/eXoWin9x/1996/AMBER (1996).zip\n\
+             # base = moose/moose98-2.vhd\n\
+             # bytes = 564000000\n\
+             # unpacked = 732000000\n\
+             [dosbox]\nmemsize=64\n",
+        )
+        .unwrap();
+        assert_eq!(super::game_bytes(&f), Some(564_000_000));
+        // A .w9x that does not say, and one that is not there: no size rather
+        // than a wrong one.
+        std::fs::write(&f, "[dosbox]\nmemsize=64\n").unwrap();
+        assert_eq!(super::game_bytes(&f), None);
+        assert_eq!(super::game_bytes(&d.join("missing.w9x")), None);
+        std::fs::remove_dir_all(&d).ok();
     }
 }

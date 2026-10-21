@@ -2047,7 +2047,12 @@ async fn main() -> Result<()> {
                     .map(|r| r.join("assets/jsdos"))
                     .unwrap_or_else(|| std::path::PathBuf::from("assets/jsdos"))
             });
-        if !jsdos.is_dir() {
+        // A version unpacked, not the folder: the folder is always there,
+        // because it holds the committed MANIFEST.tsv.
+        let unpacked = std::fs::read_dir(&jsdos)
+            .map(|rd| rd.flatten().any(|e| e.path().join("js-dos.js").is_file()))
+            .unwrap_or(false);
+        if !unpacked {
             println!(
                 "jsdos      not installed at {} -- run scripts/fetch-jsdos.sh",
                 jsdos.display()
@@ -2881,13 +2886,18 @@ mod tests {
         let jsdos = d.path().join("jsdos");
         std::fs::create_dir_all(jsdos.join("8.4.1")).unwrap();
         std::fs::write(jsdos.join("8.4.1/js-dos.js"), b"//").unwrap();
+        // And a game's zip that is there, so the answer below is a 200: a 404
+        // gets no-cache whatever the path, and proved nothing.
+        let win9x = d.path().join("eXoWin9x");
+        std::fs::create_dir_all(win9x.join("eXo/eXoWin9x/1996")).unwrap();
+        std::fs::write(win9x.join("eXo/eXoWin9x/1996/x.zip"), b"PK").unwrap();
         let web = web_app(std::sync::Arc::new(web::WebState {
             state: moose_rack::app::AppState::from_config_at(&d.path().join("none.toml"))
                 .expect("state"),
             ui_dir: ui.clone(),
             emulatorjs: ejs,
             jsdos,
-            win9x: None,
+            win9x: Some(win9x),
         }));
         for path in ["/js/main.js", "/style.css", "/__shim.js"] {
             let r = web
@@ -2930,12 +2940,19 @@ mod tests {
             assert_eq!(r.status(), StatusCode::NOT_FOUND, "{path}");
             assert_eq!(hdr(&r), "no-cache", "a 404 for {path} would be kept for a year");
         }
-        // A game's zip is not pinned to anything.
+        // A game's zip is not pinned to anything: one repaired on the NAS has
+        // to reach the page.
         let r = web
             .clone()
-            .oneshot(Request::builder().uri("/win9x?path=x.zip").body(Body::empty()).unwrap())
+            .oneshot(
+                Request::builder()
+                    .uri("/win9x?path=eXo/eXoWin9x/1996/x.zip")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
             .await
             .unwrap();
+        assert_eq!(r.status(), StatusCode::OK);
         assert_eq!(hdr(&r), "no-cache");
     }
 
