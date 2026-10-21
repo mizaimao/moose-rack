@@ -24,8 +24,11 @@ built](#not-built) what is still open.
 
 ## eXoDOS Lite on the server
 
-`dev.lan:/home/frank/moose-library/eXoDOS`: version 6.04 Lite, 11 files,
-6.6 GB, checksums verified against the copy it came from. Kept there.
+`GameFiles/eXoDOS` on the NAS, `/mnt/gamefiles/eXoDOS` on the server, since
+2026-10-11, when ROMs and ES-DE moved there too; it was
+`dev.lan:/home/frank/moose-library/eXoDOS` before. Version 6.04 Lite, 11
+files, 6.6 GB, checksums verified against the copy it came from.
+`tools/exodos_pack.py` looks there by default (`--library`).
 
 Lite holds the metadata for 7,666 games and one game. The rest are fetched one
 at a time from the full collection's torrent (697.6 GB, 14,011 files):
@@ -127,12 +130,15 @@ Pentium II are not, which is why those went to DOSBox-X.
   `dos` for next time.
 - `tools/exodos_pack.py`, run on the server. It packs a game that is already
   downloaded: the eXo zip with `DOSBOX.CONF` written first, its gamelist entry
-  from `MS-DOS.xml`, and eight kinds of artwork. 6,187 of the 7,666 configs
-  adapt. 41 never switch to C: and are refused. The 1,438 that mount a CD
-  image were refused too until 2026-10-19; now the mount moves ahead of C:,
-  with the image and its sheet's tracks spelled as the zip spells them,
-  because the browser's filesystem does not ignore case. KKND is the one
-  packed so far. A CD mounted from inside a menu is still refused.
+  from `MS-DOS.xml`, and eight kinds of artwork. Counted on 2026-10-21, 7,379
+  of the 7,666 configs adapt, 1,200 of them mounting a CD: the mount moves
+  ahead of C:, with the image and its sheet's tracks spelled as the zip
+  spells them, because the browser's filesystem does not ignore case. Before
+  2026-10-19 every CD game was refused. Refused now: 147 that mount a floppy
+  or hard-disk image, 139 that never switch to C:, and one that mounts an
+  image from outside eXoDOS. A CD mount under a menu (`goto`, `choice`, a
+  label) would be refused as well; no config has one. KKND is the one CD game
+  packed so far.
 - The desktop launch (`src/tweaks.rs`, `src/keyboard.rs`): `dosbox_pure_conf
   = inside`, MIDI on `SoundCanvas.sf2`, all thirty default keyboard hotkeys
   unbound, the menu on F12 and the mouse grabbed. No shader by default: VGA

@@ -125,8 +125,8 @@ images or zip. They are played where they are and never copied.
 | `ROMs/windows9x/<Title (Year)>.w9x` | one per game, a few KB | `tools/win9x_pack.py` |
 | `ES-DE/gamelists/windows9x/gamelist.xml` | names, descriptions, dates | `tools/win9x_pack.py` |
 | `ES-DE/downloaded_media/windows9x/<type>/` | eXo's artwork | `tools/win9x_pack.py` |
-| `eXoWin9x/moose/moose98-2.vhd` | our Windows 98 disk, 254 MB | by hand, below |
-| `eXoWin9x/moose/moose98-1.vhd` | the build before it, kept | by hand |
+| `eXoWin9x/moose/moose98-3.vhd` | our Windows 98 disk, 254 MB | by hand, below |
+| `eXoWin9x/moose/moose98-1.vhd`, `-2.vhd` | the builds before it, kept | by hand |
 | `eXoWin9x/moose/w98.iso` | the Windows 98 SE CD it was installed from | copied, 2026-10-19 |
 
 eXo's own Windows 98 disks are on the NAS too, inside
@@ -153,8 +153,9 @@ The scripts are in `tools/win98-image/`; they were run by hand, on macserver
    content, not by name. By name alone it missed DirectX 7, which replaces
    files Windows 98 ships.
 3. `w9xreg.py` reads Windows 9x registry files (`SYSTEM.DAT`, `USER.DAT`)
-   offline; `transplant.py` and `regdiff.py` write `TRANS.REG` from eXo's
-   registry, limited to what the moved files need: DirectX 7, the 3dfx Voodoo
+   offline. `regdiff.py` summarises how eXo's registry differs from ours, by
+   key; `transplant.py` writes `TRANS.REG` from eXo's registry, limited to
+   what the moved files need: DirectX 7, the 3dfx Voodoo
    driver and Glide, QuickTime, Indeo, the VB and WinG runtimes, and the PCI
    entries that tell Windows the Voodoo is already set up. Without those, a
    boot with the Voodoo on stops at "new hardware found".
@@ -172,10 +173,12 @@ The scripts are in `tools/win98-image/`; they were run by hand, on macserver
    Windows found a "new" COM1 and IDE controller on every start and asked to
    restart; eXo's disk does the same there. `jsdos-capture.mjs` boots the disk
    in headless Chrome with no game, answers Yes, and saves the disk blocks
-   that changed; `patchvhd.py` puts them onto a copy, and the registry diff
-   (`regdiff.py`) gave `JSDOS.REG`: those two devices and COM2's new name.
-   `JSDOS.BAT` imports it in one more native boot. Redo this step whenever
-   js-dos moves to a new version.
+   that changed; `patchvhd.py` puts them onto a copy, and `jsdosreg.py`
+   compares that copy's `SYSTEM.DAT` with the disk's own and writes
+   `JSDOS.REG`: those two devices and COM2's new name. `JSDOS.BAT` imports it
+   in one more native boot. Redo this step whenever js-dos moves to a new
+   version; the capture boots whatever version `JSDOS` in win9x-player.js
+   names.
 7. Remove the import files, `zerofree.py` to zero the space deleted files
    left, then `VHDMAKE -convert` in DOSBox-X for a fixed VHD with DOSBox-X's
    own geometry, and `vhddyn.py` to make it a dynamic VHD that stores only the
@@ -184,7 +187,13 @@ The scripts are in `tools/win98-image/`; they were run by hand, on macserver
 `START.VBS` runs at every logon and does what eXo's `Setup.vbs` did: copies
 `D:\Windows` over `C:\Windows`, imports `D:\reg.reg`, and starts the one
 shortcut on `D:\Windows\Desktop`, or asks which. `C:\eXo\` keeps eXo's two
-resolution tools at the paths game shortcuts use.
+resolution tools at the paths game shortcuts use. It copies file by file,
+where eXo's makes one `CopyFolder` call: that stops at the first file it
+cannot write, and a second logon in the same tab, after Windows restarts,
+met the read-only files the first had copied (91 of the packed games carry
+some) and stopped before the import and the launch. It clears the read-only
+bit on an existing copy, skips any one file that still fails, and leaves out
+eXo's `SYSBCKUP` registry backups.
 
 Checked on macserver: a boot with the Voodoo on reached the desktop with no
 new hardware, and the registry's PCI keys did not change. Zulu War booted the
@@ -193,9 +202,17 @@ eXo way, its fonts and shortcut were copied across, and the log switched to
 desktop with no dialog, and with Zulu War's zip it went straight to the
 game's title screen.
 
-`moose98-1.vhd` was the build before step 6. A new build gets a new name and
+`moose98-1.vhd` was the build before step 6, and `moose98-2.vhd` the one
+before `START.VBS` copied file by file. A new build gets a new name and
 `BASE` in `win9x_pack.py` moves with it, because the browser keeps the disk by
 name.
+
+A change to a file on a published disk needs no boot: `vhdraw.py` turns the
+dynamic VHD back into a fixed one (the raw disk with its footer after it),
+which macOS mounts with `hdiutil attach -imagekey
+diskimage-class=CRawDiskImage`; then `zerofree.py` and `vhddyn.py` as in step
+7. That is how `moose98-3.vhd` was made from `moose98-2.vhd`; the round trip
+alone gives back the same bytes.
 
 ### Packing
 
@@ -224,6 +241,18 @@ mount names that. Every run says how many it corrected; a repack on
 other 22 for an hour, which is why. 94 of eXo's configs start with a
 byte-order mark, which is dropped.
 
+Seven packed games copy files from `D:\Windows` before Windows starts, with
+`xcopy` lines in eXo's `[autoexec]`; six of them copy INI files, SYSTEM.INI
+among them. Those are eXo's own with the game's lines added, and their
+`[Password Lists]` names eXo's user: copied over ours, Windows found no
+password list for our user and stopped at "Enter Windows Password" before the
+game (ArtRageous, in headless Chrome). The packer saves our SYSTEM.INI to
+`C:\MOOSE` before eXo's line and puts it back after it. `START.VBS` copies the
+game's SYSTEM.INI again after logon and puts our password list back into it,
+so what the game adds there arrives before it starts: media drivers, codecs
+and app settings, all read at run time. 99 packed games carry a SYSTEM.INI in
+`D:\Windows`, which before this asked for a logon at the next restart.
+
 Of eXo's 664 games, 544 pack. Refused, 2026-10-19:
 
 | | |
@@ -245,7 +274,7 @@ speed, and the network ones differ in network settings.
 1. The `.w9x` from `/rom`, like any game.
 2. js-dos itself, and a HEAD of the game's zip: the cheap failures before the
    big downloads.
-3. The Windows 98 disk from `/win9x?path=moose/moose98-2.vhd`, kept in Cache
+3. The Windows 98 disk from `/win9x?path=moose/moose98-3.vhd`, kept in Cache
    Storage after the first time with its length beside it. A kept copy that
    cannot be read back, or comes back short, is thrown away and fetched again.
 4. The game's zip from `/win9x?path=eXo/eXoWin9x/<year>/<game>.zip`. `/win9x`
@@ -287,3 +316,9 @@ Plays in the page are not recorded in History, the same as EmulatorJS's.
    Chinese ones, Windows 95, and 86Box.
 4. Playing on the desktop or a handheld.
 5. Building game disks for games eXoWin9x does not carry.
+6. Changing discs. 29 packed games mount several CD images. DOSBox-X swaps
+   them with Ctrl+F4, which closes the tab in Chrome on Windows and Linux;
+   not tried in the browser.
+7. Other browsers. Everything above was checked in Chrome. Safari, Firefox and
+   phone browsers are not tried: how each handles Escape on the play dialog,
+   a 254 MB Cache Storage entry, and js-dos itself.
