@@ -78,6 +78,14 @@ struct LibraryPaths {
     /// Where EmulatorJS was unpacked. Defaults to `assets/emulatorjs` beside
     /// the `ui` directory, which is where the fetch script puts it.
     emulatorjs: Option<String>,
+    /// Where js-dos was unpacked, for Windows 9x games. Defaults to
+    /// `assets/jsdos` beside the `ui` directory, where `scripts/fetch-jsdos.sh`
+    /// puts it.
+    jsdos: Option<String>,
+    /// eXoWin9x: the games' zips and our Windows 98 disk, which `/win9x` serves
+    /// to the page. Defaults to `eXoWin9x` beside the ROMs folder, which is
+    /// where docs/win9x.md has it.
+    win9x: Option<String>,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -1621,14 +1629,20 @@ async fn isolation_headers(
 ///
 /// EmulatorJS is the exception. It is 296 MB pinned to a version in
 /// `assets/emulatorjs/MANIFEST.tsv`, so the bytes at a given path never change
-/// and re-checking them is pure waste.
+/// and re-checking them is pure waste. js-dos is the same, with its version in
+/// the path.
 async fn cache_headers(
     req: axum::extract::Request,
     next: axum::middleware::Next,
 ) -> axum::response::Response {
-    let immutable = req.uri().path().starts_with("/emulatorjs/");
+    let path = req.uri().path();
+    let immutable = path.starts_with("/emulatorjs/") || path.starts_with("/jsdos/");
     let mut res = next.run(req).await;
-    let v = if immutable {
+    // Only an answer worth keeping. A 404 is cacheable too, and one marked
+    // immutable -- js-dos asked for before its fetch script ran -- stayed in
+    // the browser for a year after the files arrived.
+    let keep = res.status().is_success() || res.status() == axum::http::StatusCode::NOT_MODIFIED;
+    let v = if immutable && keep {
         "public, max-age=31536000, immutable"
     } else {
         "no-cache"
@@ -1670,6 +1684,12 @@ fn web_app(st: Arc<web::WebState>) -> Router {
             "/emulatorjs",
             tower_http::services::ServeDir::new(st.emulatorjs.clone()),
         )
+        // js-dos, for Windows 9x games, vendored the same way by
+        // scripts/fetch-jsdos.sh, under a folder named for its version.
+        .nest_service("/jsdos", tower_http::services::ServeDir::new(st.jsdos.clone()))
+        // A Windows 9x game's zip and the Windows 98 disk it boots, by their
+        // path in eXoWin9x. See `win9x_file`.
+        .route("/win9x", get(web::win9x_file))
         .with_state(st)
         // Last, and it has to be last: `layer` wraps the routes already in the
         // router and nothing added after it. Placed mid-chain it covered
@@ -2016,7 +2036,42 @@ async fn main() -> Result<()> {
                 emulatorjs.display()
             ),
         }
-        let web_state = Arc::new(web::WebState { state, ui_dir, emulatorjs });
+        let jsdos = cfg
+            .library
+            .jsdos
+            .clone()
+            .map(std::path::PathBuf::from)
+            .unwrap_or_else(|| {
+                ui_dir
+                    .parent()
+                    .map(|r| r.join("assets/jsdos"))
+                    .unwrap_or_else(|| std::path::PathBuf::from("assets/jsdos"))
+            });
+        // A version unpacked, not the folder: the folder is always there,
+        // because it holds the committed MANIFEST.tsv.
+        let unpacked = std::fs::read_dir(&jsdos)
+            .map(|rd| rd.flatten().any(|e| e.path().join("js-dos.js").is_file()))
+            .unwrap_or(false);
+        if !unpacked {
+            println!(
+                "jsdos      not installed at {} -- run scripts/fetch-jsdos.sh",
+                jsdos.display()
+            );
+        }
+        // Kept even when it is not there yet: the NAS can mount after this
+        // starts, and `resolve_win9x` looks for the folder on every request.
+        let win9x = cfg
+            .library
+            .win9x
+            .clone()
+            .map(std::path::PathBuf::from)
+            .or_else(|| layout.roms.parent().map(|p| p.join("eXoWin9x")));
+        match &win9x {
+            Some(p) if p.is_dir() => println!("win9x      {}", p.display()),
+            Some(p) => println!("win9x      {} (not there yet)", p.display()),
+            None => println!("win9x      none"),
+        }
+        let web_state = Arc::new(web::WebState { state, ui_dir, emulatorjs, jsdos, win9x });
         // A device starring a game changes a list file. The UI in this process
         // reads its own copy of the lists, so it is told to read them again.
         let (ui, dir) = (web_state.clone(), col_dir.clone());
@@ -2822,11 +2877,27 @@ mod tests {
                 .unwrap_or("")
                 .to_owned()
         };
+        // The vendored emulators as files that are there, in a folder of the
+        // test's own: on a machine that never ran the fetch scripts, the real
+        // folders answer 404, and what a 404 gets is a separate question.
+        let ejs = d.path().join("emulatorjs");
+        std::fs::create_dir_all(ejs.join("data")).unwrap();
+        std::fs::write(ejs.join("data/loader.js"), b"//").unwrap();
+        let jsdos = d.path().join("jsdos");
+        std::fs::create_dir_all(jsdos.join("8.4.1")).unwrap();
+        std::fs::write(jsdos.join("8.4.1/js-dos.js"), b"//").unwrap();
+        // And a game's zip that is there, so the answer below is a 200: a 404
+        // gets no-cache whatever the path, and proved nothing.
+        let win9x = d.path().join("eXoWin9x");
+        std::fs::create_dir_all(win9x.join("eXo/eXoWin9x/1996")).unwrap();
+        std::fs::write(win9x.join("eXo/eXoWin9x/1996/x.zip"), b"PK").unwrap();
         let web = web_app(std::sync::Arc::new(web::WebState {
             state: moose_rack::app::AppState::from_config_at(&d.path().join("none.toml"))
                 .expect("state"),
             ui_dir: ui.clone(),
-            emulatorjs: ui.parent().unwrap().join("assets/emulatorjs"),
+            emulatorjs: ejs,
+            jsdos,
+            win9x: Some(win9x),
         }));
         for path in ["/js/main.js", "/style.css", "/__shim.js"] {
             let r = web
@@ -2851,6 +2922,38 @@ mod tests {
             "296 MB pinned to a version is re-checked on every load: {}",
             hdr(&r)
         );
+        // js-dos too, by the version in its path.
+        let r = web
+            .clone()
+            .oneshot(Request::builder().uri("/jsdos/8.4.1/js-dos.js").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert!(hdr(&r).contains("immutable"), "js-dos is re-checked on every load: {}", hdr(&r));
+        // But never a file that is not there. Kept for a year, a 404 outlived
+        // the fetch script that would have fixed it.
+        for path in ["/jsdos/8.4.1/missing.js", "/emulatorjs/data/missing.js"] {
+            let r = web
+                .clone()
+                .oneshot(Request::builder().uri(path).body(Body::empty()).unwrap())
+                .await
+                .unwrap();
+            assert_eq!(r.status(), StatusCode::NOT_FOUND, "{path}");
+            assert_eq!(hdr(&r), "no-cache", "a 404 for {path} would be kept for a year");
+        }
+        // A game's zip is not pinned to anything: one repaired on the NAS has
+        // to reach the page.
+        let r = web
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/win9x?path=eXo/eXoWin9x/1996/x.zip")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(r.status(), StatusCode::OK);
+        assert_eq!(hdr(&r), "no-cache");
     }
 
     /// The page and everything it loads are cross-origin isolated, or the
@@ -2866,8 +2969,10 @@ mod tests {
                 .expect("state"),
             ui_dir: ui.clone(),
             emulatorjs: ui.parent().unwrap().join("assets/emulatorjs"),
+            jsdos: ui.parent().unwrap().join("assets/jsdos"),
+            win9x: None,
         }));
-        for path in ["/", "/js/main.js", "/emulatorjs/data/loader.js"] {
+        for path in ["/", "/js/main.js", "/emulatorjs/data/loader.js", "/jsdos/8.4.1/js-dos.js", "/win9x?path=x"] {
             let r = web
                 .clone()
                 .oneshot(Request::builder().uri(path).body(Body::empty()).unwrap())

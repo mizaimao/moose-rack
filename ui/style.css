@@ -3525,6 +3525,9 @@ body.mobile #detail .sub {
 /* The frame is what EmulatorJS measures itself against, so it needs a real
    height rather than one that depends on the content it is about to create. */
 #ejs-stage .ejs-frame { flex: 1; min-height: 0; position: relative; }
+/* Focusable so the stage can open with focus on the game rather than on Stop,
+   where the game's first Enter would quit it. Not a control, so no ring. */
+#ejs-stage .ejs-frame:focus { outline: none; }
 #ejs-stage #ejs-player { width: 100%; height: 100%; }
 /* What the stage says while it is getting ready. Behind the emulator, so it is
    covered the moment there is something to cover it. */

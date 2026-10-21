@@ -83,8 +83,9 @@ pub fn default_for(platform: &str) -> Option<&'static str> {
     Some(match platform {
         // A PC monitor, not a television. VGA drew its 200-line modes twice
         // over, so a DOS game never had the scanlines a CRT preset adds, and
-        // its text is the one thing such a preset blurs.
-        "dos" => return None,
+        // its text is the one thing such a preset blurs. Windows 9x is the
+        // same monitor, and js-dos, which plays it, applies no shader at all.
+        "dos" | "windows9x" => return None,
         "gb" => "handheld/gameboy",
         "gbc" => "handheld/gameboy-color-dot-matrix",
         // ags001, not agb001: the AGB-001 is the *original* Game Boy Advance,
@@ -390,6 +391,9 @@ mod tests {
     fn a_dos_game_gets_no_crt_by_default() {
         assert_eq!(default_for("dos"), None);
         assert_eq!(preset_for(&Default::default(), "dos"), None);
+        // Windows 9x too: the platform pane named a CRT preset that nothing
+        // applies to a game js-dos plays.
+        assert_eq!(default_for("windows9x"), None);
     }
 
     #[test]

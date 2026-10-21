@@ -29,6 +29,7 @@ import {
 import { ejsUrls } from "./ejs-base.js";
 import { invoke } from "./state.js";
 import { toast } from "./util.js";
+import { keepOpen } from "./win9x-player.js";
 
 /// Where EmulatorJS and the ROM come from. Two answers -- this service over
 /// HTTP, or the desktop's own URI scheme -- so it is resolved per play rather
@@ -124,7 +125,7 @@ function openStage(title, shader, platformSlug, romId, core) {
         <select></select>
       </label>
     </div>
-    <div class="ejs-frame"><div id="ejs-player"></div><div class="ejs-note"></div></div>`;
+    <div class="ejs-frame" tabindex="-1" autofocus><div id="ejs-player"></div><div class="ejs-note"></div></div>`;
   stage.querySelector(".ejs-title").textContent = title;
   const sel = stage.querySelector(".ejs-shader select");
   for (const p of presetsFor(platformSlug)) {
@@ -167,6 +168,8 @@ function openStage(title, shader, platformSlug, romId, core) {
   // game still running in it, unsaved, and DOS games press Escape all the time.
   // Stop is the way out, because it sends the save first.
   stage.addEventListener("cancel", (ev) => ev.preventDefault());
+  // And put it back if the browser closes it anyway.
+  keepOpen(stage);
   document.body.appendChild(stage);
   // `showModal` where it exists; an open dialog is still a visible one where it
   // does not, and a game running is better than a correct stacking context.
