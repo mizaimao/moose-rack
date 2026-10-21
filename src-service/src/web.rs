@@ -743,6 +743,10 @@ mod tests {
         assert!(resolve_win9x(r, "moose/../../secret").is_none());
         assert!(resolve_win9x(r, tmp.join("secret").to_str().unwrap()).is_none());
         assert!(resolve_win9x(r, "moose").is_none(), "a folder is not a file");
+        // A folder with an allowed name gets past the allowlist, and only the
+        // file check stops it being handed to ServeFile.
+        std::fs::create_dir_all(root.join("moose/dir.vhd")).unwrap();
+        assert!(resolve_win9x(r, "moose/dir.vhd").is_none(), "a folder named like a disk is not a file");
         assert!(resolve_win9x(r, "").is_none());
         assert!(resolve_win9x(r, "moose/nothing.vhd").is_none());
         // Only disks and game zips, even inside eXoWin9x.
