@@ -241,17 +241,19 @@ mount names that. Every run says how many it corrected; a repack on
 other 22 for an hour, which is why. 94 of eXo's configs start with a
 byte-order mark, which is dropped.
 
-Seven packed games copy files from `D:\Windows` before Windows starts, with
-`xcopy` lines in eXo's `[autoexec]`; six of them copy INI files, SYSTEM.INI
-among them. Those are eXo's own with the game's lines added, and their
-`[Password Lists]` names eXo's user: copied over ours, Windows found no
-password list for our user and stopped at "Enter Windows Password" before the
-game (ArtRageous, in headless Chrome). The packer saves our SYSTEM.INI to
-`C:\MOOSE` before eXo's line and puts it back after it. `START.VBS` copies the
-game's SYSTEM.INI again after logon and puts our password list back into it,
-so what the game adds there arrives before it starts: media drivers, codecs
-and app settings, all read at run time. 99 packed games carry a SYSTEM.INI in
-`D:\Windows`, which before this asked for a logon at the next restart.
+Seven packed games copy SYSTEM.INI from `D:\Windows` before Windows starts,
+with `xcopy` lines in eXo's `[autoexec]`. It is eXo's own with the game's
+lines added, and its `[Password Lists]` names eXo's user: copied over ours,
+Windows found no password list for our user and stopped at "Enter Windows
+Password" before the game (ArtRageous, in headless Chrome). For six of them
+the packer saves our SYSTEM.INI to `C:\MOOSE` before eXo's line and puts it
+back after it; what those games add there (media drivers, codecs, app
+settings) is read at run time, and `START.VBS` copies the game's SYSTEM.INI
+again after logon, putting our password list back into it, before the game
+starts. The seventh, FlagTower, also copies in a driver its SYSTEM.INI loads
+at boot, so it keeps eXo's copy and asks for a logon once at its first start;
+Enter answers it. 99 packed games carry a SYSTEM.INI in `D:\Windows`, which
+before this asked for a logon at the next restart.
 
 Of eXo's 664 games, 544 pack. Refused, 2026-10-19:
 
