@@ -14,7 +14,7 @@ const W9X = `# Windows 9x game for the browser, written by tools/win9x_pack.py f
 # eXo's !win9x/1996/AMBER - Journeys Beyond (1996)/Play.conf. The page fetches the files named
 # below from eXoWin9x/ and boots this config in js-dos.
 # zip = eXo/eXoWin9x/1996/AMBER - Journeys Beyond (1996).zip
-# base = moose/moose98-2.vhd
+# base = moose/moose98-3.vhd
 # bytes = 564000000
 # unpacked = 732000000
 # file = AMBER - Journeys Beyond (1996)/AMBER_JB.moose.cue
@@ -34,7 +34,7 @@ describe("reading a .w9x", () => {
   test("the files to fetch and their sizes", () => {
     const g = parseW9x(W9X);
     assert.equal(g.zip, "eXo/eXoWin9x/1996/AMBER - Journeys Beyond (1996).zip");
-    assert.equal(g.base, "moose/moose98-2.vhd");
+    assert.equal(g.base, "moose/moose98-3.vhd");
     assert.equal(g.bytes, 564e6);
     assert.equal(g.unpacked, 732e6);
   });
@@ -76,6 +76,16 @@ describe("the page and the service agree", () => {
     const manifest = readFileSync(join(root, "assets/jsdos/MANIFEST.tsv"), "utf8");
     const row = manifest.split("\n").find((l) => l && !l.startsWith("#"));
     assert.equal(row.split("\t")[2], JSDOS);
+  });
+
+  /// The Android app and the desktop say it from Rust, the page from here.
+  test("the devices and the page say the same thing about where these play", async () => {
+    const { OWN_PLAYER } = await import("../js/ejs-systems.js");
+    const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+    const rust = readFileSync(join(root, "src/commands.rs"), "utf8");
+    const m = rust.match(/pub const PLAYS_IN_A_BROWSER: &str = "([^"]+)";/);
+    assert.ok(m, "PLAYS_IN_A_BROWSER is gone from src/commands.rs");
+    assert.equal(m[1], OWN_PLAYER.windows9x);
   });
 
   test("the packer writes the keys the page reads", () => {
@@ -134,9 +144,16 @@ describe("the stage stays up while a game runs", () => {
     const { keepOpen } = await import("../js/win9x-player.js");
     const doc = new JSDOM(`<dialog open>
       <div class="ejs-bar"><button class="ejs-close">Stop</button></div>
-      <div class="ejs-frame" tabindex="-1"><canvas tabindex="0"></canvas></div>
+      <div class="ejs-frame" tabindex="-1" autofocus><canvas tabindex="0"></canvas></div>
     </dialog>`).window.document;
     const stage = doc.querySelector("dialog");
+    // jsdom has no showModal. This one does what Chrome's does first: focus
+    // the [autofocus] element, which fires focusin before showModal returns.
+    // Without it the test passed while Chrome left focus on the frame.
+    stage.showModal = () => {
+      stage.setAttribute("open", "");
+      stage.querySelector("[autofocus]").focus();
+    };
     keepOpen(stage);
     const canvas = doc.querySelector("canvas");
     canvas.focus();

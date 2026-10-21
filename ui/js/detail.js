@@ -199,7 +199,12 @@ export async function showPlatformInfo(slug) {
                will start. Settings → Emulators installs one.</p>`
       }
       <div class="pinned">
-        <button class="pf-grab"><span class="icon icon-download"></span><span>Take offline</span></button>
+        ${
+          // Nothing to take offline that this machine could play.
+          OWN_PLAYER[p.slug] && !globalThis.__MOOSE_WEB
+            ? ""
+            : `<button class="pf-grab"><span class="icon icon-download"></span><span>Take offline</span></button>`
+        }
       </div>
     </div>`;
   el.detail.querySelector(".pf-grab")?.addEventListener("click", () =>
@@ -364,8 +369,10 @@ export async function selectRom(id) {
     <div class="pinned">
       ${autofireRow(d)}
       <div class="actions">
-        <button class="primary" id="play">${d.downloaded ? "Play" : "Download & Play"}</button>
-        <button class="ghost" id="dl" ${d.downloaded ? "disabled" : ""}>Download</button>
+        <button class="primary" id="play">${
+          d.downloaded || playsOnlyInTheBrowser(d) ? "Play" : "Download & Play"
+        }</button>
+        <button class="ghost" id="dl" ${d.downloaded || playsOnlyInTheBrowser(d) ? "disabled" : ""}>Download</button>
       </div>
       <progress id="prog" hidden></progress>
       <div id="prog-text" hidden></div>
@@ -814,8 +821,20 @@ function startSlideshow(count) {
 
 /// Enter / primary button: play, downloading first if needed.
 export async function play(d) {
+  // Windows 9x outside the library service: nothing on this machine can play
+  // it, so say where it plays instead of downloading its .w9x first and
+  // marking the game as on this machine.
+  const own = playsOnlyInTheBrowser(d);
+  if (own) return toast(own, 8000);
   if (d.downloaded) return launch(d.id);
   return download(d.id, true);
+}
+
+/// The sentence for a game only the library service's page can play, when
+/// this is not that page; otherwise nothing.
+function playsOnlyInTheBrowser(d) {
+  const own = OWN_PLAYER[d.platform_slug ?? d.platform];
+  return own && !globalThis.__MOOSE_WEB ? own : null;
 }
 
 /// A drag handle between the list and the detail pane.

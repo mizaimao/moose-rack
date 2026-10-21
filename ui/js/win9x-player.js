@@ -109,15 +109,13 @@ async function bucket() {
   }
 }
 
-/// The Windows 98 disk, from this browser if it has it.
+/// The Windows 98 disk from the server, kept in this browser for next time.
 ///
-/// Kept by name, and a new build has a new name (`BASE` in win9x_pack.py), so
-/// a disk in here is never stale. Any other name in the bucket is an older
-/// build no game boots any more, and goes when the new one comes in.
-async function baseDisk(url, onProgress, signal) {
-  const cache = await bucket();
-  const kept = await keptDisk(cache, url);
-  if (kept) return kept;
+/// Called once `keptDisk` has found no whole copy. Kept by name, and a new
+/// build has a new name (`BASE` in win9x_pack.py), so a disk in here is never
+/// stale. Any other name in the bucket is an older build no game boots any
+/// more, and goes when the new one comes in.
+async function fetchDisk(cache, url, onProgress, signal) {
   const bytes = await fetchBytes(url, onProgress, signal);
   try {
     const keep = new URL(url, location.href).href;
@@ -162,14 +160,8 @@ export async function keptDisk(cache, url) {
   return null;
 }
 
-/// The disk's size if it is not in this browser yet, for the question below.
-async function baseStillToFetch(url) {
-  try {
-    const hit = await (await bucket())?.match(url);
-    if (hit?.headers.get(KEPT_BYTES)) return 0;
-  } catch {
-    // Asked as if it were not kept.
-  }
+/// The disk's size on the server, for the question below.
+async function diskSize(url) {
   try {
     const r = await fetch(url, { method: "HEAD", credentials: "same-origin" });
     // A 404's length is the length of "not found", not of a disk. The fetch
@@ -183,10 +175,6 @@ async function baseStillToFetch(url) {
 function loadJsdos() {
   if (globalThis.Dos) return Promise.resolve();
   const base = `/jsdos/${JSDOS}/`;
-  const css = document.createElement("link");
-  css.rel = "stylesheet";
-  css.href = `${base}js-dos.css`;
-  document.head.appendChild(css);
   return new Promise((resolve, reject) => {
     const s = document.createElement("script");
     s.src = `${base}js-dos.js`;
@@ -194,6 +182,22 @@ function loadJsdos() {
     s.onerror = () => reject(new Error("js-dos is not installed on the server — run scripts/fetch-jsdos.sh"));
     document.body.appendChild(s);
   });
+}
+
+/// js-dos's stylesheet, added only when js-dos starts.
+///
+/// It opens with an unscoped reset (Tailwind's preflight) that restyles the
+/// whole page: headings lose their weight, buttons their padding. Added with
+/// the script, it stayed in the library after a Stop before the game started
+/// or after a failed start, both of which now leave the page without a reload.
+/// Once js-dos runs, Stop reloads and takes it away.
+function addJsdosStyle() {
+  if (document.getElementById("jsdos-css")) return;
+  const css = document.createElement("link");
+  css.id = "jsdos-css";
+  css.rel = "stylesheet";
+  css.href = `/jsdos/${JSDOS}/js-dos.css`;
+  document.head.appendChild(css);
 }
 
 /// The overlay, the same `<dialog>` the EmulatorJS player uses and for the
@@ -240,12 +244,15 @@ export function keepOpen(stage) {
   });
   stage.addEventListener("close", () => {
     if (!stage.isConnected) return;
+    // Read first: `showModal` focuses the frame (it has `autofocus`), and the
+    // `focusin` that fires then would put the frame in `last`.
+    const back = last;
     try {
       stage.showModal();
     } catch {
       stage.setAttribute("open", "");
     }
-    (last?.isConnected ? last : stage.querySelector(".ejs-frame"))?.focus?.();
+    (back?.isConnected ? back : stage.querySelector(".ejs-frame"))?.focus?.();
   });
 }
 
@@ -318,7 +325,11 @@ export async function playWin9x(rom) {
     const zipUrl = win9xUrl(game.zip);
     const baseUrl = win9xUrl(game.base);
 
-    const q = heavyQuestion(rom.name, game.bytes, await baseStillToFetch(baseUrl), game.unpacked, Boolean(await bucket()));
+    // The kept disk is checked now, not after the question: a copy that turns
+    // out short is fetched again, and the question has to say so.
+    const cache = await bucket();
+    const kept = await keptDisk(cache, baseUrl);
+    const q = heavyQuestion(rom.name, game.bytes, kept ? 0 : await diskSize(baseUrl), game.unpacked, Boolean(cache));
     if (q && (await ask(q, [["yes", "Play it"], ["", "Cancel"]])) !== "yes") return "Cancelled";
 
     // Until js-dos runs there is nothing to tear down: Stop takes the stage
@@ -338,7 +349,7 @@ export async function playWin9x(rom) {
     const head = await fetch(zipUrl, { method: "HEAD", credentials: "same-origin", signal: abort.signal });
     if (!head.ok) throw new Error(`${head.status} for the game's zip, ${game.zip}`);
     note(stage, "Windows 98…");
-    const base = await baseDisk(baseUrl, progress("Windows 98 disk"), abort.signal);
+    const base = kept ?? (await fetchDisk(cache, baseUrl, progress("Windows 98 disk"), abort.signal));
     note(stage, "The game…");
     const zip = await fetchBytes(zipUrl, progress(rom.name), abort.signal);
 
@@ -349,6 +360,7 @@ export async function playWin9x(rom) {
     stage.querySelector(".ejs-frame").appendChild(el);
     const text = new TextEncoder();
     running = true;
+    addJsdosStyle();
     const dos = globalThis.Dos(el, {
       dosboxConf: game.conf,
       // The disk as `c.vhd`, which is what the config mounts as C:. The zip as

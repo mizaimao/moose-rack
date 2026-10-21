@@ -53,6 +53,17 @@ describe("double-click and the Play button", () => {
     assert.match(code, /ev\.detail > 1/, "the click handler still selects twice");
   });
 
+  /// The handler hears every double-click on the page, a running game's
+  /// included: Windows games are double-clicked all the time, and each one
+  /// pressed Play again for the game selected behind the stage.
+  test("a double-click inside a game playing in the page is left to the game", () => {
+    const doc = code.slice(code.indexOf('document.addEventListener("dblclick"'));
+    const body = doc.slice(0, doc.indexOf("});"));
+    const guard = body.indexOf("if (playingInPage()) return;");
+    assert.ok(guard > 0, "the page-level double-click no longer checks for a game in the page");
+    assert.ok(guard < body.indexOf("pressPlay"), "the check comes after Play is pressed");
+  });
+
   /// Continue playing is the one deliberate exception: it resumes from a save
   /// state rather than starting over, and the button cannot express that.
   test("Continue playing still resumes rather than restarting", () => {
