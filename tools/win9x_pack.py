@@ -38,7 +38,7 @@ LIBRARY = Path("/mnt/gamefiles")
 # The Windows 98 disk every game boots, inside eXoWin9x/. Ours, not eXo's: a
 # clean install with eXo's add-ons moved across (docs/win9x.md). A new build
 # gets a new name, because the page keeps the disk and asks for it by name.
-BASE = "moose/moose98-2.vhd"
+BASE = "moose/moose98-3.vhd"
 
 # The only parent our disk stands in for. The rest are eXo's Windows 98 with
 # networking, Japanese and Chinese Windows 98, and Windows 95.
@@ -62,6 +62,9 @@ REGIONS = ["North America", "United States", "World", "Europe", "United Kingdom"
 
 # Characters LaunchBox replaces with "_" when it names an image after a title.
 LB_UNSAFE = re.compile(r"[\\/:*?\"<>|']")
+
+# A LaunchBox game id in a picture's name: `Mastermind.c682f3a7-...-01.png`.
+GUID_TAG = re.compile(r"\.([0-9a-f]{8}-[0-9a-f-]{27})-\d+\.\w+$", re.I)
 
 # eXo's settings, changed for the browser. Our Windows 98 has no network
 # drivers, and with the card in it Windows finds new hardware on every boot and
@@ -105,6 +108,10 @@ def in_zip(path: str, year: str, members: dict[str, str]) -> str:
 def quoted(name: str) -> str:
     return f'"{name}"' if " " in name else name
 
+
+# One of eXo's pre-boot copies that can carry SYSTEM.INI: `*.ini` or
+# `system.ini` from D:\Windows (`adapt`).
+INI_COPY = re.compile(r'(?i)xcopy\s+"?d:\\windows\\(\*|system)\.ini"?\s')
 
 # A track: `FILE "name" BINARY`. The name is quoted or one word, and the type
 # is not always one word: Bad Mojo's sheet says `BINARY BINARY`. eXo's sheets
@@ -208,6 +215,20 @@ def adapt(conf: str, year: str, z: zipfile.ZipFile) -> tuple[list[str], dict[str
             booted = True
             out.append(line)
             continue
+        if cmd == "xcopy" and INI_COPY.match(line):
+            # eXo copies the game's INI files over C:'s before Windows starts.
+            # They are eXo's own with the game's lines added, and SYSTEM.INI's
+            # [Password Lists] names eXo's user: with it, Windows asked for a
+            # logon. So ours is put back straight after. START.VBS copies the
+            # game's SYSTEM.INI again after logon, keeping our password list,
+            # and what games add there (media drivers, codecs) is read at run
+            # time, before the game starts.
+            out += [
+                "xcopy c:\\windows\\system.ini c:\\moose\\ /Y",
+                line,
+                "xcopy c:\\moose\\system.ini c:\\windows\\ /Y",
+            ]
+            continue
         if cmd in ("xcopy", "echo", "cls", "@echo"):
             out.append(line)
             continue
@@ -282,8 +303,9 @@ def media_for(
     `game_id` is the LaunchBox record's `ID`. Two games with one title are told
     apart by it in the file name (`Mastermind.c682f3a7-...-01.png` is the BBC
     one), so a picture carrying another game's id is never taken. `shared` says
-    another game has this title too, and then a picture named after the title
-    alone could be either's: only the zip's name or this game's id will do.
+    a picture named after the title alone could be another game's
+    (`Library.shares_title`), and then only the zip's name or this game's id
+    will do.
     A picture whose name carries a year other than the game's is never taken.
     """
     lb = LB_UNSAFE.sub("_", title)
@@ -303,7 +325,7 @@ def media_for(
                 hits.append((1, rank.get(m.group(1), len(REGIONS)), int(m.group(2)), n))
             elif n.lower().endswith((".png", ".jpg", ".jpeg")) and loose_name(n.rsplit("/", 1)[-1]) in loose:
                 leaf = n.rsplit("/", 1)[-1]
-                tagged = re.search(r"\.([0-9a-f]{8}-[0-9a-f-]{27})-\d+\.\w+$", leaf, re.I)
+                tagged = GUID_TAG.search(leaf)
                 if tagged and tagged.group(1).lower() != game_id.lower():
                     continue
                 if shared and not tagged:
@@ -389,9 +411,31 @@ class Library:
                     self.art_by_kind[parts[2]].append(n)
         self.records = load_records(art)
         # Titles more than one game has, which a picture named after the
-        # title alone cannot tell apart (`media_for`).
-        titles = collections.Counter(r.get("Title", "").lower() for r in self.records.values())
-        self.shared_titles = {t for t, n in titles.items() if n > 1}
+        # title alone cannot tell apart (`media_for`). LaunchBox puts a game's
+        # id in its pictures' names only to tell it from an earlier game of
+        # the same title, so when exactly one game of such a title has no id
+        # on any picture, the untagged pictures are that game's.
+        tagged = {
+            m.group(1).lower()
+            for names in self.art_by_kind.values()
+            for n in names
+            if (m := GUID_TAG.search(n.rsplit("/", 1)[-1]))
+        }
+        by_title: dict[str, list[str]] = collections.defaultdict(list)
+        for r in self.records.values():
+            by_title[r.get("Title", "").lower()].append(r.get("ID", "").lower())
+        self.shared_titles = {t for t, ids in by_title.items() if len(ids) > 1}
+        self.untagged_owner = {
+            t: bare[0]
+            for t in self.shared_titles
+            if len(bare := [i for i in by_title[t] if i not in tagged]) == 1
+        }
+
+    def shares_title(self, rec: dict[str, str]) -> bool:
+        """Whether a picture named after this game's title alone could be
+        another game's (`media_for`)."""
+        title = rec.get("Title", "").lower()
+        return title in self.shared_titles and self.untagged_owner.get(title) != rec.get("ID", "").lower()
 
     def game_zip(self, year: str, stem: str) -> Path:
         return self.exo / "eXo" / "eXoWin9x" / year / f"{stem}.zip"
@@ -438,7 +482,7 @@ def pack(stem: str, lib: Library) -> tuple[str, ET.Element, dict[str, str], dict
         rec.get("Title", stem),
         stem,
         rec.get("ID", ""),
-        rec.get("Title", "").lower() in lib.shared_titles,
+        lib.shares_title(rec),
     ), facts
 
 
@@ -509,14 +553,20 @@ def main() -> int:
     with zipfile.ZipFile(lib.exo / "Content" / "XOWin9xMetadata.zip") as z:
         for stem, text, _, art in packed:
             write_atomically(roms / f"{stem}.w9x", lambda part, t=text: part.write_text(t, encoding="utf-8"))
+            written = set()
             for folder, member in art.items():
                 dest = es / "downloaded_media" / "windows9x" / folder / f"{stem}{Path(member).suffix.lower()}"
                 write_atomically(dest, lambda part, m=member: part.write_bytes(z.read(m)))
-                # This game's picture in another format from an earlier run
-                # would win over this one: the library tries .png first.
+                written.add(dest)
+            # Any other picture of this game, in every folder: one in another
+            # format from an earlier run would win over the new one (the
+            # library tries .png first), and one for a kind this run found
+            # nothing for is a pick an earlier, looser match made, sometimes
+            # of another game. The folder is this tool's alone (docs/win9x.md).
+            for folder in MEDIA.values():
                 for ext in (".png", ".jpg", ".jpeg"):
-                    old = dest.with_suffix(ext)
-                    if old != dest and old.is_file():
+                    old = es / "downloaded_media" / "windows9x" / folder / f"{stem}{ext}"
+                    if old not in written and old.is_file():
                         old.unlink()
     # Reported, not removed: a .w9x from an earlier run for a game that no
     # longer packs. Taking games out of somebody's library is theirs to decide.

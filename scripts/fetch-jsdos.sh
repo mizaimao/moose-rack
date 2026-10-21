@@ -31,8 +31,9 @@ version=$(echo "$row" | cut -f3)
 out="$DIR/$version"
 
 # `js-dos.js` is what the page loads and `wdosbox-x.wasm` is the emulator it
-# starts, so both being there is what "installed" means.
-if [ -f "$out/js-dos.js" ] && [ -f "$out/emulators/wdosbox-x.wasm" ]; then
+# starts, so both being there is what "installed" means. `package.json` is the
+# licence record this script adds; a copy unpacked before it did is replaced.
+if [ -f "$out/js-dos.js" ] && [ -f "$out/emulators/wdosbox-x.wasm" ] && [ -f "$out/package.json" ]; then
   echo "  js-dos $version present"
   exit 0
 fi
