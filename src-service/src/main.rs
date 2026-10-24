@@ -21,8 +21,8 @@
 //! the content hash is the identity, and `inventory.db` already holds one for
 //! every file on the SSD.
 //!
-//!     moose-service --root /home/frank/moose-library/ES-DE \
-//!                   --roms /home/frank/moose-library/ROMs
+//!     moose-service --root /mnt/gamefiles/ES-DE \
+//!                   --roms /mnt/gamefiles/ROMs
 
 mod auth;
 mod collections;
