@@ -145,7 +145,7 @@ Pentium II are not, which is why those went to DOSBox-X.
   drew 200-line modes twice, so there were never TV scanlines.
 - `SoundCanvas.sf2` is a `dos` BIOS (`data/bios-manifest.json`, and `EXTRA` in
   `tools/bios_manifest.py`), so the launch fetches it like any other. It sits
-  in `moose-library/bios/`, copied out of `util.zip` -> `EXTDOS.zip` ->
+  in `/mnt/gamefiles/bios/`, copied out of `util.zip` -> `EXTDOS.zip` ->
   `mt32/`. That folder is outside the four the agreement below gives the DOS
   side; it is one file, and this is where it is recorded.
 - The browser: `dos` plays through EmulatorJS when the page is cross-origin
@@ -234,14 +234,17 @@ run saved one.
 A second Claude session works on `main` from another Mac and also deploys the
 service. Agreed with it on 2026-09-17:
 
-1. Whoever deploys to `dev.lan:/home/frank/moose-rack-src` writes
-   `DEPLOYED` there (branch, commit, date, session) and reads it first. A
-   deploy must contain the commit it names.
+1. Whoever deploys to `dev.lan:/home/frank/Projects/moose-rack` (it was
+   `~/moose-rack-src` until 2026-10-24) writes `DEPLOYED` there (branch,
+   commit, date, session) and reads it first. A deploy must contain the commit
+   it names. Deploy with `git archive <commit> | ssh dev.lan tar -x -C
+   ~/Projects/moose-rack`, never anything that deletes: the service's own
+   files are in `moose-library/` inside that tree.
 2. `moose-dos` rebases on `origin/main`; conflicts are resolved on
    `moose-dos`, never by rewriting `main`.
 3. The version number: on rebase, `moose-dos` takes `main`'s and bumps on top.
 4. The DOS side writes only `eXoDOS/`, `ROMs/dos/`, `ES-DE/gamelists/dos/`
-   and `ES-DE/downloaded_media/dos/` under `moose-library`. The other session
+   and `ES-DE/downloaded_media/dos/` under `/mnt/gamefiles`. The other session
    owns `ES-DE/saves/`.
 5. Game ids come from `Game.system`, `Game.rel_dir` and `Game.fs_name`
    (`src/gameid.rs` on `main`). Nothing here may change how the scanner

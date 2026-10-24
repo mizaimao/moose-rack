@@ -78,7 +78,9 @@ runs were checked by the log and by Frank at the machine.
 
 ## On the server
 
-`dev.lan:/home/frank/moose-library/`:
+Fetched while probing, into `dev.lan:/home/frank/moose-library/`, which is
+`~/Projects/moose-rack/moose-library/` since 2026-10-24. Only the torrent is
+still there; the full copy is on the NAS (below).
 
 | path | what |
 | --- | --- |

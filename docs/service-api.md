@@ -7,11 +7,11 @@
 `[server] url` and nothing else — no client code moves, and both can run side by
 side and be compared.
 
-    moose-service --root       /home/frank/moose-library/ES-DE \
-                  --roms       /home/frank/moose-library/ROMs \
-                  --collections /home/frank/moose-library/collections \
-                  --firmware   /home/frank/moose-library/bios \
-                  --inventory  /home/frank/moose-library/inventory.db
+    moose-service --root       /mnt/gamefiles/ES-DE \
+                  --roms       /mnt/gamefiles/ROMs \
+                  --collections /mnt/gamefiles/collections \
+                  --firmware   /mnt/gamefiles/bios \
+                  --inventory  /home/frank/Projects/moose-rack/moose-library/inventory.db
 
 Running on `dev.lan` (port 80) as a systemd **user** unit with linger on. Port comes
 from `MOOSE_SERVICE_PORT` in the unit's `Environment=`, so changing it is one
@@ -354,14 +354,31 @@ found a feature that had never worked.
 
 ## Where things live on the server
 
-    /home/frank/moose-library/
-      ROMs/<system>/                     seeded from the SSD, 7 systems
+The library is on the NAS (`GameFiles`), mounted at `/mnt/gamefiles` since
+2026-10-11:
+
+    /mnt/gamefiles/
+      ROMs/<system>/
       ES-DE/gamelists/<system>/gamelist.xml
       ES-DE/downloaded_media/<system>/<type>/
       ES-DE/saves/<rom_id>/<file>        written by the service
       collections/*.txt                  the 27 curated lists
-      bios/                              3,339 files
-      inventory.db                       59,319 hashes
+      bios/
+      eXoDOS/, eXoWin9x/                 see docs/dos.md, docs/win9x.md
+
+The service itself is the deployed tree at `~/Projects/moose-rack` (binary in
+`target/release/`, `ui/`, `assets/`), and its own files are in
+`~/Projects/moose-rack/moose-library/`, which is the unit's `WorkingDirectory`
+and is gitignored:
+
+    moose-service.toml                 paths and the auth token
+    config.toml                        the app config the web UI reads
+    inventory.db                       59,319 hashes
+    cache.sqlite3, state.json,         opened relative to the working
+    states-seen.json, Saves/, library/ directory, so they live here
+
+A deploy unpacks a commit over `~/Projects/moose-rack` and never cleans it, so
+`moose-library/` survives every deploy.
 
 Note the SSD's own layout differs: it is a *portable* ES-DE install, so its
 artwork is under `support/downloaded_media` while its gamelists are not. The
