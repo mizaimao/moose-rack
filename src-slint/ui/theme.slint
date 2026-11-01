@@ -1,0 +1,28 @@
+// The tokens from ui/style.css, so the prototype is judged against the same
+// look rather than against Slint's defaults.
+export global Theme {
+    out property <color> bg: #14161a;
+    out property <color> panel: #1b1e24;
+    out property <color> panel-2: #21252c;
+    out property <color> line: #2c313a;
+    out property <color> text: #e6e8ec;
+    out property <color> dim: #8b93a1;
+    out property <color> accent: #5b9dd9;
+    out property <color> ok: #5fb37a;
+    out property <color> warn: #d99b3a;
+
+    // The glass tint at the strengths style.css mixes it: resting, hover and
+    // the cursor, then the outline at the same three steps.
+    out property <color> glass: #4d8fd6;
+    out property <color> glass-rest: #4d8fd617;
+    out property <color> glass-hover: #4d8fd633;
+    out property <color> glass-sel: #4d8fd657;
+    out property <color> glass-edge: #4d8fd638;
+    out property <color> glass-edge-hover: #4d8fd673;
+    out property <color> glass-edge-sel: #7fb0e6;
+    out property <color> glow: #4d8fd6a6;
+
+    out property <length> radius: 8px;
+    out property <length> card-radius: 12px;
+    out property <duration> quick: 140ms;
+}
