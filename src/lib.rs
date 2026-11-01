@@ -51,6 +51,7 @@ pub mod padpoll;
 pub mod pagefilter;
 pub mod parity;
 pub mod pickorder;
+pub mod playlink;
 pub mod probe;
 pub mod retroarch;
 pub mod retroarch_install;

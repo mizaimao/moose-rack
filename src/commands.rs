@@ -974,6 +974,14 @@ pub fn roms(
     Ok(to_views(state, rows, list.as_ref()))
 }
 
+/// The row a play link names: its platform and exact file name, looked up in
+/// this app's own library. `None` when the library doesn't have it.
+pub fn find_rom_by_file(state: &AppState, platform: String, file: String) -> CmdResult<Option<i64>> {
+    let cache = state.cache.lock().map_err(err)?;
+    let rows = cache.roms_for(&platform).map_err(err)?;
+    Ok(rows.into_iter().find(|r| r.fs_name == file).map(|r| r.id))
+}
+
 #[derive(serde::Serialize)]
 pub struct GroupView {
     pub group: String,

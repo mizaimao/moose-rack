@@ -1020,6 +1020,53 @@ fn ejs_serve(app: &tauri::AppHandle, req: tauri::http::Request<Vec<u8>>) -> taur
     }
 }
 
+/// A play link that has arrived and the page hasn't picked up yet.
+///
+/// Held as well as announced: a link that starts the app arrives before the
+/// page has loaded and is listening, so the page asks for it once it's ready,
+/// and again each time `play-link` says another one came in.
+#[derive(Default)]
+struct PendingPlay(std::sync::Mutex<Option<moose_rack::playlink::PlayLink>>);
+
+/// Keep the last valid play link among `urls` and tell the page.
+///
+/// The last one, because two clicks before the page answers mean the second
+/// game. Anything that doesn't parse is dropped without a word: any web page
+/// can fire a `moose-rack://` address.
+#[cfg(desktop)]
+fn take_links(app: &tauri::AppHandle, urls: impl IntoIterator<Item = String>) {
+    let Some(link) = urls.into_iter().filter_map(|u| moose_rack::playlink::parse(&u)).last() else {
+        return;
+    };
+    eprintln!("play link: {}/{}", link.platform, link.file);
+    if let Ok(mut slot) = app.state::<PendingPlay>().0.lock() {
+        *slot = Some(link);
+    }
+    show_main(app);
+    let _ = app.emit_to("main", "play-link", ());
+}
+
+/// Bring the main window to the front, as when a link or a second launch asks
+/// for the app.
+#[cfg(desktop)]
+fn show_main(app: &tauri::AppHandle) {
+    if let Some(win) = app.get_webview_window("main") {
+        let _ = win.unminimize();
+        let _ = win.show();
+        let _ = win.set_focus();
+    }
+}
+
+#[tauri::command]
+fn take_play_link(pending: State<'_, PendingPlay>) -> Option<moose_rack::playlink::PlayLink> {
+    pending.0.lock().ok()?.take()
+}
+
+#[tauri::command]
+async fn find_rom_by_file(state: State<'_, AppState>, platform: String, file: String) -> CmdResult<Option<i64>> {
+    moose_rack::commands::find_rom_by_file(&state, platform, file)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     install_panic_log();
@@ -1028,7 +1075,15 @@ pub fn run() {
     // and the HTTP service start from the same state rather than two setups
     // that drift.
     let state = AppState::from_config().expect("building app state");
-    tauri::Builder::default()
+    let builder = tauri::Builder::default();
+    // Play links. Single-instance has to be the first plugin registered: a
+    // link opened on Windows or Linux starts a second copy of the app, and
+    // this is what turns that into a link for the copy already running.
+    #[cfg(desktop)]
+    let builder = builder
+        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| show_main(app)))
+        .plugin(tauri_plugin_deep_link::init());
+    builder
         // The native folder picker behind every Browse button in Settings.
         // Granted in capabilities/default.json, but a permission for a plugin
         // that was never registered still fails at runtime: f47a312 dropped
@@ -1037,11 +1092,14 @@ pub fn run() {
         // below is what catches that now.
         .plugin(tauri_plugin_dialog::init())
         .manage(state)
+        .manage(PendingPlay::default())
         // EmulatorJS and the ROM it plays, read off disk. See `ejs_serve`.
         .register_uri_scheme_protocol("moose", |ctx, req| ejs_serve(ctx.app_handle(), req))
         .invoke_handler(tauri::generate_handler![
             measure_note,
             browser_play_base,
+            take_play_link,
+            find_rom_by_file,
             stable_ids,
             local_save,
             put_local_save,
@@ -1132,6 +1190,27 @@ pub fn run() {
         .setup(|app| {
             #[cfg(target_os = "macos")]
             install_menu(app.handle())?;
+            #[cfg(desktop)]
+            {
+                use tauri_plugin_deep_link::DeepLinkExt;
+                // macOS takes the scheme from the bundle's Info.plist. Windows
+                // and Linux need it written down at run time, because the app
+                // runs portable rather than from an installer (on Windows a
+                // key under HKEY_CURRENT_USER\Software\Classes).
+                #[cfg(any(windows, target_os = "linux"))]
+                if let Err(e) = app.deep_link().register_all() {
+                    eprintln!("play links: cannot register {}://: {e}", moose_rack::playlink::SCHEME);
+                }
+                // A link that started the app arrives here; one opened while it
+                // runs arrives through on_open_url.
+                if let Ok(Some(urls)) = app.deep_link().get_current() {
+                    take_links(app.handle(), urls.iter().map(|u| u.to_string()));
+                }
+                let handle = app.handle().clone();
+                app.deep_link().on_open_url(move |event| {
+                    take_links(&handle, event.urls().iter().map(|u| u.to_string()));
+                });
+            }
             // The version in the title bar, so "which build is this" is
             // answerable from a screenshot. Set here rather than in
             // tauri.conf.json because the number lives in Cargo.toml and a
