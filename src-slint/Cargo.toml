@@ -8,14 +8,22 @@ publish = false
 # on Android, macOS and Windows. See src-slint/README.md.
 #
 # Its own workspace on purpose: nothing here reaches the main lockfile or CI
-# until the experiment is decided. It draws sample data and calls nothing in
-# `moose_rack` yet.
+# until the experiment is decided. It draws sample data; from `moose_rack` it
+# uses only the key and pad bindings so far.
 [workspace]
 
 [dependencies]
 slint = { version = "1.18.1", default-features = false, features = ["std", "compat-1-2", "backend-winit"] }
 # Only for MOOSE_SLINT_SNAPSHOT, which saves the window as a picture.
 png = "0.18.1"
+# The core: the key and pad bindings and the repeat timing the app already uses.
+moose-rack = { path = ".." }
+
+# Controllers on the desktop. On Android they arrive as the system's own key
+# events instead. Linked against the SDL3 that Homebrew put on macserver and on
+# Frank's laptop, found through pkg-config; a shipped build would link it in.
+[target.'cfg(not(target_os = "android"))'.dependencies]
+sdl3 = { version = "0.20.0", features = ["use-pkg-config"] }
 
 # Switches for finding where the memory goes. With more than one renderer
 # built in, SLINT_BACKEND=winit-femtovg, winit-software or winit-skia picks one
