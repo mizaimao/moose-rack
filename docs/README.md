@@ -27,6 +27,7 @@ these look like to-do lists and are not.
 
 | | |
 | --- | --- |
+| [server-and-client.md](server-and-client.md) | **Design, agreed 2026-11-01.** The NAS library, the web page, and a desktop app that caches: the play link, the per-OS emulator set, and what is built |
 | [one-core-two-frontends.md](one-core-two-frontends.md) | **Current.** The shape the project settled into once the answer became "Flip **and** Thor" |
 | [memory-footprint.md](memory-footprint.md) | **Measurement.** What the app weighs and why — 192 MB, and 106 MB of it is WebKit |
 | [fast-launch.md](fast-launch.md) | **Measurement + work in progress.** Why a game took 4.26 s to start, and the launcher written to fix it |
