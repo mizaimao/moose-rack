@@ -64,7 +64,7 @@ from the same design and have to work too.
 | Desktop cache, ROMs downloaded on demand | built, RetroArch games |
 | Saves uploaded after a game exits | built for RetroArch; standalone emulators at milestone 1 ([emulator-saves.md](emulator-saves.md)) |
 | Play link from the web page to the app | built; on macOS a link went to the app, downloaded the game and started RetroArch (2026-11-01). Windows not tried yet; the web page change not deployed yet |
-| App stays open while a game runs; asks before quitting with an upload pending | new; the upload after exit exists |
+| App stays open while a game runs; asks before quitting with an upload pending | built (`src-tauri/src/busy.rs`). On macOS, closing the window during a game was refused and worked once it ended (2026-11-01). The upload question and Cmd+Q are covered by tests only; the Dock's Quit can't be stopped |
 | Standalone emulators installed and set up per OS | new, and the largest piece |
 | Lock a game while another device plays it | deferred |
 | Server keeps copies of emulator updates | not doing |

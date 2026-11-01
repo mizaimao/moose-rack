@@ -30,6 +30,8 @@ use moose_rack::{cache, config::Config, coremap, download, media, savesync, shad
 use moose_rack::app::AppState;
 use moose_rack::commands::*;
 
+mod busy;
+
 #[tauri::command]
 async fn sync_library(app: tauri::AppHandle, state: State<'_, AppState>, full: bool) -> CmdResult<String> {
     let mut store = cache::Cache::open(Path::new(CACHE_DB)).map_err(err)?;
@@ -484,6 +486,7 @@ async fn launch_rom(
     skip_bios: Option<bool>,
     // A save state to start in, chosen from the shelf in the info pane.
     entry_slot: Option<u32>,
+    busy: State<'_, busy::Busy>,
 ) -> CmdResult<String> {
     let row = {
         let cache = state.cache.lock().map_err(err)?;
@@ -665,7 +668,11 @@ async fn launch_rom(
     say("starting RetroArch…");
     let began = std::time::Instant::now();
     let started_at = moose_rack::util::now_iso();
-    let status = plan.run(ra, false).map_err(err)?;
+    // The app refuses to quit from here until the saves have gone up: see `busy`.
+    let status = {
+        let _playing = busy.playing(&row.name);
+        plan.run(ra, false).map_err(err)?
+    };
 
     // How long that took is the only record of it. RetroArch tells nobody, and
     // the server's `last_played` only moves when something tells the server —
@@ -681,6 +688,7 @@ async fn launch_rom(
     let post = if skip_sync.unwrap_or(false) {
         AutoSync::default()
     } else {
+        let _uploading = busy.uploading();
         auto_sync(&state, &row, savesync::When::AfterExit).await
     };
     if let Some(note) = post.note {
@@ -832,7 +840,20 @@ fn apply_app_icon(app: &tauri::AppHandle, id: &str, dir: &Path) -> String {
 
 #[cfg(target_os = "macos")]
 fn install_menu(app: &tauri::AppHandle) -> tauri::Result<()> {
-    use tauri::menu::{AboutMetadataBuilder, MenuBuilder, SubmenuBuilder};
+    use tauri::menu::{AboutMetadataBuilder, MenuBuilder, MenuItemBuilder, SubmenuBuilder};
+
+    // Our own Quit rather than the standard one: the standard item ends the
+    // process straight away, with no event the app can answer, so Cmd+Q in
+    // the middle of a game would have skipped the save upload. This one asks
+    // `may_quit` first. (The Dock's Quit still goes the standard way.)
+    let quit = MenuItemBuilder::with_id("quit", "Quit Moose Rack")
+        .accelerator("CmdOrCtrl+Q")
+        .build(app)?;
+    app.on_menu_event(|app, event| {
+        if event.id() == "quit" && may_quit(app) {
+            app.exit(0);
+        }
+    });
 
     let about = AboutMetadataBuilder::new()
         .name(Some("Moose Rack"))
@@ -851,7 +872,7 @@ fn install_menu(app: &tauri::AppHandle) -> tauri::Result<()> {
         .hide_others()
         .show_all()
         .separator()
-        .quit()
+        .item(&quit)
         .build()?;
     // Without an Edit menu the text fields in Settings lose cut, copy, paste
     // and select-all — on macOS those are menu items first and shortcuts
@@ -1093,6 +1114,17 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .manage(state)
         .manage(PendingPlay::default())
+        .manage(busy::Busy::default())
+        // Closing the main window quits the app, so it asks `may_quit` first.
+        // The settings window closes freely.
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event
+                && window.label() == "main"
+                && !may_quit(window.app_handle())
+            {
+                api.prevent_close();
+            }
+        })
         // EmulatorJS and the ROM it plays, read off disk. See `ejs_serve`.
         .register_uri_scheme_protocol("moose", |ctx, req| ejs_serve(ctx.app_handle(), req))
         .invoke_handler(tauri::generate_handler![
@@ -1295,8 +1327,57 @@ pub fn run() {
             }
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("running tauri application");
+        .build(tauri::generate_context!())
+        .expect("building tauri application")
+        .run(|app, event| {
+            // Any other way out: Quit in the menu, or `exit` from code. Only
+            // while the main window is still there to show why; once it has
+            // closed, `may_quit` has already said yes.
+            if let tauri::RunEvent::ExitRequested { api, .. } = event
+                && app.get_webview_window("main").is_some()
+                && !may_quit(app)
+            {
+                api.prevent_exit();
+            }
+        });
+}
+
+/// Whether the app may quit now. When it may not, says why in a dialog and
+/// returns false; "Quit anyway" on the upload question quits from there.
+fn may_quit(app: &tauri::AppHandle) -> bool {
+    use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
+    let hold = app.state::<busy::Busy>().hold();
+    if let Some(why) = &hold {
+        eprintln!("quit held: {why:?}");
+    }
+    match hold {
+        None => true,
+        Some(busy::Hold::Playing(name)) => {
+            app.dialog()
+                .message(format!(
+                    "{name} is still running. Quit the game first: Moose Rack uploads its saves when it ends."
+                ))
+                .title("Moose Rack")
+                .kind(MessageDialogKind::Info)
+                .show(|_| {});
+            false
+        }
+        Some(busy::Hold::Uploading) => {
+            let handle = app.clone();
+            app.dialog()
+                .message("Saves are still uploading to the server. If you quit now, the next sync picks them up.")
+                .title("Moose Rack")
+                .kind(MessageDialogKind::Warning)
+                .buttons(MessageDialogButtons::OkCancelCustom("Quit anyway".into(), "Keep open".into()))
+                .show(move |quit| {
+                    if quit {
+                        handle.state::<busy::Busy>().leave();
+                        handle.exit(0);
+                    }
+                });
+            false
+        }
+    }
 }
 
 // ---- wrappers over moose_rack::commands ----
@@ -1496,7 +1577,9 @@ async fn resolve_save_conflict(
     state: State<'_, AppState>,
     file_name: String,
     keep: moose_rack::savesync::Keep,
+    busy: State<'_, busy::Busy>,
 ) -> CmdResult<String> {
+    let _uploading = busy.uploading();
     moose_rack::commands::resolve_save_conflict(&state, file_name, keep).await
 }
 
@@ -1553,7 +1636,8 @@ async fn attract_pool(state: State<'_, AppState>) -> CmdResult<Vec<AttractPick>>
 }
 
 #[tauri::command]
-async fn sync_saves(state: State<'_, AppState>) -> CmdResult<SyncRun> {
+async fn sync_saves(state: State<'_, AppState>, busy: State<'_, busy::Busy>) -> CmdResult<SyncRun> {
+    let _uploading = busy.uploading();
     moose_rack::commands::sync_saves(&state).await
 }
 
