@@ -170,7 +170,51 @@ fn main() -> Result<(), slint::PlatformError> {
         }
     });
 
+    if let Ok(path) = std::env::var("MOOSE_SLINT_SNAPSHOT") {
+        snapshot(&ui, path, std::env::var("MOOSE_SLINT_SCENE").unwrap_or_default());
+    }
+
     ui.run()
+}
+
+/// `MOOSE_SLINT_SNAPSHOT=out.png` sets up one scene, saves the window as a PNG
+/// and quits, so the look can be checked on a machine nobody is watching.
+/// `MOOSE_SLINT_SCENE` picks it: desk (the default), sofa, detail, list,
+/// settings or download.
+fn snapshot(ui: &AppWindow, path: String, scene: String) {
+    match scene.as_str() {
+        "sofa" => ui.set_mode(0),
+        "detail" => {
+            ui.set_mode(0);
+            ui.set_sofa_detail_open(true);
+        }
+        "list" => ui.set_list_view(true),
+        "settings" => ui.set_settings_open(true),
+        "download" => {
+            ui.set_selected_index(1);
+            ui.set_download_index(1);
+            ui.set_download_progress(0.4);
+        }
+        _ => {}
+    }
+    let weak = ui.as_weak();
+    slint::Timer::single_shot(std::time::Duration::from_millis(1200), move || {
+        let ui = weak.unwrap();
+        let saved = ui.window().take_snapshot().map_err(std::io::Error::other).and_then(|frame| save_png(&path, &frame));
+        if let Err(e) = saved {
+            eprintln!("snapshot: {e}");
+        }
+        let _ = slint::quit_event_loop();
+    });
+}
+
+fn save_png(path: &str, frame: &slint::SharedPixelBuffer<slint::Rgba8Pixel>) -> std::io::Result<()> {
+    let file = std::io::BufWriter::new(std::fs::File::create(path)?);
+    let mut encoder = png::Encoder::new(file, frame.width(), frame.height());
+    encoder.set_color(png::ColorType::Rgba);
+    encoder.set_depth(png::BitDepth::Eight);
+    let mut writer = encoder.write_header().map_err(std::io::Error::other)?;
+    writer.write_image_data(frame.as_bytes()).map_err(std::io::Error::other)
 }
 
 /// A starting point with something in every tab: a few favorites, and about a
