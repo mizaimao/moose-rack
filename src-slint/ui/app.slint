@@ -18,11 +18,14 @@ component GameGrid inherits Rectangle {
     callback activated(int);
     callback play(int);
 
-    property <length> gap: 14px;
+    property <length> gap: root.list-view ? 6px : 14px;
     property <length> pad: 18px;
-    property <length> card-height: (root.card-width - 16px) / 0.75 + 16px + 40px;
-    property <length> row-height: root.list-view ? 44px : root.card-height;
+    // `card-width` is the smallest a card may be; the cards in a row share out
+    // what is left, so the grid always meets the right edge.
     property <int> cols: root.list-view ? 1 : Math.max(1, Math.floor((root.width - 2 * root.pad + root.gap) / (root.card-width + root.gap)));
+    property <length> cell-width: (root.width - 2 * root.pad - (root.cols - 1) * root.gap) / root.cols;
+    property <length> card-height: (root.cell-width - 16px) / 0.75 + 16px + 40px;
+    property <length> row-height: root.list-view ? 44px : root.card-height;
     property <int> rows: Math.ceil(root.games.length / root.cols);
     property <length> sel-top: root.pad + Math.floor(root.selected-index / root.cols) * (root.row-height + root.gap);
     property <length> sel-bottom: root.sel-top + root.row-height;
@@ -90,9 +93,9 @@ component GameGrid inherits Rectangle {
             animate content-y { duration: 160ms; easing: ease-out; }
 
             for game[i] in root.games: Rectangle {
-                x: root.pad + Math.mod(i, root.cols) * (root.card-width + root.gap);
+                x: root.pad + Math.mod(i, root.cols) * (root.cell-width + root.gap);
                 y: root.pad + Math.floor(i / root.cols) * (root.row-height + root.gap);
-                width: root.list-view ? flick.width - 2 * root.pad : root.card-width;
+                width: root.cell-width;
                 height: root.row-height;
 
                 if !root.list-view: CoverCard {
