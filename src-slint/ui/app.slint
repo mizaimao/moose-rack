@@ -341,14 +341,14 @@ export component AppWindow inherits Window {
     out property <int> grid-cols: grid.cols;
 
     // The controller in hand, as SDL describes it, or the keyboard's keys when
-    // there is none. The four faces are bottom, right, left, top.
+    // there is none. Each glyph is the button that does that job on this pad.
     in property <bool> pad-connected: false;
     in property <string> pad-name;
     in property <string> pad-kind;
-    in property <string> face-south: "Enter";
-    in property <string> face-east: "Esc";
-    in property <string> face-west: "*";
-    in property <string> face-north: "/";
+    in property <string> glyph-confirm: "Enter";
+    in property <string> glyph-back: "Esc";
+    in property <string> glyph-favorite: "*";
+    in property <string> glyph-search: "/";
     in property <string> shoulder-left: "Q";
     in property <string> shoulder-right: "E";
     in property <string> start-label: ",";
@@ -792,22 +792,22 @@ export component AppWindow inherits Window {
                     }
 
                     Hint {
-                        glyph: root.face-south;
+                        glyph: root.glyph-confirm;
                         text: root.focus-zone == Zone.grid ? (root.mode == 1 ? "Play" : "Open")
                             : root.focus-zone == Zone.consoles ? "Open"
                             : root.focus-zone == Zone.settings ? "Change"
                             : "Select";
                     }
                     Hint {
-                        glyph: root.face-east;
+                        glyph: root.glyph-back;
                         text: root.focus-zone == Zone.settings || root.focus-zone == Zone.sofa ? "Close" : "Back";
                     }
                     if root.focus-zone == Zone.grid || root.focus-zone == Zone.detail || root.focus-zone == Zone.sofa: Hint {
-                        glyph: root.face-west;
+                        glyph: root.glyph-favorite;
                         text: "Favorite";
                     }
                     Hint {
-                        glyph: root.face-north;
+                        glyph: root.glyph-search;
                         text: "Search";
                     }
                     HorizontalLayout {

@@ -198,7 +198,8 @@ fn main() -> Result<(), slint::PlatformError> {
 /// The app's bindings with three buttons given jobs the hint bar shows: the
 /// left face button stars a game, the top one searches (it plays the gameplay
 /// video in the app), and Start opens Settings (the shortcut list in the app),
-/// as "," does on the keyboard.
+/// as "," does on the keyboard. Confirm and back are swapped on top of these;
+/// see `read_pads`.
 fn prototype_bindings() -> binds::Bindings {
     let mut bindings = binds::Bindings::default();
     bindings.set_pad("favorite", Some(2));
@@ -220,7 +221,11 @@ fn read_pads(ui: &AppWindow, bindings: &binds::Bindings) -> Option<slint::Timer>
             return None;
         }
     };
-    let map = bindings.pad_map();
+    // Confirm is the right face button and back the bottom one, on every pad:
+    // A on Nintendo, Circle on PlayStation, B on Xbox. Frank's call
+    // (2026-10-31), the same place whatever is printed there, and the core's
+    // own A/B swap does it.
+    let map = bindings.pad_map_swapped(true, false);
     let mut repeat = padpoll::Repeat::default();
     let mut connected = 0;
     let start = Instant::now();
@@ -264,10 +269,11 @@ fn show_pad(ui: &AppWindow, info: &pad::Info) {
     ui.set_pad_connected(true);
     ui.set_pad_name(info.name.clone().into());
     ui.set_pad_kind(info.kind.into());
-    ui.set_face_south(info.faces[0].into());
-    ui.set_face_east(info.faces[1].into());
-    ui.set_face_west(info.faces[2].into());
-    ui.set_face_north(info.faces[3].into());
+    // `faces` is bottom, right, left, top; the jobs are as `read_pads` maps them.
+    ui.set_glyph_confirm(info.faces[1].into());
+    ui.set_glyph_back(info.faces[0].into());
+    ui.set_glyph_favorite(info.faces[2].into());
+    ui.set_glyph_search(info.faces[3].into());
     ui.set_shoulder_left(info.shoulders[0].into());
     ui.set_shoulder_right(info.shoulders[1].into());
     ui.set_start_label(info.start.into());
@@ -277,10 +283,10 @@ fn show_pad(ui: &AppWindow, info: &pad::Info) {
 #[cfg(not(target_os = "android"))]
 fn show_keyboard(ui: &AppWindow) {
     ui.set_pad_connected(false);
-    ui.set_face_south("Enter".into());
-    ui.set_face_east("Esc".into());
-    ui.set_face_west("*".into());
-    ui.set_face_north("/".into());
+    ui.set_glyph_confirm("Enter".into());
+    ui.set_glyph_back("Esc".into());
+    ui.set_glyph_favorite("*".into());
+    ui.set_glyph_search("/".into());
     ui.set_shoulder_left("Q".into());
     ui.set_shoulder_right("E".into());
     ui.set_start_label(",".into());
