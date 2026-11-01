@@ -19,7 +19,10 @@ One user for now: the owner. The service already knows an owner token and
 named users (`[[auth.users]]`, see [service-api.md](service-api.md)), so adding
 people later needs no redesign.
 
-## Scenarios
+## How it gets used
+
+Examples, not a complete list. The first three are Frank's; the rest follow
+from the same design and have to work too.
 
 1. A friend visits. They open the web page and play a simple game in the
    browser, with pad mapping and shaders preset. Built.
@@ -30,6 +33,28 @@ people later needs no redesign.
 3. While the game runs, the app stays open, as Steam does. When the game
    quits, the app finds new or changed saves and uploads them. Quitting the app
    while an upload is unfinished asks first.
+4. I open the desktop app directly, with no web page, browse and play. Same
+   steps as 2.
+5. The server is unreachable (away from home, dev.lan down). Everything in the
+   cache still plays. Save uploads wait and go when the server is back; games
+   not in the cache say they need the server.
+6. A new computer: install the app, sign in to the service, done. Emulators and
+   ROMs arrive on first play.
+7. The cache is deleted, or the disk is full. Nothing is lost: saves are on the
+   server. When space runs short the app offers to remove the ROMs played
+   least recently, never unsynced saves.
+8. A game this OS can't run, such as Xbox 360 on the Mac. The web page and the
+   app say so and name the OS that can, instead of offering Play.
+9. The web page on a phone or a friend's laptop without the app. Browser games
+   play; the rest say they need the desktop app.
+10. I play on the Mac, then continue on Windows or the Nova. The next device
+    downloads the newer save before the game starts. If both changed it, the
+    app stops and asks which to keep.
+11. An emulator has a newer release. Play offers the update; declining plays
+    the installed version.
+12. The handhelds (Nova, Flip) keep their own setups (ES-DE, moose-patch) and
+    share saves through the same service. They are not part of this design
+    beyond that.
 
 ## The pieces
 
