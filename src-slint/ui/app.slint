@@ -34,10 +34,10 @@ component GameGrid inherits Rectangle {
     // Keep the cursor on screen as it moves, the way the grid scrolls in the
     // current app.
     function ensure-visible() {
-        if (root.sel-top < -flick.viewport-y + root.pad) {
-            flick.viewport-y = -(root.sel-top - root.pad);
-        } else if (root.sel-bottom > -flick.viewport-y + flick.height - root.pad) {
-            flick.viewport-y = -(root.sel-bottom - flick.height + root.pad);
+        if (root.sel-top < -flick.content-y + root.pad) {
+            flick.content-y = -(root.sel-top - root.pad);
+        } else if (root.sel-bottom > -flick.content-y + flick.height - root.pad) {
+            flick.content-y = -(root.sel-bottom - flick.height + root.pad);
         }
     }
 
@@ -85,9 +85,9 @@ component GameGrid inherits Rectangle {
         }
 
         flick := Flickable {
-            viewport-width: self.width;
-            viewport-height: 2 * root.pad + root.rows * (root.row-height + root.gap) - root.gap;
-            animate viewport-y { duration: 160ms; easing: ease-out; }
+            content-width: self.width;
+            content-height: 2 * root.pad + root.rows * (root.row-height + root.gap) - root.gap;
+            animate content-y { duration: 160ms; easing: ease-out; }
 
             for game[i] in root.games: Rectangle {
                 x: root.pad + Math.mod(i, root.cols) * (root.card-width + root.gap);
@@ -649,7 +649,7 @@ export component AppWindow inherits Window {
                     Flickable {
                         y: 36px;
                         height: parent.height - 36px;
-                        viewport-height: root.platforms.length * 42px + 12px;
+                        content-height: root.platforms.length * 42px + 12px;
 
                         for platform[i] in root.platforms: ConsoleRow {
                             x: 8px;
