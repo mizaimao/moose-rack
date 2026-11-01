@@ -2,11 +2,11 @@
 #
 # Seed the server's ES-DE library from the SSD.
 #
-# The new service is developed against `/home/frank/moose-library` on dev.lan,
-# which follows the ES-DE layout and holds seven systems rather than the whole
-# 1.8 TB: about 10 GB of ROMs and 71 GB of artwork. Small enough to copy in an
-# hour, representative enough to build against. RomM stays up and untouched
-# until the service replaces it.
+# Written for the first server library, `/home/frank/moose-library` on dev.lan:
+# the ES-DE layout with seven systems rather than the whole 1.8 TB, about 10 GB
+# of ROMs and 71 GB of artwork. Small enough to copy in an hour, representative
+# enough to build against. The library has been on the NAS at `/mnt/gamefiles`
+# since 2026-10-11, so that is where this now copies.
 #
 #     ROMs/<system>/
 #     ES-DE/gamelists/<system>/gamelist.xml
@@ -22,7 +22,7 @@
 set -uo pipefail
 SYS=(sfc gbc gba gb snes nes famicom)
 SSD=/Volumes/Retro
-DEST=dev.lan:/home/frank/moose-library
+DEST=dev.lan:/mnt/gamefiles
 for s in "${SYS[@]}"; do
   for pair in "Roms/$s ROMs/$s" "ES-DE/gamelists/$s ES-DE/gamelists/$s" "ES-DE/support/downloaded_media/$s ES-DE/downloaded_media/$s"; do
     set -- $pair

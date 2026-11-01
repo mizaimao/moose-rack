@@ -12,6 +12,9 @@
 /state.json
 # What each save state looked like at the last sync — local bookkeeping.
 /states-seen.json
+# The library service's own folder on dev.lan, inside the deployed tree since
+# 2026-10-24: its config with the auth token, inventory.db, cache and state.
+/moose-library/
 
 # Personal save/state data used as scanner test input — not ours to commit.
 /Saves/
