@@ -90,6 +90,52 @@ async function playHere(id) {
   return playInBrowser(detail);
 }
 
+/// Play from the web page, which can't start an emulator. The browser plays
+/// what it can; the rest goes to the desktop app on this computer through a
+/// play link (`playlink.js`, `docs/server-and-client.md`).
+async function playOnPage(id) {
+  const [{ browserPlay, OWN_PLAYER }, detail] = await Promise.all([
+    import("./ejs-systems.js"),
+    invoke("rom_detail", { id }),
+  ]);
+  const slug = detail.platform_slug ?? detail.platform;
+  if (OWN_PLAYER[slug] || !browserPlay(slug, globalThis.crossOriginIsolated).refuse) {
+    return playHere(id);
+  }
+  const { openInApp } = await import("./playlink.js");
+  return openInApp(slug, detail.fs_name, { toast });
+}
+
+/// Play links on the desktop: the web page's Play for a game it can't run.
+///
+/// The backend holds the newest link until it's asked for, so this asks once
+/// now, for a link that started the app, and again on every `play-link`.
+export async function watchPlayLinks() {
+  if (MOBILE || !(await canLaunchNatively())) return;
+  const take = async () => {
+    const link = await invoke("take_play_link").catch(() => null);
+    if (!link) return;
+    const find = () => invoke("find_rom_by_file", link).catch(() => null);
+    let id = await find();
+    if (id == null) {
+      // Most likely added on the server since this app last looked.
+      toast("Updating the library…");
+      try {
+        await invoke("sync_library", { full: false });
+      } catch (e) {
+        return toast(`Couldn't update the library — ${e}`, 8000);
+      }
+      id = await find();
+    }
+    if (id == null) return toast(`Not in this library: ${link.file}`, 8000);
+    // The detail pane's Play, so a game not in the cache downloads first.
+    const [{ play }, detail] = await Promise.all([import("./detail.js"), invoke("rom_detail", { id })]);
+    return play(detail);
+  };
+  await listen("play-link", take);
+  await take();
+}
+
 /// `launch_rom` does not return until the game quits, so a second press in the
 /// meantime used to start a second copy — two RetroArch windows over each
 /// other, both holding the same save. A held A repeats slowly enough that it
@@ -258,7 +304,7 @@ export async function launch(
       : playHereWanted(id)
       ? await playHere(id)
       : !(await canLaunchNatively())
-      ? await playHere(id)
+      ? await playOnPage(id)
       : await invoke("launch_rom", {
           id,
           pad: state.gamepad,

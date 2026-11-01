@@ -63,7 +63,7 @@ from the same design and have to work too.
 | Web library and in-browser play (EmulatorJS, DOS, Windows 9x) | built |
 | Desktop cache, ROMs downloaded on demand | built, RetroArch games |
 | Saves uploaded after a game exits | built for RetroArch; standalone emulators at milestone 1 ([emulator-saves.md](emulator-saves.md)) |
-| Play link from the web page to the app | new |
+| Play link from the web page to the app | built; on macOS a link went to the app, downloaded the game and started RetroArch (2026-11-01). Windows not tried yet; the web page change not deployed yet |
 | App stays open while a game runs; asks before quitting with an upload pending | new; the upload after exit exists |
 | Standalone emulators installed and set up per OS | new, and the largest piece |
 | Lock a game while another device plays it | deferred |
@@ -88,7 +88,22 @@ link works away from home too.
   for a game in its own library listing and never runs anything taken from the
   link itself.
 - If the app isn't installed, nothing happens. After a few seconds the page
-  says so and links to the download.
+  says so.
+- On the desktop the link is handled by the app's own Play (`play` in
+  `ui/js/detail.js`): download if needed, then launch. A game the app's cache
+  doesn't know yet triggers a library update first.
+
+Code: `src/playlink.rs` reads the link, `src-tauri/src/lib.rs` receives it
+(`take_links`, `take_play_link`), `ui/js/playlink.js` builds it on the web page,
+and `watchPlayLinks` in `ui/js/actions.js` plays it. The app logs
+`play link: <platform>/<file>` to stderr when one arrives.
+
+Found while testing on macserver: a fresh build opened through Finder or
+`open` couldn't reach `dev.lan` ("No route to host", os error 65) while `curl`
+on the same machine could. That fits macOS asking "allow Moose Rack to find
+devices on your local network?" on screen, with nobody there to click it.
+Started from a shell, the same build connected. On a machine where someone
+answers that prompt once, it doesn't come back.
 
 ## Play, step by step
 

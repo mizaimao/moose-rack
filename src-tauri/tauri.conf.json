@@ -57,5 +57,12 @@
       "minimumSystemVersion": "10.15",
       "signingIdentity": "-"
     }
+  },
+  "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": ["moose-rack"]
+      }
+    }
   }
 }
