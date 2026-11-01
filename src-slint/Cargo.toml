@@ -20,8 +20,12 @@ png = "0.18.1"
 # Switches for finding where the memory goes. With more than one renderer
 # built in, SLINT_BACKEND=winit-femtovg, winit-software or winit-skia picks one
 # at run time. `examples/empty.rs` is the floor: a window with nothing in it.
+#
+# Skia is the default because of what they cost on macserver, 2560x1600 Retina,
+# measured with `footprint` (2026-10-31): Skia over Metal 18 MB; FemtoVG over
+# OpenGL 147 MB, of which 118 MB is an empty window; the software renderer 81 MB.
 [features]
-default = ["femtovg", "software", "accessibility"]
+default = ["skia", "accessibility"]
 femtovg = ["slint/renderer-femtovg"]
 software = ["slint/renderer-software"]
 skia = ["slint/renderer-skia"]
