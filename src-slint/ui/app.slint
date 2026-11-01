@@ -1,0 +1,887 @@
+// The window: header, tab row, and either Desk (consoles | games | detail) or
+// Sofa (games alone, bigger, with the detail opened over them), as the two
+// arrangements in ui/index.html are.
+import { Theme } from "theme.slint";
+import {
+    GameItem, PlatformItem, Button, IconButton, Segmented, SearchField, Toggle, Slider,
+    ProgressBar, Chip, KeyHint, Tab, CoverArt, CoverCard, ListRow, ConsoleRow, Toast,
+} from "widgets.slint";
+import "../../assets/fonts/NotoSans[wdth,wght].ttf";
+
+export { GameItem, PlatformItem }
+
+component GameGrid inherits Rectangle {
+    in property <[GameItem]> games;
+    in-out property <int> selected-index;
+    in property <length> card-width: 150px;
+    in property <bool> list-view;
+    callback activated(int);
+    callback play(int);
+
+    property <length> gap: 14px;
+    property <length> pad: 18px;
+    property <length> card-height: (root.card-width - 16px) / 0.75 + 16px + 40px;
+    property <length> row-height: root.list-view ? 44px : root.card-height;
+    property <int> cols: root.list-view ? 1 : Math.max(1, Math.floor((root.width - 2 * root.pad + root.gap) / (root.card-width + root.gap)));
+    property <int> rows: Math.ceil(root.games.length / root.cols);
+    property <length> sel-top: root.pad + Math.floor(root.selected-index / root.cols) * (root.row-height + root.gap);
+    property <length> sel-bottom: root.sel-top + root.row-height;
+
+    public function focus-grid() {
+        scope.focus();
+    }
+
+    // Keep the cursor on screen as it moves, the way the grid scrolls in the
+    // current app.
+    function ensure-visible() {
+        if (root.sel-top < -flick.viewport-y + root.pad) {
+            flick.viewport-y = -(root.sel-top - root.pad);
+        } else if (root.sel-bottom > -flick.viewport-y + flick.height - root.pad) {
+            flick.viewport-y = -(root.sel-bottom - flick.height + root.pad);
+        }
+    }
+
+    changed selected-index => {
+        root.ensure-visible();
+    }
+
+    scope := FocusScope {
+        key-pressed(event) => {
+            if (event.text == Key.RightArrow) {
+                root.selected-index = Math.min(root.games.length - 1, root.selected-index + 1);
+                return accept;
+            }
+            if (event.text == Key.LeftArrow) {
+                root.selected-index = Math.max(0, root.selected-index - 1);
+                return accept;
+            }
+            if (event.text == Key.DownArrow) {
+                if (root.selected-index + root.cols < root.games.length) {
+                    root.selected-index += root.cols;
+                }
+                return accept;
+            }
+            if (event.text == Key.UpArrow) {
+                if (root.selected-index - root.cols >= 0) {
+                    root.selected-index -= root.cols;
+                }
+                return accept;
+            }
+            if (event.text == Key.Home) {
+                root.selected-index = 0;
+                return accept;
+            }
+            if (event.text == Key.End) {
+                root.selected-index = Math.max(0, root.games.length - 1);
+                return accept;
+            }
+            if (event.text == Key.Return || event.text == " ") {
+                if (root.games.length > 0) {
+                    root.activated(root.selected-index);
+                }
+                return accept;
+            }
+            return reject;
+        }
+
+        flick := Flickable {
+            viewport-width: self.width;
+            viewport-height: 2 * root.pad + root.rows * (root.row-height + root.gap) - root.gap;
+            animate viewport-y { duration: 160ms; easing: ease-out; }
+
+            for game[i] in root.games: Rectangle {
+                x: root.pad + Math.mod(i, root.cols) * (root.card-width + root.gap);
+                y: root.pad + Math.floor(i / root.cols) * (root.row-height + root.gap);
+                width: root.list-view ? flick.width - 2 * root.pad : root.card-width;
+                height: root.row-height;
+
+                if !root.list-view: CoverCard {
+                    game: game;
+                    selected: i == root.selected-index;
+                    clicked => {
+                        root.selected-index = i;
+                        scope.focus();
+                    }
+                    double-clicked => {
+                        root.play(i);
+                    }
+                }
+                if root.list-view: ListRow {
+                    game: game;
+                    selected: i == root.selected-index;
+                    clicked => {
+                        root.selected-index = i;
+                        scope.focus();
+                    }
+                    double-clicked => {
+                        root.play(i);
+                    }
+                }
+            }
+        }
+    }
+
+    if root.games.length == 0: Text {
+        width: parent.width;
+        height: parent.height;
+        text: "Nothing here.";
+        color: Theme.dim;
+        font-size: 15px;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+}
+
+// The detail pane: the right column in Desk, the panel over the grid in Sofa.
+component Detail inherits Rectangle {
+    in property <GameItem> game;
+    in property <bool> has-game;
+    in property <bool> downloading;
+    in property <float> progress;
+    in property <length> art-width: 200px;
+    callback play();
+    callback download();
+    callback remove();
+    callback favorite();
+
+    background: Theme.panel;
+
+    if !root.has-game: Text {
+        width: parent.width;
+        height: parent.height;
+        text: "Pick a game to see it here.";
+        color: Theme.dim;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+
+    if root.has-game: VerticalLayout {
+        padding: 20px;
+        spacing: 12px;
+
+        HorizontalLayout {
+            alignment: center;
+            CoverArt {
+                width: root.art-width;
+                height: root.art-width / 0.75;
+                game: root.game;
+                large: true;
+            }
+        }
+
+        Text {
+            text: root.game.title;
+            color: Theme.text;
+            font-size: 20px;
+            font-weight: 700;
+            wrap: word-wrap;
+        }
+
+        Text {
+            text: root.game.platform + "  ·  " + root.game.year + "  ·  " + root.game.size;
+            color: Theme.dim;
+            font-size: 12px;
+        }
+
+        HorizontalLayout {
+            alignment: start;
+            spacing: 6px;
+            if root.game.installed: Chip {
+                text: "On this device";
+                tone: Theme.ok;
+            }
+            if !root.game.installed: Chip {
+                text: "On the server";
+                tone: Theme.dim;
+            }
+            if root.game.favorite: Chip {
+                text: "Favorite";
+                tone: Theme.warn;
+            }
+            Chip {
+                text: "RetroArch";
+                tone: Theme.accent;
+            }
+        }
+
+        HorizontalLayout {
+            alignment: start;
+            spacing: 8px;
+            Button {
+                text: "Play";
+                primary: true;
+                has-icon: true;
+                icon: @image-url("../../ui/icons/play.svg");
+                clicked => {
+                    root.play();
+                }
+            }
+            if !root.game.installed && !root.downloading: Button {
+                text: "Take offline";
+                has-icon: true;
+                icon: @image-url("../../ui/icons/download.svg");
+                clicked => {
+                    root.download();
+                }
+            }
+            if root.game.installed: Button {
+                text: "Remove";
+                clicked => {
+                    root.remove();
+                }
+            }
+            IconButton {
+                icon: @image-url("../../ui/icons/star.svg");
+                active: root.game.favorite;
+                clicked => {
+                    root.favorite();
+                }
+            }
+        }
+
+        if root.downloading: VerticalLayout {
+            spacing: 6px;
+            ProgressBar {
+                progress: root.progress;
+            }
+            Text {
+                text: "Downloading  " + Math.round(root.progress * 100) + "%";
+                color: Theme.dim;
+                font-size: 12px;
+            }
+        }
+
+        Text {
+            text: "Box art, screenshots and the description come from the server in the real app. These covers are stand-ins drawn from the title.";
+            color: Theme.dim;
+            font-size: 12px;
+            wrap: word-wrap;
+        }
+
+        Text {
+            text: "SCREENSHOTS";
+            color: Theme.dim;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        HorizontalLayout {
+            spacing: 8px;
+            for n in 3: Rectangle {
+                height: 54px;
+                border-radius: 6px;
+                background: @linear-gradient(120deg, root.game.tint.darker(0.2 + n * 0.15) 0%, root.game.tint.darker(0.7) 100%);
+            }
+        }
+
+        Rectangle {
+            vertical-stretch: 1;
+        }
+    }
+}
+
+component SettingRow inherits Rectangle {
+    in property <string> label;
+    in property <string> hint;
+
+    height: 56px;
+
+    HorizontalLayout {
+        spacing: 16px;
+        VerticalLayout {
+            alignment: center;
+            horizontal-stretch: 1;
+            spacing: 2px;
+            Text {
+                text: root.label;
+                color: Theme.text;
+                font-size: 14px;
+            }
+            if root.hint != "": Text {
+                text: root.hint;
+                color: Theme.dim;
+                font-size: 12px;
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            @children
+        }
+    }
+
+    Rectangle {
+        y: parent.height - 1px;
+        height: 1px;
+        background: Theme.line;
+    }
+}
+
+export component AppWindow inherits Window {
+    title: "Moose Rack (Slint prototype)";
+    preferred-width: 1280px;
+    preferred-height: 800px;
+    min-width: 960px;
+    min-height: 600px;
+    background: Theme.bg;
+    default-font-family: "Noto Sans";
+    default-font-size: 14px;
+
+    in property <[PlatformItem]> platforms;
+    in property <[GameItem]> games;
+    in property <string> heading: "Platforms";
+    in property <string> sort-label: "Name";
+    in property <string> status: "Synced 2 min ago";
+    in-out property <int> platform-index: 0;
+    in-out property <int> selected-index: 0;
+    in-out property <int> tab-index: 0;
+    // 0 is Sofa, 1 is Desk, in the order the switch draws them.
+    in-out property <int> mode: 1;
+    in-out property <bool> list-view: false;
+    in-out property <float> zoom: 150;
+    in-out property <string> query;
+    in-out property <int> download-index: -1;
+    in-out property <float> download-progress: 0;
+    in-out property <bool> settings-open: false;
+    in-out property <bool> sofa-detail-open: false;
+    in-out property <string> toast-text;
+    in-out property <bool> toast-shown: false;
+
+    // Settings' sample controls. They change nothing yet but their own state.
+    in-out property <bool> opt-autosync: true;
+    in-out property <bool> opt-hidden: false;
+    in-out property <bool> opt-sounds: true;
+    in-out property <int> opt-theme: 0;
+
+    callback platform-selected(int);
+    callback tab-selected(int);
+    callback search-edited(string);
+    callback random-pick();
+    callback sort-toggled();
+    callback play(int);
+    callback favorite-toggled(int);
+    callback download-finished(int);
+    callback removed(int);
+
+    property <bool> has-current: root.selected-index >= 0 && root.selected-index < root.games.length;
+    property <GameItem> current: root.games[root.selected-index];
+    property <[string]> tabs: ["Platforms", "Favorites", "On this device"];
+
+    public function show-toast(text: string) {
+        root.toast-text = text;
+        root.toast-shown = true;
+        toast-timer.running = false;
+        toast-timer.running = true;
+    }
+
+    function cycle-tab(step: int) {
+        root.tab-index = Math.mod(root.tab-index + step + root.tabs.length, root.tabs.length);
+        root.tab-selected(root.tab-index);
+    }
+
+    function start-download() {
+        if (root.download-index < 0) {
+            root.download-index = root.selected-index;
+            root.download-progress = 0;
+        }
+    }
+
+    init => {
+        grid.focus-grid();
+    }
+
+    toast-timer := Timer {
+        interval: 2200ms;
+        running: false;
+        triggered => {
+            root.toast-shown = false;
+            self.running = false;
+        }
+    }
+
+    // A pretend download, so the progress bar has something to show.
+    Timer {
+        interval: 40ms;
+        running: root.download-index >= 0;
+        triggered => {
+            root.download-progress += 0.012;
+            if (root.download-progress >= 1) {
+                root.download-finished(root.download-index);
+                root.download-index = -1;
+                root.download-progress = 0;
+            }
+        }
+    }
+
+    FocusScope {
+        key-pressed(event) => {
+            if (event.text == Key.Escape) {
+                if (root.settings-open) {
+                    root.settings-open = false;
+                    grid.focus-grid();
+                    return accept;
+                }
+                if (root.sofa-detail-open) {
+                    root.sofa-detail-open = false;
+                    grid.focus-grid();
+                    return accept;
+                }
+                if (search.focused) {
+                    grid.focus-grid();
+                    return accept;
+                }
+                return reject;
+            }
+            if (search.focused) {
+                return reject;
+            }
+            if (event.text == "/") {
+                search.focus-input();
+                return accept;
+            }
+            if (event.text == "q" || event.text == "[") {
+                root.cycle-tab(-1);
+                return accept;
+            }
+            if (event.text == "e" || event.text == "]") {
+                root.cycle-tab(1);
+                return accept;
+            }
+            if (event.text == "r") {
+                root.random-pick();
+                return accept;
+            }
+            return reject;
+        }
+
+        VerticalLayout {
+            // The header. 52 px as in style.css; the 10 px of padding gives
+            // every 32 px control the full height, so nothing needs centring.
+            Rectangle {
+                height: 52px;
+                background: Theme.panel;
+
+                HorizontalLayout {
+                    padding-left: 16px;
+                    padding-right: 12px;
+                    padding-top: 10px;
+                    padding-bottom: 10px;
+                    spacing: 8px;
+
+                    if root.mode == 0 && root.sofa-detail-open: Button {
+                        text: "Back";
+                        has-icon: true;
+                        icon: @image-url("../../ui/icons/arrow-left.svg");
+                        clicked => {
+                            root.sofa-detail-open = false;
+                            grid.focus-grid();
+                        }
+                    }
+
+                    Text {
+                        text: root.heading;
+                        color: Theme.text;
+                        font-size: 17px;
+                        font-weight: 700;
+                        vertical-alignment: center;
+                        overflow: elide;
+                        min-width: 120px;
+                    }
+
+                    Rectangle {
+                        width: 6px;
+                    }
+
+                    Segmented {
+                        options: ["Sofa", "Desk"];
+                        selected <=> root.mode;
+                        picked => {
+                            root.sofa-detail-open = false;
+                            grid.focus-grid();
+                        }
+                    }
+
+                    Rectangle {
+                        horizontal-stretch: 1;
+                    }
+
+                    search := SearchField {
+                        width: 250px;
+                        placeholder: "Search all games…";
+                        text <=> root.query;
+                        edited(text) => {
+                            root.search-edited(text);
+                        }
+                    }
+
+                    VerticalLayout {
+                        alignment: center;
+                        Slider {
+                            width: 100px;
+                            minimum: 90;
+                            maximum: 300;
+                            value <=> root.zoom;
+                        }
+                    }
+
+                    IconButton {
+                        icon: root.list-view ? @image-url("../../ui/icons/list.svg") : @image-url("../../ui/icons/layout-grid.svg");
+                        clicked => {
+                            root.list-view = !root.list-view;
+                        }
+                    }
+
+                    IconButton {
+                        icon: @image-url("../../ui/icons/funnel.svg");
+                        clicked => {
+                            root.show-toast("Filters are not in the prototype yet");
+                        }
+                    }
+
+                    IconButton {
+                        icon: @image-url("../../ui/icons/dice-5.svg");
+                        clicked => {
+                            root.random-pick();
+                        }
+                    }
+
+                    Button {
+                        text: root.sort-label;
+                        has-icon: true;
+                        icon: @image-url("../../ui/icons/arrow-down-narrow-wide.svg");
+                        clicked => {
+                            root.sort-toggled();
+                        }
+                    }
+
+                    IconButton {
+                        icon: @image-url("../../ui/icons/refresh-cw.svg");
+                        clicked => {
+                            root.show-toast("Saves synced (pretend)");
+                        }
+                    }
+
+                    IconButton {
+                        icon: @image-url("../../ui/icons/settings.svg");
+                        active: root.settings-open;
+                        clicked => {
+                            root.settings-open = true;
+                        }
+                    }
+                }
+
+                Rectangle {
+                    y: parent.height - 1px;
+                    height: 1px;
+                    background: Theme.line;
+                }
+            }
+
+            // The tab row, with the keys that stand in for the shoulder buttons.
+            Rectangle {
+                height: 42px;
+
+                HorizontalLayout {
+                    padding-left: 12px;
+                    padding-right: 16px;
+                    spacing: 2px;
+
+                    VerticalLayout {
+                        alignment: center;
+                        KeyHint {
+                            text: "Q";
+                        }
+                    }
+
+                    for tab[i] in root.tabs: Tab {
+                        text: tab;
+                        active: i == root.tab-index;
+                        clicked => {
+                            root.tab-index = i;
+                            root.tab-selected(i);
+                            grid.focus-grid();
+                        }
+                    }
+
+                    VerticalLayout {
+                        alignment: center;
+                        KeyHint {
+                            text: "E";
+                        }
+                    }
+
+                    Rectangle {
+                        horizontal-stretch: 1;
+                    }
+
+                    Text {
+                        text: root.games.length + " games  ·  " + root.status;
+                        color: Theme.dim;
+                        font-size: 12px;
+                        vertical-alignment: center;
+                    }
+                }
+
+                Rectangle {
+                    y: parent.height - 1px;
+                    height: 1px;
+                    background: Theme.line;
+                }
+            }
+
+            HorizontalLayout {
+                vertical-stretch: 1;
+
+                if root.mode == 1: Rectangle {
+                    width: 230px;
+                    background: Theme.panel;
+
+                    Text {
+                        x: 18px;
+                        y: 14px;
+                        text: "CONSOLES";
+                        color: Theme.dim;
+                        font-size: 10px;
+                        font-weight: 700;
+                        letter-spacing: 1px;
+                    }
+
+                    Flickable {
+                        y: 36px;
+                        height: parent.height - 36px;
+                        viewport-height: root.platforms.length * 42px + 12px;
+
+                        for platform[i] in root.platforms: ConsoleRow {
+                            x: 8px;
+                            y: i * 42px;
+                            width: parent.width - 16px;
+                            item: platform;
+                            selected: root.tab-index == 0 && root.query == "" && i == root.platform-index;
+                            clicked => {
+                                root.platform-index = i;
+                                root.platform-selected(i);
+                                grid.focus-grid();
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        x: parent.width - 1px;
+                        width: 1px;
+                        background: Theme.line;
+                    }
+                }
+
+                grid := GameGrid {
+                    horizontal-stretch: 1;
+                    games: root.games;
+                    selected-index <=> root.selected-index;
+                    card-width: root.mode == 0 ? root.zoom * 1.35 * 1px : root.zoom * 1px;
+                    list-view: root.list-view;
+                    activated(i) => {
+                        if (root.mode == 0 && !root.sofa-detail-open) {
+                            root.sofa-detail-open = true;
+                        } else {
+                            root.play(i);
+                        }
+                    }
+                    play(i) => {
+                        root.play(i);
+                    }
+                }
+
+                if root.mode == 1: Rectangle {
+                    width: 330px;
+
+                    Detail {
+                        game: root.current;
+                        has-game: root.has-current;
+                        downloading: root.download-index >= 0 && root.download-index == root.selected-index;
+                        progress: root.download-progress;
+                        play => {
+                            root.play(root.selected-index);
+                        }
+                        download => {
+                            root.start-download();
+                        }
+                        remove => {
+                            root.removed(root.selected-index);
+                        }
+                        favorite => {
+                            root.favorite-toggled(root.selected-index);
+                        }
+                    }
+
+                    Rectangle {
+                        width: 1px;
+                        x: 0px;
+                        background: Theme.line;
+                    }
+                }
+            }
+        }
+
+        // Sofa: the detail as a panel over the games.
+        if root.mode == 0 && root.sofa-detail-open: Rectangle {
+            background: #0b0c0fc0;
+
+            TouchArea {
+                clicked => {
+                    root.sofa-detail-open = false;
+                    grid.focus-grid();
+                }
+            }
+
+            Rectangle {
+                x: (parent.width - self.width) / 2;
+                y: 70px;
+                width: 440px;
+                height: parent.height - 110px;
+                border-radius: 16px;
+                clip: true;
+                drop-shadow-blur: 40px;
+                drop-shadow-color: #00000090;
+
+                TouchArea { }
+
+                Detail {
+                    art-width: 240px;
+                    game: root.current;
+                    has-game: root.has-current;
+                    downloading: root.download-index >= 0 && root.download-index == root.selected-index;
+                    progress: root.download-progress;
+                    play => {
+                        root.play(root.selected-index);
+                    }
+                    download => {
+                        root.start-download();
+                    }
+                    remove => {
+                        root.removed(root.selected-index);
+                    }
+                    favorite => {
+                        root.favorite-toggled(root.selected-index);
+                    }
+                }
+            }
+        }
+
+        if root.settings-open: Rectangle {
+            background: #0b0c0fc0;
+
+            TouchArea {
+                clicked => {
+                    root.settings-open = false;
+                    grid.focus-grid();
+                }
+            }
+
+            Rectangle {
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+                width: 540px;
+                height: 470px;
+                border-radius: 16px;
+                background: Theme.panel;
+                border-width: 1px;
+                border-color: Theme.line;
+                drop-shadow-blur: 40px;
+                drop-shadow-color: #00000090;
+
+                TouchArea { }
+
+                VerticalLayout {
+                    padding: 24px;
+                    spacing: 0px;
+
+                    HorizontalLayout {
+                        height: 40px;
+                        Text {
+                            text: "Settings";
+                            color: Theme.text;
+                            font-size: 20px;
+                            font-weight: 700;
+                            vertical-alignment: center;
+                            horizontal-stretch: 1;
+                        }
+                        VerticalLayout {
+                            alignment: center;
+                            IconButton {
+                                icon: @image-url("../../ui/icons/x.svg");
+                                clicked => {
+                                    root.settings-open = false;
+                                    grid.focus-grid();
+                                }
+                            }
+                        }
+                    }
+
+                    SettingRow {
+                        label: "Sync saves automatically";
+                        hint: "After a game closes, and when the app starts";
+                        Toggle {
+                            checked <=> root.opt-autosync;
+                        }
+                    }
+
+                    SettingRow {
+                        label: "Show hidden games";
+                        Toggle {
+                            checked <=> root.opt-hidden;
+                        }
+                    }
+
+                    SettingRow {
+                        label: "Menu sounds";
+                        Toggle {
+                            checked <=> root.opt-sounds;
+                        }
+                    }
+
+                    SettingRow {
+                        label: "Theme";
+                        Segmented {
+                            options: ["Dark", "Light", "Auto"];
+                            selected <=> root.opt-theme;
+                        }
+                    }
+
+                    SettingRow {
+                        label: "Icon size";
+                        hint: Math.round(root.zoom) + " px";
+                        Slider {
+                            width: 180px;
+                            minimum: 90;
+                            maximum: 300;
+                            value <=> root.zoom;
+                        }
+                    }
+
+                    Rectangle {
+                        vertical-stretch: 1;
+                    }
+
+                    HorizontalLayout {
+                        alignment: end;
+                        Button {
+                            text: "Done";
+                            primary: true;
+                            clicked => {
+                                root.settings-open = false;
+                                grid.focus-grid();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Toast {
+            x: (parent.width - self.width) / 2;
+            y: root.toast-shown ? parent.height - self.height - 28px : parent.height - self.height + 8px;
+            animate y { duration: 220ms; easing: ease-out; }
+            text: root.toast-text;
+            shown: root.toast-shown;
+        }
+    }
+}

@@ -1,0 +1,22 @@
+[package]
+name = "moose-slint"
+version = "0.0.1"
+edition = "2024"
+publish = false
+
+# A prototype front end in Slint, to judge whether it can replace the Tauri one
+# on Android, macOS and Windows. See src-slint/README.md.
+#
+# Its own workspace on purpose: nothing here reaches the main lockfile or CI
+# until the experiment is decided. It draws sample data and calls nothing in
+# `moose_rack` yet.
+[workspace]
+
+[dependencies]
+slint = "1.18.1"
+
+[build-dependencies]
+slint-build = "1.18.1"
+
+[profile.release]
+strip = true
