@@ -13,9 +13,19 @@ publish = false
 [workspace]
 
 [dependencies]
-slint = "1.18.1"
+slint = { version = "1.18.1", default-features = false, features = ["std", "compat-1-2", "backend-winit"] }
 # Only for MOOSE_SLINT_SNAPSHOT, which saves the window as a picture.
 png = "0.18.1"
+
+# Switches for finding where the memory goes. With more than one renderer
+# built in, SLINT_BACKEND=winit-femtovg, winit-software or winit-skia picks one
+# at run time. `examples/empty.rs` is the floor: a window with nothing in it.
+[features]
+default = ["femtovg", "software", "accessibility"]
+femtovg = ["slint/renderer-femtovg"]
+software = ["slint/renderer-software"]
+skia = ["slint/renderer-skia"]
+accessibility = ["slint/accessibility"]
 
 [build-dependencies]
 slint-build = "1.18.1"
