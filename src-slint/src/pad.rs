@@ -49,6 +49,9 @@ impl Pads {
         // There is no SDL window: the Slint one has the focus, so without this
         // SDL would count every press as arriving in the background.
         sdl3::hint::set("SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS", "1");
+        // SDL otherwise takes Ctrl+C and kill for itself and turns them into a
+        // quit event nobody here reads, so the window could not be stopped.
+        sdl3::hint::set("SDL_NO_SIGNAL_HANDLERS", "1");
         let sdl = sdl3::init().map_err(|e| e.to_string())?;
         let subsystem = sdl.gamepad().map_err(|e| e.to_string())?;
         let pump = sdl.event_pump().map_err(|e| e.to_string())?;
