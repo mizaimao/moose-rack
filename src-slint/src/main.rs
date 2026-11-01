@@ -5,13 +5,17 @@
 //! The rules a real port keeps in `moose_rack` (sorting, filtering, the grid
 //! cursor) are done here in a few lines instead; see README.md.
 
+mod nav;
+#[cfg(not(target_os = "android"))]
+mod pad;
 mod sample;
 
 use std::cell::RefCell;
 use std::collections::HashSet;
 use std::rc::Rc;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
+use moose_rack::{binds, padpoll};
 use slint::{Color, Model, ModelRc, SharedString, VecModel};
 
 use sample::Platform;
@@ -170,6 +174,20 @@ fn main() -> Result<(), slint::PlatformError> {
         }
     });
 
+    // Keys and pad buttons both become the core's actions, so a rebinding made
+    // in the app's Settings would mean the same thing here.
+    let bindings = prototype_bindings();
+    ui.on_key({
+        let weak = ui.as_weak();
+        let bindings = bindings.clone();
+        move |name| {
+            let ui = weak.unwrap();
+            bindings.action_for(&name).is_some_and(|action| nav::dispatch(&ui, action))
+        }
+    });
+    #[cfg(not(target_os = "android"))]
+    let _pads = read_pads(&ui, &bindings);
+
     if let Ok(path) = std::env::var("MOOSE_SLINT_SNAPSHOT") {
         snapshot(&ui, path, std::env::var("MOOSE_SLINT_SCENE").unwrap_or_default());
     }
@@ -177,10 +195,101 @@ fn main() -> Result<(), slint::PlatformError> {
     ui.run()
 }
 
+/// The app's bindings with three buttons given jobs the hint bar shows: the
+/// left face button stars a game, the top one searches (it plays the gameplay
+/// video in the app), and Start opens Settings (the shortcut list in the app),
+/// as "," does on the keyboard.
+fn prototype_bindings() -> binds::Bindings {
+    let mut bindings = binds::Bindings::default();
+    bindings.set_pad("favorite", Some(2));
+    bindings.set_pad("search", Some(3));
+    bindings.set_pad("settings", Some(9));
+    bindings.set_key("settings", Some(","));
+    bindings
+}
+
+/// Poll the controllers every frame on the window's own thread, and turn what
+/// is held into actions with the core's repeat timing and stick dead zone.
+/// Returns the timer, which stops when dropped.
+#[cfg(not(target_os = "android"))]
+fn read_pads(ui: &AppWindow, bindings: &binds::Bindings) -> Option<slint::Timer> {
+    let mut pads = match pad::Pads::new() {
+        Ok(pads) => pads,
+        Err(e) => {
+            eprintln!("controllers: {e}");
+            return None;
+        }
+    };
+    let map = bindings.pad_map();
+    let mut repeat = padpoll::Repeat::default();
+    let mut connected = 0;
+    let start = Instant::now();
+    let weak = ui.as_weak();
+    let timer = slint::Timer::default();
+    timer.start(slint::TimerMode::Repeated, Duration::from_millis(16), move || {
+        let Some(ui) = weak.upgrade() else { return };
+        for change in pads.changes() {
+            match change {
+                pad::Change::Connected(info) => {
+                    println!("controller connected: {} ({})", info.name, info.kind);
+                    ui.invoke_show_toast(format!("{} connected: {}", info.kind, info.name).into());
+                    show_pad(&ui, &info);
+                    connected += 1;
+                }
+                pad::Change::Disconnected(name) => {
+                    println!("controller disconnected: {name}");
+                    ui.invoke_show_toast(format!("{name} disconnected").into());
+                    connected -= 1;
+                    if connected == 0 {
+                        show_keyboard(&ui);
+                    }
+                }
+            }
+        }
+        let frame = pads.frame();
+        let pressed = padpoll::pressed_actions(&frame.buttons, &frame.axes, &map);
+        let now = start.elapsed().as_secs_f64() * 1000.0;
+        repeat.release(&pressed);
+        for action in &pressed {
+            if repeat.fire(action, now) {
+                nav::dispatch(&ui, action);
+            }
+        }
+    });
+    Some(timer)
+}
+
+#[cfg(not(target_os = "android"))]
+fn show_pad(ui: &AppWindow, info: &pad::Info) {
+    ui.set_pad_connected(true);
+    ui.set_pad_name(info.name.clone().into());
+    ui.set_pad_kind(info.kind.into());
+    ui.set_face_south(info.faces[0].into());
+    ui.set_face_east(info.faces[1].into());
+    ui.set_face_west(info.faces[2].into());
+    ui.set_face_north(info.faces[3].into());
+    ui.set_shoulder_left(info.shoulders[0].into());
+    ui.set_shoulder_right(info.shoulders[1].into());
+    ui.set_start_label(info.start.into());
+}
+
+/// The hints go back to the keys that do the same things.
+#[cfg(not(target_os = "android"))]
+fn show_keyboard(ui: &AppWindow) {
+    ui.set_pad_connected(false);
+    ui.set_face_south("Enter".into());
+    ui.set_face_east("Esc".into());
+    ui.set_face_west("*".into());
+    ui.set_face_north("/".into());
+    ui.set_shoulder_left("Q".into());
+    ui.set_shoulder_right("E".into());
+    ui.set_start_label(",".into());
+}
+
 /// `MOOSE_SLINT_SNAPSHOT=out.png` sets up one scene, saves the window as a PNG
 /// and quits, so the look can be checked on a machine nobody is watching.
 /// `MOOSE_SLINT_SCENE` picks it: desk (the default), sofa, detail, list,
-/// settings or download.
+/// settings, download, header, consoles, actions, ps5 or switch.
 fn snapshot(ui: &AppWindow, path: String, scene: String) {
     match scene.as_str() {
         "sofa" => ui.set_mode(0),
@@ -189,7 +298,29 @@ fn snapshot(ui: &AppWindow, path: String, scene: String) {
             ui.set_sofa_detail_open(true);
         }
         "list" => ui.set_list_view(true),
-        "settings" => ui.set_settings_open(true),
+        "settings" => {
+            ui.set_settings_open(true);
+            ui.set_focus_zone(nav::SETTINGS);
+            ui.set_focus_index(3);
+        }
+        "header" => {
+            ui.set_focus_zone(nav::HEADER);
+            ui.set_focus_index(4);
+        }
+        "consoles" => ui.set_focus_zone(nav::CONSOLES),
+        "actions" => {
+            ui.set_focus_zone(nav::DETAIL);
+            ui.set_focus_index(0);
+        }
+        #[cfg(not(target_os = "android"))]
+        "ps5" | "switch" => {
+            let (faces, shoulders, start, kind, name) = if scene == "ps5" {
+                (["cross", "circle", "square", "triangle"], ["L1", "R1"], "Options", "PS5", "DualSense Wireless Controller")
+            } else {
+                (["B", "A", "Y", "X"], ["L", "R"], "+", "Switch Pro", "Pro Controller")
+            };
+            show_pad(&ui, &pad::Info { name: name.into(), kind, faces, shoulders, start });
+        }
         "download" => {
             ui.set_selected_index(1);
             ui.set_download_index(1);

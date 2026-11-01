@@ -1,38 +1,50 @@
 // The window: header, tab row, and either Desk (consoles | games | detail) or
 // Sofa (games alone, bigger, with the detail opened over them), as the two
 // arrangements in ui/index.html are.
+//
+// Controller first. One cursor goes everywhere, and where it is lives in two
+// properties, `focus-zone` and `focus-index`. Keys and pad buttons go to Rust
+// as actions from `moose_rack::binds` and come back as those two properties;
+// the mouse sets them too, so mixing the two never leaves two highlights.
 import { Theme } from "theme.slint";
 import {
     GameItem, PlatformItem, Button, IconButton, Segmented, SearchField, Toggle, Slider,
-    ProgressBar, Chip, KeyHint, Tab, CoverArt, CoverCard, ListRow, ConsoleRow, Toast,
+    ProgressBar, Chip, KeyHint, Tab, CoverArt, CoverCard, ListRow, ConsoleRow, Toast, Hint,
 } from "widgets.slint";
 import "../../assets/fonts/NotoSans[wdth,wght].ttf";
 
 export { GameItem, PlatformItem }
+
+// Where the cursor can be. Rust uses the same numbers.
+export global Zone {
+    out property <int> header: 0;
+    out property <int> consoles: 1;
+    out property <int> grid: 2;
+    out property <int> detail: 3;
+    out property <int> settings: 4;
+    out property <int> sofa: 5;
+}
 
 component GameGrid inherits Rectangle {
     in property <[GameItem]> games;
     in-out property <int> selected-index;
     in property <length> card-width: 150px;
     in property <bool> list-view;
-    callback activated(int);
+    in property <bool> lit;
+    out property <int> cols: root.list-view ? 1 : Math.max(1, Math.floor((root.width - 2 * root.pad + root.gap) / (root.card-width + root.gap)));
+    callback picked(int);
     callback play(int);
 
     property <length> gap: root.list-view ? 6px : 14px;
     property <length> pad: 18px;
     // `card-width` is the smallest a card may be; the cards in a row share out
     // what is left, so the grid always meets the right edge.
-    property <int> cols: root.list-view ? 1 : Math.max(1, Math.floor((root.width - 2 * root.pad + root.gap) / (root.card-width + root.gap)));
     property <length> cell-width: (root.width - 2 * root.pad - (root.cols - 1) * root.gap) / root.cols;
     property <length> card-height: (root.cell-width - 16px) / 0.75 + 16px + 40px;
     property <length> row-height: root.list-view ? 44px : root.card-height;
     property <int> rows: Math.ceil(root.games.length / root.cols);
     property <length> sel-top: root.pad + Math.floor(root.selected-index / root.cols) * (root.row-height + root.gap);
     property <length> sel-bottom: root.sel-top + root.row-height;
-
-    public function focus-grid() {
-        scope.focus();
-    }
 
     // Keep the cursor on screen as it moves, the way the grid scrolls in the
     // current app.
@@ -48,77 +60,37 @@ component GameGrid inherits Rectangle {
         root.ensure-visible();
     }
 
-    scope := FocusScope {
-        key-pressed(event) => {
-            if (event.text == Key.RightArrow) {
-                root.selected-index = Math.min(root.games.length - 1, root.selected-index + 1);
-                return accept;
-            }
-            if (event.text == Key.LeftArrow) {
-                root.selected-index = Math.max(0, root.selected-index - 1);
-                return accept;
-            }
-            if (event.text == Key.DownArrow) {
-                if (root.selected-index + root.cols < root.games.length) {
-                    root.selected-index += root.cols;
-                }
-                return accept;
-            }
-            if (event.text == Key.UpArrow) {
-                if (root.selected-index - root.cols >= 0) {
-                    root.selected-index -= root.cols;
-                }
-                return accept;
-            }
-            if (event.text == Key.Home) {
-                root.selected-index = 0;
-                return accept;
-            }
-            if (event.text == Key.End) {
-                root.selected-index = Math.max(0, root.games.length - 1);
-                return accept;
-            }
-            if (event.text == Key.Return || event.text == " ") {
-                if (root.games.length > 0) {
-                    root.activated(root.selected-index);
-                }
-                return accept;
-            }
-            return reject;
-        }
+    flick := Flickable {
+        content-width: self.width;
+        content-height: 2 * root.pad + root.rows * (root.row-height + root.gap) - root.gap;
+        animate content-y { duration: 160ms; easing: ease-out; }
 
-        flick := Flickable {
-            content-width: self.width;
-            content-height: 2 * root.pad + root.rows * (root.row-height + root.gap) - root.gap;
-            animate content-y { duration: 160ms; easing: ease-out; }
+        for game[i] in root.games: Rectangle {
+            x: root.pad + Math.mod(i, root.cols) * (root.cell-width + root.gap);
+            y: root.pad + Math.floor(i / root.cols) * (root.row-height + root.gap);
+            width: root.cell-width;
+            height: root.row-height;
 
-            for game[i] in root.games: Rectangle {
-                x: root.pad + Math.mod(i, root.cols) * (root.cell-width + root.gap);
-                y: root.pad + Math.floor(i / root.cols) * (root.row-height + root.gap);
-                width: root.cell-width;
-                height: root.row-height;
-
-                if !root.list-view: CoverCard {
-                    game: game;
-                    selected: i == root.selected-index;
-                    clicked => {
-                        root.selected-index = i;
-                        scope.focus();
-                    }
-                    double-clicked => {
-                        root.play(i);
-                    }
+            if !root.list-view: CoverCard {
+                game: game;
+                selected: i == root.selected-index;
+                lit: root.lit;
+                clicked => {
+                    root.picked(i);
                 }
-                if root.list-view: ListRow {
-                    game: game;
-                    selected: i == root.selected-index;
-                    clicked => {
-                        root.selected-index = i;
-                        scope.focus();
-                    }
-                    double-clicked => {
-                        root.play(i);
-                    }
+                double-clicked => {
+                    root.play(i);
+                }
+            }
+            if root.list-view: ListRow {
+                game: game;
+                selected: i == root.selected-index;
+                lit: root.lit;
+                clicked => {
+                    root.picked(i);
+                }
+                double-clicked => {
+                    root.play(i);
                 }
             }
         }
@@ -136,12 +108,15 @@ component GameGrid inherits Rectangle {
 }
 
 // The detail pane: the right column in Desk, the panel over the grid in Sofa.
+// `cursor` is which of its three actions has the cursor: Play, the download
+// button, the star; -1 for none.
 component Detail inherits Rectangle {
     in property <GameItem> game;
     in property <bool> has-game;
     in property <bool> downloading;
     in property <float> progress;
     in property <length> art-width: 200px;
+    in property <int> cursor: -1;
     callback play();
     callback download();
     callback remove();
@@ -215,6 +190,7 @@ component Detail inherits Rectangle {
                 primary: true;
                 has-icon: true;
                 icon: @image-url("../../ui/icons/play.svg");
+                cursor: root.cursor == 0;
                 clicked => {
                     root.play();
                 }
@@ -223,12 +199,18 @@ component Detail inherits Rectangle {
                 text: "Take offline";
                 has-icon: true;
                 icon: @image-url("../../ui/icons/download.svg");
+                cursor: root.cursor == 1;
                 clicked => {
                     root.download();
                 }
             }
+            if root.downloading: Button {
+                text: "Downloading";
+                cursor: root.cursor == 1;
+            }
             if root.game.installed: Button {
                 text: "Remove";
+                cursor: root.cursor == 1;
                 clicked => {
                     root.remove();
                 }
@@ -236,6 +218,7 @@ component Detail inherits Rectangle {
             IconButton {
                 icon: @image-url("../../ui/icons/star.svg");
                 active: root.game.favorite;
+                cursor: root.cursor == 2;
                 clicked => {
                     root.favorite();
                 }
@@ -287,10 +270,18 @@ component Detail inherits Rectangle {
 component SettingRow inherits Rectangle {
     in property <string> label;
     in property <string> hint;
+    in property <bool> cursor: false;
 
     height: 56px;
+    border-radius: Theme.radius;
+    background: root.cursor ? Theme.glass-hover : transparent;
+    border-width: root.cursor ? 2px : 0px;
+    border-color: Theme.cursor;
+    animate background { duration: Theme.quick; }
 
     HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 12px;
         spacing: 16px;
         VerticalLayout {
             alignment: center;
@@ -311,12 +302,6 @@ component SettingRow inherits Rectangle {
             alignment: center;
             @children
         }
-    }
-
-    Rectangle {
-        y: parent.height - 1px;
-        height: 1px;
-        background: Theme.line;
     }
 }
 
@@ -350,6 +335,24 @@ export component AppWindow inherits Window {
     in-out property <string> toast-text;
     in-out property <bool> toast-shown: false;
 
+    // The cursor. See Zone.
+    in-out property <int> focus-zone: Zone.grid;
+    in-out property <int> focus-index: 0;
+    out property <int> grid-cols: grid.cols;
+
+    // The controller in hand, as SDL describes it, or the keyboard's keys when
+    // there is none. The four faces are bottom, right, left, top.
+    in property <bool> pad-connected: false;
+    in property <string> pad-name;
+    in property <string> pad-kind;
+    in property <string> face-south: "Enter";
+    in property <string> face-east: "Esc";
+    in property <string> face-west: "*";
+    in property <string> face-north: "/";
+    in property <string> shoulder-left: "Q";
+    in property <string> shoulder-right: "E";
+    in property <string> start-label: ",";
+
     // Settings' sample controls. They change nothing yet but their own state.
     in-out property <bool> opt-autosync: true;
     in-out property <bool> opt-hidden: false;
@@ -365,10 +368,13 @@ export component AppWindow inherits Window {
     callback favorite-toggled(int);
     callback download-finished(int);
     callback removed(int);
+    // A key, in the names `moose_rack::binds` uses. True when it did something.
+    callback key(string) -> bool;
 
     property <bool> has-current: root.selected-index >= 0 && root.selected-index < root.games.length;
     property <GameItem> current: root.games[root.selected-index];
     property <[string]> tabs: ["Platforms", "Favorites", "On this device"];
+    property <bool> downloading-current: root.download-index >= 0 && root.download-index == root.selected-index;
 
     public function show-toast(text: string) {
         root.toast-text = text;
@@ -377,20 +383,48 @@ export component AppWindow inherits Window {
         toast-timer.running = true;
     }
 
-    function cycle-tab(step: int) {
+    public function cycle-tab(step: int) {
         root.tab-index = Math.mod(root.tab-index + step + root.tabs.length, root.tabs.length);
         root.tab-selected(root.tab-index);
     }
 
-    function start-download() {
+    public function start-download() {
         if (root.download-index < 0) {
             root.download-index = root.selected-index;
             root.download-progress = 0;
         }
     }
 
+    public function focus-search() {
+        root.focus-zone = Zone.header;
+        root.focus-index = 1;
+        search.focus-input();
+    }
+
+    // Back to the keys after the search box or a click elsewhere.
+    public function focus-keys() {
+        keys.focus();
+    }
+
+    // Slint's key, as the name the bindings know it by.
+    pure function key-name(text: string) -> string {
+        text == Key.UpArrow ? "ArrowUp"
+            : text == Key.DownArrow ? "ArrowDown"
+            : text == Key.LeftArrow ? "ArrowLeft"
+            : text == Key.RightArrow ? "ArrowRight"
+            : text == Key.Return ? "Enter"
+            : text == Key.Escape ? "Escape"
+            : text == Key.Backspace ? "Backspace"
+            : text == Key.Home ? "Home"
+            : text == Key.End ? "End"
+            : text == Key.PageUp ? "PageUp"
+            : text == Key.PageDown ? "PageDown"
+            : text == Key.Tab ? "Tab"
+            : text
+    }
+
     init => {
-        grid.focus-grid();
+        keys.focus();
     }
 
     toast-timer := Timer {
@@ -416,50 +450,27 @@ export component AppWindow inherits Window {
         }
     }
 
-    FocusScope {
+    keys := FocusScope {
         key-pressed(event) => {
-            if (event.text == Key.Escape) {
-                if (root.settings-open) {
-                    root.settings-open = false;
-                    grid.focus-grid();
-                    return accept;
-                }
-                if (root.sofa-detail-open) {
-                    root.sofa-detail-open = false;
-                    grid.focus-grid();
-                    return accept;
-                }
-                if (search.focused) {
-                    grid.focus-grid();
-                    return accept;
-                }
+            if (event.modifiers.control || event.modifiers.meta) {
                 return reject;
             }
             if (search.focused) {
+                // Typing belongs to the box; only leaving it is ours.
+                if (event.text == Key.Escape || event.text == Key.DownArrow) {
+                    root.focus-zone = Zone.grid;
+                    keys.focus();
+                    return accept;
+                }
                 return reject;
             }
-            if (event.text == "/") {
-                search.focus-input();
-                return accept;
-            }
-            if (event.text == "q" || event.text == "[") {
-                root.cycle-tab(-1);
-                return accept;
-            }
-            if (event.text == "e" || event.text == "]") {
-                root.cycle-tab(1);
-                return accept;
-            }
-            if (event.text == "r") {
-                root.random-pick();
-                return accept;
-            }
-            return reject;
+            return root.key(root.key-name(event.text)) ? accept : reject;
         }
 
         VerticalLayout {
             // The header. 52 px as in style.css; the 10 px of padding gives
             // every 32 px control the full height, so nothing needs centring.
+            // Its controls are the header zone's indices 0 to 7, left to right.
             Rectangle {
                 height: 52px;
                 background: Theme.panel;
@@ -477,7 +488,7 @@ export component AppWindow inherits Window {
                         icon: @image-url("../../ui/icons/arrow-left.svg");
                         clicked => {
                             root.sofa-detail-open = false;
-                            grid.focus-grid();
+                            root.focus-zone = Zone.grid;
                         }
                     }
 
@@ -498,9 +509,9 @@ export component AppWindow inherits Window {
                     Segmented {
                         options: ["Sofa", "Desk"];
                         selected <=> root.mode;
+                        cursor: root.focus-zone == Zone.header && root.focus-index == 0;
                         picked => {
                             root.sofa-detail-open = false;
-                            grid.focus-grid();
                         }
                     }
 
@@ -512,8 +523,13 @@ export component AppWindow inherits Window {
                         width: 250px;
                         placeholder: "Search all games…";
                         text <=> root.query;
+                        cursor: root.focus-zone == Zone.header && root.focus-index == 1;
                         edited(text) => {
                             root.search-edited(text);
+                        }
+                        done => {
+                            root.focus-zone = Zone.grid;
+                            keys.focus();
                         }
                     }
 
@@ -529,6 +545,7 @@ export component AppWindow inherits Window {
 
                     IconButton {
                         icon: root.list-view ? @image-url("../../ui/icons/list.svg") : @image-url("../../ui/icons/layout-grid.svg");
+                        cursor: root.focus-zone == Zone.header && root.focus-index == 2;
                         clicked => {
                             root.list-view = !root.list-view;
                         }
@@ -536,6 +553,7 @@ export component AppWindow inherits Window {
 
                     IconButton {
                         icon: @image-url("../../ui/icons/funnel.svg");
+                        cursor: root.focus-zone == Zone.header && root.focus-index == 3;
                         clicked => {
                             root.show-toast("Filters are not in the prototype yet");
                         }
@@ -543,6 +561,7 @@ export component AppWindow inherits Window {
 
                     IconButton {
                         icon: @image-url("../../ui/icons/dice-5.svg");
+                        cursor: root.focus-zone == Zone.header && root.focus-index == 4;
                         clicked => {
                             root.random-pick();
                         }
@@ -552,6 +571,7 @@ export component AppWindow inherits Window {
                         text: root.sort-label;
                         has-icon: true;
                         icon: @image-url("../../ui/icons/arrow-down-narrow-wide.svg");
+                        cursor: root.focus-zone == Zone.header && root.focus-index == 5;
                         clicked => {
                             root.sort-toggled();
                         }
@@ -559,6 +579,7 @@ export component AppWindow inherits Window {
 
                     IconButton {
                         icon: @image-url("../../ui/icons/refresh-cw.svg");
+                        cursor: root.focus-zone == Zone.header && root.focus-index == 6;
                         clicked => {
                             root.show-toast("Saves synced (pretend)");
                         }
@@ -567,8 +588,11 @@ export component AppWindow inherits Window {
                     IconButton {
                         icon: @image-url("../../ui/icons/settings.svg");
                         active: root.settings-open;
+                        cursor: root.focus-zone == Zone.header && root.focus-index == 7;
                         clicked => {
                             root.settings-open = true;
+                            root.focus-zone = Zone.settings;
+                            root.focus-index = 0;
                         }
                     }
                 }
@@ -580,7 +604,8 @@ export component AppWindow inherits Window {
                 }
             }
 
-            // The tab row, with the keys that stand in for the shoulder buttons.
+            // The tab row. The shoulder buttons move along it, so it never
+            // takes the cursor itself.
             Rectangle {
                 height: 42px;
 
@@ -592,7 +617,7 @@ export component AppWindow inherits Window {
                     VerticalLayout {
                         alignment: center;
                         KeyHint {
-                            text: "Q";
+                            text: root.shoulder-left;
                         }
                     }
 
@@ -602,14 +627,13 @@ export component AppWindow inherits Window {
                         clicked => {
                             root.tab-index = i;
                             root.tab-selected(i);
-                            grid.focus-grid();
                         }
                     }
 
                     VerticalLayout {
                         alignment: center;
                         KeyHint {
-                            text: "E";
+                            text: root.shoulder-right;
                         }
                     }
 
@@ -660,10 +684,12 @@ export component AppWindow inherits Window {
                             width: parent.width - 16px;
                             item: platform;
                             selected: root.tab-index == 0 && root.query == "" && i == root.platform-index;
+                            cursor: root.focus-zone == Zone.consoles && i == root.platform-index;
                             clicked => {
                                 root.platform-index = i;
                                 root.platform-selected(i);
-                                grid.focus-grid();
+                                root.focus-zone = Zone.consoles;
+                                keys.focus();
                             }
                         }
                     }
@@ -681,12 +707,11 @@ export component AppWindow inherits Window {
                     selected-index <=> root.selected-index;
                     card-width: root.mode == 0 ? root.zoom * 1.35 * 1px : root.zoom * 1px;
                     list-view: root.list-view;
-                    activated(i) => {
-                        if (root.mode == 0 && !root.sofa-detail-open) {
-                            root.sofa-detail-open = true;
-                        } else {
-                            root.play(i);
-                        }
+                    lit: root.focus-zone == Zone.grid;
+                    picked(i) => {
+                        root.selected-index = i;
+                        root.focus-zone = Zone.grid;
+                        keys.focus();
                     }
                     play(i) => {
                         root.play(i);
@@ -699,8 +724,9 @@ export component AppWindow inherits Window {
                     Detail {
                         game: root.current;
                         has-game: root.has-current;
-                        downloading: root.download-index >= 0 && root.download-index == root.selected-index;
+                        downloading: root.downloading-current;
                         progress: root.download-progress;
+                        cursor: root.focus-zone == Zone.detail ? root.focus-index : -1;
                         play => {
                             root.play(root.selected-index);
                         }
@@ -722,6 +748,85 @@ export component AppWindow inherits Window {
                     }
                 }
             }
+
+            // What each button does where the cursor is, drawn as the pad in
+            // hand prints it.
+            Rectangle {
+                height: 44px;
+                background: Theme.panel;
+
+                Rectangle {
+                    y: 0px;
+                    height: 1px;
+                    background: Theme.line;
+                }
+
+                HorizontalLayout {
+                    padding-left: 16px;
+                    padding-right: 16px;
+                    spacing: 18px;
+
+                    HorizontalLayout {
+                        spacing: 8px;
+                        VerticalLayout {
+                            alignment: center;
+                            Image {
+                                source: root.pad-connected ? @image-url("../../ui/icons/gamepad-2.svg") : @image-url("../../ui/icons/monitor.svg");
+                                colorize: root.pad-connected ? Theme.ok : Theme.dim;
+                                width: 18px;
+                                height: 18px;
+                            }
+                        }
+                        Text {
+                            text: root.pad-connected ? root.pad-name + "  ·  " + root.pad-kind : "Keyboard  ·  no controller";
+                            color: Theme.dim;
+                            font-size: 12px;
+                            vertical-alignment: center;
+                            overflow: elide;
+                            max-width: 360px;
+                        }
+                    }
+
+                    Rectangle {
+                        horizontal-stretch: 1;
+                    }
+
+                    Hint {
+                        glyph: root.face-south;
+                        text: root.focus-zone == Zone.grid ? (root.mode == 1 ? "Play" : "Open")
+                            : root.focus-zone == Zone.consoles ? "Open"
+                            : root.focus-zone == Zone.settings ? "Change"
+                            : "Select";
+                    }
+                    Hint {
+                        glyph: root.face-east;
+                        text: root.focus-zone == Zone.settings || root.focus-zone == Zone.sofa ? "Close" : "Back";
+                    }
+                    if root.focus-zone == Zone.grid || root.focus-zone == Zone.detail || root.focus-zone == Zone.sofa: Hint {
+                        glyph: root.face-west;
+                        text: "Favorite";
+                    }
+                    Hint {
+                        glyph: root.face-north;
+                        text: "Search";
+                    }
+                    HorizontalLayout {
+                        spacing: 4px;
+                        Hint {
+                            glyph: root.shoulder-left;
+                            text: "";
+                        }
+                        Hint {
+                            glyph: root.shoulder-right;
+                            text: "Section";
+                        }
+                    }
+                    Hint {
+                        glyph: root.start-label;
+                        text: "Settings";
+                    }
+                }
+            }
         }
 
         // Sofa: the detail as a panel over the games.
@@ -731,7 +836,7 @@ export component AppWindow inherits Window {
             TouchArea {
                 clicked => {
                     root.sofa-detail-open = false;
-                    grid.focus-grid();
+                    root.focus-zone = Zone.grid;
                 }
             }
 
@@ -739,7 +844,7 @@ export component AppWindow inherits Window {
                 x: (parent.width - self.width) / 2;
                 y: 70px;
                 width: 440px;
-                height: parent.height - 110px;
+                height: parent.height - 130px;
                 border-radius: 16px;
                 clip: true;
                 drop-shadow-blur: 40px;
@@ -751,8 +856,9 @@ export component AppWindow inherits Window {
                     art-width: 240px;
                     game: root.current;
                     has-game: root.has-current;
-                    downloading: root.download-index >= 0 && root.download-index == root.selected-index;
+                    downloading: root.downloading-current;
                     progress: root.download-progress;
+                    cursor: root.focus-zone == Zone.sofa ? root.focus-index : -1;
                     play => {
                         root.play(root.selected-index);
                     }
@@ -769,21 +875,22 @@ export component AppWindow inherits Window {
             }
         }
 
+        // Settings: its rows are the settings zone's indices 0 to 5, Done last.
         if root.settings-open: Rectangle {
             background: #0b0c0fc0;
 
             TouchArea {
                 clicked => {
                     root.settings-open = false;
-                    grid.focus-grid();
+                    root.focus-zone = Zone.grid;
                 }
             }
 
             Rectangle {
                 x: (parent.width - self.width) / 2;
                 y: (parent.height - self.height) / 2;
-                width: 540px;
-                height: 470px;
+                width: 560px;
+                height: 560px;
                 border-radius: 16px;
                 background: Theme.panel;
                 border-width: 1px;
@@ -795,7 +902,7 @@ export component AppWindow inherits Window {
 
                 VerticalLayout {
                     padding: 24px;
-                    spacing: 0px;
+                    spacing: 2px;
 
                     HorizontalLayout {
                         height: 40px;
@@ -813,15 +920,27 @@ export component AppWindow inherits Window {
                                 icon: @image-url("../../ui/icons/x.svg");
                                 clicked => {
                                     root.settings-open = false;
-                                    grid.focus-grid();
+                                    root.focus-zone = Zone.grid;
                                 }
                             }
                         }
                     }
 
                     SettingRow {
+                        label: "Controller";
+                        hint: root.pad-connected ? root.pad-name : "None connected; the keyboard drives it";
+                        Text {
+                            text: root.pad-connected ? root.pad-kind : "";
+                            color: Theme.ok;
+                            font-size: 13px;
+                            font-weight: 600;
+                        }
+                    }
+
+                    SettingRow {
                         label: "Sync saves automatically";
                         hint: "After a game closes, and when the app starts";
+                        cursor: root.focus-zone == Zone.settings && root.focus-index == 0;
                         Toggle {
                             checked <=> root.opt-autosync;
                         }
@@ -829,6 +948,7 @@ export component AppWindow inherits Window {
 
                     SettingRow {
                         label: "Show hidden games";
+                        cursor: root.focus-zone == Zone.settings && root.focus-index == 1;
                         Toggle {
                             checked <=> root.opt-hidden;
                         }
@@ -836,6 +956,7 @@ export component AppWindow inherits Window {
 
                     SettingRow {
                         label: "Menu sounds";
+                        cursor: root.focus-zone == Zone.settings && root.focus-index == 2;
                         Toggle {
                             checked <=> root.opt-sounds;
                         }
@@ -843,6 +964,7 @@ export component AppWindow inherits Window {
 
                     SettingRow {
                         label: "Theme";
+                        cursor: root.focus-zone == Zone.settings && root.focus-index == 3;
                         Segmented {
                             options: ["Dark", "Light", "Auto"];
                             selected <=> root.opt-theme;
@@ -852,6 +974,7 @@ export component AppWindow inherits Window {
                     SettingRow {
                         label: "Icon size";
                         hint: Math.round(root.zoom) + " px";
+                        cursor: root.focus-zone == Zone.settings && root.focus-index == 4;
                         Slider {
                             width: 180px;
                             minimum: 90;
@@ -869,9 +992,10 @@ export component AppWindow inherits Window {
                         Button {
                             text: "Done";
                             primary: true;
+                            cursor: root.focus-zone == Zone.settings && root.focus-index == 5;
                             clicked => {
                                 root.settings-open = false;
-                                grid.focus-grid();
+                                root.focus-zone = Zone.grid;
                             }
                         }
                     }
@@ -881,7 +1005,7 @@ export component AppWindow inherits Window {
 
         Toast {
             x: (parent.width - self.width) / 2;
-            y: root.toast-shown ? parent.height - self.height - 28px : parent.height - self.height + 8px;
+            y: root.toast-shown ? parent.height - self.height - 60px : parent.height - self.height - 30px;
             animate y { duration: 220ms; easing: ease-out; }
             text: root.toast-text;
             shown: root.toast-shown;
