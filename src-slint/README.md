@@ -37,6 +37,24 @@ about its drivers.
 The current app's frosted glass needs `backdrop-blur`, which arrives in Slint
 1.19 (unreleased on 2026-10-31) and works under Skia.
 
+## Controller first
+
+One cursor goes everywhere: the header's controls, the console column, the
+grid, the detail's buttons, Settings' rows. Keys and pad buttons both become
+the actions `moose_rack::binds` names, with the core's repeat timing and stick
+dead zone (`padpoll`), so the prototype moves the way the app does. The mouse
+works but nothing needs it.
+
+Pads are read with SDL3 (`src/pad.rs`), which reports what kind each one is
+(Xbox 360, Xbox One, PS3 to PS5, Switch Pro, Joy-Con) and what is printed on
+its buttons; the hint bar draws those, PlayStation's shapes included, and the
+keyboard's keys when no pad is connected. Face buttons are taken by position,
+as the app's standard mapping takes them: the bottom one confirms on every pad.
+
+It links the SDL3 Homebrew installed (macserver and the laptop both have
+3.4.18). On Android the pad arrives as the system's own key events instead;
+that path is not written yet.
+
 ## Running it
 
 Build on macserver, as the main app is, then run the binary:
