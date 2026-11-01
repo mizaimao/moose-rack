@@ -48,8 +48,10 @@ works but nothing needs it.
 Pads are read with SDL3 (`src/pad.rs`), which reports what kind each one is
 (Xbox 360, Xbox One, PS3 to PS5, Switch Pro, Joy-Con) and what is printed on
 its buttons; the hint bar draws those, PlayStation's shapes included, and the
-keyboard's keys when no pad is connected. Face buttons are taken by position,
-as the app's standard mapping takes them: the bottom one confirms on every pad.
+keyboard's keys when no pad is connected. Confirm is the right face button and
+back the bottom one on every pad, whatever is printed there: A on Nintendo,
+Circle on PlayStation, B on Xbox (Frank's call, 2026-10-31). That is the core's
+A/B swap, `Bindings::pad_map_swapped`.
 
 It links the SDL3 Homebrew installed (macserver and the laptop both have
 3.4.18). On Android the pad arrives as the system's own key events instead;
