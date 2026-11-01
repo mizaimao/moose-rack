@@ -78,11 +78,14 @@ runs were checked by the log and by Frank at the machine.
 
 ## On the server
 
-`dev.lan:/home/frank/moose-library/`:
+Fetched while probing, into `dev.lan:/home/frank/moose-library/`, which is
+`~/Projects/moose-rack/moose-library/` since 2026-10-24. None of it is there
+now: the torrent was deleted on 2026-10-25, with Frank's yes, and the full copy
+is on the NAS (below).
 
 | path | what |
 | --- | --- |
-| `eXoWin9x-torrent/eXoWin9x.torrent` | the torrent |
+| `eXoWin9x-torrent/eXoWin9x.torrent` | the torrent, deleted 2026-10-25 |
 | `eXoWin9x/eXo/util/utilWin9x.zip` | 2.5 GB; holds `EXTWin9x.zip` (emulators, parent images) and `OPTWin9x.zip`, both also unpacked beside it |
 | `eXoWin9x/Content/!Win9Xmetadata.zip` | 8.4 GB; per game `Play.conf`, `Install.bat`, the launcher `.bat` and the extras, which are most of the size |
 | `eXoWin9x/eXo/eXoWin9x/1996/` | Zulu War and Red Alert |
