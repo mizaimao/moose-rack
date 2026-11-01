@@ -1,0 +1,129 @@
+# The server, the web page and the desktop app
+
+**Design, agreed with Frank on 2026-11-01.** Parts already exist; the table
+under "The pieces" says which. The open questions at the end are still open.
+
+## The shape
+
+- The NAS holds the one real library: ROMs, artwork, game lists, saves.
+- `moose-service` (on dev.lan) serves it. Its web page browses the library and
+  plays the lighter games in the browser.
+- The desktop app (macOS and Windows first, Linux later) is a front end in its
+  own right. It reads from a local cache and fills the cache from the service
+  only when something is missing. Deleting the cache costs a re-download and
+  nothing else; the server never depends on it.
+- The desktop app also takes Play requests from the web page for games the
+  browser can't run (sixth generation and later).
+
+One user for now: the owner. The service already knows an owner token and
+named users (`[[auth.users]]`, see [service-api.md](service-api.md)), so adding
+people later needs no redesign.
+
+## Scenarios
+
+1. A friend visits. They open the web page and play a simple game in the
+   browser, with pad mapping and shaders preset. Built.
+2. I find an Xbox 360 game on the web page and press Play. The page hands the
+   game to the Moose Rack app on that computer, which makes sure the emulator
+   is installed and set up, downloads the ROM if the cache lacks it, and
+   starts the game.
+3. While the game runs, the app stays open, as Steam does. When the game
+   quits, the app finds new or changed saves and uploads them. Quitting the app
+   while an upload is unfinished asks first.
+
+## The pieces
+
+| piece | status |
+|---|---|
+| Web library and in-browser play (EmulatorJS, DOS, Windows 9x) | built |
+| Desktop cache, ROMs downloaded on demand | built, RetroArch games |
+| Saves uploaded after a game exits | built for RetroArch; standalone emulators at milestone 1 ([emulator-saves.md](emulator-saves.md)) |
+| Play link from the web page to the app | new |
+| App stays open while a game runs; asks before quitting with an upload pending | new; the upload after exit exists |
+| Standalone emulators installed and set up per OS | new, and the largest piece |
+| Lock a game while another device plays it | deferred |
+| Server keeps copies of emulator updates | not doing |
+
+## The play link
+
+The web page's Play button for a game the browser can't run links to
+
+    moose-rack://play/<platform>/<file name>
+
+The OS hands any `moose-rack://` address to the installed app, the way
+`steam://run/...` reaches Steam. The browser asks once ("Open Moose Rack?").
+The service never contacts the desktop, so the desktop opens no port and the
+link works away from home too.
+
+- Platform and file name, URL-encoded, name the game. Service row ids are scan
+  order and change when the library changes (see the top of
+  `src-service/src/main.rs`), so they can't go in a link.
+- Registered with Tauri's official deep-link plugin on macOS and Windows.
+- Any web page can fire a `moose-rack://` link. The app only accepts `play`
+  for a game in its own library listing and never runs anything taken from the
+  link itself.
+- If the app isn't installed, nothing happens. After a few seconds the page
+  says so and links to the download.
+
+## Play, step by step
+
+1. Emulator for this platform on this OS: installed and set up? If not, offer
+   to install it from its official release, pinned to a known version, with
+   Moose Rack's settings for it.
+2. Firmware or keys it needs: present? If not, fetch them from the NAS `bios`
+   folder.
+3. ROM in the cache? If not, download it, with progress.
+4. Launch, fullscreen, as a separate process ([PLAN.md](../PLAN.md) §10).
+5. Wait for it to exit. The app can't be closed meanwhile.
+6. Find changed saves and upload them.
+
+## The cache, per OS
+
+Each OS gets its own complete set, because the emulators differ (Xenia runs
+only on Windows):
+
+    <Moose Rack folder>/
+    ├── emulators/   one folder per emulator, portable mode where it has one
+    ├── roms/<platform>/
+    ├── media/<platform>/
+    ├── saves/       working copies; the server holds the real ones
+    └── bios/
+
+Today's layout ([PLAN.md](../PLAN.md) §11) is `library/roms` and
+`library/downloaded_media` beside the app; moving to this is part of the work.
+
+Emulators per system, as a starting point:
+
+| system | macOS | Windows |
+|---|---|---|
+| PS2 | PCSX2 | PCSX2 |
+| GameCube, Wii | Dolphin | Dolphin |
+| Wii U | Cemu | Cemu |
+| Xbox | xemu | xemu |
+| Xbox 360 | none | Xenia Canary |
+| PS3 | RPCS3 | RPCS3 |
+| Switch | Eden (macOS build to check) | Eden |
+| PSP | PPSSPP | PPSSPP |
+| 3DS | Azahar | Azahar |
+
+ARMSX2 is Android-only; the Mac uses PCSX2.
+
+## Order of work
+
+1. The play link, with RetroArch games, since their launch path already works.
+2. Stay open while a game runs, and ask before quitting with an upload pending.
+3. Standalone emulators, one at a time, each with install, settings, launch and
+   saves before the next starts.
+
+## Open questions
+
+- Which emulator comes first.
+- Emulator settings: Moose Rack writes its own known-good settings, as it does
+  for RetroArch, or uses whatever the emulator has. Leaning towards its own.
+- Updates: pinned versions, with an "update available" offer at Play time,
+  checked against the official release page. No copies on the server.
+- Disk: Switch and PS3 games run to tens of GB. How much the cache may use, and
+  what gets removed first when it's full.
+- Locking a game in use on another device: decide while building save sync for
+  standalone emulators.
+- What a save conflict looks like to the user when two devices both changed it.
