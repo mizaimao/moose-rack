@@ -175,6 +175,9 @@ async function runChecklist(id) {
     // A backend that answers without a checklist -- an older build, or a test
     // standing in for one -- launches the way it always did.
     if (!list?.game || !list?.emulator) return true;
+    // Everything here: no window, straight on to the saves step (Frank,
+    // 2026-11-02). The window is for something to fetch or something blocking.
+    if (list.ready) return true;
     const answer = await askChecklist(list);
     if (answer === "play") return true;
     if (answer !== "download") {

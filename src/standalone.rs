@@ -436,9 +436,9 @@ pub fn configure(dir: &Path, bios_dir: &Path) -> Result<PathBuf> {
     std::fs::create_dir_all(&inis)?;
     let ini = inis.join("PCSX2.ini");
     let old = std::fs::read_to_string(&ini).unwrap_or_default();
-    let new = set_ini(&old, &settings(bios_dir, pick_bios(bios_dir).as_deref()));
-    if new != old {
-        std::fs::write(&ini, new).with_context(|| format!("writing {}", ini.display()))?;
+    let want = settings(bios_dir, pick_bios(bios_dir).as_deref());
+    if !holds(&old, &want) {
+        std::fs::write(&ini, set_ini(&old, &want)).with_context(|| format!("writing {}", ini.display()))?;
     }
     let card = dir.join("memcards").join(CARD);
     seed_card(&card)?;
@@ -450,14 +450,32 @@ fn full(path: &Path) -> PathBuf {
     std::path::absolute(path).unwrap_or_else(|_| path.to_path_buf())
 }
 
+/// Whether `text` already holds every one of `values`, whatever else is in it
+/// and however it's laid out. PCSX2 rewrites its ini when it quits (two blank
+/// lines between sections, its window position added), so comparing text
+/// called every launch after the first a change, and the checklist asked to
+/// set up again.
+pub fn holds(text: &str, values: &[(&'static str, String, String)]) -> bool {
+    let mut section = String::new();
+    let mut have: std::collections::HashMap<(String, String), String> = std::collections::HashMap::new();
+    for line in text.lines().map(str::trim) {
+        if line.starts_with('[') && line.ends_with(']') {
+            section = line[1..line.len() - 1].trim().to_owned();
+        } else if let Some((k, v)) = line.split_once('=') {
+            have.entry((section.clone(), k.trim().to_owned())).or_insert_with(|| v.trim().to_owned());
+        }
+    }
+    values.iter().all(|(s, k, v)| have.get(&((*s).to_owned(), k.clone())) == Some(v))
+}
+
 /// Whether PCSX2's settings already hold everything the app owns and the
 /// card is formatted: what `configure` would leave unchanged.
 pub fn configured(dir: &Path, bios_dir: &Path) -> bool {
     let bios_dir = &full(bios_dir);
     let old = std::fs::read_to_string(dir.join("inis/PCSX2.ini")).unwrap_or_default();
-    let want = set_ini(&old, &settings(bios_dir, pick_bios(bios_dir).as_deref()));
+    let want = settings(bios_dir, pick_bios(bios_dir).as_deref());
     let card = dir.join("memcards").join(CARD).join("_pcsx2_superblock");
-    want == old && std::fs::read(card).is_ok_and(|b| b.starts_with(b"Sony PS2 Memory Card Format"))
+    holds(&old, &want) && std::fs::read(card).is_ok_and(|b| b.starts_with(b"Sony PS2 Memory Card Format"))
 }
 
 /// Create the folder card, or format one PCSX2 left unformatted, without
@@ -507,6 +525,27 @@ mod tests {
             "[UI]\nTheme = darkfusion\nConfirmShutdown = false\nSettingsVersion = 1\n\n\
              [EmuCore]\nEnableCheats = true\n\n[Hotkeys]\nShutdownVM = SDL-0/Back & SDL-0/FaceSouth\n"
         );
+    }
+
+    #[test]
+    fn settings_still_count_after_pcsx2_rewrites_the_file() {
+        let values = settings(Path::new("/lib/bios/PS2"), Some("SCPH-39001.bin"));
+        let ours = set_ini("", &values);
+        // What PCSX2 leaves when it quits: two blank lines between sections,
+        // and its window position added.
+        let rewritten = ours.replace("\n\n[", "\n\n\n[").replacen(
+            "HideMouseCursor = true\n",
+            "HideMouseCursor = true\nMainWindowGeometry = AdnQywAD\nMainWindowState = AAAA\n",
+            1,
+        );
+        assert_ne!(rewritten, ours);
+        assert!(holds(&rewritten, &values));
+        // A value that really changed does count.
+        let changed = rewritten.replace("ConfirmShutdown = false", "ConfirmShutdown = true");
+        assert!(!holds(&changed, &values));
+        // So does a binding of ours that isn't the first one any more.
+        let shadowed = rewritten.replace("Cross = SDL-0/FaceSouth", "Cross = Keyboard/Z\nCross = SDL-0/FaceSouth");
+        assert!(!holds(&shadowed, &values));
     }
 
     #[test]

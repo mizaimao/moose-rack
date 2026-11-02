@@ -115,8 +115,9 @@ answers that prompt once, it doesn't come back.
    - Game file: in the cache, and its hash matches the library's.
    - Emulator: the pinned version installed, its BIOS there, its settings at
      the current config version. BIOS is part of this line, not its own.
-   Each line shows its size. The button is Play when both are ready, or
-   Download with the total of what's missing; Download fetches the game, the
+   Each line shows its size. When both are ready the window doesn't appear
+   and the launch goes straight on to the saves step (decided 2026-11-02).
+   Otherwise the button is Download with the total of what's missing; Download fetches the game, the
    emulator, BIOS and settings, checks every hash, and the checklist checks
    again. With no server and something missing, only Cancel.
 2. Saves, as a separate step after Play and right before the game starts: in
