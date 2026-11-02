@@ -278,7 +278,7 @@ pub async fn dispatch(state: &AppState, cmd: &str, args: &Value) -> Result<Value
         | "download_estimate" | "scrape_missing" | "app_icons" | "set_app_icon"
         | "android_launch_plan" | "android_sync_before" | "android_after_play"
         // Play links go from this page to the desktop app, never back.
-        | "take_play_link" | "find_rom_by_file" => {
+        | "take_play_link" | "find_rom_by_file" | "install_emulator" => {
             Err(format!("{cmd} is not available on the server"))
         }
 

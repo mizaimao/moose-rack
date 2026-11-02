@@ -65,7 +65,7 @@ from the same design and have to work too.
 | Saves uploaded after a game exits | built for RetroArch; standalone emulators at milestone 1 ([emulator-saves.md](emulator-saves.md)) |
 | Play link from the web page to the app | built; on macOS a link went to the app, downloaded the game and started RetroArch (2026-11-01). Windows not tried yet; the web page change not deployed yet |
 | App stays open while a game runs; asks before quitting with an upload pending | built (`src-tauri/src/busy.rs`). On macOS, closing the window during a game was refused and worked once it ended (2026-11-01). The upload question and Cmd+Q are covered by tests only; the Dock's Quit can't be stopped |
-| Standalone emulators installed and set up per OS | new, and the largest piece |
+| Standalone emulators installed and set up per OS | PCSX2 on macOS built (2026-11-01); the rest not started. See "Standalone emulators" below |
 | Lock a game while another device plays it | deferred |
 | Server keeps copies of emulator updates | not doing |
 
@@ -147,6 +147,45 @@ Emulators per system, as a starting point:
 | 3DS | Azahar | Azahar |
 
 ARMSX2 is Android-only; the Mac uses PCSX2.
+
+## Standalone emulators
+
+`src/standalone.rs`. Each one installs into `<library>/emulators/<id>/` in
+its own portable mode, at a version pinned in that file. A launch that finds
+it missing returns `EMULATOR_MISSING:`, and the page asks "Install and play?".
+
+PCSX2 (PS2), first, on 2026-11-01:
+
+- v2.8.2, the official release. Its macOS build is Intel-only, so Apple
+  silicon runs it through Rosetta. ARMSX2 has a native Mac build, but only as
+  nightlies; switch when it has stable Mac releases. Both read the same cards.
+- `portable.txt` beside `PCSX2.app` keeps its settings, BIOS choice and cards
+  in its folder (`EmuFolders::SetAppRoot` in PCSX2).
+- The app owns a set of keys in `inis/PCSX2.ini` (`standalone::settings`) and
+  leaves the rest. `[UI] SettingsVersion = 1` is one of them: without it PCSX2
+  offers to reset every setting on start.
+- Pads bound by position, south button Cross. Hold Select as in RetroArch
+  games: bottom face quits, top face opens the menu, shoulders load and save a
+  state, right trigger fast-forwards.
+- BIOS: the server's `bios/PS2` files are fetched into `<system dir>/PS2`;
+  SCPH-39001 (US) is used when it's there.
+- Saves: one folder card, `memcards/Moose.ps2`, synced as `pcsx2` units
+  before and after each game and in "Sync saves" (`commands::unit_cfgs`).
+  PCSX2's own new folder card is unformatted, so every game would ask to
+  format it; the app writes a formatted header instead
+  (`data/pcsx2-folder-card-superblock.bin`, taken from ChickenCard.ps2).
+  Slot 2 is off, so no save lands on a card that doesn't sync.
+- Started as `PCSX2 -nogui -fullscreen -- <rom>`; the app waits for it.
+
+Tested on macserver: a play link for Crazy Taxi asked to install PCSX2,
+installed it, fetched 17 BIOS files, and booted the game on the US BIOS with
+the folder card in slot 1. Windows not tried yet.
+
+Found: the PS2 doesn't appear in the library at all. `ROMs/ps2` on the NAS
+has a `noload.txt` (ES-DE's switch-off marker), as do `ps3`, `switch`, `wii`,
+`wiiu`, `xbox360` and `n3ds`, all dated 2026-10-14, so the service skips
+them. The Crazy Taxi test used a local copy. `xbox` has no marker but no
+platform mapping either.
 
 ## Order of work
 

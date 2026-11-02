@@ -494,6 +494,13 @@ async fn launch_rom(
     }
     .ok_or_else(|| format!("no rom with id {id}"))?;
 
+    // Systems the app plays with a standalone emulator of its own (PCSX2 for
+    // the PS2) never touch RetroArch.
+    if let Some(emu) = moose_rack::standalone::for_platform(&row.platform_slug) {
+        let rom = row_path(&state, &row).ok_or("not downloaded yet")?;
+        return launch_standalone(&app, &state, &busy, emu, &row, &rom, skip_sync.unwrap_or(false)).await;
+    }
+
     let ra = state.retroarch.as_ref().ok_or("RetroArch not found")?;
     // row_path, not local_path: the grid marks a row downloaded with this, and
     // a launch that disagreed said "not downloaded yet" about a folder ROM
@@ -713,6 +720,134 @@ async fn launch_rom(
     } else {
         format!("{prefix}{} exited with {status}", row.name)
     })
+}
+
+/// `launch_rom` for a standalone emulator: the same steps as a RetroArch game
+/// (BIOS, saves before, play, saves after), with the emulator's own setup.
+///
+/// An emulator that isn't installed yet comes back as `EMULATOR_MISSING:`, so
+/// the page can offer to install it and try again.
+async fn launch_standalone(
+    app: &tauri::AppHandle,
+    state: &AppState,
+    busy: &busy::Busy,
+    emu: &'static moose_rack::standalone::Emulator,
+    row: &cache::RomRow,
+    rom: &Path,
+    skip_sync: bool,
+) -> CmdResult<String> {
+    use moose_rack::standalone;
+    let say = |what: &str| {
+        let _ = app.emit("launch-progress", what.to_owned());
+    };
+    let dir = standalone::dir(&state.library_root, emu);
+    let Some(program) = standalone::program(&dir) else {
+        return Err(format!("EMULATOR_MISSING:{}:{}:{}", emu.id, emu.name, emu.version));
+    };
+
+    let mut notes = Vec::new();
+    let bios_dir = state.system_dir().join("PS2");
+    if let Some(api) = state.client.as_ref() {
+        say("checking BIOS files…");
+        match standalone::fetch_bios(api, &bios_dir).await {
+            Ok(0) => {}
+            Ok(n) => notes.push(format!("fetched {n} BIOS file(s)")),
+            Err(e) => notes.push(format!("could not fetch BIOS: {e}")),
+        }
+    }
+    // PCSX2 starts nothing without one, so this is a refusal rather than the
+    // "play anyway" question a RetroArch core gets.
+    if standalone::pick_bios(&bios_dir).is_none() {
+        return Err(format!(
+            "No PS2 BIOS. Put one in the server's bios/PS2 folder, or in {}",
+            bios_dir.display()
+        ));
+    }
+    let family = emu.family.unwrap_or_default();
+    standalone::configure(&dir, &bios_dir).map_err(err)?;
+
+    if skip_sync {
+        notes.push("saves: not synced — you chose to play anyway".to_owned());
+    } else {
+        say("checking saves with the server…");
+        let pre = auto_sync_units(state, family, savesync::When::BeforeLaunch).await;
+        if let Some(why) = pre.failed {
+            return Err(format!("SAVE_OFFLINE:{why}"));
+        }
+        if !pre.conflicts.is_empty() {
+            *state.pending_conflicts.lock().map_err(err)? = pre.conflicts.clone();
+            return Err(format!(
+                "SAVE_CONFLICT:{}",
+                serde_json::to_string(&pre.conflicts).unwrap_or_default()
+            ));
+        }
+        notes.extend(pre.note);
+    }
+
+    say(&format!("starting {}…", emu.name));
+    let began = std::time::Instant::now();
+    let started_at = moose_rack::util::now_iso();
+    let status = {
+        let _playing = busy.playing(&row.name);
+        standalone::command(&program, rom).status()
+    }
+    .map_err(|e| {
+        // PCSX2's macOS build is Intel-only, so Apple silicon runs it through
+        // Rosetta, which a fresh Mac may not have.
+        if e.raw_os_error() == Some(86) {
+            format!("{} needs Rosetta on this Mac. Install it with: softwareupdate --install-rosetta", emu.name)
+        } else {
+            format!("starting {}: {e}", emu.name)
+        }
+    })?;
+    let seconds = began.elapsed().as_secs() as i64;
+    if let Ok(cache) = state.cache.lock()
+        && let Ok(true) = cache.record_play(row.id, &started_at, seconds)
+    {
+        notes.push(format!("played for {}", moose_rack::util::spell_duration(seconds)));
+    }
+
+    if !skip_sync {
+        let post = {
+            let _uploading = busy.uploading();
+            auto_sync_units(state, family, savesync::When::AfterExit).await
+        };
+        notes.extend(post.note);
+        if let Some(why) = post.failed {
+            notes.push(format!("saves: NOT uploaded — {why}"));
+        }
+        if !post.conflicts.is_empty() {
+            *state.pending_conflicts.lock().map_err(err)? = post.conflicts;
+        }
+    }
+
+    let prefix = if notes.is_empty() { String::new() } else { format!("{}; ", notes.join("; ")) };
+    Ok(if status.success() {
+        format!("{prefix}{} exited cleanly", row.name)
+    } else {
+        format!("{prefix}{} exited with {status}", row.name)
+    })
+}
+
+/// Download and set up a standalone emulator, for the page's "Install it?".
+#[tauri::command]
+async fn install_emulator(app: tauri::AppHandle, state: State<'_, AppState>, id: String) -> CmdResult<String> {
+    use moose_rack::standalone;
+    let emu = standalone::by_id(&id).ok_or_else(|| format!("no emulator called {id}"))?;
+    let dir = standalone::dir(&state.library_root, emu);
+    let http = moose_rack::util::http_client(None).map_err(err)?;
+    let mut last = std::time::Instant::now() - std::time::Duration::from_secs(1);
+    standalone::install(&http, emu, &dir, |done, total| {
+        if last.elapsed().as_millis() < 250 {
+            return;
+        }
+        last = std::time::Instant::now();
+        let pct = if total > 0 { done * 100 / total } else { 0 };
+        let _ = app.emit("launch-progress", format!("downloading {} {}… {pct}%", emu.name, emu.version));
+    })
+    .await
+    .map_err(err)?;
+    Ok(format!("installed {} {}", emu.name, emu.version))
 }
 
 #[tauri::command]
@@ -1131,6 +1266,7 @@ pub fn run() {
             measure_note,
             browser_play_base,
             take_play_link,
+            install_emulator,
             find_rom_by_file,
             stable_ids,
             local_save,

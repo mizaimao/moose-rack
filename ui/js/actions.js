@@ -4,7 +4,7 @@
 import { state, invoke, listen, MOBILE } from "./state.js";
 import { toast } from "./util.js";
 import { askAboutLightGun } from "./lightgun-gate.js";
-import { askConflicts, conflictsFrom, askOffline, offlineFrom, askBios, biosFrom, noCoreFrom, askNoCore, noteLightGun } from "./conflicts.js";
+import { askConflicts, conflictsFrom, askOffline, offlineFrom, askBios, biosFrom, noCoreFrom, askNoCore, noteLightGun, emulatorMissingFrom, askInstallEmulator } from "./conflicts.js";
 import { suspendPad, resumePad } from "./gamepad.js";
 
 /// Display refresh in Hz, measured rather than asked for: no web API reports
@@ -208,7 +208,7 @@ async function launchAndroid(id, skipSync = false) {
 /// clicked; resume is a decision this function makes.
 export async function launch(
   id,
-  { resolving = false, skipSync = false, skipBios = false, entrySlot = null, resume = false } = {}
+  { resolving = false, skipSync = false, skipBios = false, entrySlot = null, resume = false, installed = false } = {}
 ) {
   if (resume && entrySlot === null) {
     try {
@@ -243,7 +243,7 @@ export async function launch(
   // And it is a *modal*: `launch` awaits it. On a console with a gun -- which
   // is every SNES game, because the Super Scope exists -- an unanswered dialog
   // is a launch that never happens. Nothing after this line ran.
-  const retry = skipSync || skipBios;
+  const retry = skipSync || skipBios || installed;
   if (askAboutLightGun({ resolving, skipSync: retry, mobile: MOBILE, native: await canLaunchNatively() })) {
     try {
       // Shape-checked, not just truthy. `[]` is truthy in JavaScript, so a
@@ -353,6 +353,23 @@ export async function launch(
         if (!go) return toast(`No installed core for ${missing}`, 8000);
         return toast(await playHere(id));
       }
+    }
+    // A standalone emulator (PCSX2 for the PS2) this machine hasn't got yet.
+    // Installed on a yes, then the same launch again.
+    const emu = emulatorMissingFrom(e);
+    if (emu && !installed) {
+      const go = await askInstallEmulator(emu);
+      if (!go) return toast("Launch cancelled");
+      toast(`Installing ${emu.name} ${emu.version}…`, 60_000);
+      const done = listen("launch-progress", ({ payload }) => toast(String(payload), 30_000));
+      try {
+        toast(await invoke("install_emulator", { id: emu.id }));
+      } catch (err) {
+        return toast(`Couldn't install ${emu.name} — ${err}`, 8000);
+      } finally {
+        (await done)?.();
+      }
+      return launch(id, { resolving, skipSync, skipBios, entrySlot, installed: true });
     }
     // Its own flag, not `skipSync`: "play without the BIOS" says nothing
     // about saves, and reusing the offline answer meant nothing was pulled
