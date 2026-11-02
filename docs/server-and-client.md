@@ -107,15 +107,63 @@ answers that prompt once, it doesn't come back.
 
 ## Play, step by step
 
-1. Emulator for this platform on this OS: installed and set up? If not, offer
-   to install it from its official release, pinned to a known version, with
-   Moose Rack's settings for it.
-2. Firmware or keys it needs: present? If not, fetch them from the NAS `bios`
-   folder.
-3. ROM in the cache? If not, download it, with progress.
-4. Launch, fullscreen, as a separate process ([PLAN.md](../PLAN.md) §10).
-5. Wait for it to exit. The app can't be closed meanwhile.
-6. Find changed saves and upload them.
+**Agreed with Frank on 2026-11-02.** The flowchart is
+[launch-flow.html](launch-flow.html), a local page; open it in a browser.
+
+1. The launch checklist. The game file and the emulator are checked at the
+   same time, each a yes/no:
+   - Game file: in the cache, and its hash matches the library's.
+   - Emulator: the pinned version installed, its BIOS there, its settings at
+     the current config version. BIOS is part of this line, not its own.
+   Each line shows its size. The button is Play when both are ready, or
+   Download with the total of what's missing; Download fetches the game, the
+   emulator, BIOS and settings, checks every hash, and the checklist checks
+   again. With no server and something missing, only Cancel.
+2. Saves, as a separate step after Play and right before the game starts: in
+   sync, newer on the server (downloaded), a conflict (choose a save, then
+   check again), or no server (play without syncing).
+3. Open the launch record.
+4. Run the emulator, fullscreen, as its own process
+   ([PLAN.md](../PLAN.md) §10). The app can't quit meanwhile.
+5. Upload changed saves. Quitting during this asks first.
+6. Close the launch record.
+
+### Launch records
+
+Every launch is recorded, so it can be audited and repeated. A record holds
+three versions:
+
+- Code: the Moose Rack build (version and git commit).
+- Config: the numbered version of every setting that shapes the game (the
+  emulator's settings, controls, shaders). This computer's paths are added
+  locally and aren't part of it.
+- Data: hashes of the game file, the emulator build and the BIOS.
+
+Plus the machine (OS, GPU) for context, and when it closes: exit code, time
+played, saves moved. Same three versions, same launch.
+
+Records live on the server, one history for every device. A launch with no
+server (travelling) writes its record locally and uploads it, with the saves,
+the next time the server is reachable; the record says it was offline.
+
+### One set of settings for every device
+
+Frank wants one user's settings the same on every device. They can still end
+up different in these cases, and each has an answer:
+
+- A setting changed in the emulator's own menu on one device. The app notices
+  the file no longer matches the config version and asks once whether to keep
+  the change for every device; yes makes the next config version.
+- Settings that must differ per machine: file paths, the graphics backend
+  (Metal on a Mac, Vulkan or Direct3D on Windows), and how far a weaker machine
+  can upscale. These sit in a small per-device layer on top of the shared
+  config, so they never count as a difference.
+- A device that was off or offline when the config changed. Its checklist
+  shows the emulator line as not ready until it has the current version.
+- A change made offline on two devices. Handled like a save conflict: choose
+  one.
+- A newer pinned emulator version that adds or renames settings. The app
+  carries the shared values across when it moves the pin.
 
 ## The cache, per OS
 
