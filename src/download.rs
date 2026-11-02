@@ -289,7 +289,7 @@ impl Verified {
     }
 }
 
-fn verify(path: &Path, target: &Target<'_>) -> Result<Verified> {
+pub fn verify(path: &Path, target: &Target<'_>) -> Result<Verified> {
     let want_md5 = target.md5.filter(|h| !h.is_empty());
     let want_sha1 = target.sha1.filter(|h| !h.is_empty());
     if want_md5.is_none() && want_sha1.is_none() {

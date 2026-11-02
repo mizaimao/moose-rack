@@ -2011,6 +2011,63 @@ pub async fn auto_sync(
     }
 }
 
+/// Download one game into the cache and check its hash. `progress` gets
+/// `(done, total)` bytes. A file that passes is remembered (`verified`), so
+/// the launch checklist doesn't hash it again.
+pub async fn download_game(state: &AppState, id: i64, progress: impl FnMut(u64, u64)) -> CmdResult<String> {
+    let row = {
+        let cache = state.cache.lock().map_err(err)?;
+        cache.rom_by_id(id).map_err(err)?
+    }
+    .ok_or_else(|| format!("no rom with id {id}"))?;
+
+    let client = state
+        .client
+        .clone()
+        .ok_or("no server connection — check config.toml")?;
+
+    // Folder ROMs verify per member; the rom-level hash is not reproducible.
+    let members = if row.multi_file {
+        client.member_hashes(row.id).await
+    } else {
+        Vec::new()
+    };
+
+    let folder = row.folder();
+    let target = crate::download::Target {
+        rom_id: row.id,
+        members: &members,
+        fs_name: &row.fs_name,
+        folder: &folder,
+        expected_size: (row.fs_size_bytes > 0).then_some(row.fs_size_bytes as u64),
+        md5: row.md5_hash.as_deref(),
+        sha1: row.sha1_hash.as_deref(),
+        multi_file: row.multi_file,
+    };
+
+    let outcome = crate::download::fetch(
+        client.http(),
+        client.base(),
+        client.auth(),
+        &target,
+        &state.roms_dir,
+        progress,
+    )
+    .await
+    .map_err(err)?;
+
+    Ok(match outcome {
+        crate::download::Outcome::AlreadyHave(p) => {
+            crate::verified::remember(&state.library_root, &p);
+            format!("already had {}", p.display())
+        }
+        crate::download::Outcome::Downloaded { path, verified, .. } => {
+            crate::verified::remember(&state.library_root, &path);
+            format!("downloaded {} ({})", path.display(), verified.describe())
+        }
+    })
+}
+
 /// The emulator save folders this device syncs: `[[saves.units]]` from
 /// config.toml, plus the memory card of each emulator the app installed
 /// itself (`standalone`), unless config.toml already names one for its family.
