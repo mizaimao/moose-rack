@@ -165,6 +165,17 @@ up different in these cases, and each has an answer:
 - A newer pinned emulator version that adds or renames settings. The app
   carries the shared values across when it moves the pin.
 
+**Decided 2026-11-02: the per-device layer is filled automatically, by rules.**
+Frank won't set it by hand ("configuring them by hand would be a lot of
+trouble"). The first time an emulator is set up on a device, the app reads
+the hardware (screen resolution, GPU, memory) and picks that device's values
+from a rule table per emulator: the MacBook Air plays Switch games at 2K, Hog
+at 4K. The values are part of the config version a launch records, so a
+launch stays repeatable. When a launch record shows a game running badly on a
+device (frame times), the app offers once to step that device down. An agent
+reading launch records to suggest better rules is a later extra, not the
+mechanism.
+
 ## The cache, per OS
 
 Each OS gets its own complete set, because the emulators differ (Xenia runs
