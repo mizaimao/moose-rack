@@ -47,11 +47,22 @@ before(async () => {
         if (cmd === "find_rom_by_file") return library[`${args.platform}/${args.file}`] ?? null;
         if (cmd === "launch_rom") return "Played";
         if (cmd === "download_rom") return "Downloaded";
+        if (cmd === "launch_checklist") return checklistFor(args.id);
+        if (cmd === "prepare_launch") {
+          downloaded.add(args.id);
+          return "downloaded";
+        }
         return null;
       },
     },
     event: { listen: async () => () => {} },
   };
+
+  // Press the checklist's main button (Play or Download) whenever it shows.
+  new dom.window.MutationObserver(() => {
+    const b = dom.window.document.querySelector("#conflict-overlay .cl-main");
+    if (b) setTimeout(() => b.click(), 0);
+  }).observe(dom.window.document.body, { childList: true });
 
   links = await import("../js/playlink.js");
   links.opener.open = (url) => opened.push(url);
@@ -66,6 +77,13 @@ beforeEach(() => {
   pending = [];
   library = {};
 });
+
+/// A checklist: the game is ready once it has been "downloaded".
+function checklistFor(id) {
+  const ready = downloaded.has(id);
+  const item = (r) => ({ label: "x", detail: "y", ready: r, bytes: 1024 });
+  return { name: "Game", platform: "ps2", game: item(ready), emulator: item(true), ready, download_bytes: ready ? 0 : 1024, blocked: null };
+}
 
 const toastText = () => dom.window.document.getElementById("toast").textContent;
 const cmds = () => invoked.map((i) => i.cmd);
@@ -130,11 +148,14 @@ test("on the desktop, a link that arrives downloads the game if needed, then sta
   library = { "xbox360/Halo 3 (USA).iso": 9 };
   await desk.watchPlayLinks();
   const order = cmds();
-  assert.ok(order.includes("download_rom"), `not downloaded first: ${order}`);
+  assert.ok(order.includes("prepare_launch"), `the checklist didn't download first: ${order}`);
   const launched = invoked.find((i) => i.cmd === "launch_rom");
   assert.ok(launched, `no launch: ${order}`);
   assert.equal(launched.args.id, 9);
-  assert.ok(order.indexOf("download_rom") < order.indexOf("launch_rom"));
+  assert.ok(order.indexOf("launch_checklist") < order.indexOf("prepare_launch"));
+  assert.ok(order.indexOf("prepare_launch") < order.indexOf("launch_rom"));
+  assert.ok(!order.includes("download_rom"), "the old download path ran too");
+  downloaded.delete(9);
   assert.ok(!order.includes("sync_library"));
 });
 
@@ -148,7 +169,8 @@ test("on the desktop, a game already in the cache starts without a download", as
   } finally {
     downloaded.delete(7);
   }
-  assert.ok(!cmds().includes("download_rom"), `downloaded again: ${cmds()}`);
+  assert.ok(!cmds().includes("prepare_launch"), `downloaded again: ${cmds()}`);
+  assert.ok(cmds().includes("launch_checklist"));
   assert.equal(invoked.find((i) => i.cmd === "launch_rom")?.args.id, 7);
 });
 

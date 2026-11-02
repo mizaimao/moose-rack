@@ -352,6 +352,7 @@ async fn launch_standalone(
             format!("starting {}: {e}", emu.name)
         }
     })?;
+    eprintln!("launch: {} ended: {status}", emu.name);
     let seconds = began.elapsed().as_secs() as i64;
     if let Ok(cache) = state.cache.lock()
         && let Ok(true) = cache.record_play(row.id, &started_at, seconds)
@@ -360,6 +361,7 @@ async fn launch_standalone(
     }
 
     if !skip_sync {
+        eprintln!("launch: uploading saves");
         let post = {
             let _uploading = busy.uploading();
             auto_sync_units(state, family, savesync::When::AfterExit).await
@@ -374,9 +376,282 @@ async fn launch_standalone(
     }
 
     let prefix = if notes.is_empty() { String::new() } else { format!("{}; ", notes.join("; ")) };
+    eprintln!("launch: done");
     Ok(if status.success() {
         format!("{prefix}{} exited cleanly", row.name)
     } else {
         format!("{prefix}{} exited with {status}", row.name)
     })
+}
+
+/// One line of the launch checklist.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct Item {
+    /// What it is: the game's file name, or the emulator and its version.
+    pub label: String,
+    /// The state in words: "in the cache, hash checked", "not on this computer yet".
+    pub detail: String,
+    pub ready: bool,
+    /// Its size, whether or not it has to be fetched. `None` when nobody can say.
+    pub bytes: Option<u64>,
+}
+
+/// What stands between this game and Play. See `docs/launch-flow.html`.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct Checklist {
+    /// The game's name and console, for the window's heading.
+    pub name: String,
+    pub platform: String,
+    pub game: Item,
+    pub emulator: Item,
+    /// Both lines ready: the button is Play.
+    pub ready: bool,
+    /// What the Download button fetches: the sizes of the lines that aren't
+    /// ready, added up. A line with no known size adds nothing.
+    pub download_bytes: u64,
+    /// Something is missing and Download can't fetch it (no server, no
+    /// RetroArch). The window shows this and offers only Cancel.
+    pub blocked: Option<String>,
+}
+
+fn row_for(state: &AppState, id: i64) -> CmdResult<cache::RomRow> {
+    let cache = state.cache.lock().map_err(err)?;
+    cache.rom_by_id(id).map_err(err)?.ok_or_else(|| format!("no rom with id {id}"))
+}
+
+/// The game line: present, and its hash checked against the library's.
+///
+/// A file is hashed once and then remembered by size and date (`verified`),
+/// so only the first check of a big disc takes a moment.
+fn game_item(state: &AppState, row: &cache::RomRow) -> Item {
+    let bytes = (row.fs_size_bytes > 0).then_some(row.fs_size_bytes as u64);
+    let item = |ready: bool, detail: &str| Item { label: row.fs_name.clone(), detail: detail.to_owned(), ready, bytes };
+    let Some(path) = row_path(state, row) else {
+        return item(false, "not on this computer yet");
+    };
+    // Folder ROMs (multi-disc) are checked member by member when they
+    // download; there is no single hash to check here.
+    if path.is_dir() {
+        return item(true, "in the cache");
+    }
+    if crate::verified::is_current(&state.library_root, &path) {
+        return item(true, "in the cache, hash checked");
+    }
+    let no_hash = row.md5_hash.as_deref().unwrap_or("").is_empty() && row.sha1_hash.as_deref().unwrap_or("").is_empty();
+    if no_hash {
+        // A local library file the server has no hash for: nothing to check
+        // it against, and nothing better to download instead.
+        return item(true, "in the cache");
+    }
+    let folder = row.folder();
+    let target = crate::download::Target {
+        rom_id: row.id,
+        members: &[],
+        fs_name: &row.fs_name,
+        folder: &folder,
+        expected_size: bytes,
+        md5: row.md5_hash.as_deref(),
+        sha1: row.sha1_hash.as_deref(),
+        multi_file: false,
+    };
+    match crate::download::verify(&path, &target) {
+        Ok(_) => {
+            crate::verified::remember(&state.library_root, &path);
+            item(true, "in the cache, hash checked")
+        }
+        Err(_) => item(false, "in the cache, but it doesn't match the library; downloads again"),
+    }
+}
+
+/// BIOS files the server has that `missing` names, with their total size.
+async fn server_bios_bytes(state: &AppState, wanted: impl Fn(&crate::api::Firmware) -> bool) -> Option<u64> {
+    let client = state.client.as_ref()?;
+    let list = client.firmware().await.ok()?;
+    Some(list.iter().filter(|f| wanted(f)).map(|f| f.file_size_bytes.max(0) as u64).sum())
+}
+
+/// The emulator line, and what blocks Download when it can't fix this line.
+async fn emulator_item(state: &AppState, row: &cache::RomRow) -> (Item, Option<String>) {
+    if let Some(emu) = crate::standalone::for_platform(&row.platform_slug) {
+        use crate::standalone;
+        let dir = standalone::dir(&state.library_root, emu);
+        let bios_dir = state.system_dir().join("PS2");
+        let label = format!("{} {}", emu.name, emu.version);
+        let installed = standalone::program(&dir).is_some()
+            && standalone::installed_version(&dir).as_deref() == Some(emu.version);
+        let bios = standalone::pick_bios(&bios_dir).is_some();
+        let settings = installed && standalone::configured(&dir, &bios_dir);
+        let mut bytes = if installed { 0 } else { standalone::download_size(emu) };
+        if !bios {
+            let have = |f: &crate::api::Firmware| {
+                std::path::Path::new(&f.file_name).file_name().is_some_and(|n| bios_dir.join(n).is_file())
+            };
+            bytes += server_bios_bytes(state, |f| standalone::is_ps2_bios(f) && !have(f)).await.unwrap_or(0);
+        }
+        let detail = match (installed, bios, settings) {
+            (true, true, true) => "with BIOS and its settings".to_owned(),
+            (false, _, _) => "not on this computer yet; comes with BIOS and settings".to_owned(),
+            (true, false, _) => "installed; BIOS not here yet".to_owned(),
+            (true, true, false) => "installed; settings to apply".to_owned(),
+        };
+        let ready = installed && bios && settings;
+        let blocked = (!ready && (!installed || !bios) && state.client.is_none())
+            .then(|| "The server isn't reachable, so the emulator can't be fetched.".to_owned());
+        let item = Item { label, detail, ready, bytes: Some(if ready { standalone::download_size(emu) } else { bytes }) };
+        return (item, blocked);
+    }
+
+    let Some(ra) = state.retroarch.as_ref() else {
+        let item = Item { label: "RetroArch".to_owned(), detail: "not installed".to_owned(), ready: false, bytes: None };
+        return (item, Some("RetroArch isn't installed. Set it up in Settings, then press Play again.".to_owned()));
+    };
+    let (overrides, per_game) = match (state.core_overrides.lock(), state.core_per_game.lock()) {
+        (Ok(o), Ok(p)) => (o.clone(), p.clone()),
+        _ => Default::default(),
+    };
+    let Some(core) = coremap::resolve_core_for(
+        &state.map,
+        &overrides,
+        &per_game,
+        &row.platform_slug,
+        Some(&row.fs_name),
+        |_| true,
+    ) else {
+        let item = Item { label: "RetroArch".to_owned(), detail: format!("no core for {}", row.platform_slug), ready: false, bytes: None };
+        return (item, Some(format!("RetroArch has no core for {}.", row.platform_slug)));
+    };
+    let label = format!("RetroArch, {core}");
+    let has_core = ra.has_core(&core);
+    let bios_dir = state.system_dir();
+    let missing_bios: Vec<String> = crate::bios::required_for(&core, &row.platform_slug)
+        .into_iter()
+        .filter(|n| !bios_dir.join(n).is_file())
+        .collect();
+    let mut bytes = 0;
+    let mut unknown = false;
+    if !has_core {
+        match state.client.as_ref() {
+            Some(api) => match crate::cores::download_size(api.http(), &core).await {
+                Some(n) => bytes += n,
+                None => unknown = true,
+            },
+            None => unknown = true,
+        }
+    }
+    if !missing_bios.is_empty() {
+        let wanted = |f: &crate::api::Firmware| {
+            std::path::Path::new(&f.file_name)
+                .file_name()
+                .is_some_and(|n| missing_bios.iter().any(|m| n.to_string_lossy() == m.as_str()))
+        };
+        bytes += server_bios_bytes(state, wanted).await.unwrap_or(0);
+    }
+    let ready = has_core && missing_bios.is_empty();
+    let detail = match (has_core, missing_bios.is_empty()) {
+        (true, true) => "core and BIOS here".to_owned(),
+        (false, true) => "core not on this computer yet".to_owned(),
+        (true, false) => format!("BIOS not here yet: {}", missing_bios.join(", ")),
+        (false, false) => format!("core and BIOS not here yet: {}", missing_bios.join(", ")),
+    };
+    let blocked = (!ready && state.client.is_none())
+        .then(|| "The server isn't reachable, so the core and BIOS can't be fetched.".to_owned());
+    let item = Item { label, detail, ready, bytes: if ready || unknown { None } else { Some(bytes) } };
+    (item, blocked)
+}
+
+/// Check the game and the emulator for this launch.
+pub async fn checklist(state: &AppState, id: i64) -> CmdResult<Checklist> {
+    let row = row_for(state, id)?;
+    let game = game_item(state, &row);
+    let (emulator, emu_blocked) = emulator_item(state, &row).await;
+    let missing = |i: &Item| if i.ready { 0 } else { i.bytes.unwrap_or(0) };
+    let download_bytes = missing(&game) + missing(&emulator);
+    let blocked = if !game.ready && state.client.is_none() {
+        Some("The server isn't reachable, so the game can't be downloaded.".to_owned())
+    } else {
+        emu_blocked
+    };
+    Ok(Checklist {
+        name: row.name.clone(),
+        platform: row.platform_slug.clone(),
+        ready: game.ready && emulator.ready,
+        game,
+        emulator,
+        download_bytes,
+        blocked,
+    })
+}
+
+/// The Download button: fetch everything the checklist found missing, check
+/// every hash, and apply the emulator's settings. The window then checks
+/// again.
+pub async fn prepare(state: &AppState, id: i64, say: impl Fn(&str) + Send + Sync) -> CmdResult<String> {
+    let row = row_for(state, id)?;
+    let mut done = Vec::new();
+
+    if !game_item(state, &row).ready {
+        let name = row.fs_name.clone();
+        let mut last = 0u64;
+        let said = download_game(state, id, |got, total| {
+            let pct = (got * 100).checked_div(total).unwrap_or(0);
+            if pct != last {
+                last = pct;
+                say(&format!("downloading {name}… {pct}%"));
+            }
+        })
+        .await?;
+        done.push(said);
+    }
+
+    if let Some(emu) = crate::standalone::for_platform(&row.platform_slug) {
+        use crate::standalone;
+        let dir = standalone::dir(&state.library_root, emu);
+        if standalone::program(&dir).is_none() || standalone::installed_version(&dir).as_deref() != Some(emu.version) {
+            let http = crate::util::http_client(None).map_err(err)?;
+            let mut last = 0u64;
+            standalone::install(&http, emu, &dir, |got, total| {
+                let pct = (got * 100).checked_div(total).unwrap_or(0);
+                if pct != last {
+                    last = pct;
+                    say(&format!("downloading {} {}… {pct}%", emu.name, emu.version));
+                }
+            })
+            .await
+            .map_err(err)?;
+            done.push(format!("installed {} {}", emu.name, emu.version));
+        }
+        let bios_dir = state.system_dir().join("PS2");
+        if let Some(api) = state.client.as_ref() {
+            say("fetching BIOS files…");
+            let n = standalone::fetch_bios(api, &bios_dir).await.map_err(err)?;
+            if n > 0 {
+                done.push(format!("fetched {n} BIOS file(s)"));
+            }
+        }
+        say(&format!("setting up {}…", emu.name));
+        standalone::configure(&dir, &bios_dir).map_err(err)?;
+        return Ok(done.join("; "));
+    }
+
+    let ra = state.retroarch.as_ref().ok_or("RetroArch not found")?;
+    let api = state.client.as_ref().ok_or("not connected to a server")?;
+    let (overrides, per_game) = {
+        let o = state.core_overrides.lock().map_err(err)?.clone();
+        let p = state.core_per_game.lock().map_err(err)?.clone();
+        (o, p)
+    };
+    if let Some(core) = coremap::resolve_core_for(&state.map, &overrides, &per_game, &row.platform_slug, Some(&row.fs_name), |_| true) {
+        say("fetching the emulator core…");
+        if crate::cores::ensure(api.http(), ra, &core).await.map_err(err)? {
+            done.push(format!("downloaded the {core} core"));
+        }
+        say("fetching BIOS files…");
+        let n = crate::bios::ensure(api, &state.system_dir(), &state.legacy_bios, &core, &row.platform_slug)
+            .await
+            .map_err(err)?;
+        if n > 0 {
+            done.push(format!("fetched {n} BIOS file(s)"));
+        }
+    }
+    Ok(done.join("; "))
 }

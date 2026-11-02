@@ -45,6 +45,18 @@ fn core_url(segment: &str, core: &str) -> String {
     format!("{BUILDBOT}/{segment}/latest/{}.zip", core_filename(core))
 }
 
+/// The size of a core's download, from the buildbot's answer to a HEAD request.
+/// `None` when it can't say: the launch checklist then shows the line
+/// without a size rather than a wrong one.
+pub async fn download_size(client: &reqwest::Client, core: &str) -> Option<u64> {
+    let url = core_url(platform_segment().ok()?, core);
+    let resp = client.head(&url).send().await.ok()?;
+    if !resp.status().is_success() {
+        return None;
+    }
+    resp.content_length().filter(|n| *n > 0)
+}
+
 /// Download one core and extract it into `dest_dir`.
 ///
 /// Returns the number of bytes written. Existing files are overwritten, so a

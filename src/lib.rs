@@ -78,6 +78,7 @@ pub mod syncplan;
 pub mod tui;
 pub mod update;
 pub mod util;
+pub mod verified;
 
 /// RomM release this client's server-specific behavior was verified against.
 ///

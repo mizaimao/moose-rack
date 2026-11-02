@@ -33,6 +33,10 @@ before(async () => {
       invoke: async (cmd, args) => {
         invoked.push({ cmd, args });
         if (cmd === "status") return { can_launch: true };
+        if (cmd === "launch_checklist") {
+          const item = { label: "x", detail: "y", ready: true, bytes: 1024 };
+          return { name: "Game", platform: "ps2", game: item, emulator: item, ready: true, download_bytes: 0, blocked: null };
+        }
         if (cmd === "launch_rom") {
           if (!installed) throw "EMULATOR_MISSING:pcsx2:PCSX2:v2.8.2";
           return "Ico exited cleanly";
@@ -46,6 +50,11 @@ before(async () => {
     },
     event: { listen: async () => () => {} },
   };
+  // Press Play in the launch checklist whenever it shows.
+  new window.MutationObserver(() => {
+    const b = window.document.querySelector("#conflict-overlay .cl-main");
+    if (b) setTimeout(() => b.click(), 0);
+  }).observe(window.document.body, { childList: true });
   mod = await import("../js/actions.js");
 });
 

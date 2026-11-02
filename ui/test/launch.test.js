@@ -89,6 +89,8 @@ beforeEach(() => {
 describe("launching says what it is doing", () => {
   test("the phases the backend reports reach the screen", async () => {
     await mod.launch(7);
+    // In this order, with the launch checklist (docs/launch-flow.html) before
+    // the launch itself: this stub answers it with no checklist, so no window.
     // Three, in this order. `status` says whether this backend can put a game
     // on the screen in front of you, and that has to be settled *before* the
     // light-gun question: the notice describes the desktop launch planner, so
@@ -96,7 +98,7 @@ describe("launching says what it is doing", () => {
     // browser -- which `launch` then waits on for ever, and did.
     assert.deepEqual(
       invoked.map((i) => i.cmd),
-      ["status", "game_lightgun", "launch_rom"],
+      ["status", "game_lightgun", "launch_checklist", "launch_rom"],
     );
     assert.match(
       dom.window.document.getElementById("toast").textContent,

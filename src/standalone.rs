@@ -21,6 +21,9 @@ pub struct Emulator {
     pub platforms: &'static [&'static str],
     /// Save unit family (`unitsync`), when its saves sync as units.
     pub family: Option<&'static str>,
+    /// Download size in bytes of the pinned release: (macOS, Windows). Shown
+    /// in the launch checklist before anything is fetched.
+    pub sizes: (u64, u64),
 }
 
 pub const PCSX2: Emulator = Emulator {
@@ -29,6 +32,7 @@ pub const PCSX2: Emulator = Emulator {
     version: "v2.8.2",
     platforms: &["ps2"],
     family: Some("pcsx2"),
+    sizes: (24_377_200, 25_670_075),
 };
 
 pub const ALL: &[&Emulator] = &[&PCSX2];
@@ -62,6 +66,19 @@ pub fn by_id(id: &str) -> Option<&'static Emulator> {
 pub fn dir(library_root: &Path, emu: &Emulator) -> PathBuf {
     library_root.join("emulators").join(emu.id)
 }
+
+/// The pinned release's download size on this OS.
+pub fn download_size(emu: &Emulator) -> u64 {
+    if std::env::consts::OS == "windows" { emu.sizes.1 } else { emu.sizes.0 }
+}
+
+/// The version installed in `dir`, as the app recorded it when it installed it.
+pub fn installed_version(dir: &Path) -> Option<String> {
+    std::fs::read_to_string(dir.join(VERSION_FILE)).ok().map(|s| s.trim().to_owned())
+}
+
+/// Beside the program: which pinned release the app put there.
+const VERSION_FILE: &str = ".moose-version";
 
 /// The program to start, if it's installed.
 pub fn program(dir: &Path) -> Option<PathBuf> {
@@ -130,6 +147,7 @@ pub async fn install(
     if !marker.exists() {
         std::fs::write(&marker, "")?;
     }
+    std::fs::write(dir.join(VERSION_FILE), emu.version)?;
     program(dir).with_context(|| format!("{} unpacked, but its program isn't in {}", emu.name, dir.display()))
 }
 
@@ -401,6 +419,9 @@ pub fn set_ini(text: &str, values: &[(&'static str, String, String)]) -> String 
 /// Write the app's settings into PCSX2's ini, and make sure the memory card
 /// exists and is formatted. Returns the card's folder.
 pub fn configure(dir: &Path, bios_dir: &Path) -> Result<PathBuf> {
+    // In full: PCSX2 reads a relative folder against its own data folder, so
+    // `./library/...` from the app's point of view pointed nowhere.
+    let bios_dir = &full(bios_dir);
     let inis = dir.join("inis");
     std::fs::create_dir_all(&inis)?;
     let ini = inis.join("PCSX2.ini");
@@ -412,6 +433,21 @@ pub fn configure(dir: &Path, bios_dir: &Path) -> Result<PathBuf> {
     let card = dir.join("memcards").join(CARD);
     seed_card(&card)?;
     Ok(card)
+}
+
+/// `path` from the root, as PCSX2 needs it.
+fn full(path: &Path) -> PathBuf {
+    std::path::absolute(path).unwrap_or_else(|_| path.to_path_buf())
+}
+
+/// Whether PCSX2's settings already hold everything the app owns and the
+/// card is formatted: what `configure` would leave unchanged.
+pub fn configured(dir: &Path, bios_dir: &Path) -> bool {
+    let bios_dir = &full(bios_dir);
+    let old = std::fs::read_to_string(dir.join("inis/PCSX2.ini")).unwrap_or_default();
+    let want = set_ini(&old, &settings(bios_dir, pick_bios(bios_dir).as_deref()));
+    let card = dir.join("memcards").join(CARD).join("_pcsx2_superblock");
+    want == old && std::fs::read(card).is_ok_and(|b| b.starts_with(b"Sony PS2 Memory Card Format"))
 }
 
 /// Create the folder card, or format one PCSX2 left unformatted, without

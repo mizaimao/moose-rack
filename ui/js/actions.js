@@ -155,6 +155,44 @@ export async function watchPlayLinks() {
 /// took a deliberate double press, which is exactly what a controller invites.
 let launching = false;
 
+/// True while the checklist window is open, so a second press doesn't open a
+/// second one.
+let checking = false;
+
+/// Show the checklist until it says Play (true) or the user cancels (false).
+/// Download fetches what's missing and the checklist checks again.
+async function runChecklist(id) {
+  const { askChecklist } = await import("./checklist.js");
+  for (;;) {
+    let list;
+    try {
+      list = await invoke("launch_checklist", { id });
+    } catch {
+      // A check that can't run is no reason to refuse: the launch goes ahead
+      // and reports whatever is really wrong.
+      return true;
+    }
+    // A backend that answers without a checklist -- an older build, or a test
+    // standing in for one -- launches the way it always did.
+    if (!list?.game || !list?.emulator) return true;
+    const answer = await askChecklist(list);
+    if (answer === "play") return true;
+    if (answer !== "download") {
+      toast("Launch cancelled");
+      return false;
+    }
+    const stop = await listen("launch-progress", ({ payload }) => toast(String(payload), 30_000));
+    try {
+      toast((await invoke("prepare_launch", { id })) || "Ready");
+    } catch (e) {
+      toast(`Download failed — ${e}`, 8000);
+      return false;
+    } finally {
+      stop?.();
+    }
+  }
+}
+
 export function launchInFlight() {
   return launching;
 }
@@ -269,6 +307,18 @@ export async function launch(
       }
     } catch {
       // A console with no gun, or a backend that does not know: launch.
+    }
+  }
+  // The launch checklist (docs/launch-flow.html): game file and emulator,
+  // each with its size, then Play or Download. On this desktop only, and only
+  // on the first try: the retries below carry answers already given.
+  if (!resolving && !retry && !installed && !MOBILE && !launching && (await canLaunchNatively())) {
+    if (checking) return;
+    checking = true;
+    try {
+      if (!(await runChecklist(id))) return;
+    } finally {
+      checking = false;
     }
   }
   // The retry paths below call back into this function on purpose, so they
@@ -464,6 +514,9 @@ function paintStar(id, starred) {
 }
 
 export async function download(id, thenPlay) {
+  // "Download, then play" is the checklist's job on this desktop: it shows the
+  // download with the emulator's, in one window, before anything is fetched.
+  if (thenPlay && !MOBILE && (await canLaunchNatively())) return launch(id);
   const prog = document.getElementById("prog");
   if (prog) prog.hidden = false;
   try {

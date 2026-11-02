@@ -24,7 +24,7 @@ use std::path::{Path, PathBuf};
 
 use tauri::{Emitter, Manager, State};
 
-use moose_rack::{cache, config::Config, download, media};
+use moose_rack::{cache, config::Config, media};
 
 
 use moose_rack::app::AppState;
@@ -307,63 +307,18 @@ async fn download_rom(
     state: State<'_, AppState>,
     id: i64,
 ) -> CmdResult<String> {
-    let row = {
-        let cache = state.cache.lock().map_err(err)?;
-        cache.rom_by_id(id).map_err(err)?
-    }
-    .ok_or_else(|| format!("no rom with id {id}"))?;
-
-    let client = state
-        .client
-        .clone()
-        .ok_or("no server connection — check config.toml")?;
-    let roms_dir = state.roms_dir.clone();
-
-    // Folder ROMs verify per member; the rom-level hash is not reproducible.
-    let members = if row.multi_file {
-        client.member_hashes(row.id).await
-    } else {
-        Vec::new()
-    };
-
-    let folder = row.folder();
-    let target = download::Target {
-        rom_id: row.id,
-        members: &members,
-        fs_name: &row.fs_name,
-        folder: &folder,
-        expected_size: (row.fs_size_bytes > 0).then_some(row.fs_size_bytes as u64),
-        md5: row.md5_hash.as_deref(),
-        sha1: row.sha1_hash.as_deref(),
-        multi_file: row.multi_file,
-    };
-
     let mut last = std::time::Instant::now();
-    let outcome = download::fetch(
-        client.http(),
-        client.base(),
-        client.auth(),
-        &target,
-        &roms_dir,
-        |done, total| {
-            // Throttle: the webview does not need 60 events a second.
-            if last.elapsed().as_millis() < 100 {
-                return;
-            }
-            last = std::time::Instant::now();
-            let _ = app.emit("download-progress", (id, done, total));
-        },
-    )
-    .await
-    .map_err(err)?;
-
-    let _ = app.emit("download-progress", (id, 1u64, 1u64));
-    Ok(match outcome {
-        download::Outcome::AlreadyHave(p) => format!("already had {}", p.display()),
-        download::Outcome::Downloaded { path, verified, .. } => {
-            format!("downloaded {} ({})", path.display(), verified.describe())
+    let said = moose_rack::commands::download_game(&state, id, |done, total| {
+        // Throttle: the webview does not need 60 events a second.
+        if last.elapsed().as_millis() < 100 {
+            return;
         }
+        last = std::time::Instant::now();
+        let _ = app.emit("download-progress", (id, done, total));
     })
+    .await;
+    let _ = app.emit("download-progress", (id, 1u64, 1u64));
+    said
 }
 
 #[tauri::command]
@@ -499,6 +454,22 @@ async fn launch_rom(
     moose_rack::play::launch(&state, &busy, id, opts, say).await
 }
 
+
+/// The launch checklist: is the game here, is the emulator ready.
+#[tauri::command]
+async fn launch_checklist(state: State<'_, AppState>, id: i64) -> CmdResult<moose_rack::play::Checklist> {
+    moose_rack::play::checklist(&state, id).await
+}
+
+/// The checklist's Download button: fetch whatever is missing, then the page
+/// checks again.
+#[tauri::command]
+async fn prepare_launch(app: tauri::AppHandle, state: State<'_, AppState>, id: i64) -> CmdResult<String> {
+    let say = |what: &str| {
+        let _ = app.emit("launch-progress", what.to_owned());
+    };
+    moose_rack::play::prepare(&state, id, say).await
+}
 
 /// Download and set up a standalone emulator, for the page's "Install it?".
 #[tauri::command]
@@ -938,6 +909,8 @@ pub fn run() {
             browser_play_base,
             take_play_link,
             install_emulator,
+            launch_checklist,
+            prepare_launch,
             find_rom_by_file,
             stable_ids,
             local_save,
