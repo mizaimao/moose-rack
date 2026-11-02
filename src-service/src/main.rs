@@ -197,6 +197,9 @@ struct Library {
     /// first transfers here unverified. The hashes were computed once over
     /// 1.76 TB; not serving them was the whole gap.
     hashes: Hashes,
+    /// Launch records, `<saves root>/_launches/<device>/<id>.json`. See
+    /// `moose_rack::launchrecord`.
+    launches: std::path::PathBuf,
 }
 
 impl Library {
@@ -984,6 +987,72 @@ async fn negotiate_units(
     Json(plan).into_response()
 }
 
+/// A name that is safe as one path component: letters, digits, `-`, `_`, `.`,
+/// not starting with a dot.
+fn plain_component(s: &str) -> bool {
+    !s.is_empty()
+        && s.len() <= 128
+        && !s.starts_with('.')
+        && s.bytes().all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'.'))
+}
+
+/// Store one finished launch record. Records are written once by the device
+/// that launched and never changed here, so uploading the same id again is
+/// accepted and changes nothing.
+async fn upload_launch(State(lib): State<Arc<Library>>, Json(rec): Json<serde_json::Value>) -> axum::response::Response {
+    use axum::http::StatusCode;
+    let id = rec["id"].as_str().unwrap_or_default();
+    let device = rec["device_id"].as_str().or_else(|| rec["device_name"].as_str()).unwrap_or_default();
+    if !plain_component(id) || !plain_component(device) || rec["outcome"].is_null() {
+        return (StatusCode::BAD_REQUEST, "a launch record needs a plain id and device, and an outcome").into_response();
+    }
+    let dir = lib.launches.join(device);
+    let path = dir.join(format!("{id}.json"));
+    if path.is_file() {
+        return Json(serde_json::json!({ "stored": false, "already": true })).into_response();
+    }
+    let body = serde_json::to_vec_pretty(&rec).unwrap_or_default();
+    let part = dir.join(format!("{id}.json.part"));
+    let written = std::fs::create_dir_all(&dir)
+        .and_then(|_| std::fs::write(&part, &body))
+        .and_then(|_| std::fs::rename(&part, &path));
+    match written {
+        Ok(()) => (StatusCode::CREATED, Json(serde_json::json!({ "stored": true }))).into_response(),
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, format!("storing the launch record: {e}")).into_response(),
+    }
+}
+
+#[derive(Deserialize)]
+struct LaunchListQuery {
+    #[serde(default)]
+    limit: Option<usize>,
+    #[serde(default)]
+    device: Option<String>,
+}
+
+/// Launch records, newest first: every device's, or one device's.
+async fn list_launches(State(lib): State<Arc<Library>>, Query(q): Query<LaunchListQuery>) -> axum::response::Response {
+    let mut out: Vec<serde_json::Value> = Vec::new();
+    let devices = std::fs::read_dir(&lib.launches).into_iter().flatten().flatten();
+    for dev in devices {
+        let name = dev.file_name().to_string_lossy().into_owned();
+        if q.device.as_deref().is_some_and(|d| d != name) {
+            continue;
+        }
+        for f in std::fs::read_dir(dev.path()).into_iter().flatten().flatten() {
+            if f.path().extension().is_none_or(|x| x != "json") {
+                continue;
+            }
+            if let Some(v) = std::fs::read(f.path()).ok().and_then(|b| serde_json::from_slice(&b).ok()) {
+                out.push(v);
+            }
+        }
+    }
+    out.sort_by(|a, b| b["started_at"].as_str().cmp(&a["started_at"].as_str()));
+    out.truncate(q.limit.unwrap_or(100));
+    Json(out).into_response()
+}
+
 #[derive(Deserialize)]
 struct UnitListQuery {
     #[serde(default)]
@@ -1744,6 +1813,7 @@ fn app(lib: Arc<Library>, media_dir: std::path::PathBuf, with_index: bool) -> Ro
         .route("/api/units/{id}/content", get(unit_content))
         .route("/api/units/{id}/downloaded", axum::routing::post(unit_downloaded))
         .route("/api/sync/sessions/{id}/complete", axum::routing::post(complete_session))
+        .route("/api/launches", get(list_launches).post(upload_launch))
             // Artwork straight off the tree. ES-DE and Skraper already scraped it;
             // re-serving it through a database would gain nothing.
             //
@@ -1957,6 +2027,7 @@ async fn main() -> Result<()> {
         lists_changed: std::sync::OnceLock::new(),
         hashes,
         firmware,
+        launches: saves_root.join("_launches"),
         sync: std::sync::Mutex::new(SyncState {
             store: saves::SaveStore::new(&saves_root),
             states: saves::StateStore::new(saves_root.join("_states")),
@@ -2175,6 +2246,7 @@ mod tests {
             lists_changed: std::sync::OnceLock::new(),
             hashes: Default::default(),
             firmware: scan_firmware(&dir.join("bios")),
+            launches: saves_root.join("_launches"),
             sync: std::sync::Mutex::new(SyncState {
                 store: saves::SaveStore::new(&saves_root),
                 states: saves::StateStore::new(saves_root.join("_states")),
@@ -3171,6 +3243,33 @@ mod tests {
         let s = r.status();
         let b = axum::body::to_bytes(r.into_body(), usize::MAX).await.unwrap();
         (s, String::from_utf8_lossy(&b).into_owned())
+    }
+
+    /// A launch record is stored once, under its device, and listed newest first.
+    #[tokio::test]
+    async fn launch_records_are_kept_once_and_listed_newest_first() {
+        let (_d, app) = built();
+        let rec = |id: &str, at: &str| serde_json::json!({
+            "id": id, "device_id": "mac-1", "device_name": "macserver", "started_at": at,
+            "outcome": { "exit": "exit status: 0", "seconds": 60 }
+        });
+        let (s, _) = post_json(&app, "/api/launches", rec("20261102T010000-aaaaaa", "2026-11-02T01:00:00")).await;
+        assert_eq!(s, StatusCode::CREATED);
+        let (s, _) = post_json(&app, "/api/launches", rec("20261102T020000-bbbbbb", "2026-11-02T02:00:00")).await;
+        assert_eq!(s, StatusCode::CREATED);
+        // The same record again: accepted, nothing changes.
+        let (s, body) = post_json(&app, "/api/launches", rec("20261102T010000-aaaaaa", "2026-11-02T01:00:00")).await;
+        assert_eq!(s, StatusCode::OK);
+        assert!(body.contains("already"));
+        let (_, body) = get(&app, "/api/launches").await;
+        let list: Vec<serde_json::Value> = serde_json::from_str(&body).unwrap();
+        let ids: Vec<&str> = list.iter().map(|r| r["id"].as_str().unwrap()).collect();
+        assert_eq!(ids, ["20261102T020000-bbbbbb", "20261102T010000-aaaaaa"]);
+        // No path tricks, and no record without an outcome.
+        let (s, _) = post_json(&app, "/api/launches", rec("../escape", "2026-11-02T03:00:00")).await;
+        assert_eq!(s, StatusCode::BAD_REQUEST);
+        let (s, _) = post_json(&app, "/api/launches", serde_json::json!({"id": "x1", "device_id": "mac-1"})).await;
+        assert_eq!(s, StatusCode::BAD_REQUEST);
     }
 
     /// A multipart body with one `saveFile` part, built by hand so the test does

@@ -934,6 +934,11 @@ impl Client {
         .await
     }
 
+    /// Hand one finished launch record to the server (`/api/launches`).
+    pub async fn post_launch(&self, rec: &crate::launchrecord::Record) -> Result<serde_json::Value> {
+        self.post_json("/api/launches", rec).await
+    }
+
     /// Saves the server holds, optionally for one ROM.
     pub async fn saves(&self, rom_id: Option<i64>) -> Result<Vec<Save>> {
         let path = match rom_id {
