@@ -181,10 +181,12 @@ Tested on macserver: a play link for Crazy Taxi asked to install PCSX2,
 installed it, fetched 17 BIOS files, and booted the game on the US BIOS with
 the folder card in slot 1. Windows not tried yet.
 
-Found: the PS2 doesn't appear in the library at all. `ROMs/ps2` on the NAS
-has a `noload.txt` (ES-DE's switch-off marker), as do `ps3`, `switch`, `wii`,
-`wiiu`, `xbox360` and `n3ds`, all dated 2026-10-14, so the service skips
-them. The Crazy Taxi test used a local copy. `xbox` has no marker but no
+Found: the PS2 was missing from the library. `ROMs/ps2` on the NAS had a
+`noload.txt` (ES-DE's switch-off marker), as do `ps3`, `switch`, `wii`,
+`wiiu`, `xbox360` and `n3ds`, all dated 2026-10-14, so the service skipped
+them. The Crazy Taxi test used a local copy. On 2026-11-01 Frank had the PS2
+turned back on: the marker is now `noload.txt.masked-off`, and after a service
+restart the PS2 lists 123 games. The others are still off. `xbox` has no marker but no
 platform mapping either.
 
 ## Order of work
