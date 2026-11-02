@@ -59,6 +59,7 @@ pub mod savehash;
 pub mod saveunit;
 pub mod shaders;
 pub mod slangp;
+pub mod standalone;
 pub mod theme;
 pub mod tweaks;
 pub mod unitsync;

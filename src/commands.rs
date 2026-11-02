@@ -2011,6 +2011,58 @@ pub async fn auto_sync(
     }
 }
 
+/// The emulator save folders this device syncs: `[[saves.units]]` from
+/// config.toml, plus the memory card of each emulator the app installed
+/// itself (`standalone`), unless config.toml already names one for its family.
+pub fn unit_cfgs(state: &AppState) -> Vec<crate::config::UnitSourceCfg> {
+    let mut units = Config::load().map(|c| c.saves.units).unwrap_or_default();
+    for emu in crate::standalone::ALL {
+        let Some(family) = emu.family else { continue };
+        if units.iter().any(|u| u.family == family) {
+            continue;
+        }
+        let dir = crate::standalone::dir(&state.library_root, emu);
+        let card = dir.join("memcards").join(crate::standalone::CARD);
+        if crate::standalone::program(&dir).is_some() && card.is_dir() {
+            units.push(crate::config::UnitSourceCfg {
+                family: family.to_owned(),
+                root: card.to_string_lossy().into_owned(),
+                max_mb: None,
+                skip: Vec::new(),
+            });
+        }
+    }
+    units
+}
+
+/// `auto_sync` for a standalone emulator: its family's save units, before a
+/// game and after it, the way RetroArch saves sync around a launch.
+pub async fn auto_sync_units(state: &AppState, family: &str, when: savesync::When) -> AutoSync {
+    if !state.auto_sync {
+        return AutoSync::default();
+    }
+    let Some(client) = state.client.clone() else {
+        return AutoSync::default();
+    };
+    let units: Vec<_> = unit_cfgs(state).into_iter().filter(|u| u.family == family).collect();
+    let mut summary = savesync::Summary::default();
+    let sources = crate::unitsync::sources(&units, &mut summary);
+    if sources.is_empty() {
+        return AutoSync { note: summary.problems.first().cloned(), ..Default::default() };
+    }
+    match crate::unitsync::run(&client, &sources, Path::new("."), &state.library_root, &mut summary).await {
+        Ok(()) => AutoSync {
+            note: savesync::describe(when, &summary),
+            conflicts: summary.conflicts,
+            failed: None,
+        },
+        Err(e) => AutoSync {
+            failed: Some(format!("{e:#}").lines().next().unwrap_or("the server did not answer").to_owned()),
+            ..Default::default()
+        },
+    }
+}
+
 pub async fn resolve_save_conflict(
     state: &AppState,
     file_name: String,
@@ -2562,7 +2614,7 @@ pub async fn sync_saves_plan(state: &AppState) -> CmdResult<crate::syncplan::Rev
 
     // Standalone emulators' saves, into the same list.
     let mut problems = crate::savesync::Summary::default();
-    let units = Config::load().map(|c| c.saves.units).unwrap_or_default();
+    let units = unit_cfgs(state);
     let sources = crate::unitsync::sources(&units, &mut problems);
     let (lines, agreed, notes) =
         crate::unitsync::preview(&client, &sources, Path::new(".")).await.map_err(err)?;
@@ -2659,7 +2711,7 @@ pub async fn sync_saves(state: &AppState) -> CmdResult<SyncRun> {
     )
         .await
         .map_err(err)?;
-    let units = Config::load().map(|c| c.saves.units).unwrap_or_default();
+    let units = unit_cfgs(state);
     let sources = crate::unitsync::sources(&units, &mut summary);
     if let Err(e) =
         crate::unitsync::run(&client, &sources, Path::new("."), library_root, &mut summary).await
