@@ -19,6 +19,7 @@ const opened = [];
 let mode = "web";
 let pending = [];
 let library = {};
+let windows = 0;
 const downloaded = new Set();
 
 before(async () => {
@@ -58,9 +59,14 @@ before(async () => {
     event: { listen: async () => () => {} },
   };
 
-  // Press the checklist's main button (Play or Download) whenever it shows.
+  // Press the checklist's main button (Play or Download) whenever it shows,
+  // and count how often it does.
   new dom.window.MutationObserver(() => {
     const b = dom.window.document.querySelector("#conflict-overlay .cl-main");
+    if (b && !b.dataset.counted) {
+      b.dataset.counted = "1";
+      windows++;
+    }
     if (b) setTimeout(() => b.click(), 0);
   }).observe(dom.window.document.body, { childList: true });
 
@@ -72,6 +78,7 @@ before(async () => {
 });
 
 beforeEach(() => {
+  windows = 0;
   invoked.length = 0;
   opened.length = 0;
   pending = [];
@@ -155,6 +162,7 @@ test("on the desktop, a link that arrives downloads the game if needed, then sta
   assert.ok(order.indexOf("launch_checklist") < order.indexOf("prepare_launch"));
   assert.ok(order.indexOf("prepare_launch") < order.indexOf("launch_rom"));
   assert.ok(!order.includes("download_rom"), "the old download path ran too");
+  assert.equal(windows, 1, "one window, for the download; none once it was ready");
   downloaded.delete(9);
   assert.ok(!order.includes("sync_library"));
 });
@@ -171,6 +179,7 @@ test("on the desktop, a game already in the cache starts without a download", as
   }
   assert.ok(!cmds().includes("prepare_launch"), `downloaded again: ${cmds()}`);
   assert.ok(cmds().includes("launch_checklist"));
+  assert.equal(windows, 0, "nothing to fetch, so no window");
   assert.equal(invoked.find((i) => i.cmd === "launch_rom")?.args.id, 7);
 });
 
