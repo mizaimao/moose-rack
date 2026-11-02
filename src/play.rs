@@ -226,13 +226,32 @@ pub async fn launch(
         ));
     }
 
+    let record = open_record(
+        state,
+        &row,
+        skip_sync.unwrap_or(false),
+        retroarch_config_lines(&plan, state),
+        crate::launchrecord::Data {
+            game_md5: row.md5_hash.clone(),
+            emulator: format!("RetroArch, {}", plan.core),
+            emulator_md5: crate::launchrecord::md5_of(&ra.core_path(&plan.core)),
+            bios: bios_of(&state.system_dir(), crate::bios::required_for(&plan.core, &row.platform_slug)),
+        },
+    );
     say("starting RetroArch…");
     let began = std::time::Instant::now();
     let started_at = crate::util::now_iso();
     // The app refuses to quit from here until the saves have gone up: see `busy`.
     let status = {
         let _playing = busy.playing(&row.name);
-        plan.run(ra, false).map_err(err)?
+        plan.run(ra, false)
+    };
+    let status = match status {
+        Ok(s) => s,
+        Err(e) => {
+            close_record(state, record, format!("did not start: {e}"), 0, None).await;
+            return Err(err(e));
+        }
     };
 
     // How long that took is the only record of it. RetroArch tells nobody, and
@@ -252,6 +271,7 @@ pub async fn launch(
         let _uploading = busy.uploading();
         auto_sync(state, &row, savesync::When::AfterExit).await
     };
+    let saves_note = post.note.clone().or_else(|| post.failed.clone().map(|w| format!("NOT uploaded: {w}")));
     if let Some(note) = post.note {
         notes.push(note);
     }
@@ -260,6 +280,7 @@ pub async fn launch(
     if let Some(why) = post.failed {
         notes.push(format!("saves: NOT uploaded — {why}"));
     }
+    close_record(state, record, status.to_string(), seconds, saves_note).await;
     if !post.conflicts.is_empty() {
         *state.pending_conflicts.lock().map_err(err)? = post.conflicts;
     }
@@ -336,6 +357,18 @@ async fn launch_standalone(
         notes.extend(pre.note);
     }
 
+    let record = open_record(
+        state,
+        row,
+        skip_sync,
+        standalone::config_lines(&bios_dir),
+        crate::launchrecord::Data {
+            game_md5: row.md5_hash.clone(),
+            emulator: format!("{} {}", emu.name, emu.version),
+            emulator_md5: crate::launchrecord::md5_of(&program),
+            bios: bios_of(&bios_dir, standalone::pick_bios(&bios_dir).into_iter().collect()),
+        },
+    );
     say(&format!("starting {}…", emu.name));
     let began = std::time::Instant::now();
     let started_at = crate::util::now_iso();
@@ -360,12 +393,14 @@ async fn launch_standalone(
         notes.push(format!("played for {}", crate::util::spell_duration(seconds)));
     }
 
+    let mut saves_note = None;
     if !skip_sync {
         eprintln!("launch: uploading saves");
         let post = {
             let _uploading = busy.uploading();
             auto_sync_units(state, family, savesync::When::AfterExit).await
         };
+        saves_note = post.note.clone().or_else(|| post.failed.clone().map(|w| format!("NOT uploaded: {w}")));
         notes.extend(post.note);
         if let Some(why) = post.failed {
             notes.push(format!("saves: NOT uploaded — {why}"));
@@ -375,6 +410,7 @@ async fn launch_standalone(
         }
     }
 
+    close_record(state, record, status.to_string(), seconds, saves_note).await;
     let prefix = if notes.is_empty() { String::new() } else { format!("{}; ", notes.join("; ")) };
     eprintln!("launch: done");
     Ok(if status.success() {
@@ -654,4 +690,92 @@ pub async fn prepare(state: &AppState, id: i64, say: impl Fn(&str) + Send + Sync
         }
     }
     Ok(done.join("; "))
+}
+
+/// Open a launch record. Written before the emulator starts, so a launch
+/// that never comes back still left a trace (`launchrecord`).
+fn open_record(
+    state: &AppState,
+    row: &cache::RomRow,
+    offline: bool,
+    config: Vec<String>,
+    data: crate::launchrecord::Data,
+) -> crate::launchrecord::Record {
+    use crate::launchrecord::*;
+    let started_at = crate::util::now_iso();
+    let identity = savesync::DeviceIdentity::current(Path::new("."));
+    let rec = Record {
+        id: new_id(&started_at),
+        device_id: identity.map(|i| i.device_id),
+        device_name: savesync::hostname(),
+        started_at,
+        ended_at: None,
+        game: Game { platform: row.platform_slug.clone(), file: row.fs_name.clone() },
+        code: code(),
+        config: ConfigVersion { hash: config_hash(&config) },
+        data,
+        machine: machine(),
+        offline: offline || state.client.is_none(),
+        outcome: None,
+    };
+    if let Err(e) = save(&state.library_root, &rec) {
+        eprintln!("launch: could not write the launch record: {e:#}");
+    }
+    rec
+}
+
+/// Close the record with how the game ended, then upload every finished
+/// record waiting on this computer, this one included.
+async fn close_record(
+    state: &AppState,
+    mut rec: crate::launchrecord::Record,
+    exit: String,
+    seconds: i64,
+    saves: Option<String>,
+) {
+    use crate::launchrecord::*;
+    rec.ended_at = Some(crate::util::now_iso());
+    rec.outcome = Some(Outcome { exit, seconds, saves });
+    if let Err(e) = save(&state.library_root, &rec) {
+        eprintln!("launch: could not finish the launch record: {e:#}");
+        return;
+    }
+    if let Some(client) = state.client.as_ref() {
+        let n = upload_pending(client, &state.library_root).await;
+        eprintln!("launch: record {} written, {n} uploaded", rec.id);
+    }
+}
+
+/// Each named BIOS in `dir` with its md5, for a launch record.
+fn bios_of(dir: &Path, names: Vec<String>) -> Vec<crate::launchrecord::Bios> {
+    names
+        .into_iter()
+        .map(|name| crate::launchrecord::Bios { md5: crate::launchrecord::md5_of(&dir.join(&name)), name })
+        .collect()
+}
+
+/// The settings a RetroArch launch was given, as lines for the record's config
+/// hash: the core, the shader preset by name, and the overrides file the plan
+/// wrote, with this computer's paths and window geometry left out.
+fn retroarch_config_lines(plan: &crate::launch::Plan, state: &AppState) -> Vec<String> {
+    let mut lines = vec![format!("core = {}", plan.core)];
+    if let Some(name) = plan.shader.as_deref().and_then(|s| s.file_name()) {
+        lines.push(format!("shader = {}", name.to_string_lossy()));
+    }
+    let root = std::path::absolute(&state.library_root).unwrap_or_else(|_| state.library_root.clone());
+    let root = root.to_string_lossy().into_owned();
+    const PER_DEVICE: &[&str] = &["window_pos", "_width", "_height", "refresh_rate", "monitor_index", "directory", "_path"];
+    if let Some(text) = plan.overrides.as_deref().and_then(|p| std::fs::read_to_string(p).ok()) {
+        for l in text.lines().map(str::trim) {
+            if l.is_empty() || l.starts_with('#') {
+                continue;
+            }
+            let key = l.split('=').next().unwrap_or("").trim();
+            if PER_DEVICE.iter().any(|d| key.contains(d)) || l.contains(&root) {
+                continue;
+            }
+            lines.push(l.to_owned());
+        }
+    }
+    lines
 }

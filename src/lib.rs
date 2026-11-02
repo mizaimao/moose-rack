@@ -38,6 +38,7 @@ pub mod gridnav;
 pub mod iconart;
 pub mod keyboard;
 pub mod launch;
+pub mod launchrecord;
 pub mod layout;
 pub mod lightgun;
 pub mod macdisplay;

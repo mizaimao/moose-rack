@@ -347,6 +347,16 @@ pub fn settings(bios_dir: &Path, bios: Option<&str>) -> Vec<(&'static str, Strin
     out
 }
 
+/// The app-owned settings as `Section.Key = value` lines, for a launch record's
+/// config version. The BIOS folder is this computer's path and is left out.
+pub fn config_lines(bios_dir: &Path) -> Vec<String> {
+    settings(bios_dir, pick_bios(bios_dir).as_deref())
+        .into_iter()
+        .filter(|(s, k, _)| !(*s == "Folders" && k == "Bios"))
+        .map(|(s, k, v)| format!("{s}.{k} = {v}"))
+        .collect()
+}
+
 /// `text` with each `(section, key, value)` set, everything else kept.
 ///
 /// A key the app owns is written once: a repeat of it (PCSX2 allows several
