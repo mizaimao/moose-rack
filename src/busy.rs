@@ -125,11 +125,11 @@ mod tests {
     #[test]
     fn a_launch_that_fails_still_lets_go() {
         let busy = Busy::default();
-        let r: Result<(), &str> = (|| {
+        fn launch(busy: &Busy) -> Result<(), &'static str> {
             let _g = busy.playing("Broken");
             Err("emulator missing")
-        })();
-        assert!(r.is_err());
+        }
+        assert!(launch(&busy).is_err());
         assert_eq!(busy.hold(), None);
     }
 
