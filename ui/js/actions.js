@@ -24,15 +24,28 @@ export function warmRefresh() {
   measureRefresh();
 }
 
-function measureRefresh(frames = 24) {
+/// Gives up after `wait` ms with no answer. A window the system doesn't count
+/// as visible -- covered, on another desktop, a sleeping screen -- gets no
+/// animation frames at all, and without this a launch waited for them
+/// forever: a play link that brought such a window up started nothing. The
+/// refresh rate is a hint the launch can do without.
+function measureRefresh(frames = 24, wait = 1500) {
   if (refreshHz !== null) return Promise.resolve(refreshHz);
   return new Promise((resolve) => {
     const times = [];
     let last = performance.now();
+    let done = false;
+    const timer = setTimeout(() => {
+      done = true;
+      resolve(null);
+    }, wait);
     const tick = (now) => {
+      if (done) return;
       times.push(now - last);
       last = now;
       if (times.length < frames) return requestAnimationFrame(tick);
+      clearTimeout(timer);
+      done = true;
       times.sort((a, b) => a - b);
       const median = times[times.length >> 1];
       // Guard against a throttled or backgrounded window, which reports
