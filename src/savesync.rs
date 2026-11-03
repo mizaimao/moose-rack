@@ -46,6 +46,11 @@ pub struct DeviceIdentity {
 const STATE_FILE: &str = "state.json";
 
 impl DeviceIdentity {
+    /// This device's identity if it has one already, without asking the server.
+    pub fn current(dir: &Path) -> Option<Self> {
+        Self::load(dir)
+    }
+
     fn load(dir: &Path) -> Option<Self> {
         let raw = std::fs::read_to_string(dir.join(STATE_FILE)).ok()?;
         serde_json::from_str(&raw).ok()
@@ -82,7 +87,7 @@ impl DeviceIdentity {
 /// macOS exports no `HOSTNAME` to an app and has no `/etc/hostname`, and nor
 /// does Android, so both registered as "unknown". When no real name can be
 /// found, the name made up is one nobody else will have.
-fn hostname() -> String {
+pub fn hostname() -> String {
     let usable = |s: &str| {
         let s = s.trim();
         !s.is_empty() && s != "unknown" && !s.starts_with("localhost")

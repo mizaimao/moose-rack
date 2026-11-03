@@ -21,7 +21,7 @@ import { installGamepad } from "./gamepad.js";
 import { loadBindings } from "./bindings.js";
 import { loadListControls } from "./sort.js";
 import { setFilters } from "./filter.js";
-import { warmRefresh } from "./actions.js";
+import { warmRefresh, watchPlayLinks } from "./actions.js";
 import { redrawCollections } from "./collections.js";
 import { installAttractScreen } from "./attract-screen.js";
 import {
@@ -447,6 +447,8 @@ function statusCard(s) {
   // Measure the display now. It costs 24 animation frames, and taken on demand
   // that wait landed between pressing play and the game being asked for.
   warmRefresh();
+  // The web page's Play for games the browser can't run. Desktop only; it checks.
+  watchPlayLinks();
 
   // Last, and only once the library is on screen: the config file still works
   // whatever it says, so this is never a reason to hold up the app starting.

@@ -4,7 +4,7 @@
 import { state, invoke, listen, MOBILE } from "./state.js";
 import { toast } from "./util.js";
 import { askAboutLightGun } from "./lightgun-gate.js";
-import { askConflicts, conflictsFrom, askOffline, offlineFrom, askBios, biosFrom, noCoreFrom, askNoCore, noteLightGun } from "./conflicts.js";
+import { askConflicts, conflictsFrom, askOffline, offlineFrom, askBios, biosFrom, noCoreFrom, askNoCore, noteLightGun, emulatorMissingFrom, askInstallEmulator } from "./conflicts.js";
 import { suspendPad, resumePad } from "./gamepad.js";
 
 /// Display refresh in Hz, measured rather than asked for: no web API reports
@@ -24,15 +24,28 @@ export function warmRefresh() {
   measureRefresh();
 }
 
-function measureRefresh(frames = 24) {
+/// Gives up after `wait` ms with no answer. A window the system doesn't count
+/// as visible -- covered, on another desktop, a sleeping screen -- gets no
+/// animation frames at all, and without this a launch waited for them
+/// forever: a play link that brought such a window up started nothing. The
+/// refresh rate is a hint the launch can do without.
+function measureRefresh(frames = 24, wait = 1500) {
   if (refreshHz !== null) return Promise.resolve(refreshHz);
   return new Promise((resolve) => {
     const times = [];
     let last = performance.now();
+    let done = false;
+    const timer = setTimeout(() => {
+      done = true;
+      resolve(null);
+    }, wait);
     const tick = (now) => {
+      if (done) return;
       times.push(now - last);
       last = now;
       if (times.length < frames) return requestAnimationFrame(tick);
+      clearTimeout(timer);
+      done = true;
       times.sort((a, b) => a - b);
       const median = times[times.length >> 1];
       // Guard against a throttled or backgrounded window, which reports
@@ -90,11 +103,98 @@ async function playHere(id) {
   return playInBrowser(detail);
 }
 
+/// Play from the web page, which can't start an emulator. The browser plays
+/// what it can; the rest goes to the desktop app on this computer through a
+/// play link (`playlink.js`, `docs/server-and-client.md`).
+async function playOnPage(id) {
+  const [{ browserPlay, OWN_PLAYER }, detail] = await Promise.all([
+    import("./ejs-systems.js"),
+    invoke("rom_detail", { id }),
+  ]);
+  const slug = detail.platform_slug ?? detail.platform;
+  if (OWN_PLAYER[slug] || !browserPlay(slug, globalThis.crossOriginIsolated).refuse) {
+    return playHere(id);
+  }
+  const { openInApp } = await import("./playlink.js");
+  return openInApp(slug, detail.fs_name, { toast });
+}
+
+/// Play links on the desktop: the web page's Play for a game it can't run.
+///
+/// The backend holds the newest link until it's asked for, so this asks once
+/// now, for a link that started the app, and again on every `play-link`.
+export async function watchPlayLinks() {
+  if (MOBILE || !(await canLaunchNatively())) return;
+  const take = async () => {
+    const link = await invoke("take_play_link").catch(() => null);
+    if (!link) return;
+    const find = () => invoke("find_rom_by_file", link).catch(() => null);
+    let id = await find();
+    if (id == null) {
+      // Most likely added on the server since this app last looked.
+      toast("Updating the library…");
+      try {
+        await invoke("sync_library", { full: false });
+      } catch (e) {
+        return toast(`Couldn't update the library — ${e}`, 8000);
+      }
+      id = await find();
+    }
+    if (id == null) return toast(`Not in this library: ${link.file}`, 8000);
+    // The detail pane's Play, so a game not in the cache downloads first.
+    const [{ play }, detail] = await Promise.all([import("./detail.js"), invoke("rom_detail", { id })]);
+    return play(detail);
+  };
+  await listen("play-link", take);
+  await take();
+}
+
 /// `launch_rom` does not return until the game quits, so a second press in the
 /// meantime used to start a second copy — two RetroArch windows over each
 /// other, both holding the same save. A held A repeats slowly enough that it
 /// took a deliberate double press, which is exactly what a controller invites.
 let launching = false;
+
+/// True while the checklist window is open, so a second press doesn't open a
+/// second one.
+let checking = false;
+
+/// Show the checklist until it says Play (true) or the user cancels (false).
+/// Download fetches what's missing and the checklist checks again.
+async function runChecklist(id) {
+  const { askChecklist } = await import("./checklist.js");
+  for (;;) {
+    let list;
+    try {
+      list = await invoke("launch_checklist", { id });
+    } catch {
+      // A check that can't run is no reason to refuse: the launch goes ahead
+      // and reports whatever is really wrong.
+      return true;
+    }
+    // A backend that answers without a checklist -- an older build, or a test
+    // standing in for one -- launches the way it always did.
+    if (!list?.game || !list?.emulator) return true;
+    // Everything here: no window, straight on to the saves step (Frank,
+    // 2026-11-02). The window is for something to fetch or something blocking.
+    if (list.ready) return true;
+    const answer = await askChecklist(list);
+    if (answer === "play") return true;
+    if (answer !== "download") {
+      toast("Launch cancelled");
+      return false;
+    }
+    const stop = await listen("launch-progress", ({ payload }) => toast(String(payload), 30_000));
+    try {
+      toast((await invoke("prepare_launch", { id })) || "Ready");
+    } catch (e) {
+      toast(`Download failed — ${e}`, 8000);
+      return false;
+    } finally {
+      stop?.();
+    }
+  }
+}
 
 export function launchInFlight() {
   return launching;
@@ -162,7 +262,7 @@ async function launchAndroid(id, skipSync = false) {
 /// clicked; resume is a decision this function makes.
 export async function launch(
   id,
-  { resolving = false, skipSync = false, skipBios = false, entrySlot = null, resume = false } = {}
+  { resolving = false, skipSync = false, skipBios = false, entrySlot = null, resume = false, installed = false } = {}
 ) {
   if (resume && entrySlot === null) {
     try {
@@ -197,7 +297,7 @@ export async function launch(
   // And it is a *modal*: `launch` awaits it. On a console with a gun -- which
   // is every SNES game, because the Super Scope exists -- an unanswered dialog
   // is a launch that never happens. Nothing after this line ran.
-  const retry = skipSync || skipBios;
+  const retry = skipSync || skipBios || installed;
   if (askAboutLightGun({ resolving, skipSync: retry, mobile: MOBILE, native: await canLaunchNatively() })) {
     try {
       // Shape-checked, not just truthy. `[]` is truthy in JavaScript, so a
@@ -210,6 +310,18 @@ export async function launch(
       }
     } catch {
       // A console with no gun, or a backend that does not know: launch.
+    }
+  }
+  // The launch checklist (docs/launch-flow.html): game file and emulator,
+  // each with its size, then Play or Download. On this desktop only, and only
+  // on the first try: the retries below carry answers already given.
+  if (!resolving && !retry && !installed && !MOBILE && !launching && (await canLaunchNatively())) {
+    if (checking) return;
+    checking = true;
+    try {
+      if (!(await runChecklist(id))) return;
+    } finally {
+      checking = false;
     }
   }
   // The retry paths below call back into this function on purpose, so they
@@ -258,7 +370,7 @@ export async function launch(
       : playHereWanted(id)
       ? await playHere(id)
       : !(await canLaunchNatively())
-      ? await playHere(id)
+      ? await playOnPage(id)
       : await invoke("launch_rom", {
           id,
           pad: state.gamepad,
@@ -307,6 +419,23 @@ export async function launch(
         if (!go) return toast(`No installed core for ${missing}`, 8000);
         return toast(await playHere(id));
       }
+    }
+    // A standalone emulator (PCSX2 for the PS2) this machine hasn't got yet.
+    // Installed on a yes, then the same launch again.
+    const emu = emulatorMissingFrom(e);
+    if (emu && !installed) {
+      const go = await askInstallEmulator(emu);
+      if (!go) return toast("Launch cancelled");
+      toast(`Installing ${emu.name} ${emu.version}…`, 60_000);
+      const done = listen("launch-progress", ({ payload }) => toast(String(payload), 30_000));
+      try {
+        toast(await invoke("install_emulator", { id: emu.id }));
+      } catch (err) {
+        return toast(`Couldn't install ${emu.name} — ${err}`, 8000);
+      } finally {
+        (await done)?.();
+      }
+      return launch(id, { resolving, skipSync, skipBios, entrySlot, installed: true });
     }
     // Its own flag, not `skipSync`: "play without the BIOS" says nothing
     // about saves, and reusing the offline answer meant nothing was pulled
@@ -388,6 +517,9 @@ function paintStar(id, starred) {
 }
 
 export async function download(id, thenPlay) {
+  // "Download, then play" is the checklist's job on this desktop: it shows the
+  // download with the emulator's, in one window, before anything is fetched.
+  if (thenPlay && !MOBILE && (await canLaunchNatively())) return launch(id);
   const prog = document.getElementById("prog");
   if (prog) prog.hidden = false;
   try {

@@ -517,3 +517,67 @@ export function askNoCore(platform, core) {
     paint();
   });
 }
+
+/// The emulator a launch said it needs and this machine hasn't got, from an
+/// `EMULATOR_MISSING:<id>:<name>:<version>` error; otherwise null.
+export function emulatorMissingFrom(err) {
+  const text = typeof err === "string" ? err : String(err?.message ?? err ?? "");
+  const m = text.match(/EMULATOR_MISSING:([\w-]+):([^:]+):(\S+)/);
+  return m ? { id: m[1], name: m[2], version: m[3] } : null;
+}
+
+/// "This console plays in PCSX2, which isn't installed yet — install it?"
+///
+/// Asked once, on the first game that needs it. The app downloads the
+/// emulator's official release at the version it's set up for and keeps it in
+/// its own folder, so nothing else on the machine changes.
+export function askInstallEmulator({ name, version }) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.id = "conflict-overlay";
+    overlay.innerHTML = `<div class="conflict-box">
+        <header><span class="icon icon-info-on"></span><h2>${escape(name)} isn't installed</h2></header>
+        <p class="lead">This game plays in ${escape(name)}, which isn't on this computer yet.</p>
+        <p class="note">Moose Rack downloads the official ${escape(name)} ${escape(version)} release
+          into its own folder, sets it up, and then starts the game.</p>
+        <div class="sides">
+          <button class="side" data-go="yes"><span class="who">Install and play</span>
+            <span class="when">about 25 MB</span></button>
+          <button class="side" data-go="no"><span class="who">Cancel</span>
+            <span class="when">do not launch</span></button>
+        </div>
+      </div>`;
+
+    let settled = false;
+    const finish = (ok) => {
+      if (settled) return;
+      settled = true;
+      overlay.remove();
+      document.removeEventListener("keydown", onKey, true);
+      resolve(ok);
+    };
+    const sides = () => [...overlay.querySelectorAll("[data-go]")];
+    let at = 0;
+    const paint = () => sides().forEach((b, i) => b.classList.toggle("sel", i === at));
+    const onKey = (ev) => {
+      ev.stopPropagation();
+      if (ev.key === "Escape") {
+        ev.preventDefault();
+        return finish(false);
+      }
+      if (ev.key === "ArrowLeft" || ev.key === "ArrowRight") {
+        at = at === 0 ? 1 : 0;
+        paint();
+        ev.preventDefault();
+      }
+      if (ev.key === "Enter") finish(sides()[at]?.dataset.go === "yes");
+    };
+    overlay.addEventListener("click", (ev) => {
+      const b = ev.target.closest("[data-go]");
+      if (b) finish(b.dataset.go === "yes");
+    });
+    document.addEventListener("keydown", onKey, true);
+    document.body.appendChild(overlay);
+    paint();
+  });
+}

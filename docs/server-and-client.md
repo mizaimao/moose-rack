@@ -63,9 +63,9 @@ from the same design and have to work too.
 | Web library and in-browser play (EmulatorJS, DOS, Windows 9x) | built |
 | Desktop cache, ROMs downloaded on demand | built, RetroArch games |
 | Saves uploaded after a game exits | built for RetroArch; standalone emulators at milestone 1 ([emulator-saves.md](emulator-saves.md)) |
-| Play link from the web page to the app | new |
-| App stays open while a game runs; asks before quitting with an upload pending | new; the upload after exit exists |
-| Standalone emulators installed and set up per OS | new, and the largest piece |
+| Play link from the web page to the app | built; on macOS a link went to the app, downloaded the game and started RetroArch (2026-11-01). Windows not tried yet; the web page change not deployed yet |
+| App stays open while a game runs; asks before quitting with an upload pending | built (`src-tauri/src/busy.rs`). On macOS, closing the window during a game was refused and worked once it ended (2026-11-01). The upload question and Cmd+Q are covered by tests only; the Dock's Quit can't be stopped |
+| Standalone emulators installed and set up per OS | PCSX2 on macOS built (2026-11-01); the rest not started. See "Standalone emulators" below |
 | Lock a game while another device plays it | deferred |
 | Server keeps copies of emulator updates | not doing |
 
@@ -88,19 +88,94 @@ link works away from home too.
   for a game in its own library listing and never runs anything taken from the
   link itself.
 - If the app isn't installed, nothing happens. After a few seconds the page
-  says so and links to the download.
+  says so.
+- On the desktop the link is handled by the app's own Play (`play` in
+  `ui/js/detail.js`): download if needed, then launch. A game the app's cache
+  doesn't know yet triggers a library update first.
+
+Code: `src/playlink.rs` reads the link, `src-tauri/src/lib.rs` receives it
+(`take_links`, `take_play_link`), `ui/js/playlink.js` builds it on the web page,
+and `watchPlayLinks` in `ui/js/actions.js` plays it. The app logs
+`play link: <platform>/<file>` to stderr when one arrives.
+
+Found while testing on macserver: a fresh build opened through Finder or
+`open` couldn't reach `dev.lan` ("No route to host", os error 65) while `curl`
+on the same machine could. That fits macOS asking "allow Moose Rack to find
+devices on your local network?" on screen, with nobody there to click it.
+Started from a shell, the same build connected. On a machine where someone
+answers that prompt once, it doesn't come back.
 
 ## Play, step by step
 
-1. Emulator for this platform on this OS: installed and set up? If not, offer
-   to install it from its official release, pinned to a known version, with
-   Moose Rack's settings for it.
-2. Firmware or keys it needs: present? If not, fetch them from the NAS `bios`
-   folder.
-3. ROM in the cache? If not, download it, with progress.
-4. Launch, fullscreen, as a separate process ([PLAN.md](../PLAN.md) §10).
-5. Wait for it to exit. The app can't be closed meanwhile.
-6. Find changed saves and upload them.
+**Agreed with Frank on 2026-11-02.** The flowchart is
+[launch-flow.html](launch-flow.html), a local page; open it in a browser.
+
+1. The launch checklist. The game file and the emulator are checked at the
+   same time, each a yes/no:
+   - Game file: in the cache, and its hash matches the library's.
+   - Emulator: the pinned version installed, its BIOS there, its settings at
+     the current config version. BIOS is part of this line, not its own.
+   Each line shows its size. When both are ready the window doesn't appear
+   and the launch goes straight on to the saves step (decided 2026-11-02).
+   Otherwise the button is Download with the total of what's missing; Download fetches the game, the
+   emulator, BIOS and settings, checks every hash, and the checklist checks
+   again. With no server and something missing, only Cancel.
+2. Saves, as a separate step after Play and right before the game starts: in
+   sync, newer on the server (downloaded), a conflict (choose a save, then
+   check again), or no server (play without syncing).
+3. Open the launch record.
+4. Run the emulator, fullscreen, as its own process
+   ([PLAN.md](../PLAN.md) §10). The app can't quit meanwhile.
+5. Upload changed saves. Quitting during this asks first.
+6. Close the launch record.
+
+### Launch records
+
+Every launch is recorded, so it can be audited and repeated. A record holds
+three versions:
+
+- Code: the Moose Rack build (version and git commit).
+- Config: the numbered version of every setting that shapes the game (the
+  emulator's settings, controls, shaders). This computer's paths are added
+  locally and aren't part of it.
+- Data: hashes of the game file, the emulator build and the BIOS.
+
+Plus the machine (OS, GPU) for context, and when it closes: exit code, time
+played, saves moved. Same three versions, same launch.
+
+Records live on the server, one history for every device. A launch with no
+server (travelling) writes its record locally and uploads it, with the saves,
+the next time the server is reachable; the record says it was offline.
+
+### One set of settings for every device
+
+Frank wants one user's settings the same on every device. They can still end
+up different in these cases, and each has an answer:
+
+- A setting changed in the emulator's own menu on one device. The app notices
+  the file no longer matches the config version and asks once whether to keep
+  the change for every device; yes makes the next config version.
+- Settings that must differ per machine: file paths, the graphics backend
+  (Metal on a Mac, Vulkan or Direct3D on Windows), and how far a weaker machine
+  can upscale. These sit in a small per-device layer on top of the shared
+  config, so they never count as a difference.
+- A device that was off or offline when the config changed. Its checklist
+  shows the emulator line as not ready until it has the current version.
+- A change made offline on two devices. Handled like a save conflict: choose
+  one.
+- A newer pinned emulator version that adds or renames settings. The app
+  carries the shared values across when it moves the pin.
+
+**Decided 2026-11-02: the per-device layer is filled automatically, by rules.**
+Frank won't set it by hand ("configuring them by hand would be a lot of
+trouble"). The first time an emulator is set up on a device, the app reads
+the hardware (screen resolution, GPU, memory) and picks that device's values
+from a rule table per emulator: the MacBook Air plays Switch games at 2K, Hog
+at 4K. The values are part of the config version a launch records, so a
+launch stays repeatable. When a launch record shows a game running badly on a
+device (frame times), the app offers once to step that device down. An agent
+reading launch records to suggest better rules is a later extra, not the
+mechanism.
 
 ## The cache, per OS
 
@@ -132,6 +207,47 @@ Emulators per system, as a starting point:
 | 3DS | Azahar | Azahar |
 
 ARMSX2 is Android-only; the Mac uses PCSX2.
+
+## Standalone emulators
+
+`src/standalone.rs`. Each one installs into `<library>/emulators/<id>/` in
+its own portable mode, at a version pinned in that file. A launch that finds
+it missing returns `EMULATOR_MISSING:`, and the page asks "Install and play?".
+
+PCSX2 (PS2), first, on 2026-11-01:
+
+- v2.8.2, the official release. Its macOS build is Intel-only, so Apple
+  silicon runs it through Rosetta. ARMSX2 has a native Mac build, but only as
+  nightlies; switch when it has stable Mac releases. Both read the same cards.
+- `portable.txt` beside `PCSX2.app` keeps its settings, BIOS choice and cards
+  in its folder (`EmuFolders::SetAppRoot` in PCSX2).
+- The app owns a set of keys in `inis/PCSX2.ini` (`standalone::settings`) and
+  leaves the rest. `[UI] SettingsVersion = 1` is one of them: without it PCSX2
+  offers to reset every setting on start.
+- Pads bound by position, south button Cross. Hold Select as in RetroArch
+  games: bottom face quits, top face opens the menu, shoulders load and save a
+  state, right trigger fast-forwards.
+- BIOS: the server's `bios/PS2` files are fetched into `<system dir>/PS2`;
+  SCPH-39001 (US) is used when it's there.
+- Saves: one folder card, `memcards/Moose.ps2`, synced as `pcsx2` units
+  before and after each game and in "Sync saves" (`commands::unit_cfgs`).
+  PCSX2's own new folder card is unformatted, so every game would ask to
+  format it; the app writes a formatted header instead
+  (`data/pcsx2-folder-card-superblock.bin`, taken from ChickenCard.ps2).
+  Slot 2 is off, so no save lands on a card that doesn't sync.
+- Started as `PCSX2 -nogui -fullscreen -- <rom>`; the app waits for it.
+
+Tested on macserver: a play link for Crazy Taxi asked to install PCSX2,
+installed it, fetched 17 BIOS files, and booted the game on the US BIOS with
+the folder card in slot 1. Windows not tried yet.
+
+Found: the PS2 was missing from the library. `ROMs/ps2` on the NAS had a
+`noload.txt` (ES-DE's switch-off marker), as do `ps3`, `switch`, `wii`,
+`wiiu`, `xbox360` and `n3ds`, all dated 2026-10-14, so the service skipped
+them. The Crazy Taxi test used a local copy. On 2026-11-01 Frank had the PS2
+turned back on: the marker is now `noload.txt.masked-off`, and after a service
+restart the PS2 lists 123 games. The others are still off. `xbox` has no marker but no
+platform mapping either.
 
 ## Order of work
 
