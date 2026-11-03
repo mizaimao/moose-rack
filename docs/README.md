@@ -28,6 +28,7 @@ these look like to-do lists and are not.
 | | |
 | --- | --- |
 | [server-and-client.md](server-and-client.md) | **Design, agreed 2026-11-01.** The NAS library, the web page, and a desktop app that caches: the play link, the per-OS emulator set, and what is built |
+| [launch-flow.html](launch-flow.html) | **Design, agreed 2026-11-02.** The launch as a flowchart: the checklist, the saves step, the launch record. A local page; open it in a browser |
 | [one-core-two-frontends.md](one-core-two-frontends.md) | **Current.** The shape the project settled into once the answer became "Flip **and** Thor" |
 | [controller-ux.md](controller-ux.md) | **Current, agreed 2026-11-01.** The nine rules a controller-first screen has to pass, and where the Slint prototype stands against them |
 | [memory-footprint.md](memory-footprint.md) | **Measurement.** What the app weighs and why — 192 MB, and 106 MB of it is WebKit |

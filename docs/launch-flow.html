@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Launch Flow</title>
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --text: #1d2129;
+    --muted: #5d6573;
+    --line: #8d96a6;
+    --core: #e8f0fe;
+    --core-edge: #3b6fd8;
+    --check: #e6f6ee;
+    --check-edge: #1f9a5b;
+    --ask: #fff4dc;
+    --ask-edge: #c98a12;
+    --note: #eef0f3;
+    --note-edge: #8a93a3;
+    --start: #1d2129;
+    --start-text: #ffffff;
+    --ok: #1f9a5b;
+    --todo: #c98a12;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14161a;
+      --panel: #1c1f25;
+      --text: #e7e9ee;
+      --muted: #a2a9b6;
+      --line: #6b7383;
+      --core: #1d2b45;
+      --core-edge: #6f9cf2;
+      --check: #16352a;
+      --check-edge: #46c486;
+      --ask: #3a2f17;
+      --ask-edge: #e2a83a;
+      --note: #262a31;
+      --note-edge: #7d8696;
+      --start: #e7e9ee;
+      --start-text: #14161a;
+      --ok: #46c486;
+      --todo: #e2a83a;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14161a;
+    --panel: #1c1f25;
+    --text: #e7e9ee;
+    --muted: #a2a9b6;
+    --line: #6b7383;
+    --core: #1d2b45;
+    --core-edge: #6f9cf2;
+    --check: #16352a;
+    --check-edge: #46c486;
+    --ask: #3a2f17;
+    --ask-edge: #e2a83a;
+    --note: #262a31;
+    --note-edge: #7d8696;
+    --start: #e7e9ee;
+    --start-text: #14161a;
+    --ok: #46c486;
+    --todo: #e2a83a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 1060px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  h2 { font-size: 18px; margin: 36px 0 10px; }
+  p { margin: 0 0 12px; color: var(--muted); max-width: 72ch; }
+  .chart {
+    background: var(--panel);
+    border-radius: 12px;
+    padding: 16px;
+    overflow-x: auto;
+  }
+  .chart svg { display: block; width: 100%; min-width: 720px; height: auto; }
+  .legend { display: flex; flex-wrap: wrap; gap: 16px; margin: 12px 0 0; font-size: 14px; color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 8px; }
+  .swatch { width: 18px; height: 14px; border-radius: 4px; border: 2px solid; display: inline-block; }
+  .s-core { background: var(--core); border-color: var(--core-edge); }
+  .s-check { background: var(--check); border-color: var(--check-edge); }
+  .s-ask { background: var(--ask); border-color: var(--ask-edge); }
+  .s-note { background: var(--note); border-color: var(--note-edge); }
+  ul { margin: 0; padding-left: 20px; max-width: 72ch; }
+  li { margin: 4px 0; }
+  code { font-size: 14px; }
+
+  /* the checklist window, drawn as the app would show it */
+  .mock {
+    max-width: 520px;
+    background: var(--panel);
+    border-radius: 14px;
+    padding: 20px 22px;
+    box-shadow: 0 6px 24px rgb(0 0 0 / 18%);
+  }
+  .mock .game { font-weight: 600; font-size: 17px; }
+  .mock .sys { color: var(--muted); font-size: 14px; margin-bottom: 14px; }
+  .mock ol { list-style: none; padding: 0; margin: 0 0 18px; }
+  .mock li { display: grid; grid-template-columns: 22px 1fr auto; gap: 10px; margin: 10px 0; max-width: none; }
+  .mock .size { font-variant-numeric: tabular-nums; font-weight: 600; padding-top: 1px; }
+  .mock .after { color: var(--muted); font-size: 14px; margin: 0 0 16px; }
+  .mock .mark { width: 18px; height: 18px; border-radius: 50%; margin-top: 3px; border: 2px solid; }
+  .mock .ok .mark { background: var(--ok); border-color: var(--ok); }
+  .mock .todo .mark { border-color: var(--todo); }
+  .mock .what { font-weight: 600; }
+  .mock .detail { color: var(--muted); font-size: 14px; }
+  .mock .buttons { display: flex; gap: 10px; flex-wrap: wrap; }
+  .mock button {
+    font: inherit; font-weight: 600; border-radius: 9px; padding: 9px 18px; border: 2px solid var(--core-edge);
+    background: var(--core-edge); color: #fff;
+  }
+  .mock button.second { background: transparent; color: var(--text); border-color: var(--line); }
+
+  table { border-collapse: collapse; font-size: 15px; max-width: 760px; width: 100%; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--note); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+
+  svg text { fill: var(--text); font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  svg .sub { fill: var(--muted); font-size: 13px; }
+  svg .title { font-size: 15px; font-weight: 600; }
+  svg .dtext { font-size: 14px; font-weight: 600; }
+  svg .core { fill: var(--core); stroke: var(--core-edge); stroke-width: 2; }
+  svg .check { fill: var(--check); stroke: var(--check-edge); stroke-width: 2; }
+  svg .ask { fill: var(--ask); stroke: var(--ask-edge); stroke-width: 2; }
+  svg .note { fill: var(--note); stroke: var(--note-edge); stroke-width: 1.5; stroke-dasharray: 4 3; }
+  svg .start { fill: var(--start); }
+  svg .start-text { fill: var(--start-text); font-weight: 600; font-size: 15px; }
+  svg .flow { stroke: var(--line); stroke-width: 2; fill: none; }
+  svg .bar { stroke: var(--line); stroke-width: 5; }
+  svg .loop { stroke: var(--ask-edge); stroke-width: 2; fill: none; stroke-dasharray: 6 4; }
+  svg .label { fill: var(--muted); font-size: 13px; }
+  svg .tag { fill: var(--text); font-size: 13px; font-weight: 600; }
+</style>
+</head>
+<body>
+<main>
+  <h1>What happens when you press Play</h1>
+  <p>Redrawn 2026-11-02 after Frank's notes. Every check is an explicit decision. The game and the emulator are checked at the same time and land in one checklist, and one Download button fetches whatever is missing. Saves are a separate step once Play is pressed, right before the game starts. Every launch leaves a record of exactly what ran.</p>
+
+  <div class="chart">
+    <svg viewBox="0 0 1000 1760" role="img" aria-label="Launch flowchart">
+      <defs>
+        <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" style="fill: var(--line)"/>
+        </marker>
+        <marker id="arrow-loop" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" style="fill: var(--ask-edge)"/>
+        </marker>
+      </defs>
+
+      <!-- start -->
+      <rect class="start" x="400" y="16" width="200" height="48" rx="24"/>
+      <text class="start-text" x="500" y="45" text-anchor="middle">Play</text>
+      <text class="label" x="500" y="84" text-anchor="middle">from the app, or a moose-rack:// link from the web page</text>
+
+      <!-- step 1: the checklist -->
+      <line class="flow" x1="500" y1="90" x2="500" y2="104" marker-end="url(#arrow)"/>
+      <rect class="core" x="290" y="106" width="420" height="56" rx="10"/>
+      <text class="title" x="500" y="131" text-anchor="middle">1. Open the launch checklist</text>
+      <text class="sub" x="500" y="151" text-anchor="middle">and check the game and the emulator at once</text>
+
+      <line class="flow" x1="500" y1="162" x2="500" y2="190"/>
+      <line class="bar" x1="280" y1="192" x2="720" y2="192"/>
+      <line class="flow" x1="280" y1="194" x2="280" y2="218" marker-end="url(#arrow)"/>
+      <line class="flow" x1="720" y1="194" x2="720" y2="218" marker-end="url(#arrow)"/>
+
+      <polygon class="check" points="280,220 410,290 280,360 150,290"/>
+      <text class="dtext" x="280" y="286" text-anchor="middle">Game file</text>
+      <text class="dtext" x="280" y="305" text-anchor="middle">in the cache?</text>
+      <text class="sub" x="280" y="384" text-anchor="middle">present, and its hash matches the library's</text>
+
+      <polygon class="check" points="720,220 850,290 720,360 590,290"/>
+      <text class="dtext" x="720" y="286" text-anchor="middle">Emulator</text>
+      <text class="dtext" x="720" y="305" text-anchor="middle">ready?</text>
+      <text class="sub" x="720" y="384" text-anchor="middle">pinned version installed, BIOS there,</text>
+      <text class="sub" x="720" y="402" text-anchor="middle">settings at the current config version</text>
+
+      <line class="flow" x1="280" y1="410" x2="280" y2="426" marker-end="url(#arrow)"/>
+      <rect class="note" x="170" y="428" width="220" height="56" rx="10"/>
+      <text class="sub" x="280" y="451" text-anchor="middle">yes: ready</text>
+      <text class="sub" x="280" y="471" text-anchor="middle">no: to download (its size)</text>
+
+      <line class="flow" x1="720" y1="410" x2="720" y2="426" marker-end="url(#arrow)"/>
+      <rect class="note" x="610" y="428" width="220" height="56" rx="10"/>
+      <text class="sub" x="720" y="451" text-anchor="middle">yes: ready</text>
+      <text class="sub" x="720" y="471" text-anchor="middle">no: to download (its size)</text>
+
+      <line class="flow" x1="280" y1="484" x2="280" y2="530"/>
+      <line class="flow" x1="720" y1="484" x2="720" y2="530"/>
+      <line class="bar" x1="280" y1="532" x2="720" y2="532"/>
+      <line class="flow" x1="500" y1="534" x2="500" y2="558" marker-end="url(#arrow)"/>
+
+      <polygon class="check" points="500,560 660,630 500,700 340,630"/>
+      <text class="dtext" x="500" y="626" text-anchor="middle">What does the</text>
+      <text class="dtext" x="500" y="645" text-anchor="middle">checklist show?</text>
+
+      <line class="flow" x1="500" y1="700" x2="500" y2="726"/>
+      <line class="flow" x1="200" y1="726" x2="800" y2="726"/>
+      <line class="flow" x1="200" y1="726" x2="200" y2="768" marker-end="url(#arrow)"/>
+      <line class="flow" x1="500" y1="726" x2="500" y2="768" marker-end="url(#arrow)"/>
+      <line class="flow" x1="800" y1="726" x2="800" y2="768" marker-end="url(#arrow)"/>
+      <text class="tag" x="208" y="752">both ready</text>
+      <text class="tag" x="508" y="752">something to download</text>
+      <text class="tag" x="808" y="752">to download, no server</text>
+
+      <rect class="ask" x="100" y="770" width="200" height="76" rx="10"/>
+      <text class="title" x="200" y="802" text-anchor="middle">No window</text>
+      <text class="sub" x="200" y="824" text-anchor="middle">straight on to the saves</text>
+
+      <rect class="ask" x="390" y="770" width="220" height="76" rx="10"/>
+      <text class="title" x="500" y="802" text-anchor="middle">[Download 677 MB]</text>
+      <text class="sub" x="500" y="824" text-anchor="middle">[Cancel]</text>
+
+      <rect class="ask" x="700" y="770" width="200" height="76" rx="10"/>
+      <text class="title" x="800" y="802" text-anchor="middle">[Cancel] only</text>
+      <text class="sub" x="800" y="824" text-anchor="middle">"needs the server"</text>
+
+      <line class="flow" x1="500" y1="846" x2="500" y2="876" marker-end="url(#arrow)"/>
+      <rect class="core" x="380" y="878" width="240" height="76" rx="10"/>
+      <text class="title" x="500" y="903" text-anchor="middle">Fetch what's missing</text>
+      <text class="sub" x="500" y="923" text-anchor="middle">game, emulator, BIOS, settings;</text>
+      <text class="sub" x="500" y="941" text-anchor="middle">check every hash</text>
+
+      <path class="loop" d="M620,916 H960 V134 H714" marker-end="url(#arrow-loop)"/>
+      <text class="label" x="836" y="126" text-anchor="middle">the checklist checks again</text>
+
+      <!-- step 2: saves -->
+      <path class="flow" d="M200,846 V1060 H328" marker-end="url(#arrow)"/>
+      <polygon class="check" points="500,990 670,1060 500,1130 330,1060"/>
+      <text class="dtext" x="500" y="1056" text-anchor="middle">2. Saves in sync</text>
+      <text class="dtext" x="500" y="1075" text-anchor="middle">with the server?</text>
+      <text class="label" x="690" y="1000">checked only after Play,</text>
+      <text class="label" x="690" y="1018">right before the game starts</text>
+
+      <line class="flow" x1="500" y1="1130" x2="500" y2="1156"/>
+      <line class="flow" x1="140" y1="1156" x2="860" y2="1156"/>
+      <line class="flow" x1="140" y1="1156" x2="140" y2="1300"/>
+      <line class="flow" x1="380" y1="1156" x2="380" y2="1198" marker-end="url(#arrow)"/>
+      <line class="flow" x1="620" y1="1156" x2="620" y2="1198" marker-end="url(#arrow)"/>
+      <line class="flow" x1="860" y1="1156" x2="860" y2="1198" marker-end="url(#arrow)"/>
+      <text class="tag" x="148" y="1182">in sync</text>
+      <text class="tag" x="388" y="1182">newer on server</text>
+      <text class="tag" x="628" y="1182">conflict</text>
+      <text class="tag" x="868" y="1182">no server</text>
+
+      <rect class="core" x="290" y="1200" width="180" height="64" rx="10"/>
+      <text class="title" x="380" y="1226" text-anchor="middle">Download them</text>
+      <text class="sub" x="380" y="1248" text-anchor="middle">into the emulator</text>
+
+      <rect class="ask" x="530" y="1200" width="180" height="64" rx="10"/>
+      <text class="title" x="620" y="1226" text-anchor="middle">[Choose a save]</text>
+      <text class="sub" x="620" y="1248" text-anchor="middle">[Cancel]</text>
+      <path class="loop" d="M710,1232 H745 V1060 H674" marker-end="url(#arrow-loop)"/>
+
+      <rect class="ask" x="770" y="1200" width="200" height="64" rx="10"/>
+      <text class="title" x="870" y="1226" text-anchor="middle">[Play without syncing]</text>
+      <text class="sub" x="870" y="1248" text-anchor="middle">[Cancel]</text>
+
+      <line class="flow" x1="380" y1="1264" x2="380" y2="1300"/>
+      <line class="flow" x1="860" y1="1264" x2="860" y2="1300"/>
+      <line class="bar" x1="140" y1="1302" x2="860" y2="1302"/>
+      <line class="flow" x1="500" y1="1304" x2="500" y2="1328" marker-end="url(#arrow)"/>
+
+      <!-- step 3: play -->
+      <rect class="core" x="350" y="1330" width="300" height="64" rx="10"/>
+      <text class="title" x="500" y="1356" text-anchor="middle">3. Open the launch record</text>
+      <text class="sub" x="500" y="1378" text-anchor="middle">code, config and data versions</text>
+
+      <line class="flow" x1="500" y1="1394" x2="500" y2="1422" marker-end="url(#arrow)"/>
+      <rect class="core" x="350" y="1424" width="300" height="64" rx="10"/>
+      <text class="title" x="500" y="1450" text-anchor="middle">4. Run the emulator, wait</text>
+      <text class="sub" x="500" y="1472" text-anchor="middle">the app can't quit meanwhile</text>
+
+      <line class="flow" x1="500" y1="1488" x2="500" y2="1516" marker-end="url(#arrow)"/>
+      <rect class="core" x="350" y="1518" width="300" height="64" rx="10"/>
+      <text class="title" x="500" y="1544" text-anchor="middle">5. Upload changed saves</text>
+      <text class="sub" x="500" y="1566" text-anchor="middle">quitting now asks first</text>
+
+      <line class="flow" x1="500" y1="1582" x2="500" y2="1610" marker-end="url(#arrow)"/>
+      <rect class="core" x="350" y="1612" width="300" height="64" rx="10"/>
+      <text class="title" x="500" y="1638" text-anchor="middle">6. Close the launch record</text>
+      <text class="sub" x="500" y="1660" text-anchor="middle">exit code, time played, saves moved</text>
+
+      <line class="flow" x1="500" y1="1676" x2="500" y2="1704" marker-end="url(#arrow)"/>
+      <rect class="start" x="430" y="1706" width="140" height="36" rx="18"/>
+      <text class="start-text" x="500" y="1730" text-anchor="middle">Done</text>
+
+      <line class="flow" x1="650" y1="1362" x2="678" y2="1362"/>
+      <rect class="note" x="680" y="1330" width="300" height="128" rx="10"/>
+      <text class="title" x="696" y="1356">Launch record</text>
+      <text class="sub" x="696" y="1380">Code: Moose Rack 0.6.0, d65745f</text>
+      <text class="sub" x="696" y="1400">Config: PCSX2 settings v7 (3f9a…)</text>
+      <text class="sub" x="696" y="1420">Data: Ico (USA).chd sha1 7b2d…,</text>
+      <text class="sub" x="696" y="1440">PCSX2 v2.8.2, BIOS md5 d5ce…</text>
+    </svg>
+    <div class="legend">
+      <span><i class="swatch s-check"></i>A check or decision</span>
+      <span><i class="swatch s-core"></i>Something the app does</span>
+      <span><i class="swatch s-ask"></i>Buttons the app shows</span>
+      <span><i class="swatch s-note"></i>A result or a record</span>
+    </div>
+  </div>
+
+  <h2>The checklist window</h2>
+  <p>As the app would show it, for a PS2 game on a computer that has neither the game nor PCSX2 yet. Each line shows its own size; the button shows the total of what's missing.</p>
+  <div class="mock">
+    <div class="game">Ico (USA)</div>
+    <div class="sys">PlayStation 2</div>
+    <ol>
+      <li class="todo"><span class="mark"></span><span><span class="what">Game file</span><br><span class="detail">Ico (USA).chd, not on this computer yet</span></span><span class="size">646 MB</span></li>
+      <li class="todo"><span class="mark"></span><span><span class="what">Emulator: PCSX2 v2.8.2</span><br><span class="detail">with BIOS and your settings v7</span></span><span class="size">31 MB</span></li>
+    </ol>
+    <p class="after">Saves are checked with the server after you press Play.</p>
+    <div class="buttons"><button>Download 677 MB</button><button class="second">Cancel</button></div>
+  </div>
+  <p style="margin-top:12px">A line that's ready turns green and keeps its size, for reference; it isn't counted in the button. When both lines are ready the window doesn't appear at all: the launch goes straight on to the saves step (decided 2026-11-02).</p>
+
+  <h2>The three versions in a launch record</h2>
+  <table>
+    <tr><th>Version</th><th>What it pins</th><th>Where it comes from</th></tr>
+    <tr><td>Code</td><td>The Moose Rack build that ran the launch</td><td>App version and git commit, compiled in</td></tr>
+    <tr><td>Config</td><td>Every setting that shapes the game: the emulator's settings, controls, shaders</td><td>A numbered version kept on the server, the same for every device; this computer's paths are added locally and not part of it</td></tr>
+    <tr><td>Data</td><td>The game file, the emulator build, the BIOS</td><td>Their hashes, checked before Play is offered</td></tr>
+  </table>
+  <p style="margin-top:12px">Same three versions, same launch. A record also notes the machine (OS, GPU) for context, since those can't be pinned.</p>
+</main>
+</body>
+</html>

@@ -24,11 +24,13 @@ use std::path::{Path, PathBuf};
 
 use tauri::{Emitter, Manager, State};
 
-use moose_rack::{cache, config::Config, coremap, download, media, savesync, shaders};
+use moose_rack::{cache, config::Config, media};
 
 
 use moose_rack::app::AppState;
 use moose_rack::commands::*;
+
+use moose_rack::busy::{self, Busy};
 
 #[tauri::command]
 async fn sync_library(app: tauri::AppHandle, state: State<'_, AppState>, full: bool) -> CmdResult<String> {
@@ -305,63 +307,18 @@ async fn download_rom(
     state: State<'_, AppState>,
     id: i64,
 ) -> CmdResult<String> {
-    let row = {
-        let cache = state.cache.lock().map_err(err)?;
-        cache.rom_by_id(id).map_err(err)?
-    }
-    .ok_or_else(|| format!("no rom with id {id}"))?;
-
-    let client = state
-        .client
-        .clone()
-        .ok_or("no server connection — check config.toml")?;
-    let roms_dir = state.roms_dir.clone();
-
-    // Folder ROMs verify per member; the rom-level hash is not reproducible.
-    let members = if row.multi_file {
-        client.member_hashes(row.id).await
-    } else {
-        Vec::new()
-    };
-
-    let folder = row.folder();
-    let target = download::Target {
-        rom_id: row.id,
-        members: &members,
-        fs_name: &row.fs_name,
-        folder: &folder,
-        expected_size: (row.fs_size_bytes > 0).then_some(row.fs_size_bytes as u64),
-        md5: row.md5_hash.as_deref(),
-        sha1: row.sha1_hash.as_deref(),
-        multi_file: row.multi_file,
-    };
-
     let mut last = std::time::Instant::now();
-    let outcome = download::fetch(
-        client.http(),
-        client.base(),
-        client.auth(),
-        &target,
-        &roms_dir,
-        |done, total| {
-            // Throttle: the webview does not need 60 events a second.
-            if last.elapsed().as_millis() < 100 {
-                return;
-            }
-            last = std::time::Instant::now();
-            let _ = app.emit("download-progress", (id, done, total));
-        },
-    )
-    .await
-    .map_err(err)?;
-
-    let _ = app.emit("download-progress", (id, 1u64, 1u64));
-    Ok(match outcome {
-        download::Outcome::AlreadyHave(p) => format!("already had {}", p.display()),
-        download::Outcome::Downloaded { path, verified, .. } => {
-            format!("downloaded {} ({})", path.display(), verified.describe())
+    let said = moose_rack::commands::download_game(&state, id, |done, total| {
+        // Throttle: the webview does not need 60 events a second.
+        if last.elapsed().as_millis() < 100 {
+            return;
         }
+        last = std::time::Instant::now();
+        let _ = app.emit("download-progress", (id, done, total));
     })
+    .await;
+    let _ = app.emit("download-progress", (id, 1u64, 1u64));
+    said
 }
 
 #[tauri::command]
@@ -476,235 +433,63 @@ async fn launch_rom(
     id: i64,
     pad: Option<String>,
     refresh: Option<f32>,
-    // Set by the retry after the user answered an offline warning.
     skip_sync: Option<bool>,
-    // Set by the retry after the user said "play anyway" to a missing BIOS.
-    // Separate from `skip_sync`: that answer is about the BIOS, and taking it
-    // as "skip the save sync" lost the sync on both sides of the game.
     skip_bios: Option<bool>,
-    // A save state to start in, chosen from the shelf in the info pane.
     entry_slot: Option<u32>,
+    busy: State<'_, Busy>,
 ) -> CmdResult<String> {
-    let row = {
-        let cache = state.cache.lock().map_err(err)?;
-        cache.rom_by_id(id).map_err(err)?
-    }
-    .ok_or_else(|| format!("no rom with id {id}"))?;
-
-    let ra = state.retroarch.as_ref().ok_or("RetroArch not found")?;
-    // row_path, not local_path: the grid marks a row downloaded with this, and
-    // a launch that disagreed said "not downloaded yet" about a folder ROM
-    // sitting right there. launch::plan resolves the folder to its playlist.
-    let path = row_path(&state, &row).ok_or("not downloaded yet")?;
-    // One shared planner for GUI, CLI and TUI — see launch.rs for why.
-    let overrides = state.core_overrides.lock().map_err(err)?.clone();
-    let per_game = state.core_per_game.lock().map_err(err)?.clone();
-    let shader_overrides = state.shader_overrides.lock().map_err(err)?.clone();
-    let motion = state.motion_shader.lock().map_err(err)?.clone();
-    let lightgun = state.lightgun.lock().map_err(err)?.clone();
-    // The app's library folder, where the CLI already put these. The folder
-    // above the ROMs, which this was, is the home folder for `~/ROMs` and the
-    // root of the card on a handheld.
-    let lib = state.library_root.as_path();
-    // Read per launch rather than held on AppState: it is a path the settings
-    // window can change while the app is running, and a copy taken at startup
-    // would send saves to the old folder until a restart.
-    let saves_root = Config::load()
-        .map(|c| moose_rack::util::expand_tilde(&c.saves.root))
-        .unwrap_or_default();
-    let req = moose_rack::launch::Request {
-        saves_root: Some(&saves_root),
-        fit_window: state.fit_window,
-        window_decorations: state.window_decorations,
-        // Only where the metadata says shooter, and only on the platforms
-        // whose cabinets had a fire button: a "shooter" on the Mega Drive is
-        // as likely to be a light-gun game or a shmup with its own auto-fire.
-        autofire: autofire_for(&row),
-        save_state_on_exit: Config::load()
-            .map(|c| c.retroarch.save_state_on_exit)
-            .unwrap_or(false),
-        autofire_hz: autofire_hz(&state),
-        mirror_players: state.mirror_players,
-        entry_slot,
-        rom: &path,
-        platform: &row.platform_slug,
-        fs_name: &row.fs_name,
-        library_root: lib,
-        user_cfg: &state.user_retroarch_cfg,
-        shaders_enabled: state.shaders_enabled,
-        shader_overrides: &shader_overrides,
-        motion_shader: motion.as_deref(),
-        refresh_hz: refresh,
-        core_overrides: &overrides,
-        core_per_game: &per_game,
-        core_override: None,
-        pad: pad.as_deref(),
-        achievements: Some(&state.achievements),
-        lightgun: &lightgun,
+    // The whole sequence is shared with the other front ends; this window adds
+    // where the game goes and how progress is shown.
+    let opts = moose_rack::play::Options {
+        pad,
+        refresh,
         screen: work_area(&app),
+        skip_sync,
+        skip_bios,
+        entry_slot,
     };
-    // Fetch what is missing before planning. `plan` only ever picks among cores
-    // already on disk, so without this a fresh install — which has none — fails
-    // with "no installed core" even when the buildbot has it.
-    let wanted = coremap::resolve_core_for(
-        &state.map,
-        &overrides,
-        &per_game,
-        &row.platform_slug,
-        Some(&row.fs_name),
-        |_| true, // ignore what is installed; that is the point
-    );
-    // Say what is happening. Between pressing play and the emulator appearing
-    // there are four things that can take a visible moment — fetching a core,
-    // fetching a shader pack, fetching BIOS, and asking the server about saves
-    // — and none of them used to announce itself. A window that goes quiet for
-    // several seconds reads as one that has hung, and gives nothing to report
-    // when it is slow.
     let say = |what: &str| {
         let _ = app.emit("launch-progress", what.to_owned());
     };
-    let mut fetched = Vec::new();
-    // Reuses the API client's HTTP stack; without a configured server there is
-    // nothing to download from anyway.
-    if let (Some(core), Some(api)) = (wanted.as_deref(), state.client.as_ref()) {
-        let http = api.http();
-        say("checking the emulator core…");
-        match moose_rack::cores::ensure(http, ra, core).await {
-            Ok(true) => fetched.push(format!("downloaded the {core} core")),
-            Ok(false) => {}
-            // Not fatal: an offline launch of an already-installed core should
-            // still work, and `plan` reports the real problem if it does not.
-            Err(e) => fetched.push(format!("could not fetch {core}: {e}")),
-        }
-        if state.shaders_enabled {
-            say("checking shaders…");
-            match shaders::ensure_pack(http, ra).await {
-                Ok(true) => fetched.push("downloaded the shader pack".to_owned()),
-                Ok(false) => {}
-                Err(e) => fetched.push(format!("could not fetch shaders: {e}")),
-            }
-        }
-        // BIOS, for the same reason as the core: telling someone to go and
-        // install one is advice delivered at the exact moment they cannot see
-        // why the screen is black. Only what this platform actually needs.
-        let bios_dir = state.system_dir();
-        say("checking BIOS files…");
-        match moose_rack::bios::ensure(api, &bios_dir, &state.legacy_bios, core, &row.platform_slug).await {
-            Ok(0) => {}
-            Ok(n) => fetched.push(format!("fetched {n} BIOS file(s)")),
-            Err(e) => {
-                // Refused rather than noted. This used to go into the launch
-                // notes and start the game anyway, which meant the one case
-                // the automatic fetch cannot fix — a file the server has not
-                // got either — arrived as a black screen with the explanation
-                // scrolled past behind it. The front end offers "play anyway",
-                // because a core that wants a BIOS sometimes runs without one.
-                if !skip_bios.unwrap_or(false) {
-                    let want = moose_rack::bios::required_for(core, &row.platform_slug);
-                    let missing: Vec<String> = want
-                        .into_iter()
-                        .filter(|n| !bios_dir.join(n).is_file())
-                        .collect();
-                    if !missing.is_empty() {
-                        return Err(format!(
-                            "BIOS_MISSING:{} needs {} — {}",
-                            row.platform_slug,
-                            missing.join(", "),
-                            e
-                        ));
-                    }
-                }
-                fetched.push(format!("could not fetch BIOS: {e}"));
-            }
-        }
-    }
+    moose_rack::play::launch(&state, &busy, id, opts, say).await
+}
 
-    // The BIOS folder as it is now. `state.retroarch` was pointed at it at
-    // startup only if it existed then, and on a fresh machine the fetch above
-    // is what creates it: the first Neo Geo launch would otherwise download
-    // aes.zip and still tell RetroArch to look somewhere else.
-    let ra = &ra.clone().with_system_dir(Some(state.system_dir()));
-    let plan = moose_rack::launch::plan(ra, &state.map, &req).map_err(err)?;
 
-    // Steam-cloud shape: pull what the server has that is newer, play, then
-    // push whatever changed. `plan.run` blocks until the emulator exits, so
-    // those two moments are a real boundary rather than a guess about when
-    // someone stopped playing.
-    let mut notes = fetched;
-    let pre = if skip_sync.unwrap_or(false) {
-        // The user already said "play anyway" to an offline warning; asking
-        // again on the retry would be a loop they cannot get out of.
-        notes.push("saves: not synced — you chose to play anyway".to_owned());
-        AutoSync::default()
-    } else {
-        say("checking saves with the server…");
-        auto_sync(&state, &row, savesync::When::BeforeLaunch).await
+/// The launch checklist: is the game here, is the emulator ready.
+#[tauri::command]
+async fn launch_checklist(state: State<'_, AppState>, id: i64) -> CmdResult<moose_rack::play::Checklist> {
+    moose_rack::play::checklist(&state, id).await
+}
+
+/// The checklist's Download button: fetch whatever is missing, then the page
+/// checks again.
+#[tauri::command]
+async fn prepare_launch(app: tauri::AppHandle, state: State<'_, AppState>, id: i64) -> CmdResult<String> {
+    let say = |what: &str| {
+        let _ = app.emit("launch-progress", what.to_owned());
     };
-    if let Some(note) = pre.note {
-        notes.push(note);
-    }
-    // Could not sync at all. Steam asks rather than either blocking or starting
-    // silently, and it is the right call: the save may be stale, which is worth
-    // knowing before you put an hour into it, but being unable to play because
-    // a server is off would be worse.
-    if let Some(why) = pre.failed {
-        return Err(format!("SAVE_OFFLINE:{why}"));
-    }
-    // A conflict stops the launch, as Steam does. Playing on top of a save
-    // whose ownership is unresolved is how the loser gets overwritten for good
-    // on the way back out — the one moment where continuing quietly is worse
-    // than refusing.
-    if !pre.conflicts.is_empty() {
-        *state.pending_conflicts.lock().map_err(err)? = pre.conflicts.clone();
-        return Err(format!(
-            "SAVE_CONFLICT:{}",
-            serde_json::to_string(&pre.conflicts).unwrap_or_default()
-        ));
-    }
+    moose_rack::play::prepare(&state, id, say).await
+}
 
-    say("starting RetroArch…");
-    let began = std::time::Instant::now();
-    let started_at = moose_rack::util::now_iso();
-    let status = plan.run(ra, false).map_err(err)?;
-
-    // How long that took is the only record of it. RetroArch tells nobody, and
-    // the server's `last_played` only moves when something tells the server —
-    // which nothing here did, so playing a game on this machine used to leave
-    // no trace on this machine at all.
-    let seconds = began.elapsed().as_secs() as i64;
-    if let Ok(cache) = state.cache.lock()
-        && let Ok(true) = cache.record_play(row.id, &started_at, seconds)
-    {
-        notes.push(format!("played for {}", moose_rack::util::spell_duration(seconds)));
-    }
-
-    let post = if skip_sync.unwrap_or(false) {
-        AutoSync::default()
-    } else {
-        auto_sync(&state, &row, savesync::When::AfterExit).await
-    };
-    if let Some(note) = post.note {
-        notes.push(note);
-    }
-    // After the fact there is nothing to ask: the game has already been played.
-    // Say so in the notes so progress that has not left the machine is visible.
-    if let Some(why) = post.failed {
-        notes.push(format!("saves: NOT uploaded — {why}"));
-    }
-    if !post.conflicts.is_empty() {
-        *state.pending_conflicts.lock().map_err(err)? = post.conflicts;
-    }
-
-    let prefix = if notes.is_empty() {
-        String::new()
-    } else {
-        format!("{}; ", notes.join("; "))
-    };
-    Ok(if status.success() {
-        format!("{prefix}{} exited cleanly", row.name)
-    } else {
-        format!("{prefix}{} exited with {status}", row.name)
+/// Download and set up a standalone emulator, for the page's "Install it?".
+#[tauri::command]
+async fn install_emulator(app: tauri::AppHandle, state: State<'_, AppState>, id: String) -> CmdResult<String> {
+    use moose_rack::standalone;
+    let emu = standalone::by_id(&id).ok_or_else(|| format!("no emulator called {id}"))?;
+    let dir = standalone::dir(&state.library_root, emu);
+    let http = moose_rack::util::http_client(None).map_err(err)?;
+    let mut last = std::time::Instant::now() - std::time::Duration::from_secs(1);
+    standalone::install(&http, emu, &dir, |done, total| {
+        if last.elapsed().as_millis() < 250 {
+            return;
+        }
+        last = std::time::Instant::now();
+        let pct = (done * 100).checked_div(total).unwrap_or(0);
+        let _ = app.emit("launch-progress", format!("downloading {} {}… {pct}%", emu.name, emu.version));
     })
+    .await
+    .map_err(err)?;
+    Ok(format!("installed {} {}", emu.name, emu.version))
 }
 
 #[tauri::command]
@@ -832,7 +617,20 @@ fn apply_app_icon(app: &tauri::AppHandle, id: &str, dir: &Path) -> String {
 
 #[cfg(target_os = "macos")]
 fn install_menu(app: &tauri::AppHandle) -> tauri::Result<()> {
-    use tauri::menu::{AboutMetadataBuilder, MenuBuilder, SubmenuBuilder};
+    use tauri::menu::{AboutMetadataBuilder, MenuBuilder, MenuItemBuilder, SubmenuBuilder};
+
+    // Our own Quit rather than the standard one: the standard item ends the
+    // process straight away, with no event the app can answer, so Cmd+Q in
+    // the middle of a game would have skipped the save upload. This one asks
+    // `may_quit` first. (The Dock's Quit still goes the standard way.)
+    let quit = MenuItemBuilder::with_id("quit", "Quit Moose Rack")
+        .accelerator("CmdOrCtrl+Q")
+        .build(app)?;
+    app.on_menu_event(|app, event| {
+        if event.id() == "quit" && may_quit(app) {
+            app.exit(0);
+        }
+    });
 
     let about = AboutMetadataBuilder::new()
         .name(Some("Moose Rack"))
@@ -851,7 +649,7 @@ fn install_menu(app: &tauri::AppHandle) -> tauri::Result<()> {
         .hide_others()
         .show_all()
         .separator()
-        .quit()
+        .item(&quit)
         .build()?;
     // Without an Edit menu the text fields in Settings lose cut, copy, paste
     // and select-all — on macOS those are menu items first and shortcuts
@@ -1020,6 +818,53 @@ fn ejs_serve(app: &tauri::AppHandle, req: tauri::http::Request<Vec<u8>>) -> taur
     }
 }
 
+/// A play link that has arrived and the page hasn't picked up yet.
+///
+/// Held as well as announced: a link that starts the app arrives before the
+/// page has loaded and is listening, so the page asks for it once it's ready,
+/// and again each time `play-link` says another one came in.
+#[derive(Default)]
+struct PendingPlay(std::sync::Mutex<Option<moose_rack::playlink::PlayLink>>);
+
+/// Keep the last valid play link among `urls` and tell the page.
+///
+/// The last one, because two clicks before the page answers mean the second
+/// game. Anything that doesn't parse is dropped without a word: any web page
+/// can fire a `moose-rack://` address.
+#[cfg(desktop)]
+fn take_links(app: &tauri::AppHandle, urls: impl IntoIterator<Item = String>) {
+    let Some(link) = urls.into_iter().filter_map(|u| moose_rack::playlink::parse(&u)).last() else {
+        return;
+    };
+    eprintln!("play link: {}/{}", link.platform, link.file);
+    if let Ok(mut slot) = app.state::<PendingPlay>().0.lock() {
+        *slot = Some(link);
+    }
+    show_main(app);
+    let _ = app.emit_to("main", "play-link", ());
+}
+
+/// Bring the main window to the front, as when a link or a second launch asks
+/// for the app.
+#[cfg(desktop)]
+fn show_main(app: &tauri::AppHandle) {
+    if let Some(win) = app.get_webview_window("main") {
+        let _ = win.unminimize();
+        let _ = win.show();
+        let _ = win.set_focus();
+    }
+}
+
+#[tauri::command]
+fn take_play_link(pending: State<'_, PendingPlay>) -> Option<moose_rack::playlink::PlayLink> {
+    pending.0.lock().ok()?.take()
+}
+
+#[tauri::command]
+async fn find_rom_by_file(state: State<'_, AppState>, platform: String, file: String) -> CmdResult<Option<i64>> {
+    moose_rack::commands::find_rom_by_file(&state, platform, file)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     install_panic_log();
@@ -1028,7 +873,15 @@ pub fn run() {
     // and the HTTP service start from the same state rather than two setups
     // that drift.
     let state = AppState::from_config().expect("building app state");
-    tauri::Builder::default()
+    let builder = tauri::Builder::default();
+    // Play links. Single-instance has to be the first plugin registered: a
+    // link opened on Windows or Linux starts a second copy of the app, and
+    // this is what turns that into a link for the copy already running.
+    #[cfg(desktop)]
+    let builder = builder
+        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| show_main(app)))
+        .plugin(tauri_plugin_deep_link::init());
+    builder
         // The native folder picker behind every Browse button in Settings.
         // Granted in capabilities/default.json, but a permission for a plugin
         // that was never registered still fails at runtime: f47a312 dropped
@@ -1037,11 +890,28 @@ pub fn run() {
         // below is what catches that now.
         .plugin(tauri_plugin_dialog::init())
         .manage(state)
+        .manage(PendingPlay::default())
+        .manage(busy::Busy::default())
+        // Closing the main window quits the app, so it asks `may_quit` first.
+        // The settings window closes freely.
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event
+                && window.label() == "main"
+                && !may_quit(window.app_handle())
+            {
+                api.prevent_close();
+            }
+        })
         // EmulatorJS and the ROM it plays, read off disk. See `ejs_serve`.
         .register_uri_scheme_protocol("moose", |ctx, req| ejs_serve(ctx.app_handle(), req))
         .invoke_handler(tauri::generate_handler![
             measure_note,
             browser_play_base,
+            take_play_link,
+            install_emulator,
+            launch_checklist,
+            prepare_launch,
+            find_rom_by_file,
             stable_ids,
             local_save,
             put_local_save,
@@ -1132,6 +1002,27 @@ pub fn run() {
         .setup(|app| {
             #[cfg(target_os = "macos")]
             install_menu(app.handle())?;
+            #[cfg(desktop)]
+            {
+                use tauri_plugin_deep_link::DeepLinkExt;
+                // macOS takes the scheme from the bundle's Info.plist. Windows
+                // and Linux need it written down at run time, because the app
+                // runs portable rather than from an installer (on Windows a
+                // key under HKEY_CURRENT_USER\Software\Classes).
+                #[cfg(any(windows, target_os = "linux"))]
+                if let Err(e) = app.deep_link().register_all() {
+                    eprintln!("play links: cannot register {}://: {e}", moose_rack::playlink::SCHEME);
+                }
+                // A link that started the app arrives here; one opened while it
+                // runs arrives through on_open_url.
+                if let Ok(Some(urls)) = app.deep_link().get_current() {
+                    take_links(app.handle(), urls.iter().map(|u| u.to_string()));
+                }
+                let handle = app.handle().clone();
+                app.deep_link().on_open_url(move |event| {
+                    take_links(&handle, event.urls().iter().map(|u| u.to_string()));
+                });
+            }
             // The version in the title bar, so "which build is this" is
             // answerable from a screenshot. Set here rather than in
             // tauri.conf.json because the number lives in Cargo.toml and a
@@ -1216,8 +1107,57 @@ pub fn run() {
             }
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("running tauri application");
+        .build(tauri::generate_context!())
+        .expect("building tauri application")
+        .run(|app, event| {
+            // Any other way out: Quit in the menu, or `exit` from code. Only
+            // while the main window is still there to show why; once it has
+            // closed, `may_quit` has already said yes.
+            if let tauri::RunEvent::ExitRequested { api, .. } = event
+                && app.get_webview_window("main").is_some()
+                && !may_quit(app)
+            {
+                api.prevent_exit();
+            }
+        });
+}
+
+/// Whether the app may quit now. When it may not, says why in a dialog and
+/// returns false; "Quit anyway" on the upload question quits from there.
+fn may_quit(app: &tauri::AppHandle) -> bool {
+    use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
+    let hold = app.state::<busy::Busy>().hold();
+    if let Some(why) = &hold {
+        eprintln!("quit held: {why:?}");
+    }
+    match hold {
+        None => true,
+        Some(busy::Hold::Playing(name)) => {
+            app.dialog()
+                .message(format!(
+                    "{name} is still running. Quit the game first: Moose Rack uploads its saves when it ends."
+                ))
+                .title("Moose Rack")
+                .kind(MessageDialogKind::Info)
+                .show(|_| {});
+            false
+        }
+        Some(busy::Hold::Uploading) => {
+            let handle = app.clone();
+            app.dialog()
+                .message("Saves are still uploading to the server. If you quit now, the next sync picks them up.")
+                .title("Moose Rack")
+                .kind(MessageDialogKind::Warning)
+                .buttons(MessageDialogButtons::OkCancelCustom("Quit anyway".into(), "Keep open".into()))
+                .show(move |quit| {
+                    if quit {
+                        handle.state::<busy::Busy>().leave();
+                        handle.exit(0);
+                    }
+                });
+            false
+        }
+    }
 }
 
 // ---- wrappers over moose_rack::commands ----
@@ -1417,7 +1357,9 @@ async fn resolve_save_conflict(
     state: State<'_, AppState>,
     file_name: String,
     keep: moose_rack::savesync::Keep,
+    busy: State<'_, busy::Busy>,
 ) -> CmdResult<String> {
+    let _uploading = busy.uploading();
     moose_rack::commands::resolve_save_conflict(&state, file_name, keep).await
 }
 
@@ -1474,7 +1416,8 @@ async fn attract_pool(state: State<'_, AppState>) -> CmdResult<Vec<AttractPick>>
 }
 
 #[tauri::command]
-async fn sync_saves(state: State<'_, AppState>) -> CmdResult<SyncRun> {
+async fn sync_saves(state: State<'_, AppState>, busy: State<'_, busy::Busy>) -> CmdResult<SyncRun> {
+    let _uploading = busy.uploading();
     moose_rack::commands::sync_saves(&state).await
 }
 

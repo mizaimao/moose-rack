@@ -974,6 +974,14 @@ pub fn roms(
     Ok(to_views(state, rows, list.as_ref()))
 }
 
+/// The row a play link names: its platform and exact file name, looked up in
+/// this app's own library. `None` when the library doesn't have it.
+pub fn find_rom_by_file(state: &AppState, platform: String, file: String) -> CmdResult<Option<i64>> {
+    let cache = state.cache.lock().map_err(err)?;
+    let rows = cache.roms_for(&platform).map_err(err)?;
+    Ok(rows.into_iter().find(|r| r.fs_name == file).map(|r| r.id))
+}
+
 #[derive(serde::Serialize)]
 pub struct GroupView {
     pub group: String,
@@ -2003,6 +2011,115 @@ pub async fn auto_sync(
     }
 }
 
+/// Download one game into the cache and check its hash. `progress` gets
+/// `(done, total)` bytes. A file that passes is remembered (`verified`), so
+/// the launch checklist doesn't hash it again.
+pub async fn download_game(state: &AppState, id: i64, progress: impl FnMut(u64, u64)) -> CmdResult<String> {
+    let row = {
+        let cache = state.cache.lock().map_err(err)?;
+        cache.rom_by_id(id).map_err(err)?
+    }
+    .ok_or_else(|| format!("no rom with id {id}"))?;
+
+    let client = state
+        .client
+        .clone()
+        .ok_or("no server connection — check config.toml")?;
+
+    // Folder ROMs verify per member; the rom-level hash is not reproducible.
+    let members = if row.multi_file {
+        client.member_hashes(row.id).await
+    } else {
+        Vec::new()
+    };
+
+    let folder = row.folder();
+    let target = crate::download::Target {
+        rom_id: row.id,
+        members: &members,
+        fs_name: &row.fs_name,
+        folder: &folder,
+        expected_size: (row.fs_size_bytes > 0).then_some(row.fs_size_bytes as u64),
+        md5: row.md5_hash.as_deref(),
+        sha1: row.sha1_hash.as_deref(),
+        multi_file: row.multi_file,
+    };
+
+    let outcome = crate::download::fetch(
+        client.http(),
+        client.base(),
+        client.auth(),
+        &target,
+        &state.roms_dir,
+        progress,
+    )
+    .await
+    .map_err(err)?;
+
+    Ok(match outcome {
+        crate::download::Outcome::AlreadyHave(p) => {
+            crate::verified::remember(&state.library_root, &p);
+            format!("already had {}", p.display())
+        }
+        crate::download::Outcome::Downloaded { path, verified, .. } => {
+            crate::verified::remember(&state.library_root, &path);
+            format!("downloaded {} ({})", path.display(), verified.describe())
+        }
+    })
+}
+
+/// The emulator save folders this device syncs: `[[saves.units]]` from
+/// config.toml, plus the memory card of each emulator the app installed
+/// itself (`standalone`), unless config.toml already names one for its family.
+pub fn unit_cfgs(state: &AppState) -> Vec<crate::config::UnitSourceCfg> {
+    let mut units = Config::load().map(|c| c.saves.units).unwrap_or_default();
+    for emu in crate::standalone::ALL {
+        let Some(family) = emu.family else { continue };
+        if units.iter().any(|u| u.family == family) {
+            continue;
+        }
+        let dir = crate::standalone::dir(&state.library_root, emu);
+        let card = dir.join("memcards").join(crate::standalone::CARD);
+        if crate::standalone::program(&dir).is_some() && card.is_dir() {
+            units.push(crate::config::UnitSourceCfg {
+                family: family.to_owned(),
+                root: card.to_string_lossy().into_owned(),
+                max_mb: None,
+                skip: Vec::new(),
+            });
+        }
+    }
+    units
+}
+
+/// `auto_sync` for a standalone emulator: its family's save units, before a
+/// game and after it, the way RetroArch saves sync around a launch.
+pub async fn auto_sync_units(state: &AppState, family: &str, when: savesync::When) -> AutoSync {
+    if !state.auto_sync {
+        return AutoSync::default();
+    }
+    let Some(client) = state.client.clone() else {
+        return AutoSync::default();
+    };
+    let units: Vec<_> = unit_cfgs(state).into_iter().filter(|u| u.family == family).collect();
+    let mut summary = savesync::Summary::default();
+    let sources = crate::unitsync::sources(&units, &mut summary);
+    if sources.is_empty() {
+        return AutoSync { note: summary.problems.first().cloned(), ..Default::default() };
+    }
+    match crate::unitsync::run(&client, &sources, Path::new("."), &state.library_root, &mut summary).await {
+        Ok(()) => AutoSync {
+            note: savesync::describe(when, &summary),
+            conflicts: summary.conflicts,
+            failed: None,
+        },
+        Err(e) => AutoSync {
+            failed: Some(format!("{e:#}").lines().next().unwrap_or("the server did not answer").to_owned()),
+            ..Default::default()
+        },
+    }
+}
+
 pub async fn resolve_save_conflict(
     state: &AppState,
     file_name: String,
@@ -2554,7 +2671,7 @@ pub async fn sync_saves_plan(state: &AppState) -> CmdResult<crate::syncplan::Rev
 
     // Standalone emulators' saves, into the same list.
     let mut problems = crate::savesync::Summary::default();
-    let units = Config::load().map(|c| c.saves.units).unwrap_or_default();
+    let units = unit_cfgs(state);
     let sources = crate::unitsync::sources(&units, &mut problems);
     let (lines, agreed, notes) =
         crate::unitsync::preview(&client, &sources, Path::new(".")).await.map_err(err)?;
@@ -2651,7 +2768,7 @@ pub async fn sync_saves(state: &AppState) -> CmdResult<SyncRun> {
     )
         .await
         .map_err(err)?;
-    let units = Config::load().map(|c| c.saves.units).unwrap_or_default();
+    let units = unit_cfgs(state);
     let sources = crate::unitsync::sources(&units, &mut summary);
     if let Err(e) =
         crate::unitsync::run(&client, &sources, Path::new("."), library_root, &mut summary).await
