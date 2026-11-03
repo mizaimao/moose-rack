@@ -3472,11 +3472,13 @@ dependencies = [
 name = "moose-slint"
 version = "0.0.1"
 dependencies = [
+ "image",
  "moose-rack",
  "png",
  "sdl3",
  "slint",
  "slint-build",
+ "tokio",
 ]
 
 [[package]]

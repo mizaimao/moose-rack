@@ -24,7 +24,7 @@ use std::path::{Path, PathBuf};
 
 use tauri::{Emitter, Manager, State};
 
-use moose_rack::{cache, config::Config, media};
+use moose_rack::media;
 
 
 use moose_rack::app::AppState;
@@ -34,106 +34,10 @@ use moose_rack::busy::{self, Busy};
 
 #[tauri::command]
 async fn sync_library(app: tauri::AppHandle, state: State<'_, AppState>, full: bool) -> CmdResult<String> {
-    let mut store = cache::Cache::open(Path::new(CACHE_DB)).map_err(err)?;
-
-    // Pass one: this machine.
-    //
-    // Before the server and regardless of it. A library that exists on disk is
-    // a library, and it used to be unreachable from here — this command began
-    // by demanding a server and gave up if there was not one, so an install
-    // with a full ES-DE folder and no RomM account showed an empty grid and
-    // said only "no server configured".
-    //
-    // Failure here is reported and stepped over rather than returned. A missing
-    // ROMs folder is the ordinary state of a fresh install, and it must not
-    // stop the server pass that would have filled it.
-    let _ = app.emit("sync-progress", "looking for games on this device…");
-    let cfg = Config::load().unwrap_or_default();
-    let layout = cfg.esde_layout();
-    let local = match moose_rack::esde::scan(&layout, &state.map) {
-        Ok((games, _skipped)) => store.replace_from_esde(&games).unwrap_or(0),
-        Err(_) => 0,
-    };
-
-    // Pass two: the server, if there is one. Everything below is optional.
-    let Some(client) = state.client.clone() else {
-        // Nothing to fold — absorb only ever matches against server rows.
-        let total = store.rom_count().unwrap_or(0);
-        let _ = app.emit("sync-progress", "done");
-        return Ok(if total == 0 {
-            format!(
-                "No games found under {} and no server configured.",
-                layout.roms.display()
-            )
-        } else {
-            format!("{total} games found on this device. No server configured.")
-        });
-    };
-
-    let _ = app.emit("sync-progress", "checking the server…");
-    // Refresh the settings that govern hashing before anything downloads.
-    if let Ok(cfg) = client.config().await {
-        store.save_server_config(&cfg).ok();
-    }
-
-    let _ = app.emit("sync-progress", "fetching the library…");
-    let (platforms, upserted, incremental) = store.sync(&client, full).await.map_err(err)?;
-
-    // Removals never appear in an incremental pull.
-    let mut pruned = 0;
-    if let Ok(ids) = client.rom_identifiers().await {
-        pruned = store.prune_missing(&ids).unwrap_or(0);
-    }
-
-    let _ = app.emit("sync-progress", "collections…");
-    let collections = match client.all_collections().await {
-        Ok(items) => store.replace_collections(&items).unwrap_or(0),
-        Err(_) => 0,
-    };
-
-    // Console pictures for the platform grid. Cheap — a few KB of vector art
-    // each, only for platforms not already cached — and it means the grid has
-    // real artwork without anyone downloading a theme for it.
-    let _ = app.emit("sync-progress", "console pictures…");
-    let icons = match client.platforms().await {
-        Ok(list) => {
-            let pairs: Vec<(String, String)> =
-                list.iter().map(|p| (p.slug.clone(), p.fs_slug.clone())).collect();
-            moose_rack::platformicon::ensure(&client, &state.media_dir, &pairs)
-                .await
-                .unwrap_or(0)
-        }
-        Err(_) => 0,
-    };
-
-    // A sync rewrites names from the server, so the real arcade titles go back
-    // afterwards rather than before.
-    let names = moose_rack::arcade::names(Path::new("data/arcade-names.json"));
-    let renamed = store.apply_arcade_names(&names).unwrap_or(0);
-
-    // One row per game whichever side found it, because both derive the id
-    // from where the file is. This only counts the overlap for the message.
-    let folded = store.on_both().unwrap_or(0);
-    // Server rows are in now, so old ids that only the server's rows could
-    // place are placeable; move what is still keyed by them.
-    moose_rack::app::adopt_client_stores(&store, &state.library_root, Path::new("."));
-
-    let total = store.rom_count().unwrap_or(0);
-    let _ = app.emit("sync-progress", "done");
-    Ok(format!(
-        "{} sync: {total} games across {platforms} platforms ({upserted} updated{}{}{}{})",
-        if incremental { "Incremental" } else { "Full" },
-        if pruned > 0 { format!(", {pruned} removed") } else { String::new() },
-        if collections > 0 { format!(", {collections} collections") } else { String::new() },
-        if renamed > 0 { format!(", {renamed} arcade titles") } else { String::new() },
-        // Said out loud because it is the number that explains why a local
-        // scan of 900 games and a server of 900 games is not 1,800.
-        if local > 0 {
-            format!(", {local} found on this device of which {folded} matched the server")
-        } else {
-            String::new()
-        },
-    ) + &if icons > 0 { format!(", {icons} console pictures") } else { String::new() })
+    moose_rack::commands::sync_library(&state, full, |what| {
+        let _ = app.emit("sync-progress", what.to_owned());
+    })
+    .await
 }
 
 #[tauri::command]

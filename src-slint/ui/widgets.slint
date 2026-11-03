@@ -13,6 +13,8 @@ export struct GameItem {
     tint: color,
     installed: bool,
     favorite: bool,
+    cover: image,
+    has-cover: bool,
 }
 
 export struct PlatformItem {
@@ -402,6 +404,14 @@ export component CoverArt inherits Rectangle {
     clip: true;
     background: @linear-gradient(160deg, root.game.tint.brighter(0.3) 0%, root.game.tint 45%, root.game.tint.darker(0.55) 100%);
 
+    // The real cover, when the library has one; the stand-in shows through until it loads.
+    if root.game.has-cover: Image {
+        source: root.game.cover;
+        width: parent.width;
+        height: parent.height;
+        image-fit: cover;
+    }
+
     Rectangle {
         y: 0px;
         height: root.large ? 26px : 18px;
@@ -418,7 +428,7 @@ export component CoverArt inherits Rectangle {
         }
     }
 
-    Text {
+    if !root.game.has-cover: Text {
         x: 10px;
         y: root.large ? 40px : 28px;
         width: parent.width - 20px;
