@@ -26,7 +26,8 @@ Four things went wrong in one day, and they are all the same thing:
 | 878 rows survived as "missing", showing beside the new names as duplicates | The database is the source of truth, so it cannot simply forget |
 
 The library on the SSD is already canonical: every file hash-verified, every
-name the consensus database name. That work is done and it is not going to be
+name the consensus database name. (Written when the SSD was the canonical copy.
+Since 2026-11-02 the NAS `GameFiles` share is, and the SSD is a travel copy.) That work is done and it is not going to be
 undone. What is needed is something that *reads* that library rather than
 keeping its own opinion about it.
 

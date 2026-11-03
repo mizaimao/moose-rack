@@ -211,7 +211,9 @@ and it should be offered as judgement rather than dressed up as data.
 
 ## Scope
 
-SSD only. Server, Android and Flip get pushed once the canonical copy is right.
+Written when the SSD was the canonical copy. Since 2026-11-02 the canonical
+library is the NAS `GameFiles` share; the Retro SSD, Android and the Flip are
+copies of it, and get pushed once the NAS copy is right.
 
 ## Where it stands
 
