@@ -17,6 +17,14 @@ export struct GameItem {
     has-cover: bool,
 }
 
+// One line of the launch checklist (docs/launch-flow.html).
+export struct CheckLine {
+    title: string,
+    detail: string,
+    size: string,
+    ready: bool,
+}
+
 export struct PlatformItem {
     name: string,
     short: string,
