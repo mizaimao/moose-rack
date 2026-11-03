@@ -75,7 +75,10 @@ does not scrape with Frank's ScreenScraper account — only the Android build
 does. So "just scrape it on the Mac" is not a plan, however reasonable it looks
 from the settings file, which holds the same credentials on both. New art is
 scraped on the Android device and comes back with
-`tools/pull-android-media.py`; the SSD stays canonical.
+`tools/pull-android-media.py`. The canonical library is the NAS `GameFiles` share
+(`/mnt/gamefiles` on dev.lan; Frank, 2026-11-02); the Retro SSD, which used to be
+canonical, is a copy for when the LAN is out of reach or too slow, so art that
+lands on the SSD still has to reach the NAS.
 
 Nothing here uses the ScreenScraper API directly: that needs a developer id
 issued to the software, on top of the user's account, and moose-rack has none.
