@@ -600,9 +600,14 @@ fn update_library(ui: &AppWindow) {
         let progress = weak.clone();
         let said = moose_rack::commands::sync_library(&lib, false, move |what| {
             let what = what.to_owned();
+            eprintln!("library: {what}");
             let _ = progress.upgrade_in_event_loop(move |ui| ui.invoke_show_toast(format!("Library: {what}").into()));
         })
         .await;
+        match &said {
+            Ok(line) => eprintln!("library: {line}"),
+            Err(e) => eprintln!("library: update failed: {e}"),
+        }
         let _ = weak.upgrade_in_event_loop(move |ui| {
             let fresh = library::load(&lib);
             with_app(|a| {
