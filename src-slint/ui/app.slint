@@ -60,6 +60,19 @@ component GameGrid inherits Rectangle {
         root.ensure-visible();
     }
 
+    // The games on screen, as indices into `games`, so covers load only near
+    // them: every game in the list has a card, and a cover for each of 2,500
+    // arcade games would take gigabytes.
+    out property <int> first-visible: Math.max(0, Math.floor((-flick.content-y - root.pad) / (root.row-height + root.gap))) * root.cols;
+    out property <int> last-visible: Math.min(root.games.length - 1, (Math.floor((-flick.content-y + flick.height - root.pad) / (root.row-height + root.gap)) + 1) * root.cols - 1);
+    callback visible-changed(int, int);
+    changed first-visible => {
+        root.visible-changed(root.first-visible, root.last-visible);
+    }
+    changed last-visible => {
+        root.visible-changed(root.first-visible, root.last-visible);
+    }
+
     flick := Flickable {
         content-width: self.width;
         content-height: 2 * root.pad + root.rows * (root.row-height + root.gap) - root.gap;
@@ -365,6 +378,8 @@ export component AppWindow inherits Window {
     callback random-pick();
     callback sort-toggled();
     callback play(int);
+    // The games on screen in the grid, by index: covers load near them.
+    callback visible-range(int, int);
     callback favorite-toggled(int);
     callback download-finished(int);
     callback removed(int);
@@ -708,6 +723,9 @@ export component AppWindow inherits Window {
                     card-width: root.mode == 0 ? root.zoom * 1.35 * 1px : root.zoom * 1px;
                     list-view: root.list-view;
                     lit: root.focus-zone == Zone.grid;
+                    visible-changed(first, last) => {
+                        root.visible-range(first, last);
+                    }
                     picked(i) => {
                         root.selected-index = i;
                         root.focus-zone = Zone.grid;

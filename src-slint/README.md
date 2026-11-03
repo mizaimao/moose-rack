@@ -11,9 +11,21 @@ console column, the cover grid and list rows, the detail pane with chips,
 buttons and a download bar, the Sofa detail panel, Settings (toggles, a
 segmented choice, a slider) and the toast.
 
-The data is a sample of real titles with made-up sizes and stand-in covers.
-Nothing here calls `moose_rack` yet; sorting and filtering are a few lines in
-`src/main.rs` where the real port would use the core.
+The data is the real library, through the shared core (`src/library.rs`): the
+consoles and games in the same cache the desktop app uses, kept current by the
+same library update (`moose_rack::commands::sync_library`) in the background.
+Covers load only near what's on screen and are shrunk to card size on a
+background thread (`fetch_covers` in `src/main.rs`); every game in a list has
+a card, and full-size art for the arcade's 2,501 would take gigabytes. With no
+config, with `MOOSE_SLINT_SAMPLE=1`, or for a snapshot without
+`MOOSE_SLINT_REAL=1`, it shows the old sample instead (`src/sample.rs`).
+`MOOSE_SLINT_PLATFORM=gba` opens on one console, and
+`MOOSE_SLINT_SNAPSHOT_WAIT` gives a snapshot time for covers to arrive.
+
+On macserver with the real library (13,041 games, 2026-11-02), `footprint`
+gave 77 MB open on the Game Boy Advance with covers drawn, against 192 MB for
+the desktop app (`docs/memory-footprint.md`). Play, the game details and the
+remaining controller rules are next.
 
 ## Renderer
 

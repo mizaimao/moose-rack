@@ -1,27 +1,27 @@
 //! Sample library: real titles from Frank's shelves, so the grid reads like his
 //! rather than like lorem ipsum. Years are North American release years.
 
-pub struct Platform {
-    pub name: &'static str,
-    pub short: &'static str,
-    pub rgb: (u8, u8, u8),
+struct RawPlatform {
+    name: &'static str,
+    short: &'static str,
+    rgb: (u8, u8, u8),
     /// Typical size of one game, in MB, for the made-up sizes.
-    pub typical_mb: u32,
-    pub games: Vec<Game>,
+    typical_mb: u32,
+    games: Vec<RawGame>,
 }
 
-pub struct Game {
-    pub title: &'static str,
-    pub year: u16,
+struct RawGame {
+    title: &'static str,
+    year: u16,
 }
 
-fn games(list: &[(&'static str, u16)]) -> Vec<Game> {
-    list.iter().map(|&(title, year)| Game { title, year }).collect()
+fn games(list: &[(&'static str, u16)]) -> Vec<RawGame> {
+    list.iter().map(|&(title, year)| RawGame { title, year }).collect()
 }
 
-pub fn platforms() -> Vec<Platform> {
+fn raw() -> Vec<RawPlatform> {
     vec![
-        Platform {
+        RawPlatform {
             name: "PlayStation 2",
             short: "PS2",
             rgb: (52, 84, 196),
@@ -59,7 +59,7 @@ pub fn platforms() -> Vec<Platform> {
                 ("Gran Turismo 4", 2005),
             ]),
         },
-        Platform {
+        RawPlatform {
             name: "Xbox",
             short: "XBOX",
             rgb: (58, 140, 62),
@@ -77,7 +77,7 @@ pub fn platforms() -> Vec<Platform> {
                 ("Conker: Live & Reloaded", 2005),
             ]),
         },
-        Platform {
+        RawPlatform {
             name: "Super Nintendo",
             short: "SNES",
             rgb: (104, 74, 196),
@@ -93,7 +93,7 @@ pub fn platforms() -> Vec<Platform> {
                 ("Super Mario RPG", 1996),
             ]),
         },
-        Platform {
+        RawPlatform {
             name: "Game Boy Advance",
             short: "GBA",
             rgb: (86, 70, 170),
@@ -107,7 +107,7 @@ pub fn platforms() -> Vec<Platform> {
                 ("Pokemon Emerald", 2005),
             ]),
         },
-        Platform {
+        RawPlatform {
             name: "Genesis",
             short: "MD",
             rgb: (178, 44, 44),
@@ -119,7 +119,7 @@ pub fn platforms() -> Vec<Platform> {
                 ("Shinobi III", 1993),
             ]),
         },
-        Platform {
+        RawPlatform {
             name: "Nintendo 64",
             short: "N64",
             rgb: (196, 98, 30),
@@ -132,7 +132,7 @@ pub fn platforms() -> Vec<Platform> {
                 ("Mario Kart 64", 1997),
             ]),
         },
-        Platform {
+        RawPlatform {
             name: "Dreamcast",
             short: "DC",
             rgb: (214, 132, 20),
@@ -145,4 +145,39 @@ pub fn platforms() -> Vec<Platform> {
             ]),
         },
     ]
+}
+
+/// The sample in the app's shape. Sizes are made up from each console's
+/// typical size, about a third of the games count as downloaded, and a few are
+/// favorites, so every tab has something in it.
+pub fn platforms() -> Vec<crate::model::Platform> {
+    use crate::model::{Game, Platform, hash};
+    const FAVORITES: [&str; 5] =
+        ["Ratchet & Clank: Up Your Arsenal", "Sly 2: Band of Thieves", "Okami", "Jet Set Radio Future", "Super Metroid"];
+    let mut id = 0;
+    raw()
+        .into_iter()
+        .map(|p| Platform {
+            slug: p.short.to_lowercase(),
+            name: p.name.to_owned(),
+            short: p.short.to_owned(),
+            rgb: p.rgb,
+            games: p
+                .games
+                .into_iter()
+                .map(|g| {
+                    id += 1;
+                    Game {
+                        id,
+                        title: g.title.to_owned(),
+                        year: Some(i32::from(g.year)),
+                        bytes: u64::from(p.typical_mb) * (60 + hash(g.title) % 80) / 100 * 1_000_000,
+                        installed: hash(g.title) % 3 == 0,
+                        favorite: FAVORITES.contains(&g.title),
+                        cover: None,
+                    }
+                })
+                .collect(),
+        })
+        .collect()
 }
