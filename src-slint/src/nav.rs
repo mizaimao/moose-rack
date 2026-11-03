@@ -31,6 +31,18 @@ const ZOOM_MAX: f32 = 300.0;
 /// Carry out one action. False when it meant nothing where the cursor is, so a
 /// key can fall through to whatever else wants it.
 pub fn dispatch(ui: &AppWindow, action: &str) -> bool {
+    // The launch checklist takes every action while it is open: nothing behind
+    // it moves, as in the desktop app's launch questions.
+    if ui.get_checklist_open() {
+        let has_main = !ui.get_checklist_button().is_empty() && ui.get_checklist_progress().is_empty();
+        match action {
+            "left" | "right" if has_main => ui.set_checklist_at(1 - ui.get_checklist_at()),
+            "activate" if has_main && ui.get_checklist_at() == 0 => ui.invoke_checklist_go(),
+            "activate" | "back" | "back2" => ui.invoke_checklist_cancel(),
+            _ => {}
+        }
+        return true;
+    }
     let zone = ui.get_focus_zone();
     let at = ui.get_focus_index();
     let desk = ui.get_mode() == 1;

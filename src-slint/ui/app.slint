@@ -8,12 +8,12 @@
 // the mouse sets them too, so mixing the two never leaves two highlights.
 import { Theme } from "theme.slint";
 import {
-    GameItem, PlatformItem, Button, IconButton, Segmented, SearchField, Toggle, Slider,
+    GameItem, PlatformItem, CheckLine, Button, IconButton, Segmented, SearchField, Toggle, Slider,
     ProgressBar, Chip, KeyHint, Tab, CoverArt, CoverCard, ListRow, ConsoleRow, Toast, Hint,
 } from "widgets.slint";
 import "../../assets/fonts/NotoSans[wdth,wght].ttf";
 
-export { GameItem, PlatformItem }
+export { GameItem, PlatformItem, CheckLine }
 
 // Where the cursor can be. Rust uses the same numbers.
 export global Zone {
@@ -345,6 +345,18 @@ export component AppWindow inherits Window {
     in-out property <float> download-progress: 0;
     in-out property <bool> settings-open: false;
     in-out property <bool> sofa-detail-open: false;
+    // The launch checklist (docs/launch-flow.html): shown when the game or its
+    // emulator has something to fetch. `checklist-button` is "" when nothing
+    // can be fetched (`checklist-blocked` says why); `checklist-at` is the
+    // button under the cursor, 0 the main one and 1 Cancel.
+    in-out property <bool> checklist-open: false;
+    in property <string> checklist-game;
+    in property <string> checklist-platform;
+    in property <[CheckLine]> checklist-lines;
+    in property <string> checklist-button;
+    in property <string> checklist-blocked;
+    in property <string> checklist-progress;
+    in-out property <int> checklist-at: 0;
     in-out property <string> toast-text;
     in-out property <bool> toast-shown: false;
 
@@ -380,6 +392,8 @@ export component AppWindow inherits Window {
     callback play(int);
     // The games on screen in the grid, by index: covers load near them.
     callback visible-range(int, int);
+    callback checklist-go();
+    callback checklist-cancel();
     callback favorite-toggled(int);
     callback download-finished(int);
     callback removed(int);
@@ -1014,6 +1028,121 @@ export component AppWindow inherits Window {
                             clicked => {
                                 root.settings-open = false;
                                 root.focus-zone = Zone.grid;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if root.checklist-open: Rectangle {
+            background: #0b0c0fc0;
+
+            TouchArea {
+                clicked => {
+                    root.checklist-cancel();
+                }
+            }
+
+            Rectangle {
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+                width: 520px;
+                height: box.preferred-height;
+                border-radius: 16px;
+                background: Theme.panel;
+                border-width: 1px;
+                border-color: Theme.line;
+                drop-shadow-blur: 40px;
+                drop-shadow-color: #00000090;
+
+                TouchArea { }
+
+                box := VerticalLayout {
+                    padding: 24px;
+                    spacing: 10px;
+
+                    Text {
+                        text: root.checklist-game;
+                        color: Theme.text;
+                        font-size: 19px;
+                        font-weight: 700;
+                        wrap: word-wrap;
+                    }
+                    Text {
+                        text: root.checklist-platform;
+                        color: Theme.dim;
+                        font-size: 13px;
+                    }
+
+                    for line in root.checklist-lines: HorizontalLayout {
+                        spacing: 12px;
+                        padding-top: 4px;
+                        VerticalLayout {
+                            alignment: start;
+                            padding-top: 3px;
+                            Rectangle {
+                                width: 16px;
+                                height: 16px;
+                                border-radius: 8px;
+                                border-width: 2px;
+                                border-color: line.ready ? Theme.ok : Theme.warn;
+                                background: line.ready ? Theme.ok : transparent;
+                            }
+                        }
+                        VerticalLayout {
+                            horizontal-stretch: 1;
+                            Text {
+                                text: line.title;
+                                color: Theme.text;
+                                font-size: 14px;
+                                font-weight: 600;
+                            }
+                            Text {
+                                text: line.detail;
+                                color: Theme.dim;
+                                font-size: 12px;
+                                wrap: word-wrap;
+                            }
+                        }
+                        Text {
+                            text: line.size;
+                            color: Theme.text;
+                            font-size: 14px;
+                            font-weight: 600;
+                        }
+                    }
+
+                    if root.checklist-blocked != "": Text {
+                        text: root.checklist-blocked;
+                        color: Theme.warn;
+                        font-size: 13px;
+                        wrap: word-wrap;
+                    }
+
+                    Text {
+                        text: root.checklist-progress != "" ? root.checklist-progress : "Saves are checked with the server after you press Play.";
+                        color: Theme.dim;
+                        font-size: 12px;
+                        wrap: word-wrap;
+                    }
+
+                    HorizontalLayout {
+                        spacing: 10px;
+                        alignment: start;
+                        if root.checklist-button != "" && root.checklist-progress == "": Button {
+                            text: root.checklist-button;
+                            primary: true;
+                            cursor: root.checklist-at == 0;
+                            clicked => {
+                                root.checklist-go();
+                            }
+                        }
+                        Button {
+                            text: "Cancel";
+                            cursor: root.checklist-at == 1 || root.checklist-button == "";
+                            clicked => {
+                                root.checklist-cancel();
                             }
                         }
                     }

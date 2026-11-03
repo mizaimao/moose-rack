@@ -24,8 +24,19 @@ config, with `MOOSE_SLINT_SAMPLE=1`, or for a snapshot without
 
 On macserver with the real library (13,041 games, 2026-11-02), `footprint`
 gave 77 MB open on the Game Boy Advance with covers drawn, against 192 MB for
-the desktop app (`docs/memory-footprint.md`). Play, the game details and the
-remaining controller rules are next.
+the desktop app (`docs/memory-footprint.md`).
+
+Play goes through the shared launch (`moose_rack::play`): the checklist first,
+shown as a window only when the game or its emulator has something to fetch,
+with each line's size and a Download button for the total; then the saves,
+the emulator and the launch record. The launch runs on a thread of its own,
+and the window won't close while a game runs. A save conflict or an
+unreachable server is said in a toast for now; the desktop app's dialogs for
+them are still to port. `MOOSE_SLINT_TEST_PLAY=ps2/Crazy Taxi (USA).chd` presses
+Play on a game and `MOOSE_SLINT_TEST_ACCEPT=1` presses the checklist's button,
+for running it where nobody is at the screen. On macserver (2026-11-03) that
+downloaded Crazy Taxi and PCSX2, booted the game and uploaded its launch
+record. The game details and the remaining controller rules are next.
 
 ## Renderer
 

@@ -49,6 +49,10 @@ struct App {
     visible: (usize, usize),
     /// Games whose cover has been asked for and not dropped since.
     requested: std::collections::HashSet<i64>,
+    /// What is running: the window won't close while a game is (`moose_rack::busy`).
+    busy: Arc<moose_rack::busy::Busy>,
+    /// The game the checklist window is about, while it is open.
+    checking: Option<i64>,
 }
 
 thread_local! {
@@ -82,6 +86,8 @@ fn main() -> Result<(), slint::PlatformError> {
             runtime,
             visible: (0, NEAR),
             requested: Default::default(),
+            busy: Default::default(),
+            checking: None,
         })
     });
     // MOOSE_SLINT_PLATFORM=gba opens on that console, for measuring one.
@@ -93,6 +99,21 @@ fn main() -> Result<(), slint::PlatformError> {
     fetch_covers(&ui);
     if lib.is_some() {
         update_library(&ui);
+    }
+    // Test switches, for driving it where nobody is at the screen:
+    // MOOSE_SLINT_TEST_PLAY=ps2/Crazy Taxi (USA).chd presses Play on that game
+    // two seconds in, and MOOSE_SLINT_TEST_ACCEPT presses the checklist's main
+    // button when it shows.
+    if let (Ok(target), Some(state)) = (std::env::var("MOOSE_SLINT_TEST_PLAY"), lib.clone()) {
+        let weak = ui.as_weak();
+        slint::Timer::single_shot(Duration::from_secs(2), move || {
+            let Some(ui) = weak.upgrade() else { return };
+            let (platform, file) = target.split_once('/').unwrap_or(("", target.as_str()));
+            match moose_rack::commands::find_rom_by_file(&state, platform.to_owned(), file.to_owned()) {
+                Ok(Some(id)) => play_game(&ui, id),
+                _ => eprintln!("test play: {target} is not in the library"),
+            }
+        });
     }
 
     ui.on_platform_selected({
@@ -182,8 +203,41 @@ fn main() -> Result<(), slint::PlatformError> {
         let weak = ui.as_weak();
         move |i: i32| {
             let ui = weak.unwrap();
-            if let Some(title) = with_app(|a| a.state.shown.get(i as usize).map(|&(pi, gi)| a.platforms[pi].games[gi].title.clone())).flatten() {
-                ui.invoke_show_toast(format!("Starting {title} (Play comes in the next step)").into());
+            if let Some(id) = with_app(|a| a.state.shown.get(i as usize).map(|&(pi, gi)| a.platforms[pi].games[gi].id)).flatten() {
+                play_game(&ui, id);
+            }
+        }
+    });
+
+    ui.on_checklist_go({
+        let weak = ui.as_weak();
+        move || checklist_download(&weak.unwrap())
+    });
+
+    ui.on_checklist_cancel({
+        let weak = ui.as_weak();
+        move || {
+            let ui = weak.unwrap();
+            let fetching = !ui.get_checklist_progress().is_empty();
+            with_app(|a| a.checking = None);
+            ui.set_checklist_open(false);
+            ui.invoke_show_toast(if fetching { "The download carries on; press Play again when it's done" } else { "Launch cancelled" }.into());
+        }
+    });
+
+    // Not while a game runs: its saves go up when it ends, as in the desktop app.
+    ui.window().on_close_requested({
+        let weak = ui.as_weak();
+        move || {
+            let running = with_app(|a| a.busy.hold()).flatten();
+            match running {
+                Some(moose_rack::busy::Hold::Playing(name)) => {
+                    if let Some(ui) = weak.upgrade() {
+                        ui.invoke_show_toast(format!("{name} is still running. Quit the game first: its saves go up when it ends.").into());
+                    }
+                    slint::CloseRequestResponse::KeepWindowShown
+                }
+                _ => slint::CloseRequestResponse::HideWindow,
             }
         }
     });
@@ -699,4 +753,156 @@ fn rgb((r, g, b): (u8, u8, u8)) -> Color {
 fn random() -> u64 {
     let nanos = SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.subsec_nanos()).unwrap_or(0);
     hash(&nanos.to_string())
+}
+
+/// Play: the shared launch checklist first (docs/launch-flow.html). When the
+/// game and its emulator are both here the game starts with no window; when
+/// something is missing the checklist window shows it, with its size.
+fn play_game(ui: &AppWindow, id: i64) {
+    let Some((lib, rt, busy)) = with_app(|a| Some((a.lib.clone()?, a.runtime.clone()?, a.busy.clone()))).flatten() else {
+        ui.invoke_show_toast("Playing needs the real library; this is the sample".into());
+        return;
+    };
+    if let Some(moose_rack::busy::Hold::Playing(name)) = busy.hold() {
+        ui.invoke_show_toast(format!("{name} is already running").into());
+        return;
+    }
+    let weak = ui.as_weak();
+    rt.spawn(async move {
+        let list = moose_rack::play::checklist(&lib, id).await;
+        let _ = weak.upgrade_in_event_loop(move |ui| match list {
+            Ok(list) if list.ready => start_launch(&ui, id),
+            Ok(list) => show_checklist(&ui, id, &list),
+            // A check that can't run is no reason to refuse: the launch says
+            // what is really wrong.
+            Err(_) => start_launch(&ui, id),
+        });
+    });
+}
+
+/// Open the checklist window for this game, or bring it up to date.
+fn show_checklist(ui: &AppWindow, id: i64, list: &moose_rack::play::Checklist) {
+    let platform = with_app(|a| {
+        a.checking = Some(id);
+        a.platforms.iter().find(|p| p.slug == list.platform).map(|p| p.name.clone())
+    })
+    .flatten()
+    .unwrap_or_else(|| list.platform.clone());
+    let line = |title: &str, item: &moose_rack::play::Item| CheckLine {
+        title: title.into(),
+        detail: format!("{}: {}", item.label, item.detail).into(),
+        size: item.bytes.map(human).unwrap_or_default().into(),
+        ready: item.ready,
+    };
+    let button = if list.blocked.is_some() {
+        String::new()
+    } else if list.download_bytes > 0 {
+        format!("Download {}", human(list.download_bytes))
+    } else {
+        "Set up".to_owned()
+    };
+    ui.set_checklist_game(list.name.as_str().into());
+    ui.set_checklist_platform(platform.into());
+    ui.set_checklist_lines(ModelRc::new(VecModel::from(vec![line("Game file", &list.game), line("Emulator", &list.emulator)])));
+    ui.set_checklist_button(button.into());
+    ui.set_checklist_blocked(list.blocked.clone().unwrap_or_default().into());
+    ui.set_checklist_progress(SharedString::new());
+    ui.set_checklist_at(0);
+    ui.set_checklist_open(true);
+    if std::env::var_os("MOOSE_SLINT_TEST_ACCEPT").is_some() && list.blocked.is_none() {
+        let weak = ui.as_weak();
+        slint::Timer::single_shot(Duration::from_millis(1500), move || {
+            if let Some(ui) = weak.upgrade() {
+                eprintln!("test: pressing {}", ui.get_checklist_button());
+                checklist_download(&ui);
+            }
+        });
+    }
+}
+
+/// The checklist's Download button: fetch everything missing through the
+/// shared core, then check again; ready means the game starts.
+fn checklist_download(ui: &AppWindow) {
+    let Some((lib, rt, id)) = with_app(|a| Some((a.lib.clone()?, a.runtime.clone()?, a.checking?))).flatten() else { return };
+    ui.set_checklist_progress("Starting…".into());
+    let weak = ui.as_weak();
+    rt.spawn(async move {
+        let progress = weak.clone();
+        let fetched = moose_rack::play::prepare(&lib, id, move |what| {
+            let what = what.to_owned();
+            let _ = progress.upgrade_in_event_loop(move |ui| ui.set_checklist_progress(what.into()));
+        })
+        .await;
+        let list = moose_rack::play::checklist(&lib, id).await;
+        let _ = weak.upgrade_in_event_loop(move |ui| {
+            // Cancelled while it fetched: say it's done, start nothing.
+            let still_asked = with_app(|a| a.checking == Some(id)).unwrap_or(false);
+            mark_installed(&ui, id, list.as_ref().is_ok_and(|l| l.game.ready));
+            match (fetched, list) {
+                (Err(e), _) => {
+                    ui.set_checklist_progress(SharedString::new());
+                    ui.invoke_show_toast(format!("Download failed: {e}").into());
+                }
+                (Ok(_), Ok(list)) if list.ready && still_asked => {
+                    with_app(|a| a.checking = None);
+                    ui.set_checklist_open(false);
+                    start_launch(&ui, id);
+                }
+                (Ok(_), Ok(list)) if still_asked => show_checklist(&ui, id, &list),
+                (Ok(said), _) => ui.invoke_show_toast(if said.is_empty() { "Ready".to_owned() } else { said }.into()),
+            }
+        });
+    });
+}
+
+/// Mark a game downloaded or not wherever it is shown.
+fn mark_installed(ui: &AppWindow, id: i64, installed: bool) {
+    let row = with_app(|a| {
+        let (pi, gi) = a.platforms.iter().enumerate().find_map(|(pi, p)| p.games.iter().position(|g| g.id == id).map(|gi| (pi, gi)))?;
+        a.platforms[pi].games[gi].installed = installed;
+        a.state.shown.iter().position(|&k| k == (pi, gi))
+    })
+    .flatten();
+    if let Some(row) = row {
+        redraw_row(ui, row);
+    }
+}
+
+/// Start the game through the shared launch (`moose_rack::play::launch`):
+/// saves checked, the emulator run and waited for, saves uploaded, the launch
+/// recorded. On a thread of its own, because the emulator run blocks until the
+/// game ends.
+fn start_launch(ui: &AppWindow, id: i64) {
+    let Some((lib, busy)) = with_app(|a| Some((a.lib.clone()?, a.busy.clone()))).flatten() else { return };
+    let weak = ui.as_weak();
+    std::thread::spawn(move || {
+        let Ok(rt) = tokio::runtime::Builder::new_current_thread().enable_all().build() else { return };
+        let progress = weak.clone();
+        let say = move |what: &str| {
+            let what = what.to_owned();
+            let _ = progress.upgrade_in_event_loop(move |ui| ui.invoke_show_toast(what.into()));
+        };
+        let result = rt.block_on(moose_rack::play::launch(&lib, &busy, id, moose_rack::play::Options::default(), say));
+        let _ = weak.upgrade_in_event_loop(move |ui| {
+            let line = match result {
+                Ok(line) => line,
+                Err(e) => stop_reason(&e),
+            };
+            ui.invoke_show_toast(line.into());
+        });
+    });
+}
+
+/// A launch that stopped to ask, in words. The desktop app turns these codes
+/// into dialogs; here, for now, they are said.
+fn stop_reason(e: &str) -> String {
+    if e.starts_with("SAVE_CONFLICT:") {
+        "This game's save changed on two devices. Choose which to keep in the desktop app for now.".to_owned()
+    } else if let Some(why) = e.strip_prefix("SAVE_OFFLINE:") {
+        format!("Saves can't be checked with the server: {why}")
+    } else if let Some(what) = e.strip_prefix("BIOS_MISSING:") {
+        format!("A BIOS is missing: {what}")
+    } else {
+        format!("Launch failed: {e}")
+    }
 }
