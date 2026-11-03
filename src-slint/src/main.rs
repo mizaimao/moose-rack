@@ -53,6 +53,8 @@ struct App {
     busy: Arc<moose_rack::busy::Busy>,
     /// The game the checklist window is about, while it is open.
     checking: Option<i64>,
+    /// Why the last library update failed, until one succeeds.
+    library_error: Option<String>,
 }
 
 thread_local! {
@@ -88,6 +90,7 @@ fn main() -> Result<(), slint::PlatformError> {
             requested: Default::default(),
             busy: Default::default(),
             checking: None,
+            library_error: None,
         })
     });
     // MOOSE_SLINT_PLATFORM=gba opens on that console, for measuring one.
@@ -536,7 +539,11 @@ fn refresh(ui: &AppWindow, keep: Option<(usize, usize)>) {
             match s.tab {
                 1 => "Favorites".to_string(),
                 2 => "On this device".to_string(),
-                _ => platforms.get(s.platform).map_or_else(|| "Updating the library…".to_owned(), |p| p.name.clone()),
+                _ => match (platforms.get(s.platform), &a.library_error) {
+                    (Some(p), _) => p.name.clone(),
+                    (None, Some(why)) => format!("Couldn't load the library: {why}"),
+                    (None, None) => "Updating the library…".to_owned(),
+                },
             }
         };
         let rows: Vec<GameItem> = shown.iter().map(|&(pi, gi)| item(&platforms[pi], gi)).collect();
@@ -617,12 +624,27 @@ fn update_library(ui: &AppWindow) {
                 a.platforms = fresh;
                 a.state.platform = slug.and_then(|s| a.platforms.iter().position(|p| p.slug == s)).unwrap_or(0);
             });
+            let empty = with_app(|a| {
+                a.library_error = said.as_ref().err().map(|e| plain_error(e));
+                a.platforms.is_empty()
+            })
+            .unwrap_or(true);
             show_platforms(&ui);
             refresh(&ui, None);
             fetch_covers(&ui);
             match said {
                 Ok(line) => ui.invoke_show_toast(line.into()),
-                Err(e) => ui.invoke_show_toast(format!("Library update failed: {e}").into()),
+                Err(e) => ui.invoke_show_toast(format!("Library update failed: {}", plain_error(&e)).into()),
+            }
+            // Nothing to show yet: try again, so allowing the network in System
+            // Settings, or the server coming back, fills the window by itself.
+            if empty {
+                let again = ui.as_weak();
+                slint::Timer::single_shot(Duration::from_secs(15), move || {
+                    if let Some(ui) = again.upgrade() {
+                        update_library(&ui);
+                    }
+                });
             }
         });
     });
@@ -909,5 +931,17 @@ fn stop_reason(e: &str) -> String {
         format!("A BIOS is missing: {what}")
     } else {
         format!("Launch failed: {e}")
+    }
+}
+
+/// A library update failure in words someone can act on.
+fn plain_error(e: &str) -> String {
+    if e.contains("os error 65") {
+        // macOS 15 and later: the app hasn't been allowed onto the LAN.
+        "macOS hasn't let Moose Rack onto your local network. Allow it in System Settings > Privacy & Security > Local Network.".to_owned()
+    } else if e.contains("tcp connect error") || e.contains("timed out") {
+        "the server didn't answer. Moose Rack tries again every 15 seconds.".to_owned()
+    } else {
+        e.lines().next().unwrap_or(e).to_owned()
     }
 }
