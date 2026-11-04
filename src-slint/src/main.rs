@@ -55,6 +55,9 @@ struct App {
     checking: Option<i64>,
     /// Why the last library update failed, until one succeeds.
     library_error: Option<String>,
+    /// Counts selection changes, so details that arrive late for a game the
+    /// cursor has left are dropped.
+    detail_gen: u64,
 }
 
 thread_local! {
@@ -91,6 +94,7 @@ fn main() -> Result<(), slint::PlatformError> {
             busy: Default::default(),
             checking: None,
             library_error: None,
+            detail_gen: 0,
         })
     });
     // MOOSE_SLINT_PLATFORM=gba opens on that console, for measuring one.
@@ -210,6 +214,11 @@ fn main() -> Result<(), slint::PlatformError> {
                 play_game(&ui, id);
             }
         }
+    });
+
+    ui.on_selection_changed({
+        let weak = ui.as_weak();
+        move |_row: i32| request_detail(&weak.unwrap())
     });
 
     ui.on_checklist_go({
@@ -558,8 +567,21 @@ fn refresh(ui: &AppWindow, keep: Option<(usize, usize)>) {
     ui.set_heading(heading.into());
     ui.set_sort_label(if by_year { "Year" } else { "Name" }.into());
     ui.set_platform_index(platform as i32);
+    ui.set_art_aspect(art_aspect());
     ui.set_games(ModelRc::new(VecModel::from(rows)));
     ui.set_selected_index(cursor as i32);
+    request_detail(ui);
+}
+
+/// The shape of the cards on show: the console's art shape on its own page,
+/// tall box shape elsewhere. Kept between a tall box and a wide cartridge.
+fn art_aspect() -> f32 {
+    with_app(|a| {
+        let on_console = a.state.tab == 0 && a.state.query.is_empty();
+        let shape = if on_console { a.platforms.get(a.state.platform).and_then(|p| p.aspect) } else { None };
+        shape.unwrap_or(0.75).clamp(0.6, 1.6)
+    })
+    .unwrap_or(0.75)
 }
 
 /// Draw one row of the grid again, after its game changed.
@@ -621,6 +643,27 @@ fn update_library(ui: &AppWindow) {
                 // Stay on the same console, found by name, as the list may
                 // have gained or lost consoles before it.
                 let slug = a.platforms.get(a.state.platform).map(|p| p.slug.clone());
+                // Keep the covers already drawn and the shapes already measured:
+                // the fresh list has neither, and a cover marked as asked for
+                // would never be asked for again.
+                let mut fresh = fresh;
+                let mut kept: std::collections::HashMap<i64, slint::Image> = std::collections::HashMap::new();
+                let mut shapes: std::collections::HashMap<String, f32> = std::collections::HashMap::new();
+                for p in a.platforms.drain(..) {
+                    if let Some(s) = p.aspect {
+                        shapes.insert(p.slug.clone(), s);
+                    }
+                    kept.extend(p.games.into_iter().filter_map(|g| Some((g.id, g.cover?))));
+                }
+                for p in &mut fresh {
+                    if p.aspect.is_none() {
+                        p.aspect = shapes.get(&p.slug).copied();
+                    }
+                    for g in &mut p.games {
+                        g.cover = kept.remove(&g.id);
+                    }
+                }
+                a.requested = fresh.iter().flat_map(|p| p.games.iter()).filter(|g| g.cover.is_some()).map(|g| g.id).collect();
                 a.platforms = fresh;
                 a.state.platform = slug.and_then(|s| a.platforms.iter().position(|p| p.slug == s)).unwrap_or(0);
             });
@@ -633,7 +676,12 @@ fn update_library(ui: &AppWindow) {
             refresh(&ui, None);
             fetch_covers(&ui);
             match said {
-                Ok(line) => ui.invoke_show_toast(line.into()),
+                Ok(line) => {
+                    // "Synced 20:41": when this device last heard from the server.
+                    let now = moose_rack::util::now_iso();
+                    ui.set_status(format!("Synced {}", now.get(11..16).unwrap_or("")).into());
+                    ui.invoke_show_toast(line.into())
+                }
                 Err(e) => ui.invoke_show_toast(format!("Library update failed: {}", plain_error(&e)).into()),
             }
             // Nothing to show yet: try again, so allowing the network in System
@@ -723,8 +771,13 @@ fn fetch_covers(ui: &AppWindow) {
 
 /// A cover file, shrunk to `COVER_WIDTH` wide, ready for the window.
 fn shrunk(path: &str) -> Option<slint::SharedPixelBuffer<slint::Rgba8Pixel>> {
+    shrunk_to(path, COVER_WIDTH)
+}
+
+/// A picture file, shrunk to at most `width` pixels wide.
+fn shrunk_to(path: &str, width: u32) -> Option<slint::SharedPixelBuffer<slint::Rgba8Pixel>> {
     let picture = image::open(path).ok()?;
-    let small = if picture.width() > COVER_WIDTH { picture.thumbnail(COVER_WIDTH, u32::MAX) } else { picture };
+    let small = if picture.width() > width { picture.thumbnail(width, u32::MAX) } else { picture };
     let rgba = small.to_rgba8();
     Some(slint::SharedPixelBuffer::clone_from_slice(rgba.as_raw(), rgba.width(), rgba.height()))
 }
@@ -747,9 +800,34 @@ fn apply_covers(ui: &AppWindow, pictures: Vec<(i64, slint::SharedPixelBuffer<sli
                 rows.push(row);
             }
         }
-        rows
+        // A console whose art shape isn't known yet takes the middle shape of
+        // its first six covers.
+        let mut reshaped = false;
+        for p in &mut a.platforms {
+            if p.aspect.is_some() {
+                continue;
+            }
+            let mut shapes: Vec<f32> = p
+                .games
+                .iter()
+                .filter_map(|g| g.cover.as_ref())
+                .map(|c| c.size())
+                .filter(|s| s.height > 0)
+                .map(|s| s.width as f32 / s.height as f32)
+                .collect();
+            if shapes.len() >= 6 {
+                shapes.sort_by(f32::total_cmp);
+                p.aspect = Some(shapes[shapes.len() / 2]);
+                reshaped = true;
+            }
+        }
+        (rows, reshaped)
     })
     .unwrap_or_default();
+    let (rows, reshaped) = rows;
+    if reshaped {
+        ui.set_art_aspect(art_aspect());
+    }
     for row in rows {
         redraw_row(ui, row);
     }
@@ -944,4 +1022,85 @@ fn plain_error(e: &str) -> String {
     } else {
         e.lines().next().unwrap_or(e).to_owned()
     }
+}
+
+/// Load the selected game's details for the pane, a moment after the cursor
+/// stops, so running down a list doesn't fetch every game it passes.
+fn request_detail(ui: &AppWindow) {
+    let row = ui.get_selected_index().max(0) as usize;
+    let picked = with_app(|a| {
+        a.detail_gen += 1;
+        let turn = a.detail_gen;
+        a.state.shown.get(row).map(|&(pi, gi)| (a.platforms[pi].games[gi].id, turn))
+    })
+    .flatten();
+    clear_detail(ui);
+    let Some((id, turn)) = picked else { return };
+    let weak = ui.as_weak();
+    slint::Timer::single_shot(Duration::from_millis(150), move || {
+        if with_app(|a| a.detail_gen == turn).unwrap_or(false)
+            && let Some(ui) = weak.upgrade()
+        {
+            load_detail(&ui, id, turn);
+        }
+    });
+}
+
+fn clear_detail(ui: &AppWindow) {
+    ui.set_detail_has_art(false);
+    ui.set_detail_summary(SharedString::new());
+    ui.set_detail_meta(SharedString::new());
+    ui.set_detail_emulator(SharedString::new());
+    ui.set_detail_shots(ModelRc::default());
+}
+
+/// The details from the shared core (`commands::rom_detail`): the fuller
+/// artwork the old app showed in its pane, the description, a line of facts,
+/// the emulator, and up to three screenshots. Pictures are shrunk off the
+/// window's thread.
+fn load_detail(ui: &AppWindow, id: i64, turn: u64) {
+    let Some((lib, rt)) = with_app(|a| a.lib.clone().zip(a.runtime.clone())).flatten() else { return };
+    let weak = ui.as_weak();
+    rt.spawn(async move {
+        let Ok(d) = moose_rack::commands::rom_detail(&lib, id).await else { return };
+        let emulator = moose_rack::standalone::for_platform(&d.platform_slug)
+            .map(|e| e.name.to_owned())
+            .unwrap_or_else(|| "RetroArch".to_owned());
+        let mut facts: Vec<String> = Vec::new();
+        if let Some(year) = d.release_year {
+            facts.push(year.to_string());
+        }
+        if !d.genres.is_empty() {
+            facts.push(d.genres.iter().take(2).cloned().collect::<Vec<_>>().join(", "));
+        }
+        if let Some(players) = d.player_count.as_deref().filter(|p| !p.is_empty()) {
+            facts.push(if players == "1" { "1 player".to_owned() } else { format!("{players} players") });
+        }
+        if let Some(maker) = d.companies.first() {
+            facts.push(maker.clone());
+        }
+        let summary = d.summary.clone().unwrap_or_default();
+        let (cover, shots) = (d.cover.clone(), d.screenshots.clone());
+        let (art, pictures) = tokio::task::spawn_blocking(move || {
+            let art = cover.as_deref().and_then(|p| shrunk_to(p, 640));
+            let pictures: Vec<_> = shots.iter().take(3).filter_map(|p| shrunk_to(p, 320)).collect();
+            (art, pictures)
+        })
+        .await
+        .unwrap_or((None, Vec::new()));
+        let _ = weak.upgrade_in_event_loop(move |ui| {
+            if !with_app(|a| a.detail_gen == turn).unwrap_or(false) {
+                return;
+            }
+            ui.set_detail_has_art(art.is_some());
+            if let Some(pixels) = art {
+                ui.set_detail_art(slint::Image::from_rgba8(pixels));
+            }
+            ui.set_detail_summary(summary.into());
+            ui.set_detail_meta(facts.join("  ·  ").into());
+            ui.set_detail_emulator(emulator.into());
+            let shots: Vec<slint::Image> = pictures.into_iter().map(slint::Image::from_rgba8).collect();
+            ui.set_detail_shots(ModelRc::new(VecModel::from(shots)));
+        });
+    });
 }

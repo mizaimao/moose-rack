@@ -8,6 +8,9 @@ pub struct Platform {
     /// The few letters on a card's band: "PS2", "SNES".
     pub short: String,
     pub rgb: (u8, u8, u8),
+    /// Width over height of this console's art, once known: from the cached
+    /// art at load, or measured from the first covers drawn.
+    pub aspect: Option<f32>,
     pub games: Vec<Game>,
 }
 

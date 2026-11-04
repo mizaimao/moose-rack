@@ -197,6 +197,8 @@ struct Library {
     /// first transfers here unverified. The hashes were computed once over
     /// 1.76 TB; not serving them was the whole gap.
     hashes: Hashes,
+    /// When the games were scanned; every game's `updated_at`.
+    scanned_at: String,
     /// Launch records, `<saves root>/_launches/<device>/<id>.json`. See
     /// `moose_rack::launchrecord`.
     launches: std::path::PathBuf,
@@ -457,6 +459,11 @@ struct Rom {
     /// overwrote each other.
     esde_system: String,
     rel_dir: String,
+    /// When the service scanned the library, the same for every game: the
+    /// service sees no change until it scans again, so this is the newest any
+    /// game here can be. It is what lets a client ask for only what changed
+    /// (`updated_after`); without it every start fetched all 13,041 games.
+    updated_at: String,
 }
 
 #[derive(Serialize)]
@@ -471,6 +478,9 @@ struct Page {
     limit: usize,
     #[serde(default)]
     offset: usize,
+    /// Only games changed after this, as `updated_at` writes it.
+    #[serde(default)]
+    updated_after: Option<String>,
 }
 
 fn default_limit() -> usize {
@@ -499,6 +509,7 @@ fn to_rom(g: &esde::Game, lib: &Library) -> Rom {
         summary: g.summary.clone(),
         esde_system: g.system.clone(),
         rel_dir: g.rel_dir.clone(),
+        updated_at: lib.scanned_at.clone(),
     }
 }
 
@@ -650,6 +661,10 @@ async fn platforms(State(lib): State<Arc<Library>>) -> Json<Vec<Platform>> {
 }
 
 async fn roms(State(lib): State<Arc<Library>>, Query(p): Query<Page>) -> Json<RomPage> {
+    // Nothing has changed since the scan: a client that has it all gets nothing.
+    if p.updated_after.as_deref().is_some_and(|t| t >= lib.scanned_at.as_str()) {
+        return Json(RomPage { items: Vec::new(), total: 0 });
+    }
     let items = lib
         .games
         .iter()
@@ -2028,6 +2043,7 @@ async fn main() -> Result<()> {
         hashes,
         firmware,
         launches: saves_root.join("_launches"),
+        scanned_at: moose_rack::util::now_iso(),
         sync: std::sync::Mutex::new(SyncState {
             store: saves::SaveStore::new(&saves_root),
             states: saves::StateStore::new(saves_root.join("_states")),
@@ -2247,6 +2263,7 @@ mod tests {
             hashes: Default::default(),
             firmware: scan_firmware(&dir.join("bios")),
             launches: saves_root.join("_launches"),
+            scanned_at: moose_rack::util::now_iso(),
             sync: std::sync::Mutex::new(SyncState {
                 store: saves::SaveStore::new(&saves_root),
                 states: saves::StateStore::new(saves_root.join("_states")),
@@ -3243,6 +3260,26 @@ mod tests {
         let s = r.status();
         let b = axum::body::to_bytes(r.into_body(), usize::MAX).await.unwrap();
         (s, String::from_utf8_lossy(&b).into_owned())
+    }
+
+    /// After a full pull, a client asking for what changed since gets nothing;
+    /// before, every start fetched the whole library.
+    #[tokio::test]
+    async fn a_client_that_has_everything_gets_nothing_new() {
+        let (_d, app) = built();
+        let (_, body) = get(&app, "/api/roms?limit=500").await;
+        let page: serde_json::Value = serde_json::from_str(&body).unwrap();
+        let items = page["items"].as_array().unwrap();
+        assert!(!items.is_empty());
+        let stamp = items[0]["updated_at"].as_str().unwrap().to_owned();
+        assert!(items.iter().all(|r| r["updated_at"] == stamp.as_str()));
+        let (_, body) = get(&app, &format!("/api/roms?limit=500&updated_after={stamp}")).await;
+        let page: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(page["items"].as_array().unwrap().len(), 0);
+        // An older stamp still gets everything.
+        let (_, body) = get(&app, "/api/roms?limit=500&updated_after=2000-01-01T00:00:00").await;
+        let page: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(page["items"].as_array().unwrap().len(), items.len());
     }
 
     /// A launch record is stored once, under its device, and listed newest first.
