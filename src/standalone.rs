@@ -67,6 +67,11 @@ pub fn dir(library_root: &Path, emu: &Emulator) -> PathBuf {
     library_root.join("emulators").join(emu.id)
 }
 
+/// Where the app keeps its own RetroArch, portable (`play::install_retroarch`).
+pub fn retroarch_dir(library_root: &Path) -> PathBuf {
+    library_root.join("emulators").join("retroarch")
+}
+
 /// The pinned release's download size on this OS.
 pub fn download_size(emu: &Emulator) -> u64 {
     if std::env::consts::OS == "windows" { emu.sizes.1 } else { emu.sizes.0 }
