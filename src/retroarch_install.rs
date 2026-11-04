@@ -4,12 +4,13 @@
 //! from the stable tree:
 //!
 //! ```text
-//! https://buildbot.libretro.com/stable/<version>/apple/osx/x86_64/RetroArch.dmg
+//! https://buildbot.libretro.com/stable/<version>/apple/osx/universal/RetroArch_Metal.dmg
 //! https://buildbot.libretro.com/stable/<version>/windows/x86_64/RetroArch.7z
 //! ```
 //!
-//! There is no separate `arm64` macOS directory — the `x86_64` path serves a
-//! universal disk image (~171 MB), which is what Apple Silicon machines get.
+//! The Mac build is the universal one (~233 MB), Apple silicon and Intel in one.
+//! The `x86_64` directory's `RetroArch.dmg` was taken for universal until
+//! 2026-11-03; `file` says it is Intel only.
 //!
 //! Installs land next to our other data rather than in `/Applications`, so the
 //! whole thing stays inside the one deletable folder, and we set up portable
@@ -34,9 +35,12 @@ const KNOWN_VERSIONS: &[&str] = &["1.22.2", "1.22.1", "1.22.0", "1.21.0", "1.20.
 /// Where the download lives for this OS, and how to unpack it.
 fn artifact(version: &str) -> Result<(String, &'static str)> {
     Ok(match std::env::consts::OS {
-        // Universal build; there is no arm64-specific directory.
+        // The universal build. `apple/osx/x86_64/RetroArch.dmg` is Intel only
+        // (checked with `file`, 1.22.2): on Apple silicon it runs under Rosetta
+        // and then can't load the arm64 cores the app fetches, so every game
+        // quit after a second.
         "macos" => (
-            format!("{STABLE_BASE}/{version}/apple/osx/x86_64/RetroArch.dmg"),
+            format!("{STABLE_BASE}/{version}/apple/osx/universal/RetroArch_Metal.dmg"),
             "dmg",
         ),
         "windows" => (
@@ -53,6 +57,17 @@ fn artifact(version: &str) -> Result<(String, &'static str)> {
         ),
         os => bail!("no RetroArch download configured for {os}; install it manually"),
     })
+}
+
+/// The size of a release's download for this OS, from a HEAD request. `None`
+/// when the server doesn't say.
+pub async fn download_size(http: &reqwest::Client, version: &str) -> Option<u64> {
+    let (url, _) = artifact(version).ok()?;
+    let resp = http.head(&url).send().await.ok()?;
+    if !resp.status().is_success() {
+        return None;
+    }
+    resp.content_length().filter(|n| *n > 0)
 }
 
 /// Newest version whose artifact actually exists.
@@ -108,14 +123,16 @@ fn install_dmg(dmg: &Path, dest_dir: &Path) -> Result<PathBuf> {
             .context("no .app inside the disk image")?;
 
         std::fs::create_dir_all(dest_dir)?;
-        let target = dest_dir.join(app.file_name().unwrap_or_default());
+        // Always `RetroArch.app`, which is the name `locate` looks for, whatever
+        // the disk image calls it.
+        let target = dest_dir.join("RetroArch.app");
         if target.exists() {
             std::fs::remove_dir_all(&target).ok();
         }
         // `cp -R` preserves the bundle's symlinks and permissions, which a
         // naive recursive copy would flatten and break code signing.
         run(
-            Command::new("cp").arg("-R").arg(&app).arg(dest_dir),
+            Command::new("cp").arg("-R").arg(&app).arg(&target),
             "cp -R",
         )?;
         Ok(target)

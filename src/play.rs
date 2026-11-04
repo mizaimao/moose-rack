@@ -58,7 +58,8 @@ pub async fn launch(
         return launch_standalone(state, busy, emu, &row, &rom, skip_sync.unwrap_or(false), &say).await;
     }
 
-    let ra = state.retroarch.as_ref().ok_or("RetroArch not found")?;
+    let found = retroarch(state).ok_or("RetroArch not found")?;
+    let ra = &found;
     // row_path, not local_path: the grid marks a row downloaded with this, and
     // a launch that disagreed said "not downloaded yet" about a folder ROM
     // sitting right there. launch::plan resolves the folder to its playlist.
@@ -238,6 +239,9 @@ pub async fn launch(
             bios: bios_of(&state.system_dir(), crate::bios::required_for(&plan.core, &row.platform_slug)),
         },
     );
+    if let Ok(cmd) = plan.command(ra, false) {
+        eprintln!("launch: {}", crate::retroarch::render(&cmd));
+    }
     say("starting RetroArch…");
     let began = std::time::Instant::now();
     let started_at = crate::util::now_iso();
@@ -537,10 +541,6 @@ async fn emulator_item(state: &AppState, row: &cache::RomRow) -> (Item, Option<S
         return (item, blocked);
     }
 
-    let Some(ra) = state.retroarch.as_ref() else {
-        let item = Item { label: "RetroArch".to_owned(), detail: "not installed".to_owned(), ready: false, bytes: None };
-        return (item, Some("RetroArch isn't installed. Set it up in Settings, then press Play again.".to_owned()));
-    };
     let (overrides, per_game) = match (state.core_overrides.lock(), state.core_per_game.lock()) {
         (Ok(o), Ok(p)) => (o.clone(), p.clone()),
         _ => Default::default(),
@@ -556,18 +556,37 @@ async fn emulator_item(state: &AppState, row: &cache::RomRow) -> (Item, Option<S
         let item = Item { label: "RetroArch".to_owned(), detail: format!("no core for {}", row.platform_slug), ready: false, bytes: None };
         return (item, Some(format!("RetroArch has no core for {}.", row.platform_slug)));
     };
-    let label = format!("RetroArch, {core}");
-    let has_core = ra.has_core(&core);
+    // Not found: Download installs the app's own copy (`install_retroarch`).
+    let ra = retroarch(state);
+    let http = crate::util::http_client(Some(std::time::Duration::from_secs(10))).ok();
+    let mut bytes = 0;
+    let mut unknown = false;
+    let version = match (&ra, &http) {
+        (None, Some(h)) => crate::retroarch_install::latest_available(h).await.ok(),
+        _ => None,
+    };
+    if ra.is_none() {
+        match (&http, &version) {
+            (Some(h), Some(v)) => match crate::retroarch_install::download_size(h, v).await {
+                Some(n) => bytes += n,
+                None => unknown = true,
+            },
+            _ => unknown = true,
+        }
+    }
+    let label = match &version {
+        Some(v) => format!("RetroArch {v}, {core}"),
+        None => format!("RetroArch, {core}"),
+    };
+    let has_core = ra.as_ref().is_some_and(|ra| ra.has_core(&core));
     let bios_dir = state.system_dir();
     let missing_bios: Vec<String> = crate::bios::required_for(&core, &row.platform_slug)
         .into_iter()
         .filter(|n| !bios_dir.join(n).is_file())
         .collect();
-    let mut bytes = 0;
-    let mut unknown = false;
     if !has_core {
-        match state.client.as_ref() {
-            Some(api) => match crate::cores::download_size(api.http(), &core).await {
+        match &http {
+            Some(h) => match crate::cores::download_size(h, &core).await {
                 Some(n) => bytes += n,
                 None => unknown = true,
             },
@@ -584,13 +603,16 @@ async fn emulator_item(state: &AppState, row: &cache::RomRow) -> (Item, Option<S
     }
     let ready = has_core && missing_bios.is_empty();
     let detail = match (has_core, missing_bios.is_empty()) {
+        _ if ra.is_none() && missing_bios.is_empty() => "not on this computer yet; comes with its core".to_owned(),
+        _ if ra.is_none() => format!("not on this computer yet; comes with its core and BIOS: {}", missing_bios.join(", ")),
         (true, true) => "core and BIOS here".to_owned(),
         (false, true) => "core not on this computer yet".to_owned(),
         (true, false) => format!("BIOS not here yet: {}", missing_bios.join(", ")),
         (false, false) => format!("core and BIOS not here yet: {}", missing_bios.join(", ")),
     };
-    let blocked = (!ready && state.client.is_none())
-        .then(|| "The server isn't reachable, so the core and BIOS can't be fetched.".to_owned());
+    // RetroArch and its cores come from libretro's site; only BIOS needs the server.
+    let blocked = (!missing_bios.is_empty() && state.client.is_none())
+        .then(|| "The server isn't reachable, so the BIOS can't be fetched.".to_owned());
     let item = Item { label, detail, ready, bytes: if ready || unknown { None } else { Some(bytes) } };
     (item, blocked)
 }
@@ -669,7 +691,16 @@ pub async fn prepare(state: &AppState, id: i64, say: impl Fn(&str) + Send + Sync
         return Ok(done.join("; "));
     }
 
-    let ra = state.retroarch.as_ref().ok_or("RetroArch not found")?;
+    let ra = match retroarch(state) {
+        Some(ra) => ra,
+        None => {
+            let (ra, version) = install_retroarch(state, &say).await?;
+            done.push(format!("installed RetroArch {version}"));
+            ra
+        }
+    };
+    let ra = &ra;
+    let http = crate::util::http_client(None).map_err(err)?;
     let api = state.client.as_ref().ok_or("not connected to a server")?;
     let (overrides, per_game) = {
         let o = state.core_overrides.lock().map_err(err)?.clone();
@@ -678,7 +709,7 @@ pub async fn prepare(state: &AppState, id: i64, say: impl Fn(&str) + Send + Sync
     };
     if let Some(core) = coremap::resolve_core_for(&state.map, &overrides, &per_game, &row.platform_slug, Some(&row.fs_name), |_| true) {
         say("fetching the emulator core…");
-        if crate::cores::ensure(api.http(), ra, &core).await.map_err(err)? {
+        if crate::cores::ensure(&http, ra, &core).await.map_err(err)? {
             done.push(format!("downloaded the {core} core"));
         }
         say("fetching BIOS files…");
@@ -778,4 +809,38 @@ fn retroarch_config_lines(plan: &crate::launch::Plan, state: &AppState) -> Vec<S
         }
     }
     lines
+}
+
+/// RetroArch: the copy found at startup, or the app's own one if the
+/// checklist's Download has installed it since.
+fn retroarch(state: &AppState) -> Option<crate::retroarch::RetroArch> {
+    state.retroarch.clone().or_else(|| {
+        let own = crate::standalone::retroarch_dir(&state.library_root);
+        crate::retroarch::RetroArch::locate_in(&[own.to_string_lossy().into_owned()])
+            .ok()
+            .map(|ra| ra.with_system_dir(Some(state.system_dir())))
+    })
+}
+
+/// Install RetroArch into `<library>/emulators/retroarch`, portable, so its
+/// config, cores and shaders stay in that folder. Returns it and its version.
+async fn install_retroarch(
+    state: &AppState,
+    say: &(impl Fn(&str) + Send + Sync),
+) -> CmdResult<(crate::retroarch::RetroArch, String)> {
+    let http = crate::util::http_client(None).map_err(err)?;
+    let version = crate::retroarch_install::latest_available(&http).await.map_err(err)?;
+    let dir = crate::standalone::retroarch_dir(&state.library_root);
+    let mut last = 101;
+    crate::retroarch_install::install(&http, &version, &dir, |got, total| {
+        let pct = (got * 100).checked_div(total).unwrap_or(0);
+        if pct != last {
+            last = pct;
+            say(&format!("downloading RetroArch {version}… {pct}%"));
+        }
+    })
+    .await
+    .map_err(err)?;
+    let ra = retroarch(state).ok_or_else(|| format!("RetroArch {version} installed, but it isn't in {}", dir.display()))?;
+    Ok((ra, version))
 }

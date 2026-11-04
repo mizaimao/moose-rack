@@ -208,7 +208,17 @@ impl AppState {
     let retroarch = if cfg!(target_os = "android") {
         RetroArch::locate_android()
     } else {
-        RetroArch::locate_in(&cfg.retroarch.ordered_paths()).ok()
+        // The app's own copy first, where the launch checklist's Download puts
+        // it (docs/server-and-client.md); then config.toml's list, or the usual
+        // places when it has none.
+        let mut paths = vec![crate::standalone::retroarch_dir(&cfg.library_dir()).to_string_lossy().into_owned()];
+        let configured = cfg.retroarch.ordered_paths();
+        if configured.is_empty() {
+            paths.extend(crate::platform::current().retroarch_roots().iter().map(|p| (*p).to_owned()));
+        } else {
+            paths.extend(configured);
+        }
+        RetroArch::locate_in(&paths).ok()
     }
     .map(|ra| ra.with_system_dir(Some(cfg.system_dir())));
     let roms_dir = cfg.local_roms_dir();
