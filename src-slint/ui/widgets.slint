@@ -410,17 +410,20 @@ export component CoverArt inherits Rectangle {
 
     border-radius: 8px;
     clip: true;
-    background: @linear-gradient(160deg, root.game.tint.brighter(0.3) 0%, root.game.tint 45%, root.game.tint.darker(0.55) 100%);
+    background: root.game.has-cover ? #00000024
+        : @linear-gradient(160deg, root.game.tint.brighter(0.3) 0%, root.game.tint 45%, root.game.tint.darker(0.55) 100%);
 
     // The real cover, when the library has one; the stand-in shows through until it loads.
     if root.game.has-cover: Image {
         source: root.game.cover;
         width: parent.width;
         height: parent.height;
-        image-fit: cover;
+        // Whole, never cropped: a cartridge or a disc is the picture.
+        image-fit: contain;
     }
 
-    Rectangle {
+    // The console band only on a stand-in; on real art it would cover the top.
+    if !root.game.has-cover: Rectangle {
         y: 0px;
         height: root.large ? 26px : 18px;
         background: #00000059;
@@ -479,6 +482,8 @@ export component CoverArt inherits Rectangle {
 export component CoverCard inherits Rectangle {
     in property <GameItem> game;
     in property <bool> selected;
+    // Width over height of this console's art, so the card takes its shape.
+    in property <float> art-aspect: 0.75;
     // The grid has the cursor, so its choice is lit; otherwise the choice is
     // only marked, and the light is wherever the cursor went.
     in property <bool> lit: true;
@@ -500,7 +505,7 @@ export component CoverCard inherits Rectangle {
         x: root.pad;
         y: root.pad;
         width: root.width - 2 * root.pad;
-        height: self.width / 0.75;
+        height: self.width / root.art-aspect;
         game: root.game;
     }
 
