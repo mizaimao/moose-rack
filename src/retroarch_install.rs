@@ -6,7 +6,15 @@
 //! ```text
 //! https://buildbot.libretro.com/stable/<version>/apple/osx/universal/RetroArch_Metal.dmg
 //! https://buildbot.libretro.com/stable/<version>/windows/x86_64/RetroArch.7z
+//! https://buildbot.libretro.com/stable/<version>/linux/x86_64/RetroArch.7z
 //! ```
+//!
+//! The Linux one is an AppImage (`RetroArch-Linux-x86_64.AppImage`) with a
+//! `RetroArch-Linux-x86_64.AppImage.home/` folder beside it holding
+//! `.config/retroarch/` (assets, shaders, core info). An AppImage with a
+//! `<name>.home` folder runs with `HOME` pointed at it, so RetroArch's XDG
+//! config lands inside: that folder is its portable mode on Linux, where
+//! `portable.txt` means nothing (`RetroArch::data_dir`).
 //!
 //! The Mac build is the universal one (~233 MB), Apple silicon and Intel in one.
 //! The `x86_64` directory's `RetroArch.dmg` was taken for universal until
@@ -47,13 +55,11 @@ fn artifact(version: &str) -> Result<(String, &'static str)> {
             format!("{STABLE_BASE}/{version}/windows/x86_64/RetroArch.7z"),
             "7z",
         ),
-        // Linux has no single official binary: RetroArch ships through distro
-        // packages, Flatpak and AppImage, and each puts cores and config
-        // somewhere different. Naming them beats a generic failure.
-        "linux" => bail!(
-            "RetroArch is not downloaded automatically on Linux — install it with your \n\
-             package manager, Flatpak (`flatpak install flathub org.libretro.RetroArch`),\n\
-             or an AppImage, then set its location in Settings if it is not found."
+        // x86_64 only: libretro builds no other Linux desktop RetroArch, and
+        // the PS5 and every PC this is meant for are x86_64.
+        "linux" if std::env::consts::ARCH == "x86_64" => (
+            format!("{STABLE_BASE}/{version}/linux/x86_64/RetroArch.7z"),
+            "7z",
         ),
         os => bail!("no RetroArch download configured for {os}; install it manually"),
     })
@@ -213,10 +219,20 @@ pub async fn install(
             sevenz_rust2::decompress_file(&tmp, &staging)
                 .with_context(|| format!("extracting {}", tmp.display()))?;
             let unpacked = exe_folder(&staging)
-                .with_context(|| format!("no retroarch.exe in {}", tmp.display()))?;
-            let target = dest_dir.join("RetroArch");
+                .with_context(|| format!("no {EXE} in {}", tmp.display()))?;
+            // Windows: its own folder, as before. Linux: the AppImage and its
+            // .home folder straight into `dest_dir`, which is where the app
+            // looks for its own RetroArch (`standalone::retroarch_dir`).
+            let target = if cfg!(target_os = "linux") { dest_dir.to_path_buf() } else { dest_dir.join("RetroArch") };
             lay_over(&unpacked, &target)?;
             std::fs::remove_dir_all(&staging).ok();
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                let exe = target.join(EXE);
+                std::fs::set_permissions(&exe, std::fs::Permissions::from_mode(0o755))
+                    .with_context(|| format!("making {} runnable", exe.display()))?;
+            }
             (target.clone(), target)
         }
         other => bail!("no handler for a .{other} artifact"),
@@ -228,25 +244,33 @@ pub async fn install(
     // Portable mode: RetroArch keeps config, saves and cores beside the app
     // rather than in the user's home, so this install cannot disturb another.
     // Beside the executable, which is where RetroArch looks for it.
+    // (Linux: the AppImage's .home folder is that already.)
     let marker = root.join("portable.txt");
-    if !marker.exists() {
+    if cfg!(not(target_os = "linux")) && !marker.exists() {
         std::fs::write(&marker, "").ok();
     }
 
     Ok(root)
 }
 
-/// The folder in an unpacked archive that holds `retroarch.exe`: the top, or
-/// the one folder the archive wraps everything in.
+/// The program in the 7z download: `retroarch.exe` on Windows, the AppImage on
+/// Linux.
+#[cfg(not(target_os = "linux"))]
+const EXE: &str = "retroarch.exe";
+#[cfg(target_os = "linux")]
+const EXE: &str = crate::retroarch::LINUX_APPIMAGE;
+
+/// The folder in an unpacked archive that holds the program: the top, or the
+/// one folder the archive wraps everything in.
 fn exe_folder(dir: &Path) -> Option<PathBuf> {
-    if dir.join("retroarch.exe").is_file() {
+    if dir.join(EXE).is_file() {
         return Some(dir.to_path_buf());
     }
     std::fs::read_dir(dir)
         .ok()?
         .flatten()
         .map(|e| e.path())
-        .find(|p| p.is_dir() && p.join("retroarch.exe").is_file())
+        .find(|p| p.is_dir() && p.join(EXE).is_file())
 }
 
 /// Copy every file under `from` into `to`, replacing ones of the same name and
@@ -271,7 +295,31 @@ mod tests {
 
     /// An update lays the new program over the old folder. RetroArch keeps a
     /// portable install's saves in that folder, and they have to survive it.
+    /// The Linux download wraps the AppImage and its .home folder in one
+    /// folder; both land in the install folder itself, and what RetroArch
+    /// wrote into the .home folder (saves, its config) survives an update.
     #[test]
+    #[cfg(target_os = "linux")]
+    fn the_linux_download_lands_in_place_and_keeps_its_home() {
+        let dir = std::env::temp_dir().join("moose-rack-ra-install-linux");
+        let _ = std::fs::remove_dir_all(&dir);
+        let home = format!("{EXE}.home/.config/retroarch");
+        let staging = dir.join(".RetroArch.incoming/RetroArch-Linux-x86_64");
+        std::fs::create_dir_all(staging.join(&home).join("assets")).unwrap();
+        std::fs::write(staging.join(EXE), "new").unwrap();
+        std::fs::create_dir_all(dir.join(&home).join("saves")).unwrap();
+        std::fs::write(dir.join(&home).join("saves/Zelda.srm"), "hours of play").unwrap();
+
+        let unpacked = exe_folder(&dir.join(".RetroArch.incoming")).expect("found inside the wrapper");
+        lay_over(&unpacked, &dir).unwrap();
+        assert_eq!(std::fs::read_to_string(dir.join(EXE)).unwrap(), "new");
+        assert!(dir.join(&home).join("assets").is_dir());
+        assert_eq!(std::fs::read_to_string(dir.join(&home).join("saves/Zelda.srm")).unwrap(), "hours of play");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    #[cfg(not(target_os = "linux"))]
     fn an_update_keeps_what_retroarch_wrote_beside_itself() {
         let dir = std::env::temp_dir().join("moose-rack-ra-install");
         let _ = std::fs::remove_dir_all(&dir);

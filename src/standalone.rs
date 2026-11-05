@@ -21,9 +21,9 @@ pub struct Emulator {
     pub platforms: &'static [&'static str],
     /// Save unit family (`unitsync`), when its saves sync as units.
     pub family: Option<&'static str>,
-    /// Download size in bytes of the pinned release: (macOS, Windows). Shown
-    /// in the launch checklist before anything is fetched.
-    pub sizes: (u64, u64),
+    /// Download size in bytes of the pinned release: (macOS, Windows, Linux).
+    /// Shown in the launch checklist before anything is fetched.
+    pub sizes: (u64, u64, u64),
 }
 
 pub const PCSX2: Emulator = Emulator {
@@ -32,7 +32,7 @@ pub const PCSX2: Emulator = Emulator {
     version: "v2.8.2",
     platforms: &["ps2"],
     family: Some("pcsx2"),
-    sizes: (24_377_200, 25_670_075),
+    sizes: (24_377_200, 25_670_075, 60_119_544),
 };
 
 pub const ALL: &[&Emulator] = &[&PCSX2];
@@ -52,7 +52,11 @@ const CARD_SUPERBLOCK: &[u8] = include_bytes!("../data/pcsx2-folder-card-superbl
 
 /// The emulator the app runs for this platform on this OS, if there is one.
 pub fn for_platform(platform: &str) -> Option<&'static Emulator> {
-    if !matches!(std::env::consts::OS, "macos" | "windows") {
+    // Desktop Linux on x86_64, which is what PCSX2 builds for: not KNULLI,
+    // which is `target_os = "linux"` on an ARM handheld.
+    let scheme = crate::platform::current().scheme();
+    let desktop_linux = scheme == "linux" && std::env::consts::ARCH == "x86_64";
+    if !(matches!(scheme, "macos" | "windows") || desktop_linux) {
         return None;
     }
     ALL.iter().copied().find(|e| e.platforms.contains(&platform))
@@ -74,7 +78,11 @@ pub fn retroarch_dir(library_root: &Path) -> PathBuf {
 
 /// The pinned release's download size on this OS.
 pub fn download_size(emu: &Emulator) -> u64 {
-    if std::env::consts::OS == "windows" { emu.sizes.1 } else { emu.sizes.0 }
+    match std::env::consts::OS {
+        "windows" => emu.sizes.1,
+        "linux" => emu.sizes.2,
+        _ => emu.sizes.0,
+    }
 }
 
 /// The version installed in `dir`, as the app recorded it when it installed it.
@@ -85,10 +93,28 @@ pub fn installed_version(dir: &Path) -> Option<String> {
 /// Beside the program: which pinned release the app put there.
 const VERSION_FILE: &str = ".moose-version";
 
+/// The Linux download, kept under one name whatever the version.
+const LINUX_APPIMAGE: &str = "PCSX2.AppImage";
+
+/// Where PCSX2 keeps its settings (`inis/`) and memory cards (`memcards/`) in
+/// its portable mode. Beside the program on macOS and Windows. On Linux the
+/// program is an AppImage, which runs from a read-only mount, so PCSX2 2.8
+/// uses a `PCSX2` folder beside the AppImage instead (`EmuFolders::
+/// SetDataDirectory`, the `APPIMAGE` case).
+pub fn data_root(dir: &Path) -> PathBuf {
+    if std::env::consts::OS == "linux" { dir.join("PCSX2") } else { dir.to_path_buf() }
+}
+
+/// The app's memory card folder, which the save sync reads and writes.
+pub fn card_dir(dir: &Path) -> PathBuf {
+    data_root(dir).join("memcards").join(CARD)
+}
+
 /// The program to start, if it's installed.
 pub fn program(dir: &Path) -> Option<PathBuf> {
     let p = match std::env::consts::OS {
         "macos" => dir.join("PCSX2.app/Contents/MacOS/PCSX2"),
+        "linux" => dir.join(LINUX_APPIMAGE),
         _ => dir.join("pcsx2-qt.exe"),
     };
     p.is_file().then_some(p)
@@ -100,6 +126,7 @@ fn asset(emu: &Emulator) -> Result<(String, &'static str)> {
     let name = match std::env::consts::OS {
         "macos" => (format!("pcsx2-{v}-macos-Qt.tar.xz"), "tar.xz"),
         "windows" => (format!("pcsx2-{v}-windows-x64-Qt.7z"), "7z"),
+        "linux" if std::env::consts::ARCH == "x86_64" => (format!("pcsx2-{v}-linux-appimage-x64-Qt.AppImage"), "AppImage"),
         os => bail!("{} is not set up for {os} yet", emu.name),
     };
     Ok((format!("https://github.com/PCSX2/pcsx2/releases/download/{v}/{}", name.0), name.1))
@@ -136,21 +163,34 @@ pub async fn install(
     }
     drop(file);
 
-    let staging = dir.join(".incoming");
-    if staging.exists() {
+    if kind == "AppImage" {
+        // Linux: the AppImage is the program; nothing to unpack. Portable mode
+        // there is `-portable` on the command line (see `command`).
+        let target = dir.join(LINUX_APPIMAGE);
+        std::fs::rename(&download, &target).with_context(|| format!("moving {} into place", target.display()))?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&target, std::fs::Permissions::from_mode(0o755))
+                .with_context(|| format!("making {} runnable", target.display()))?;
+        }
+    } else {
+        let staging = dir.join(".incoming");
+        if staging.exists() {
+            std::fs::remove_dir_all(&staging).ok();
+        }
+        std::fs::create_dir_all(&staging)?;
+        unpack(&download, kind, &staging)?;
+        place(&staging, dir)?;
         std::fs::remove_dir_all(&staging).ok();
-    }
-    std::fs::create_dir_all(&staging)?;
-    unpack(&download, kind, &staging)?;
-    place(&staging, dir)?;
-    std::fs::remove_dir_all(&staging).ok();
-    std::fs::remove_file(&download).ok();
+        std::fs::remove_file(&download).ok();
 
-    // Portable mode: PCSX2 looks for this beside the .app on macOS and beside
-    // the .exe on Windows (`EmuFolders::SetAppRoot`).
-    let marker = dir.join("portable.txt");
-    if !marker.exists() {
-        std::fs::write(&marker, "")?;
+        // Portable mode: PCSX2 looks for this beside the .app on macOS and
+        // beside the .exe on Windows (`EmuFolders::SetAppRoot`).
+        let marker = dir.join("portable.txt");
+        if !marker.exists() {
+            std::fs::write(&marker, "")?;
+        }
     }
     std::fs::write(dir.join(VERSION_FILE), emu.version)?;
     program(dir).with_context(|| format!("{} unpacked, but its program isn't in {}", emu.name, dir.display()))
@@ -437,7 +477,7 @@ pub fn configure(dir: &Path, bios_dir: &Path) -> Result<PathBuf> {
     // In full: PCSX2 reads a relative folder against its own data folder, so
     // `./library/...` from the app's point of view pointed nowhere.
     let bios_dir = &full(bios_dir);
-    let inis = dir.join("inis");
+    let inis = data_root(dir).join("inis");
     std::fs::create_dir_all(&inis)?;
     let ini = inis.join("PCSX2.ini");
     let old = std::fs::read_to_string(&ini).unwrap_or_default();
@@ -445,7 +485,7 @@ pub fn configure(dir: &Path, bios_dir: &Path) -> Result<PathBuf> {
     if !holds(&old, &want) {
         std::fs::write(&ini, set_ini(&old, &want)).with_context(|| format!("writing {}", ini.display()))?;
     }
-    let card = dir.join("memcards").join(CARD);
+    let card = card_dir(dir);
     seed_card(&card)?;
     Ok(card)
 }
@@ -477,9 +517,9 @@ pub fn holds(text: &str, values: &[(&'static str, String, String)]) -> bool {
 /// card is formatted: what `configure` would leave unchanged.
 pub fn configured(dir: &Path, bios_dir: &Path) -> bool {
     let bios_dir = &full(bios_dir);
-    let old = std::fs::read_to_string(dir.join("inis/PCSX2.ini")).unwrap_or_default();
+    let old = std::fs::read_to_string(data_root(dir).join("inis/PCSX2.ini")).unwrap_or_default();
     let want = settings(bios_dir, pick_bios(bios_dir).as_deref());
-    let card = dir.join("memcards").join(CARD).join("_pcsx2_superblock");
+    let card = card_dir(dir).join("_pcsx2_superblock");
     holds(&old, &want) && std::fs::read(card).is_ok_and(|b| b.starts_with(b"Sony PS2 Memory Card Format"))
 }
 
@@ -499,6 +539,11 @@ pub fn seed_card(card: &Path) -> Result<()> {
 /// PCSX2 quits when the game is shut down.
 pub fn command(program: &Path, rom: &Path) -> std::process::Command {
     let mut cmd = std::process::Command::new(program);
+    // On Linux portable mode is this flag: no file beside an AppImage's
+    // program can be read from inside its mount.
+    if std::env::consts::OS == "linux" {
+        cmd.arg("-portable");
+    }
     cmd.args(["-nogui", "-fullscreen", "--"]).arg(rom);
     cmd
 }
@@ -633,13 +678,15 @@ mod tests {
         let bios = d.join("bios");
         std::fs::create_dir_all(&bios).unwrap();
         std::fs::write(bios.join("SCPH-70004.BIN"), b"x").unwrap();
-        std::fs::create_dir_all(d.join("inis")).unwrap();
-        std::fs::write(d.join("inis/PCSX2.ini"), "[UI]\nTheme = darkfusion\n").unwrap();
+        let root = data_root(&d);
+        std::fs::create_dir_all(root.join("inis")).unwrap();
+        std::fs::write(root.join("inis/PCSX2.ini"), "[UI]\nTheme = darkfusion\n").unwrap();
         let card = configure(&d, &bios).unwrap();
-        let ini = std::fs::read_to_string(d.join("inis/PCSX2.ini")).unwrap();
+        let ini = std::fs::read_to_string(root.join("inis/PCSX2.ini")).unwrap();
         assert!(ini.contains("Theme = darkfusion"));
         assert!(ini.contains("BIOS = SCPH-70004.BIN"));
-        assert_eq!(card, d.join("memcards").join(CARD));
+        assert_eq!(card, root.join("memcards").join(CARD));
+        assert!(configured(&d, &bios), "configure's result reads back as configured");
         assert!(card.join("_pcsx2_superblock").is_file());
     }
 
@@ -647,13 +694,19 @@ mod tests {
     fn the_command_plays_fullscreen_with_no_window_around_it() {
         let cmd = command(Path::new("/e/PCSX2"), Path::new("/r/Ico (USA).chd"));
         let args: Vec<_> = cmd.get_args().map(|a| a.to_string_lossy().into_owned()).collect();
-        assert_eq!(args, ["-nogui", "-fullscreen", "--", "/r/Ico (USA).chd"]);
+        let want: &[&str] = if std::env::consts::OS == "linux" {
+            &["-portable", "-nogui", "-fullscreen", "--", "/r/Ico (USA).chd"]
+        } else {
+            &["-nogui", "-fullscreen", "--", "/r/Ico (USA).chd"]
+        };
+        assert_eq!(args, want);
     }
 
     #[test]
     fn ps2_is_pcsx2_where_the_app_runs_it() {
         let found = for_platform("ps2").map(|e| e.id);
-        if matches!(std::env::consts::OS, "macos" | "windows") {
+        let scheme = crate::platform::current().scheme();
+        if matches!(scheme, "macos" | "windows") || (scheme == "linux" && std::env::consts::ARCH == "x86_64") {
             assert_eq!(found, Some("pcsx2"));
         } else {
             assert_eq!(found, None);

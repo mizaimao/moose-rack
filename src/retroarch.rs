@@ -200,6 +200,9 @@ fn first_existing(primary: &[PathBuf], extra: &[PathBuf]) -> PathBuf {
         .unwrap_or_else(|| primary[0].clone())
 }
 
+/// The program in libretro's Linux x86_64 download (`retroarch_install`).
+pub const LINUX_APPIMAGE: &str = "RetroArch-Linux-x86_64.AppImage";
+
 fn binary_candidates(root: &Path) -> Vec<(PathBuf, PathBuf)> {
     #[cfg(target_os = "macos")]
     {
@@ -217,9 +220,11 @@ fn binary_candidates(root: &Path) -> Vec<(PathBuf, PathBuf)> {
     }
     #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     {
-        // A distro install puts the binary in <prefix>/bin but keeps cores and
-        // config elsewhere, so both layouts are worth trying.
+        // The app's own AppImage first; then a distro install, which puts the
+        // binary in <prefix>/bin but keeps cores and config elsewhere, so both
+        // of its layouts are worth trying.
         vec![
+            (root.join(LINUX_APPIMAGE), root.to_path_buf()),
             (root.join("bin").join("retroarch"), root.to_path_buf()),
             (root.join("retroarch"), root.to_path_buf()),
         ]
@@ -567,10 +572,26 @@ impl RetroArch {
     /// where `portable.txt` is ignored outright, so the marker is never even
     /// consulted there.
     pub fn data_dir(&self) -> PathBuf {
+        if let Some(home) = self.appimage_home() {
+            return home.join(".config").join("retroarch");
+        }
         if self.portable {
             return self.root.clone();
         }
         crate::platform::current().retroarch_data_dir(&self.root)
+    }
+
+    /// An AppImage's own home: a `<name>.home` folder beside it, which the
+    /// AppImage runtime makes `HOME` while it runs, so RetroArch's XDG config
+    /// is inside it. libretro's Linux download ships RetroArch that way, and
+    /// it is the portable mode Linux has.
+    fn appimage_home(&self) -> Option<PathBuf> {
+        let name = self.binary.file_name()?.to_str()?;
+        if !name.ends_with(".AppImage") {
+            return None;
+        }
+        let home = self.binary.with_file_name(format!("{name}.home"));
+        home.is_dir().then_some(home)
     }
 
     /// One value out of RetroArch's own `retroarch.cfg`.
@@ -1391,6 +1412,28 @@ pub fn render(cmd: &Command) -> String {
 
 #[cfg(test)]
 mod tests {
+
+    /// libretro's Linux download, laid out as the installer leaves it: the
+    /// AppImage is found, and RetroArch's data (cores, shaders, retroarch.cfg)
+    /// is its .home folder's XDG config, not the user's ~/.config.
+    #[test]
+    #[cfg(target_os = "linux")]
+    fn the_linux_appimage_is_found_and_keeps_its_data_in_its_home_folder() {
+        let dir = std::env::temp_dir().join("moose-rack-ra-appimage");
+        let _ = std::fs::remove_dir_all(&dir);
+        let data = dir.join(format!("{}.home/.config/retroarch", super::LINUX_APPIMAGE));
+        // As the download has them: cores/ (holding the .info files) and shaders/.
+        std::fs::create_dir_all(data.join("shaders/shaders_slang")).unwrap();
+        std::fs::create_dir_all(data.join("cores")).unwrap();
+        std::fs::write(dir.join(super::LINUX_APPIMAGE), "").unwrap();
+
+        let ra = super::RetroArch::locate_in(&[dir.to_string_lossy().into_owned()]).expect("found");
+        assert_eq!(ra.binary, dir.join(super::LINUX_APPIMAGE));
+        assert_eq!(ra.data_dir(), data);
+        assert_eq!(ra.cores_dir(), data.join("cores"));
+        assert_eq!(ra.shaders_dir(), data.join("shaders"));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 
     /// The merge exists because `CONFIGFILE` replaces the whole config, so
     /// anything the file omits reverts to RetroArch's defaults rather than to
