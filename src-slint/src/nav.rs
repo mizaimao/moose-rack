@@ -5,7 +5,7 @@
 //! app.slint); this moves it, and acts through the window's own callbacks so a
 //! press and a click do exactly the same thing.
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 
 use slint::{Model, ModelRc, SharedString, VecModel};
 
@@ -19,6 +19,17 @@ pub const DETAIL: i32 = 3;
 pub const SETTINGS: i32 = 4;
 pub const SOFA: i32 = 5;
 // 6 is the Options menu, which `menu-open` stands for here.
+pub const KEYBOARD: i32 = 7;
+
+/// The on-screen keyboard's bottom row (indices 40 to 43): Space, Delete,
+/// Clear and Done, each under these columns of the rows above.
+const OSK_WIDE: [(i32, i32); 4] = [(0, 4), (4, 6), (6, 8), (8, 10)];
+const OSK_SPACE: i32 = 40;
+const OSK_DELETE: i32 = 41;
+const OSK_CLEAR: i32 = 42;
+const OSK_DONE: i32 = 43;
+/// Where the keyboard opens: on q, then wherever it was left.
+const OSK_START: i32 = 10;
 
 thread_local! {
     /// What each row of the open Options menu does, as `menu_pick` names it.
@@ -26,6 +37,103 @@ thread_local! {
     /// The letters the list's titles start with, in list order, and which one
     /// the menu's "Jump to letter" row is on.
     static LETTERS: RefCell<(Vec<char>, usize)> = const { RefCell::new((Vec::new(), 0)) };
+    /// The keyboard key the cursor was on when it closed, and the column it
+    /// was last in above the bottom row, so Up from a wide key goes back there.
+    static OSK_AT: Cell<i32> = const { Cell::new(OSK_START) };
+    static OSK_COL: Cell<i32> = const { Cell::new(0) };
+}
+
+/// Search with the pad alone (rule 7): the on-screen keyboard while a
+/// controller is connected, the text box otherwise.
+pub fn open_search(ui: &AppWindow) {
+    if !ui.get_pad_connected() {
+        ui.invoke_focus_search();
+        return;
+    }
+    ui.set_osk_open(true);
+    ui.set_focus_zone(KEYBOARD);
+    ui.set_focus_index(OSK_AT.get());
+}
+
+fn close_osk(ui: &AppWindow) {
+    let at = ui.get_focus_index();
+    OSK_AT.set(if at == OSK_DONE { OSK_START } else { at });
+    // Only spaces is no search, and should not leave Clear search behind.
+    if ui.get_query().trim().is_empty() && !ui.get_query().is_empty() {
+        osk_edit(ui, String::clear);
+    }
+    ui.set_osk_open(false);
+    ui.set_focus_zone(GRID);
+    ui.set_focus_index(0);
+}
+
+/// One press on the keyboard. The results narrow behind it as each key types.
+fn osk(ui: &AppWindow, action: &str) {
+    let at = ui.get_focus_index();
+    let wide = at >= OSK_SPACE;
+    let col = at % 10;
+    let to = match action {
+        "left" if (wide && at > OSK_SPACE) || (!wide && col > 0) => at - 1,
+        "right" if (wide && at < OSK_DONE) || (!wide && col < 9) => at + 1,
+        "up" if wide => {
+            let (from, to) = OSK_WIDE[(at - OSK_SPACE) as usize];
+            let c = OSK_COL.get();
+            30 + if (from..to).contains(&c) { c } else { from }
+        }
+        "up" if at >= 10 => at - 10,
+        "down" if !wide && at < 30 => at + 10,
+        "down" if !wide => OSK_SPACE + OSK_WIDE.iter().position(|&(from, to)| (from..to).contains(&col)).unwrap_or(0) as i32,
+        "activate" => return osk_press(ui, at),
+        "favorite" => return osk_press(ui, OSK_DELETE),
+        "options" => return osk_press(ui, OSK_SPACE),
+        "settings" | "back" | "back2" => return close_osk(ui),
+        _ => return,
+    };
+    if to < OSK_SPACE {
+        OSK_COL.set(to % 10);
+    }
+    ui.set_focus_index(to);
+}
+
+/// Press a keyboard key, by its index, from the pad or a click.
+pub fn osk_press(ui: &AppWindow, key: i32) {
+    match key {
+        OSK_SPACE => osk_edit(ui, |q| q.push(' ')),
+        OSK_DELETE => osk_edit(ui, |q| {
+            q.pop();
+        }),
+        OSK_CLEAR => osk_edit(ui, String::clear),
+        OSK_DONE => close_osk(ui),
+        _ => {
+            if let Some(k) = ui.get_osk_keys().row_data(key.max(0) as usize) {
+                osk_edit(ui, |q| q.push_str(&k));
+            }
+        }
+    }
+}
+
+/// A key typed on a real keyboard while the on-screen one is open types into
+/// the search too. False for the keys that move and press.
+pub fn osk_key(ui: &AppWindow, name: &str) -> bool {
+    if name == "Backspace" {
+        osk_press(ui, OSK_DELETE);
+        return true;
+    }
+    let mut chars = name.chars();
+    match (chars.next(), chars.next()) {
+        (Some(c), None) if !c.is_control() => {
+            osk_edit(ui, |q| q.extend(c.to_lowercase()));
+            true
+        }
+        _ => false,
+    }
+}
+
+fn osk_edit(ui: &AppWindow, edit: impl FnOnce(&mut String)) {
+    let mut query = ui.get_query().to_string();
+    edit(&mut query);
+    ui.set_query(query.as_str().into());
+    ui.invoke_search_edited(query.into());
 }
 
 /// The letter a title is filed under when sorted by name: the first character,
@@ -110,6 +218,11 @@ fn act(ui: &AppWindow, action: &str) -> bool {
             "back" | "back2" | "options" => ui.invoke_close_menu(),
             _ => {}
         }
+        return true;
+    }
+    // And the on-screen keyboard.
+    if ui.get_osk_open() {
+        osk(ui, action);
         return true;
     }
     // Settings takes everything but moving, changing, closing and Start, so
@@ -200,7 +313,7 @@ fn act(ui: &AppWindow, action: &str) -> bool {
         // The star is for the game under the cursor, so only where there is one.
         "favorite" if count > 0 && matches!(zone, GRID | DETAIL | SOFA) => ui.invoke_favorite_toggled(sel),
         "options" => open_menu(ui, zone),
-        "search" => ui.invoke_focus_search(),
+        "search" => open_search(ui),
         // Start opens Settings and closes it again, as the menu button does in
         // Steam's Big Picture and ES-DE.
         "settings" if ui.get_settings_open() => ui.invoke_close_settings(),
@@ -288,7 +401,7 @@ pub fn menu_pick(ui: &AppWindow, row: i32) {
         "download" => ui.invoke_start_download(),
         "remove" => ui.invoke_removed(sel),
         "favorite" => ui.invoke_favorite_toggled(sel),
-        "search" => ui.invoke_focus_search(),
+        "search" => open_search(ui),
         "sort" => ui.invoke_sort_toggled(),
         "layout" => ui.set_list_view(!ui.get_list_view()),
         "letter" => {
@@ -314,7 +427,7 @@ fn header_action(ui: &AppWindow, at: i32) {
             ui.set_mode(1 - ui.get_mode());
             ui.set_sofa_detail_open(false);
         }
-        1 => ui.invoke_focus_search(),
+        1 => open_search(ui),
         2 => ui.set_list_view(!ui.get_list_view()),
         3 => ui.invoke_show_toast("Filters are not in the prototype yet".into()),
         4 => ui.invoke_random_pick(),

@@ -151,8 +151,9 @@ fn main() -> Result<(), slint::PlatformError> {
     }
     // MOOSE_SLINT_TEST_KEYS=right,down,settings,back presses those actions
     // (the names `moose_rack::binds` uses) one by one, prints where the cursor
-    // is after each, and quits; `type:zelda` types into search. For checking
-    // the controller rules in docs/controller-ux.md.
+    // is after each, and quits; `type:zelda` types into search, and `pad` acts
+    // as if a controller were connected. For checking the controller rules in
+    // docs/controller-ux.md.
     let _test_keys = std::env::var("MOOSE_SLINT_TEST_KEYS").ok().map(|keys| test_keys(&ui, keys));
 
     ui.on_platform_selected({
@@ -346,8 +347,16 @@ fn main() -> Result<(), slint::PlatformError> {
         let bindings = bindings.clone();
         move |name| {
             let ui = weak.unwrap();
+            // With the on-screen keyboard open, typing types.
+            if ui.get_osk_open() && nav::osk_key(&ui, &name) {
+                return true;
+            }
             bindings.action_for(&name).is_some_and(|action| nav::dispatch(&ui, action))
         }
+    });
+    ui.on_osk_pressed({
+        let weak = ui.as_weak();
+        move |key| nav::osk_press(&weak.unwrap(), key)
     });
     ui.on_menu_picked({
         let weak = ui.as_weak();
@@ -466,7 +475,7 @@ fn show_keyboard(ui: &AppWindow) {
 /// `MOOSE_SLINT_SNAPSHOT=out.png` sets up one scene, saves the window as a PNG
 /// and quits, so the look can be checked on a machine nobody is watching.
 /// `MOOSE_SLINT_SCENE` picks it: desk (the default), sofa, detail, list,
-/// settings, download, header, consoles, actions, options, ps5 or switch.
+/// settings, download, header, consoles, actions, options, keyboard, ps5 or switch.
 fn snapshot(ui: &AppWindow, path: String, scene: String) {
     match scene.as_str() {
         "sofa" => ui.set_mode(0),
@@ -487,6 +496,15 @@ fn snapshot(ui: &AppWindow, path: String, scene: String) {
         "consoles" => ui.set_focus_zone(nav::CONSOLES),
         "options" => {
             nav::dispatch(ui, "options");
+        }
+        "keyboard" => {
+            ui.set_pad_connected(true);
+            nav::open_search(ui);
+            // i and c: "ic", which finds Ico in the sample.
+            for key in [17, 32] {
+                nav::osk_press(ui, key);
+            }
+            nav::dispatch(ui, "right");
         }
         "actions" => {
             ui.set_focus_zone(nav::DETAIL);
@@ -570,6 +588,8 @@ fn test_keys(ui: &AppWindow, keys: String) -> slint::Timer {
                 ui.set_query(text.into());
                 ui.invoke_search_edited(text.into());
             }
+            // As if a controller were plugged in.
+            None if step == "pad" => ui.set_pad_connected(true),
             None => {
                 nav::dispatch(&ui, step);
             }

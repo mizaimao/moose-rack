@@ -83,6 +83,11 @@ where it does something.
 Big lists are quick to cross (rule 6): a held direction or trigger speeds up
 the longer it is held, the triggers move a screen at a time, and Options has
 Jump to letter (left and right pick it) when the list is sorted by name.
+
+Search works with the pad alone (rule 7): with a controller connected it opens
+an on-screen keyboard along the bottom, and the results narrow above it as
+each key types. The left face button deletes, the top one types a space,
+Start or Done closes it, and a real keyboard types into it too.
 `MOOSE_SLINT_TEST_KEYS=right,down,settings,back`
 plays those actions (`type:zelda` types a search), prints where the cursor is
 after each, and quits.
