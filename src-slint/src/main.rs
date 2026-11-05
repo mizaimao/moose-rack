@@ -600,7 +600,7 @@ fn snapshot(ui: &AppWindow, path: String, scene: String) {
         "settings" => {
             ui.set_settings_open(true);
             ui.set_focus_zone(nav::SETTINGS);
-            ui.set_focus_index(3);
+            ui.set_focus_index(2);
         }
         "header" => {
             ui.set_focus_zone(nav::HEADER);
