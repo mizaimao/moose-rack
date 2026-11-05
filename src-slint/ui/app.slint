@@ -114,6 +114,19 @@ component GameGrid inherits Rectangle {
                 }
             }
         }
+
+        // The cursor: one ring that slides from card to card as it moves, and
+        // rides up with the lifted card (rule 9 in docs/controller-ux.md).
+        if root.lit && root.games.length > 0: Rectangle {
+            x: root.pad + Math.mod(root.selected-index, root.cols) * (root.cell-width + root.gap);
+            y: root.pad + Math.floor(root.selected-index / root.cols) * (root.row-height + root.gap) - (root.list-view ? 0px : 6px);
+            width: root.cell-width;
+            height: root.row-height;
+            border-radius: root.list-view ? Theme.radius : Theme.card-radius;
+            border-width: 2px;
+            border-color: Theme.cursor;
+            animate x, y { duration: 120ms; easing: ease-out; }
+        }
     }
 
     if root.games.length == 0: Text {
