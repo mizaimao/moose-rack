@@ -268,6 +268,36 @@ fn act(ui: &AppWindow, action: &str) -> bool {
     let header = ui.get_header_at();
     let page = ui.get_grid_page_rows().max(1) * cols;
 
+    // Sofa's console level: the tiles move like a grid and only open on
+    // Confirm, so running over them doesn't rebuild the games each step.
+    if !desk && ui.get_sofa_consoles() && zone == CONSOLES {
+        let n = ui.get_platforms().row_count() as i32;
+        let c = ui.get_console_cols().max(1);
+        let i = ui.get_platform_index();
+        let to = match action {
+            "left" if i % c > 0 => i - 1,
+            "right" if i % c < c - 1 && i + 1 < n => i + 1,
+            "down" if i + c < n => i + c,
+            "down" if i / c < (n - 1) / c => n - 1,
+            "up" if i >= c => i - c,
+            "up" => {
+                go(HEADER, header);
+                return true;
+            }
+            "activate" if n > 0 => {
+                open_console(ui, i);
+                return true;
+            }
+            // The top level: Back has nowhere to go.
+            "back" | "back2" | "left" | "right" | "down" => return false,
+            _ => i,
+        };
+        if to != i {
+            ui.set_platform_index(to);
+            return true;
+        }
+    }
+
     match action {
         "up" => match zone {
             GRID if sel >= cols => ui.set_selected_index(sel - cols),
@@ -322,15 +352,12 @@ fn act(ui: &AppWindow, action: &str) -> bool {
                 go(GRID, 0);
             }
             HEADER | DETAIL | CONSOLES => go(GRID, 0),
-            _ if !ui.get_query().is_empty() => {
-                ui.set_query(SharedString::new());
-                ui.invoke_search_edited(SharedString::new());
-            }
-            _ => return false,
+            _ => return go_back(ui),
         },
         "prevSection" | "nextSection" => {
             ui.invoke_cycle_tab(if action == "prevSection" { -1 } else { 1 });
             ui.set_sofa_detail_open(false);
+            ui.set_sofa_consoles(false);
             go(GRID, 0);
         }
         // The star is for the game under the cursor, so only where there is one.
@@ -484,11 +511,41 @@ pub fn menu_pick(ui: &AppWindow, row: i32) {
     }
 }
 
+/// Up one level, for Back on the games and the header's Back button: out of a
+/// game's panel, then out of a search, then in Sofa from a console's games up
+/// to the consoles, as the old app's Back did. False at the top.
+pub fn go_back(ui: &AppWindow) -> bool {
+    let sofa = ui.get_mode() == 0;
+    if sofa && ui.get_sofa_detail_open() {
+        ui.set_sofa_detail_open(false);
+        ui.set_focus_zone(GRID);
+    } else if !ui.get_query().is_empty() {
+        ui.set_query(SharedString::new());
+        ui.invoke_search_edited(SharedString::new());
+    } else if sofa && ui.get_tab_index() == 0 && !ui.get_sofa_consoles() {
+        ui.set_sofa_consoles(true);
+        ui.set_focus_zone(CONSOLES);
+        ui.set_focus_index(0);
+    } else {
+        return false;
+    }
+    true
+}
+
+/// Open a console from Sofa's console level: its games, cursor on the grid.
+pub fn open_console(ui: &AppWindow, i: i32) {
+    ui.invoke_platform_selected(i);
+    ui.set_sofa_consoles(false);
+    ui.set_focus_zone(GRID);
+    ui.set_focus_index(0);
+}
+
 fn header_action(ui: &AppWindow, at: i32) {
     match at {
         0 => {
             ui.set_mode(1 - ui.get_mode());
             ui.set_sofa_detail_open(false);
+            ui.set_sofa_consoles(false);
         }
         1 => open_search(ui),
         2 => ui.set_list_view(!ui.get_list_view()),
