@@ -641,6 +641,16 @@ export component AppWindow inherits Window {
 
     // Settings' sample controls. They change nothing yet but their own state.
     in-out property <bool> opt-autosync: true;
+    // Settings and the window's other choices changed: Rust keeps them for
+    // next time (prefs.rs), and the save sync in the core's config.
+    callback prefs-changed();
+    callback autosync-changed(bool);
+    changed opt-sounds => { root.prefs-changed(); }
+    changed zoom => { root.prefs-changed(); }
+    changed mode => { root.prefs-changed(); }
+    changed list-view => { root.prefs-changed(); }
+    changed sort-label => { root.prefs-changed(); }
+    changed opt-autosync => { root.autosync-changed(root.opt-autosync); }
     in-out property <bool> opt-hidden: false;
     in-out property <bool> opt-sounds: true;
     in-out property <int> opt-theme: 0;

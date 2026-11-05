@@ -21,6 +21,8 @@
 
 # Metadata cache — regenerate with `cargo run -- sync`.
 /moose-sdl.toml
+# The Slint app's window choices (src-slint/src/prefs.rs), beside the config.
+/ui.toml
 /cache.sqlite3
 # What the last favourites sync agreed on. Written beside whatever the addon
 # was started from, which is this directory when it is run from the checkout.

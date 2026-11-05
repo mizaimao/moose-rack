@@ -71,8 +71,9 @@ pub struct AppState {
     /// RetroAchievements, read once at startup from this project's config.toml
     /// — see `crate::achievements`.
     pub achievements: crate::achievements::Settings,
-    /// Pull before a launch and push after it exits.
-    pub auto_sync: bool,
+    /// Pull before a launch and push after it exits. Atomic so a settings
+    /// switch takes effect at once, without a restart (`commands::set_auto_sync`).
+    pub auto_sync: std::sync::atomic::AtomicBool,
     /// Conflicts awaiting the user's answer, so the resolve command can act on
     /// one by name rather than the UI having to hand the whole record back.
     pub pending_conflicts: Mutex<Vec<crate::savesync::SaveConflict>>,
@@ -286,7 +287,7 @@ impl AppState {
         icon_look: Mutex::new(cfg.icons.style.clone()),
         icon_set: Mutex::new(cfg.icons.set.clone()),
         achievements: cfg.achievements.settings(),
-        auto_sync: cfg.saves.auto_sync,
+        auto_sync: std::sync::atomic::AtomicBool::new(cfg.saves.auto_sync),
         pending_conflicts: Mutex::new(Vec::new()),
         autofire_hz: Mutex::new(None),
         bindings: Mutex::new(cfg.bindings.clone()),

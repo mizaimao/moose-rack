@@ -41,6 +41,16 @@ for running it where nobody is at the screen. On macserver (2026-11-03) that
 downloaded Crazy Taxi and PCSX2, booted the game and uploaded its launch
 record. The game details and the remaining controller rules are next.
 
+## Settings that stay
+
+The window's choices are kept between launches in `ui.toml` beside the
+config (`src/prefs.rs`): menu sounds, icon size, Sofa or Desk, grid or list,
+and the sort order. Sync saves automatically is the core's setting: the
+switch writes `saves.auto_sync` in config.toml and takes effect at once
+(`commands::set_auto_sync`). Show hidden games and the theme are still only
+drawn; they do nothing yet. Snapshots and scripted tests keep nothing unless
+`MOOSE_SLINT_KEEP_PREFS` is set.
+
 ## Renderer
 
 Skia, decided with Frank on 2026-10-31. Slint hands it the drawing, and only
