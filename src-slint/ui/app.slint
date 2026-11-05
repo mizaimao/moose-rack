@@ -405,6 +405,37 @@ export component AppWindow inherits Window {
     in-out property <int> focus-index: 0;
     out property <int> grid-cols: grid.cols;
 
+    // Coming back to a pane lands where its cursor last was (rule 2 in
+    // docs/controller-ux.md): the header's control, which Rust keeps current
+    // (search to begin with), Settings' row, and on closing Settings, wherever
+    // the cursor was when it opened.
+    in-out property <int> header-at: 1;
+    property <int> settings-at: 0;
+    property <int> settings-from-zone: Zone.grid;
+    property <int> settings-from-index: 0;
+
+    public function open-settings() {
+        if (root.settings-open) {
+            return;
+        }
+        root.settings-from-zone = root.focus-zone;
+        root.settings-from-index = root.focus-index;
+        root.settings-open = true;
+        root.focus-zone = Zone.settings;
+        root.focus-index = root.settings-at;
+    }
+
+    // Leaving by Done, the last row (5), opens Settings at the top next time.
+    public function close-settings() {
+        if (!root.settings-open) {
+            return;
+        }
+        root.settings-at = root.focus-zone == Zone.settings && root.focus-index < 5 ? root.focus-index : 0;
+        root.settings-open = false;
+        root.focus-zone = root.settings-from-zone;
+        root.focus-index = root.settings-from-index;
+    }
+
     // The controller in hand, as SDL describes it, or the keyboard's keys when
     // there is none. Each glyph is the button that does that job on this pad.
     in property <bool> pad-connected: false;
@@ -659,9 +690,7 @@ export component AppWindow inherits Window {
                         active: root.settings-open;
                         cursor: root.focus-zone == Zone.header && root.focus-index == 7;
                         clicked => {
-                            root.settings-open = true;
-                            root.focus-zone = Zone.settings;
-                            root.focus-index = 0;
+                            root.open-settings();
                         }
                     }
                 }
@@ -966,8 +995,7 @@ export component AppWindow inherits Window {
 
             TouchArea {
                 clicked => {
-                    root.settings-open = false;
-                    root.focus-zone = Zone.grid;
+                    root.close-settings();
                 }
             }
 
@@ -1004,8 +1032,7 @@ export component AppWindow inherits Window {
                             IconButton {
                                 icon: @image-url("../../ui/icons/x.svg");
                                 clicked => {
-                                    root.settings-open = false;
-                                    root.focus-zone = Zone.grid;
+                                    root.close-settings();
                                 }
                             }
                         }
@@ -1079,8 +1106,7 @@ export component AppWindow inherits Window {
                             primary: true;
                             cursor: root.focus-zone == Zone.settings && root.focus-index == 5;
                             clicked => {
-                                root.settings-open = false;
-                                root.focus-zone = Zone.grid;
+                                root.close-settings();
                             }
                         }
                     }
