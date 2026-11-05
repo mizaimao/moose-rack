@@ -30,9 +30,12 @@ Play goes through the shared launch (`moose_rack::play`): the checklist first,
 shown as a window only when the game or its emulator has something to fetch,
 with each line's size and a Download button for the total; then the saves,
 the emulator and the launch record. The launch runs on a thread of its own,
-and the window won't close while a game runs. A save conflict or an
-unreachable server is said in a toast for now; the desktop app's dialogs for
-them are still to port. `MOOSE_SLINT_TEST_PLAY=ps2/Crazy Taxi (USA).chd` presses
+and the window won't close while a game runs. A launch that stops to ask
+asks, with two answers side by side as the desktop app's dialogs do and as
+Steam asks about cloud saves: which copy of a conflicting save to keep (one
+save at a time, then the game starts), whether to play while saves can't be
+checked with the server, and whether to play with a BIOS missing. Back
+cancels. The snapshot has offline and conflict scenes. `MOOSE_SLINT_TEST_PLAY=ps2/Crazy Taxi (USA).chd` presses
 Play on a game and `MOOSE_SLINT_TEST_ACCEPT=1` presses the checklist's button,
 for running it where nobody is at the screen. On macserver (2026-11-03) that
 downloaded Crazy Taxi and PCSX2, booted the game and uploaded its launch
