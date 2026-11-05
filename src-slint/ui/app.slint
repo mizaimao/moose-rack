@@ -9,7 +9,7 @@
 import { Theme } from "theme.slint";
 import {
     GameItem, PlatformItem, CheckLine, Button, IconButton, Segmented, SearchField, Toggle, Slider,
-    ProgressBar, Chip, KeyHint, Tab, CoverArt, CoverCard, ListRow, ConsoleRow, Toast, Hint,
+    ProgressBar, Chip, KeyHint, Tab, CoverArt, CoverCard, ListRow, ConsoleRow, Toast, Hint, Stepper,
 } from "widgets.slint";
 import "../../assets/fonts/NotoSans[wdth,wght].ttf";
 
@@ -77,13 +77,21 @@ component ConsoleGrid inherits Rectangle {
             drop-shadow-color: Theme.glow;
             animate y, drop-shadow-blur { duration: Theme.quick; }
 
-            Text {
+            if !p.has-logo: Text {
                 x: 16px;
                 y: 14px;
                 text: p.short;
                 color: #ffffffc0;
                 font-size: 14px;
                 font-weight: 800;
+            }
+            if p.has-logo: Image {
+                x: 16px;
+                y: 12px;
+                width: parent.width - 32px;
+                height: parent.height - 72px;
+                source: p.logo;
+                image-fit: contain;
             }
             Text {
                 x: 16px;
@@ -726,12 +734,12 @@ export component AppWindow inherits Window {
     ];
     callback osk-pressed(int);
 
-    // Leaving by Done, the last row (3), opens Settings at the top next time.
+    // Leaving by Done, the last row (6), opens Settings at the top next time.
     public function close-settings() {
         if (!root.settings-open) {
             return;
         }
-        root.settings-at = root.focus-zone == Zone.settings && root.focus-index < 3 ? root.focus-index : 0;
+        root.settings-at = root.focus-zone == Zone.settings && root.focus-index < 6 ? root.focus-index : 0;
         root.settings-open = false;
         root.focus-zone = root.settings-from-zone;
         root.focus-index = root.settings-from-index;
@@ -763,6 +771,16 @@ export component AppWindow inherits Window {
     changed sort-label => { root.prefs-changed(); }
     changed opt-autosync => { root.autosync-changed(root.opt-autosync); }
     in-out property <bool> opt-sounds: true;
+    // The picture choices, as the old app's Appearance pane had them: what a
+    // game's card shows, what a console's tile shows, and getting the console
+    // pictures. Rust fills the labels and does the stepping.
+    in property <string> game-pictures: "Cartridge or disc";
+    in property <string> console-pictures: "None yet";
+    in property <string> console-pictures-hint: "Get them below first";
+    in property <bool> console-pictures-busy: false;
+    // 0 for the games, 1 for the consoles; -1 or 1.
+    callback pictures-step(int, int);
+    callback get-console-pictures();
 
     callback platform-selected(int);
     callback tab-selected(int);
@@ -1574,6 +1592,42 @@ export component AppWindow inherits Window {
                         }
                     }
 
+                    SettingRow {
+                        label: "Game pictures";
+                        hint: "What each game's card shows";
+                        cursor: root.focus-zone == Zone.settings && root.focus-index == 3;
+                        Stepper {
+                            text: root.game-pictures;
+                            step(by) => {
+                                root.pictures-step(0, by);
+                            }
+                        }
+                    }
+
+                    SettingRow {
+                        label: "Console pictures";
+                        hint: root.console-pictures-hint;
+                        cursor: root.focus-zone == Zone.settings && root.focus-index == 4;
+                        Stepper {
+                            text: root.console-pictures;
+                            step(by) => {
+                                root.pictures-step(1, by);
+                            }
+                        }
+                    }
+
+                    SettingRow {
+                        label: "Get console pictures";
+                        hint: "A few hundred kilobytes from an ES-DE theme";
+                        cursor: root.focus-zone == Zone.settings && root.focus-index == 5;
+                        Button {
+                            text: root.console-pictures-busy ? "Getting..." : "Get";
+                            clicked => {
+                                root.get-console-pictures();
+                            }
+                        }
+                    }
+
                     Rectangle {
                         height: 12px;
                     }
@@ -1583,7 +1637,7 @@ export component AppWindow inherits Window {
                         Button {
                             text: "Done";
                             primary: true;
-                            cursor: root.focus-zone == Zone.settings && root.focus-index == 3;
+                            cursor: root.focus-zone == Zone.settings && root.focus-index == 6;
                             clicked => {
                                 root.close-settings();
                             }

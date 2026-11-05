@@ -22,7 +22,7 @@ moose-rack = { path = ".." }
 # window's thread.
 tokio = { version = "1", features = ["rt-multi-thread"] }
 # Shrinks covers to card size before they reach the window.
-image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp"] }
 
 # Controllers on the desktop. On Android they arrive as the system's own key
 # events instead. Linked against the SDL3 that Homebrew put on macserver and on

@@ -222,6 +222,18 @@ fn main() -> Result<(), slint::PlatformError> {
             }
         }
     });
+    ui.on_pictures_step({
+        let weak = ui.as_weak();
+        move |which, by| {
+            let ui = weak.unwrap();
+            if which == 0 { step_list_art(&ui, by) } else { step_icon_style(&ui, by) }
+        }
+    });
+    ui.on_get_console_pictures({
+        let weak = ui.as_weak();
+        move || get_console_pictures(&weak.unwrap())
+    });
+    show_picture_labels(&ui);
     show_platforms(&ui);
     refresh(&ui, Land::Remembered);
     // Sofa opens on the consoles, as the old app opened on its Platforms page.
@@ -737,21 +749,161 @@ fn save_png(path: &str, frame: &slint::SharedPixelBuffer<slint::Rgba8Pixel>) -> 
     writer.write_image_data(frame.as_bytes()).map_err(std::io::Error::other)
 }
 
-/// The consoles column.
+thread_local! {
+    /// Console pictures already read, by file, so redrawing the consoles
+    /// doesn't read them again. A few dozen small files.
+    static LOGOS: RefCell<std::collections::HashMap<String, slint::Image>> = RefCell::new(Default::default());
+}
+
+/// A console picture, read once. SVG, PNG and WebP, as the themes ship them.
+fn logo_image(path: &str) -> Option<slint::Image> {
+    LOGOS.with(|cache| {
+        if let Some(image) = cache.borrow().get(path) {
+            return Some(image.clone());
+        }
+        let image = slint::Image::load_from_path(std::path::Path::new(path)).ok()?;
+        cache.borrow_mut().insert(path.to_owned(), image.clone());
+        Some(image)
+    })
+}
+
+/// The consoles column, and Sofa's console tiles.
 fn show_platforms(ui: &AppWindow) {
     let rows: Vec<PlatformItem> = with_app(|a| {
         a.platforms
             .iter()
-            .map(|p| PlatformItem {
-                name: p.name.as_str().into(),
-                short: p.short.as_str().into(),
-                count: p.games.len() as i32,
-                tint: rgb(p.rgb),
+            .map(|p| {
+                let logo = p.logo.as_deref().and_then(logo_image);
+                PlatformItem {
+                    name: p.name.as_str().into(),
+                    short: p.short.as_str().into(),
+                    count: p.games.len() as i32,
+                    tint: rgb(p.rgb),
+                    has_logo: logo.is_some(),
+                    logo: logo.unwrap_or_default(),
+                }
             })
             .collect()
     })
     .unwrap_or_default();
     ui.set_platforms(ModelRc::new(VecModel::from(rows)));
+}
+
+/// The console picture styles that have pictures, in the core's order. A
+/// style with none would turn every tile back into letters, so it isn't
+/// offered, as the old app didn't.
+pub(crate) fn icon_styles() -> Vec<moose_rack::commands::IconStyleView> {
+    let Some(lib) = with_app(|a| a.lib.clone()).flatten() else { return Vec::new() };
+    moose_rack::commands::icon_styles(&lib).unwrap_or_default().into_iter().filter(|s| s.available > 0).collect()
+}
+
+/// Settings' picture rows say what is chosen now.
+fn show_picture_labels(ui: &AppWindow) {
+    let now = list_art();
+    let game = moose_rack::media::LIST_ART_CHOICES
+        .iter()
+        .find(|&&(key, _)| Some(key) == now.as_deref())
+        .map_or("Cartridge or disc", |&(_, label)| label);
+    ui.set_game_pictures(game.into());
+    let styles = icon_styles();
+    match styles.iter().find(|s| s.selected).or(styles.first()) {
+        Some(s) => {
+            ui.set_console_pictures(s.label.as_str().into());
+            ui.set_console_pictures_hint(format!("{} consoles have this picture", s.available).into());
+        }
+        None => {
+            ui.set_console_pictures("None yet".into());
+            ui.set_console_pictures_hint("Get them below first".into());
+        }
+    }
+}
+
+/// Re-read every console's picture from the core, after the style or the
+/// set changed.
+fn reload_logos(ui: &AppWindow) {
+    let Some(lib) = with_app(|a| a.lib.clone()).flatten() else { return };
+    let Ok(list) = moose_rack::commands::platforms(&lib) else { return };
+    let logos: std::collections::HashMap<String, Option<String>> = list.into_iter().map(|p| (p.slug, p.logo)).collect();
+    with_app(|a| {
+        for p in &mut a.platforms {
+            p.logo = logos.get(&p.slug).cloned().flatten();
+        }
+    });
+    show_platforms(ui);
+}
+
+/// The next or previous game picture, from Settings.
+pub(crate) fn step_list_art(ui: &AppWindow, by: i32) {
+    let choices = moose_rack::media::LIST_ART_CHOICES;
+    let now = list_art();
+    let at = choices.iter().position(|&(key, _)| Some(key) == now.as_deref()).unwrap_or(0) as i32;
+    let next = (at + by).rem_euclid(choices.len() as i32) as usize;
+    let (key, label) = choices[next];
+    set_list_art(ui, key, label);
+}
+
+/// The next or previous console picture style, from Settings. With none to
+/// step through, it offers to get them.
+pub(crate) fn step_icon_style(ui: &AppWindow, by: i32) {
+    let styles = icon_styles();
+    if styles.is_empty() {
+        ui.invoke_show_toast("No console pictures yet: Get console pictures, below".into());
+        return;
+    }
+    let at = styles.iter().position(|s| s.selected).unwrap_or(0) as i32;
+    let next = (at + by).rem_euclid(styles.len() as i32) as usize;
+    set_icon_style(ui, &styles[next].key);
+}
+
+/// Draw the consoles in another style, kept in config.toml by the core.
+pub(crate) fn set_icon_style(ui: &AppWindow, key: &str) {
+    let Some(lib) = with_app(|a| a.lib.clone()).flatten() else { return };
+    match moose_rack::commands::set_icon_style(&lib, key.to_owned()) {
+        Ok(label) => {
+            reload_logos(ui);
+            show_picture_labels(ui);
+            ui.invoke_show_toast(format!("Console pictures: {label}").into());
+        }
+        Err(e) => ui.invoke_show_toast(e.into()),
+    }
+}
+
+/// "Get console pictures", as the old app's Appearance pane had it: the
+/// chosen set's pictures, or the default set's when none was chosen
+/// (`commands::fetch_icons`), counted out as they arrive.
+pub(crate) fn get_console_pictures(ui: &AppWindow) {
+    if ui.get_console_pictures_busy() {
+        return;
+    }
+    let Some((lib, rt)) = with_app(|a| a.lib.clone().zip(a.runtime.clone())).flatten() else {
+        ui.invoke_show_toast("No library to get console pictures for".into());
+        return;
+    };
+    ui.set_console_pictures_busy(true);
+    let weak = ui.as_weak();
+    rt.spawn(async move {
+        let progress = {
+            let weak = weak.clone();
+            move |what: &str| {
+                let what = format!("Console pictures: {what}");
+                let _ = weak.upgrade_in_event_loop(move |ui| ui.invoke_show_toast(what.into()));
+            }
+        };
+        let result = moose_rack::commands::fetch_icons(&lib, &progress).await;
+        let _ = weak.upgrade_in_event_loop(move |ui| {
+            ui.set_console_pictures_busy(false);
+            match result {
+                Ok(summary) => {
+                    // Files at the same paths may have been replaced.
+                    LOGOS.with(|cache| cache.borrow_mut().clear());
+                    reload_logos(&ui);
+                    show_picture_labels(&ui);
+                    ui.invoke_show_toast(summary.lines().next().unwrap_or("Console pictures fetched").to_owned().into());
+                }
+                Err(e) => ui.invoke_show_toast(format!("Couldn't get console pictures: {e}").into()),
+            }
+        });
+    });
 }
 
 /// Runs MOOSE_SLINT_TEST_KEYS: one step every 200 ms, the first a second in.
@@ -1145,6 +1297,7 @@ pub(crate) fn set_list_art(ui: &AppWindow, value: &str, label: &str) {
     });
     refresh(ui, Land::Same);
     fetch_covers(ui);
+    show_picture_labels(ui);
     ui.invoke_show_toast(format!("Game pictures: {label}").into());
 }
 

@@ -100,7 +100,11 @@ Filter (only games on this device, only favorites; `f`), Y / Triangle opens
 Sort by (`s`), the Menu button opens Options for the game under the cursor
 (take offline or remove, the star, jump to letter, search, grid or list, a
 random game, Game pictures; `o`), the Steam button (Guide) opens Settings
-(`,`), and View (Select) opens Game pictures, the old app's picture changer.
+(`,`), and View (Select) opens the old app's picture changer: Console
+pictures on the consoles, Game pictures elsewhere. Settings has the same two
+choices and Get console pictures, as the old Appearance pane did; the console
+tiles and the console column draw the chosen picture, and the letters only
+until a set is fetched.
 Menus take every press while open, and the hint bar shows a button only where
 it does something. From the moment a launch starts until the game has ended
 and the pad is at rest, the window ignores the pad: SDL reads it even with the

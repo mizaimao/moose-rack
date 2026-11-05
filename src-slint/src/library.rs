@@ -43,7 +43,15 @@ pub fn load(state: &AppState) -> Vec<Platform> {
                 .collect();
             // The full name, as the desktop app shows it: "Super Nintendo", not "snes".
             let name = state.map.display_name(&p.slug).map(str::to_owned).unwrap_or(p.name);
-            Platform { short: short_name(&p.slug), rgb: colour_for(&p.slug), aspect: p.cover_aspect, slug: p.slug, name, games }
+            Platform {
+                short: short_name(&p.slug),
+                rgb: colour_for(&p.slug),
+                aspect: p.cover_aspect,
+                logo: p.logo,
+                slug: p.slug,
+                name,
+                games,
+            }
         })
         .collect()
 }

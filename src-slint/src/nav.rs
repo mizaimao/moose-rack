@@ -170,8 +170,9 @@ fn step_letter(ui: &AppWindow, row: i32, step: i32) {
 /// The header's controls, left to right: Sofa/Desk, search, grid or list,
 /// filter, random, sort, sync, settings.
 const HEADER_LAST: i32 = 7;
-/// Settings' rows: save sync, menu sounds, icon size, Done.
-const SETTINGS_LAST: i32 = 3;
+/// Settings' rows: save sync, menu sounds, icon size, game pictures, console
+/// pictures, get console pictures, Done.
+const SETTINGS_LAST: i32 = 6;
 /// The detail's actions: Play, the download button, the star.
 const DETAIL_LAST: i32 = 2;
 
@@ -386,6 +387,7 @@ fn act(ui: &AppWindow, action: &str) -> bool {
         "zoomIn" => ui.set_zoom((ui.get_zoom() + 10.0).min(ZOOM_MAX)),
         "zoomOut" => ui.set_zoom((ui.get_zoom() - 10.0).max(ZOOM_MIN)),
         "download" if count > 0 => ui.invoke_start_download(),
+        "pictures" if zone == CONSOLES => open_console_pictures_menu(ui),
         "pictures" => open_pictures_menu(ui),
         "help" | "video" | "sidebar" => {
             ui.invoke_show_toast(format!("\"{action}\" is not in the prototype yet").into())
@@ -463,6 +465,28 @@ fn open_pictures_menu(ui: &AppWindow) {
     show_menu(ui, "Game pictures".into(), items, at as i32);
 }
 
+/// Menu ids for the console picture styles on offer, in order; which style each
+/// is stays in `STYLES` while the menu is open.
+const STYLE_IDS: [&str; 12] =
+    ["style_0", "style_1", "style_2", "style_3", "style_4", "style_5", "style_6", "style_7", "style_8", "style_9", "style_10", "style_11"];
+
+thread_local! {
+    static STYLES: RefCell<Vec<String>> = const { RefCell::new(Vec::new()) };
+}
+
+/// Console pictures, on View where the consoles are, as the old app's button
+/// changed the console grid's pictures there: the styles that have pictures,
+/// then getting them.
+fn open_console_pictures_menu(ui: &AppWindow) {
+    let styles = crate::icon_styles();
+    let at = styles.iter().position(|s| s.selected).unwrap_or(0);
+    let mut items: Vec<(&'static str, String)> =
+        styles.iter().zip(STYLE_IDS).map(|(s, id)| (id, format!("{} ({})", s.label, s.available))).collect();
+    STYLES.with(|k| *k.borrow_mut() = styles.into_iter().map(|s| s.key).collect());
+    items.push(("get_pictures", "Get console pictures".into()));
+    show_menu(ui, "Console pictures".into(), items, at as i32);
+}
+
 /// The orders Sort by offers, in the order main.rs's `Sort::ALL` has them.
 const SORTS: [(&str, &str); 3] = [("sort_0", "Name"), ("sort_1", "Year"), ("sort_2", "Recently played")];
 
@@ -511,6 +535,13 @@ pub fn menu_pick(ui: &AppWindow, row: i32) {
         }
         "layout" => ui.set_list_view(!ui.get_list_view()),
         "pictures" => open_pictures_menu(ui),
+        "get_pictures" => crate::get_console_pictures(ui),
+        _ if id.starts_with("style_") => {
+            let i = STYLE_IDS.iter().position(|&s| s == id).unwrap_or(0);
+            if let Some(key) = STYLES.with(|k| k.borrow().get(i).cloned()) {
+                crate::set_icon_style(ui, &key);
+            }
+        }
         _ if moose_rack::media::LIST_ART_CHOICES.iter().any(|&(key, _)| key == id) => {
             let label = moose_rack::media::LIST_ART_CHOICES.iter().find(|&&(key, _)| key == id).map_or(id, |&(_, l)| l);
             crate::set_list_art(ui, id, label);
@@ -583,6 +614,9 @@ fn settings_action(ui: &AppWindow, at: i32) {
         0 => ui.set_opt_autosync(!ui.get_opt_autosync()),
         1 => ui.set_opt_sounds(!ui.get_opt_sounds()),
         2 => {}
+        3 => crate::step_list_art(ui, 1),
+        4 => crate::step_icon_style(ui, 1),
+        5 => crate::get_console_pictures(ui),
         _ => ui.invoke_close_settings(),
     }
 }
@@ -591,6 +625,8 @@ fn settings_action(ui: &AppWindow, at: i32) {
 fn adjust(ui: &AppWindow, at: i32, step: i32) {
     match at {
         2 => ui.set_zoom((ui.get_zoom() + 10.0 * step as f32).clamp(ZOOM_MIN, ZOOM_MAX)),
+        3 => crate::step_list_art(ui, step),
+        4 => crate::step_icon_style(ui, step),
         _ => {}
     }
 }
