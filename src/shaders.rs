@@ -158,12 +158,19 @@ fn shader_root(ra: &RetroArch) -> PathBuf {
 }
 
 /// Absolute path of a preset, if this install actually has it.
+///
+/// Absolute even when the install is not: RetroArch resolves a relative
+/// `video_shader` or `--set-shader` against its own shaders directory, not the
+/// working directory, so `./emulators/retroarch/shaders/...` (what a RetroArch
+/// installed into a library at `local_root = "."` gives) loaded nothing and
+/// every game ran without its shader, saying nothing. The same fault the
+/// chained preset had; see the tests.
 pub fn resolve(ra: &RetroArch, preset: &str) -> Option<PathBuf> {
     if preset.is_empty() || preset == "none" {
         return None;
     }
     let p = shader_root(ra).join(format!("{preset}.slangp"));
-    p.is_file().then_some(p)
+    p.is_file().then(|| p.canonicalize().unwrap_or(p))
 }
 
 /// Catalog entries this install can actually load, for the given display.
@@ -305,6 +312,28 @@ mod tests {
     /// nothing was logged at the app's end. Only the chained path took this
     /// route, and the motion pass is CRT-only, which is why the handhelds went
     /// on looking correct throughout.
+    /// The plain preset too: a RetroArch installed into the library sits at a
+    /// relative path when the library is `local_root = "."`, and the preset
+    /// handed over from it has to be absolute all the same.
+    #[test]
+    fn a_preset_resolves_to_an_absolute_path_from_a_relative_install() {
+        let dir = std::path::PathBuf::from("target/moose-rack-shader-resolve-test");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join("shaders/shaders_slang/crt")).unwrap();
+        std::fs::write(dir.join("shaders/shaders_slang/crt/plain.slangp"), "shaders = 1\n").unwrap();
+        assert!(dir.is_relative(), "the test itself has to hand over a relative path");
+        let ra = crate::retroarch::RetroArch {
+            root: dir.clone(),
+            binary: dir.join("retroarch"),
+            portable: true,
+            system_override: None,
+        };
+        let out = resolve(&ra, "crt/plain").expect("the preset exists");
+        assert!(out.is_absolute(), "video_shader would be written as {}", out.display());
+        assert!(config_lines(&ra, Some("crt/plain")).contains(&format!("video_shader = \"{}\"", out.display())));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
     #[test]
     fn the_chained_preset_is_written_as_an_absolute_path() {
         // Relative on purpose, and relative to the working directory the test
