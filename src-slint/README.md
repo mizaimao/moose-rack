@@ -47,9 +47,9 @@ The window's choices are kept between launches in `ui.toml` beside the
 config (`src/prefs.rs`): menu sounds, icon size, Sofa or Desk, grid or list,
 and the sort order. Sync saves automatically is the core's setting: the
 switch writes `saves.auto_sync` in config.toml and takes effect at once
-(`commands::set_auto_sync`). Show hidden games and the theme are still only
-drawn; they do nothing yet. Snapshots and scripted tests keep nothing unless
-`MOOSE_SLINT_KEEP_PREFS` is set.
+(`commands::set_auto_sync`). Show hidden games and a theme choice were taken
+out of Settings until they are built (Frank, 2026-11-05). Snapshots and
+scripted tests keep nothing unless `MOOSE_SLINT_KEEP_PREFS` is set.
 
 ## Renderer
 

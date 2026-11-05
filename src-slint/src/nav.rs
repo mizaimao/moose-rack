@@ -170,8 +170,8 @@ fn step_letter(ui: &AppWindow, row: i32, step: i32) {
 /// The header's controls, left to right: Sofa/Desk, search, grid or list,
 /// filter, random, sort, sync, settings.
 const HEADER_LAST: i32 = 7;
-/// Settings' rows: three toggles, theme, icon size, Done.
-const SETTINGS_LAST: i32 = 5;
+/// Settings' rows: save sync, menu sounds, icon size, Done.
+const SETTINGS_LAST: i32 = 3;
 /// The detail's actions: Play, the download button, the star.
 const DETAIL_LAST: i32 = 2;
 
@@ -503,10 +503,8 @@ fn header_action(ui: &AppWindow, at: i32) {
 fn settings_action(ui: &AppWindow, at: i32) {
     match at {
         0 => ui.set_opt_autosync(!ui.get_opt_autosync()),
-        1 => ui.set_opt_hidden(!ui.get_opt_hidden()),
-        2 => ui.set_opt_sounds(!ui.get_opt_sounds()),
-        3 => ui.set_opt_theme((ui.get_opt_theme() + 1) % 3),
-        4 => {}
+        1 => ui.set_opt_sounds(!ui.get_opt_sounds()),
+        2 => {}
         _ => ui.invoke_close_settings(),
     }
 }
@@ -514,8 +512,7 @@ fn settings_action(ui: &AppWindow, at: i32) {
 /// Left and right on a Settings row change its value where it has one.
 fn adjust(ui: &AppWindow, at: i32, step: i32) {
     match at {
-        3 => ui.set_opt_theme((ui.get_opt_theme() + step).clamp(0, 2)),
-        4 => ui.set_zoom((ui.get_zoom() + 10.0 * step as f32).clamp(ZOOM_MIN, ZOOM_MAX)),
+        2 => ui.set_zoom((ui.get_zoom() + 10.0 * step as f32).clamp(ZOOM_MIN, ZOOM_MAX)),
         _ => {}
     }
 }
