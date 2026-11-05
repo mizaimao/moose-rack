@@ -217,6 +217,17 @@ fn act(ui: &AppWindow, action: &str) -> bool {
         }
         return true;
     }
+    // So does a question the launch stopped to ask: left and right pick an
+    // answer, Confirm gives it, Back cancels.
+    if ui.get_ask_open() {
+        match action {
+            "left" | "right" => ui.set_ask_at(1 - ui.get_ask_at()),
+            "activate" => ui.invoke_ask_chosen(ui.get_ask_at()),
+            "back" | "back2" => ui.invoke_ask_chosen(-1),
+            _ => {}
+        }
+        return true;
+    }
     // So does the Options menu.
     if ui.get_menu_open() {
         let at = ui.get_focus_index();

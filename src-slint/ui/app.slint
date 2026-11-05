@@ -394,6 +394,50 @@ component KeyCap inherits Rectangle {
     }
 }
 
+// One of a question's two answers, side by side.
+component AskChoice inherits Rectangle {
+    in property <string> label;
+    in property <string> sub;
+    in property <bool> cursor: false;
+    callback clicked;
+
+    height: 72px;
+    horizontal-stretch: 1;
+    border-radius: 12px;
+    background: root.cursor ? Theme.glass-sel : (touch.has-hover ? Theme.glass-hover : Theme.panel-2);
+    border-width: root.cursor ? 2px : 1px;
+    border-color: root.cursor ? Theme.cursor : Theme.line;
+    drop-shadow-blur: root.cursor ? 16px : 0px;
+    animate background { duration: Theme.quick; }
+
+    VerticalLayout {
+        padding: 12px;
+        spacing: 4px;
+        alignment: center;
+        Text {
+            text: root.label;
+            color: Theme.text;
+            font-size: 16px;
+            font-weight: 700;
+            horizontal-alignment: center;
+        }
+        Text {
+            text: root.sub;
+            color: Theme.dim;
+            font-size: 12px;
+            horizontal-alignment: center;
+            overflow: elide;
+        }
+    }
+
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
 // One row of the Options menu.
 component MenuRow inherits Rectangle {
     in property <string> text;
@@ -471,6 +515,25 @@ export component AppWindow inherits Window {
         root.selection-changed(root.selected-index);
     }
     in-out property <bool> checklist-open: false;
+
+    // A launch that stopped to ask, as Steam does rather than guess: which
+    // copy of a save to keep, whether to play while saves can't sync, or
+    // with a BIOS missing. Two answers side by side; Back cancels. Rust fills
+    // the words and takes the answer through ask-chosen (0, 1, or -1).
+    in-out property <bool> ask-open: false;
+    in property <string> ask-title;
+    in property <string> ask-lead;
+    in property <string> ask-detail;
+    in property <string> ask-note;
+    in property <string> ask-a;
+    in property <string> ask-a-sub;
+    in property <string> ask-b;
+    in property <string> ask-b-sub;
+    in-out property <int> ask-at: 0;
+    callback ask-chosen(int);
+    // The launch checklist or a question is up: only choosing and cancelling
+    // work, and the hint bar says just that.
+    property <bool> modal: root.ask-open || root.checklist-open;
     in property <string> checklist-game;
     in property <string> checklist-platform;
     in property <[CheckLine]> checklist-lines;
@@ -1026,7 +1089,8 @@ export component AppWindow inherits Window {
 
                     Hint {
                         glyph: root.glyph-confirm;
-                        text: root.focus-zone == Zone.grid ? (root.mode == 1 ? "Play" : "Open")
+                        text: root.ask-open || root.checklist-open ? "Choose"
+                            : root.focus-zone == Zone.grid ? (root.mode == 1 ? "Play" : "Open")
                             : root.focus-zone == Zone.consoles ? "Open"
                             : root.focus-zone == Zone.settings ? "Change"
                             : root.focus-zone == Zone.keyboard ? "Type"
@@ -1035,24 +1099,25 @@ export component AppWindow inherits Window {
                     // Each hint shows only where its button does something
                     // (rule 5 in docs/controller-ux.md); nav.rs matches.
                     // Back does nothing on the grid unless a search is shown.
-                    if root.focus-zone != Zone.grid || root.query != "": Hint {
+                    if root.modal || root.focus-zone != Zone.grid || root.query != "": Hint {
                         glyph: root.glyph-back;
-                        text: root.focus-zone == Zone.grid ? "Clear search"
+                        text: root.modal ? "Cancel"
+                            : root.focus-zone == Zone.grid ? "Clear search"
                             : root.focus-zone == Zone.settings || root.focus-zone == Zone.sofa || root.focus-zone == Zone.menu
                                 || root.focus-zone == Zone.keyboard ? "Close"
                             : "Back";
                     }
                     // As in Steam's library: X filters, Y sorts, Menu opens
                     // Options. On the keyboard X deletes and Y types a space.
-                    if root.focus-zone != Zone.settings && root.focus-zone != Zone.menu: Hint {
+                    if !root.modal && root.focus-zone != Zone.settings && root.focus-zone != Zone.menu: Hint {
                         glyph: root.glyph-left;
                         text: root.focus-zone == Zone.keyboard ? "Delete" : "Filter";
                     }
-                    if root.focus-zone != Zone.settings && root.focus-zone != Zone.menu: Hint {
+                    if !root.modal && root.focus-zone != Zone.settings && root.focus-zone != Zone.menu: Hint {
                         glyph: root.glyph-top;
                         text: root.focus-zone == Zone.keyboard ? "Space" : "Sort by";
                     }
-                    if root.focus-zone != Zone.settings && root.focus-zone != Zone.menu && root.focus-zone != Zone.keyboard: HorizontalLayout {
+                    if !root.modal && root.focus-zone != Zone.settings && root.focus-zone != Zone.menu && root.focus-zone != Zone.keyboard: HorizontalLayout {
                         spacing: 4px;
                         Hint {
                             glyph: root.shoulder-left;
@@ -1063,7 +1128,7 @@ export component AppWindow inherits Window {
                             text: "Section";
                         }
                     }
-                    if !root.settings-open: Hint {
+                    if !root.modal && !root.settings-open: Hint {
                         glyph: root.start-label;
                         text: root.focus-zone == Zone.menu ? "Close" : root.focus-zone == Zone.keyboard ? "Done" : "Options";
                     }
@@ -1399,6 +1464,75 @@ export component AppWindow inherits Window {
                                 root.close-settings();
                             }
                         }
+                    }
+                }
+            }
+        }
+
+        if root.ask-open: Rectangle {
+            background: #0b0c0fc0;
+
+            TouchArea { }
+
+            Rectangle {
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+                width: 560px;
+                height: ask-box.preferred-height;
+                border-radius: 16px;
+                background: Theme.panel;
+                border-width: 1px;
+                border-color: Theme.line;
+                drop-shadow-blur: 40px;
+                drop-shadow-color: #00000090;
+
+                ask-box := VerticalLayout {
+                    padding: 24px;
+                    spacing: 12px;
+
+                    Text {
+                        text: root.ask-title;
+                        color: Theme.text;
+                        font-size: 20px;
+                        font-weight: 700;
+                        wrap: word-wrap;
+                    }
+                    Text {
+                        text: root.ask-lead;
+                        color: Theme.text;
+                        font-size: 14px;
+                        wrap: word-wrap;
+                    }
+                    if root.ask-detail != "": Text {
+                        text: root.ask-detail;
+                        color: Theme.dim;
+                        font-size: 13px;
+                        wrap: word-wrap;
+                    }
+                    HorizontalLayout {
+                        spacing: 12px;
+                        AskChoice {
+                            label: root.ask-a;
+                            sub: root.ask-a-sub;
+                            cursor: root.ask-at == 0;
+                            clicked => {
+                                root.ask-chosen(0);
+                            }
+                        }
+                        AskChoice {
+                            label: root.ask-b;
+                            sub: root.ask-b-sub;
+                            cursor: root.ask-at == 1;
+                            clicked => {
+                                root.ask-chosen(1);
+                            }
+                        }
+                    }
+                    if root.ask-note != "": Text {
+                        text: root.ask-note;
+                        color: Theme.dim;
+                        font-size: 12px;
+                        wrap: word-wrap;
                     }
                 }
             }

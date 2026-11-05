@@ -365,6 +365,10 @@ fn main() -> Result<(), slint::PlatformError> {
         let weak = ui.as_weak();
         move |key| nav::osk_press(&weak.unwrap(), key)
     });
+    ui.on_ask_chosen({
+        let weak = ui.as_weak();
+        move |choice| answered(&weak.unwrap(), choice)
+    });
     ui.on_menu_picked({
         let weak = ui.as_weak();
         move |row| nav::menu_pick(&weak.unwrap(), row)
@@ -487,7 +491,8 @@ fn show_keyboard(ui: &AppWindow) {
 /// `MOOSE_SLINT_SNAPSHOT=out.png` sets up one scene, saves the window as a PNG
 /// and quits, so the look can be checked on a machine nobody is watching.
 /// `MOOSE_SLINT_SCENE` picks it: desk (the default), sofa, detail, list,
-/// settings, download, header, consoles, actions, options, keyboard, ps5 or switch.
+/// settings, download, header, consoles, actions, options, keyboard, offline,
+/// conflict, ps5 or switch.
 fn snapshot(ui: &AppWindow, path: String, scene: String) {
     match scene.as_str() {
         "sofa" => ui.set_mode(0),
@@ -508,6 +513,23 @@ fn snapshot(ui: &AppWindow, path: String, scene: String) {
         "consoles" => ui.set_focus_zone(nav::CONSOLES),
         "options" => {
             nav::dispatch(ui, "options");
+        }
+        "offline" => stopped(ui, 0, Default::default(), "SAVE_OFFLINE:the server didn't answer (dev.lan:8080)"),
+        "conflict" => {
+            let c = moose_rack::savesync::SaveConflict {
+                rom_id: 0,
+                save_id: None,
+                file_name: "Ico (USA).ps2".into(),
+                slot: None,
+                emulator: None,
+                reason: Some("Both copies changed since the last sync.".into()),
+                local_path: None,
+                local_updated: Some("2026-11-04T21:12:09Z".into()),
+                local_bytes: 8_388_608,
+                server_updated: Some("2026-11-03T18:40:55Z".into()),
+            };
+            ASKING.with(|q| *q.borrow_mut() = Some(Asking::Conflict { id: 0, opts: Default::default(), conflicts: vec![c] }));
+            ask_next(ui);
         }
         "keyboard" => {
             ui.set_pad_connected(true);
@@ -604,6 +626,8 @@ fn test_keys(ui: &AppWindow, keys: String) -> slint::Timer {
             }
             // As if a controller were plugged in.
             None if step == "pad" => ui.set_pad_connected(true),
+            // The offline question, as if a launch had stopped on it.
+            None if step == "ask" => stopped(&ui, 0, Default::default(), "SAVE_OFFLINE:test"),
             None => {
                 nav::dispatch(&ui, step);
             }
@@ -611,11 +635,12 @@ fn test_keys(ui: &AppWindow, keys: String) -> slint::Timer {
         let sel = ui.get_selected_index();
         let title = ui.get_games().row_data(sel.max(0) as usize).map(|g| g.title.to_string()).unwrap_or_default();
         println!(
-            "{step:>12}  zone {} at {}  header {}  settings {}  {} | {sel} {title}",
+            "{step:>12}  zone {} at {}  header {}  settings {}  ask {}  {} | {sel} {title}",
             ui.get_focus_zone(),
             ui.get_focus_index(),
             ui.get_header_at(),
             ui.get_settings_open(),
+            if ui.get_ask_open() { ui.get_ask_at() } else { -1 },
             ui.get_heading(),
         );
     });
@@ -1134,6 +1159,12 @@ fn mark_installed(ui: &AppWindow, id: i64, installed: bool) {
 /// recorded. On a thread of its own, because the emulator run blocks until the
 /// game ends.
 fn start_launch(ui: &AppWindow, id: i64) {
+    start_launch_with(ui, id, moose_rack::play::Options::default());
+}
+
+/// Launch with the answers given so far (play while saves can't sync, play
+/// without the BIOS). A stop that needs an answer comes back as a question.
+fn start_launch_with(ui: &AppWindow, id: i64, opts: moose_rack::play::Options) {
     let Some((lib, busy)) = with_app(|a| Some((a.lib.clone()?, a.busy.clone()))).flatten() else { return };
     let weak = ui.as_weak();
     std::thread::spawn(move || {
@@ -1143,28 +1174,160 @@ fn start_launch(ui: &AppWindow, id: i64) {
             let what = what.to_owned();
             let _ = progress.upgrade_in_event_loop(move |ui| ui.invoke_show_toast(what.into()));
         };
-        let result = rt.block_on(moose_rack::play::launch(&lib, &busy, id, moose_rack::play::Options::default(), say));
-        let _ = weak.upgrade_in_event_loop(move |ui| {
-            let line = match result {
-                Ok(line) => line,
-                Err(e) => stop_reason(&e),
-            };
-            ui.invoke_show_toast(line.into());
+        let result = rt.block_on(moose_rack::play::launch(&lib, &busy, id, opts.clone(), say));
+        let _ = weak.upgrade_in_event_loop(move |ui| match result {
+            Ok(line) => ui.invoke_show_toast(line.into()),
+            Err(e) => stopped(&ui, id, opts, &e),
         });
     });
 }
 
-/// A launch that stopped to ask, in words. The desktop app turns these codes
-/// into dialogs; here, for now, they are said.
-fn stop_reason(e: &str) -> String {
+/// What a question is about, kept until it is answered.
+enum Asking {
+    /// Which copy of each conflicting save to keep, one at a time.
+    Conflict { id: i64, opts: moose_rack::play::Options, conflicts: Vec<moose_rack::savesync::SaveConflict> },
+    /// Play while saves can't be checked with the server?
+    Offline { id: i64, opts: moose_rack::play::Options },
+    /// Play with a BIOS missing?
+    Bios { id: i64, opts: moose_rack::play::Options },
+}
+
+thread_local! {
+    static ASKING: RefCell<Option<Asking>> = const { RefCell::new(None) };
+}
+
+/// A launch stopped. The stops that need an answer are asked, as the desktop
+/// app's dialogs ask them (ui/js/conflicts.js), and as Steam asks about cloud
+/// saves rather than guessing; anything else is said.
+fn stopped(ui: &AppWindow, id: i64, opts: moose_rack::play::Options, e: &str) {
     if e.starts_with("SAVE_CONFLICT:") {
-        "This game's save changed on two devices. Choose which to keep in the desktop app for now.".to_owned()
+        let conflicts = with_app(|a| a.lib.as_ref().and_then(|l| l.pending_conflicts.lock().ok().map(|c| c.clone())))
+            .flatten()
+            .unwrap_or_default();
+        if !conflicts.is_empty() {
+            ASKING.with(|q| *q.borrow_mut() = Some(Asking::Conflict { id, opts, conflicts }));
+            ask_next(ui);
+            return;
+        }
     } else if let Some(why) = e.strip_prefix("SAVE_OFFLINE:") {
-        format!("Saves can't be checked with the server: {why}")
+        ASKING.with(|q| *q.borrow_mut() = Some(Asking::Offline { id, opts }));
+        ask(
+            ui,
+            "Saves are not syncing",
+            "Your saves could not be checked against the server.",
+            why.trim(),
+            "You can play, but progress won't be uploaded when you quit, and this device may not have the newest save.",
+            ("Play anyway", "saves stay on this device"),
+            ("Cancel", "don't launch"),
+        );
+        return;
     } else if let Some(what) = e.strip_prefix("BIOS_MISSING:") {
-        format!("A BIOS is missing: {what}")
-    } else {
-        format!("Launch failed: {e}")
+        ASKING.with(|q| *q.borrow_mut() = Some(Asking::Bios { id, opts }));
+        ask(
+            ui,
+            "A BIOS file is missing",
+            "This console needs a BIOS file that isn't on this device, and the server doesn't have it either.",
+            what.trim(),
+            "Games usually show a black screen without it. Some emulators run anyway, so it's worth a try.",
+            ("Play anyway", "may show a black screen"),
+            ("Cancel", "don't launch"),
+        );
+        return;
+    }
+    ui.invoke_show_toast(format!("Launch failed: {e}").into());
+}
+
+/// Put a question up, on its first answer.
+fn ask(ui: &AppWindow, title: &str, lead: &str, detail: &str, note: &str, a: (&str, &str), b: (&str, &str)) {
+    ui.set_ask_title(title.into());
+    ui.set_ask_lead(lead.into());
+    ui.set_ask_detail(detail.into());
+    ui.set_ask_note(note.into());
+    ui.set_ask_a(a.0.into());
+    ui.set_ask_a_sub(a.1.into());
+    ui.set_ask_b(b.0.into());
+    ui.set_ask_b_sub(b.1.into());
+    ui.set_ask_at(0);
+    ui.set_ask_open(true);
+}
+
+/// Ask about the next unanswered save conflict, or launch once there are none.
+fn ask_next(ui: &AppWindow) {
+    let next = ASKING.with(|q| match &*q.borrow() {
+        Some(Asking::Conflict { conflicts, .. }) => conflicts.first().cloned(),
+        _ => None,
+    });
+    let Some(c) = next else {
+        ui.set_ask_open(false);
+        if let Some(Asking::Conflict { id, opts, .. }) = ASKING.with(|q| q.borrow_mut().take()) {
+            start_launch_with(ui, id, opts);
+        }
+        return;
+    };
+    let when = |t: &Option<String>| match t {
+        Some(t) => format!("saved {}", t.replace('T', " ").replace('Z', " UTC")),
+        None => "date unknown".to_owned(),
+    };
+    let here = match c.local_bytes {
+        0 => when(&c.local_updated),
+        n => format!("{}, {}", when(&c.local_updated), human(n as u64)),
+    };
+    ask(
+        ui,
+        "Which save do you want to keep?",
+        &format!("{} changed on this device and on the server since they last matched. The game waits until you choose.", c.file_name),
+        c.reason.as_deref().unwrap_or(""),
+        "The copy you don't keep is backed up to library/saves-backup/ first, so this can be undone.",
+        ("This device", &here),
+        ("Server", &when(&c.server_updated)),
+    );
+}
+
+/// The answer to the open question: 0 or 1 for its two choices, -1 to cancel.
+fn answered(ui: &AppWindow, choice: i32) {
+    let asking = ASKING.with(|q| q.borrow_mut().take());
+    match asking {
+        Some(Asking::Conflict { id, opts, conflicts }) if choice >= 0 => {
+            let Some(c) = conflicts.first().cloned() else { return };
+            let keep = if choice == 0 { moose_rack::savesync::Keep::Local } else { moose_rack::savesync::Keep::Server };
+            let Some((lib, rt)) = with_app(|a| Some((a.lib.clone()?, a.runtime.clone()?))).flatten() else { return };
+            ASKING.with(|q| *q.borrow_mut() = Some(Asking::Conflict { id, opts, conflicts }));
+            let weak = ui.as_weak();
+            rt.spawn(async move {
+                let said = moose_rack::commands::resolve_save_conflict(&lib, c.file_name.clone(), keep).await;
+                let _ = weak.upgrade_in_event_loop(move |ui| match said {
+                    Ok(line) => {
+                        ui.invoke_show_toast(line.into());
+                        ASKING.with(|q| {
+                            if let Some(Asking::Conflict { conflicts, .. }) = &mut *q.borrow_mut() {
+                                conflicts.retain(|x| x.file_name != c.file_name);
+                            }
+                        });
+                        ask_next(&ui);
+                    }
+                    // The save is still unresolved, so the question stays up.
+                    Err(e) => ui.invoke_show_toast(format!("Couldn't keep that copy: {e}").into()),
+                });
+            });
+        }
+        Some(Asking::Offline { id, mut opts }) if choice == 0 => {
+            ui.set_ask_open(false);
+            opts.skip_sync = Some(true);
+            start_launch_with(ui, id, opts);
+        }
+        Some(Asking::Bios { id, mut opts }) if choice == 0 => {
+            ui.set_ask_open(false);
+            opts.skip_bios = Some(true);
+            start_launch_with(ui, id, opts);
+        }
+        Some(Asking::Conflict { .. }) => {
+            ui.set_ask_open(false);
+            ui.invoke_show_toast("Not launched: the save is still waiting for a choice".into());
+        }
+        _ => {
+            ui.set_ask_open(false);
+            ui.invoke_show_toast("Not launched".into());
+        }
     }
 }
 
