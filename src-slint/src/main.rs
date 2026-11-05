@@ -11,6 +11,7 @@ mod model;
 mod nav;
 #[cfg(not(target_os = "android"))]
 mod pad;
+mod prefs;
 mod sample;
 mod sound;
 
@@ -67,6 +68,19 @@ enum Sort {
 
 impl Sort {
     const ALL: [Sort; 3] = [Sort::Name, Sort::Year, Sort::Played];
+
+    /// How `ui.toml` writes it.
+    fn id(self) -> &'static str {
+        match self {
+            Sort::Name => "name",
+            Sort::Year => "year",
+            Sort::Played => "played",
+        }
+    }
+
+    fn from_id(id: &str) -> Sort {
+        Sort::ALL.into_iter().find(|s| s.id() == id).unwrap_or(Sort::Name)
+    }
 
     fn label(self) -> &'static str {
         match self {
@@ -164,6 +178,46 @@ fn main() -> Result<(), slint::PlatformError> {
     if let Ok(slug) = std::env::var("MOOSE_SLINT_PLATFORM") {
         with_app(|a| a.state.platform = a.platforms.iter().position(|p| p.slug == slug).unwrap_or(0));
     }
+    // The window's choices from last time (prefs.rs). Pictures and scripted
+    // tests start from the defaults and keep nothing, so they stay comparable
+    // and leave no trace.
+    // MOOSE_SLINT_KEEP_PREFS lets a scripted test check them.
+    let keep_prefs = std::env::var_os("MOOSE_SLINT_SNAPSHOT").is_none()
+        && (std::env::var_os("MOOSE_SLINT_TEST_KEYS").is_none() || std::env::var_os("MOOSE_SLINT_KEEP_PREFS").is_some());
+    if let Some(p) = prefs::load().filter(|_| keep_prefs) {
+        ui.set_opt_sounds(p.sounds);
+        ui.set_zoom(p.icon_size.clamp(90.0, 300.0));
+        ui.set_mode(if p.desk { 1 } else { 0 });
+        ui.set_list_view(p.list);
+        with_app(|a| a.state.sort = Sort::from_id(&p.sort));
+    }
+    if keep_prefs {
+        ui.on_prefs_changed({
+            let weak = ui.as_weak();
+            move || {
+                let sort = with_app(|a| a.state.sort.id()).unwrap_or("name");
+                prefs::changed(&weak.unwrap(), sort);
+            }
+        });
+    }
+    // The save sync belongs to the core (config.toml); the switch shows it and
+    // changes it there, taking effect at once.
+    if let Some(lib) = &lib {
+        ui.set_opt_autosync(lib.auto_sync.load(std::sync::atomic::Ordering::Relaxed));
+    }
+    ui.on_autosync_changed({
+        let weak = ui.as_weak();
+        let lib = lib.clone();
+        move |on| {
+            let Some(lib) = &lib else { return };
+            if lib.auto_sync.load(std::sync::atomic::Ordering::Relaxed) == on {
+                return;
+            }
+            if let Err(e) = moose_rack::commands::set_auto_sync(lib, on) {
+                weak.unwrap().invoke_show_toast(format!("Couldn't change the save sync: {e}").into());
+            }
+        }
+    });
     show_platforms(&ui);
     refresh(&ui, Land::Remembered);
     fetch_covers(&ui);
@@ -681,12 +735,15 @@ fn test_keys(ui: &AppWindow, keys: String) -> slint::Timer {
         let sel = ui.get_selected_index();
         let title = ui.get_games().row_data(sel.max(0) as usize).map(|g| g.title.to_string()).unwrap_or_default();
         println!(
-            "{step:>12}  zone {} at {}  header {}  settings {}  ask {}  {} | {sel} {title}",
+            "{step:>12}  zone {} at {}  header {}  settings {}  ask {}  mode {} list {} sort {}  {} | {sel} {title}",
             ui.get_focus_zone(),
             ui.get_focus_index(),
             ui.get_header_at(),
             ui.get_settings_open(),
             if ui.get_ask_open() { ui.get_ask_at() } else { -1 },
+            ui.get_mode(),
+            ui.get_list_view(),
+            ui.get_sort_label(),
             ui.get_heading(),
         );
     });

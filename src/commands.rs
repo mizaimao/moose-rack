@@ -225,6 +225,14 @@ pub fn config_fields() -> CmdResult<ConfigFields> {
     })
 }
 
+/// Turn the automatic save sync on or off: written to config.toml for the
+/// next start, and switched in the running app at once.
+pub fn set_auto_sync(state: &AppState, on: bool) -> CmdResult<bool> {
+    crate::config::set_table_bool(&crate::config::path_str(), "saves", "auto_sync", on).map_err(err)?;
+    state.auto_sync.store(on, std::sync::atomic::Ordering::Relaxed);
+    Ok(on)
+}
+
 pub fn set_config_field(field: String, value: String) -> CmdResult<String> {
     let (table, key) = match field.as_str() {
         "library_root" => ("library", "local_root"),
@@ -1966,7 +1974,7 @@ pub async fn auto_sync(
     row: &cache::RomRow,
     when: savesync::When,
 ) -> AutoSync {
-    if !state.auto_sync {
+    if !state.auto_sync.load(std::sync::atomic::Ordering::Relaxed) {
         return AutoSync::default();
     }
     let Some(client) = state.client.clone() else {
@@ -2095,7 +2103,7 @@ pub fn unit_cfgs(state: &AppState) -> Vec<crate::config::UnitSourceCfg> {
 /// `auto_sync` for a standalone emulator: its family's save units, before a
 /// game and after it, the way RetroArch saves sync around a launch.
 pub async fn auto_sync_units(state: &AppState, family: &str, when: savesync::When) -> AutoSync {
-    if !state.auto_sync {
+    if !state.auto_sync.load(std::sync::atomic::Ordering::Relaxed) {
         return AutoSync::default();
     }
     let Some(client) = state.client.clone() else {
