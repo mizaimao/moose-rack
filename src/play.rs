@@ -318,30 +318,32 @@ async fn launch_standalone(
 ) -> CmdResult<String> {
     use crate::standalone;
     let dir = standalone::dir(&state.library_root, emu);
-    let Some(program) = standalone::program(&dir) else {
+    let Some(program) = standalone::program(emu, &dir) else {
         return Err(format!("EMULATOR_MISSING:{}:{}:{}", emu.id, emu.name, emu.version));
     };
 
     let mut notes = Vec::new();
-    let bios_dir = state.system_dir().join("PS2");
-    if let Some(api) = state.client.as_ref() {
-        say("checking BIOS files…");
-        match standalone::fetch_bios(api, &bios_dir).await {
-            Ok(0) => {}
-            Ok(n) => notes.push(format!("fetched {n} BIOS file(s)")),
-            Err(e) => notes.push(format!("could not fetch BIOS: {e}")),
+    let bios_dir = state.system_dir().join(emu.bios.unwrap_or_default());
+    if emu.bios.is_some() {
+        if let Some(api) = state.client.as_ref() {
+            say("checking BIOS files…");
+            match standalone::fetch_bios(api, &bios_dir).await {
+                Ok(0) => {}
+                Ok(n) => notes.push(format!("fetched {n} BIOS file(s)")),
+                Err(e) => notes.push(format!("could not fetch BIOS: {e}")),
+            }
+        }
+        // PCSX2 starts nothing without one, so this is a refusal rather than
+        // the "play anyway" question a RetroArch core gets.
+        if standalone::pick_bios(&bios_dir).is_none() {
+            return Err(format!(
+                "No PS2 BIOS. Put one in the server's bios/PS2 folder, or in {}",
+                bios_dir.display()
+            ));
         }
     }
-    // PCSX2 starts nothing without one, so this is a refusal rather than the
-    // "play anyway" question a RetroArch core gets.
-    if standalone::pick_bios(&bios_dir).is_none() {
-        return Err(format!(
-            "No PS2 BIOS. Put one in the server's bios/PS2 folder, or in {}",
-            bios_dir.display()
-        ));
-    }
     let family = emu.family.unwrap_or_default();
-    standalone::configure(&dir, &bios_dir).map_err(err)?;
+    standalone::configure(emu, &dir, &bios_dir).map_err(err)?;
 
     if skip_sync {
         notes.push("saves: not synced — you chose to play anyway".to_owned());
@@ -365,12 +367,16 @@ async fn launch_standalone(
         state,
         row,
         skip_sync,
-        standalone::config_lines(&bios_dir),
+        standalone::config_lines(emu, &bios_dir),
         crate::launchrecord::Data {
             game_md5: row.md5_hash.clone(),
             emulator: format!("{} {}", emu.name, emu.version),
             emulator_md5: crate::launchrecord::md5_of(&program),
-            bios: bios_of(&bios_dir, standalone::pick_bios(&bios_dir).into_iter().collect()),
+            bios: if emu.bios.is_some() {
+                bios_of(&bios_dir, standalone::pick_bios(&bios_dir).into_iter().collect())
+            } else {
+                Vec::new()
+            },
         },
     );
     say(&format!("starting {}…", emu.name));
@@ -378,7 +384,7 @@ async fn launch_standalone(
     let started_at = crate::util::now_iso();
     let status = {
         let _playing = busy.playing(&row.name);
-        standalone::command(&program, rom).status()
+        standalone::command(emu, &program, rom, &dir).status()
     }
     .map_err(|e| {
         // PCSX2's macOS build is Intel-only, so Apple silicon runs it through
@@ -515,12 +521,13 @@ async fn emulator_item(state: &AppState, row: &cache::RomRow) -> (Item, Option<S
     if let Some(emu) = crate::standalone::for_platform(&row.platform_slug) {
         use crate::standalone;
         let dir = standalone::dir(&state.library_root, emu);
-        let bios_dir = state.system_dir().join("PS2");
+        let bios_dir = state.system_dir().join(emu.bios.unwrap_or_default());
         let label = format!("{} {}", emu.name, emu.version);
-        let installed = standalone::program(&dir).is_some()
+        let installed = standalone::program(emu, &dir).is_some()
             && standalone::installed_version(&dir).as_deref() == Some(emu.version);
-        let bios = standalone::pick_bios(&bios_dir).is_some();
-        let settings = installed && standalone::configured(&dir, &bios_dir);
+        // An emulator that needs no BIOS has all it needs.
+        let bios = emu.bios.is_none() || standalone::pick_bios(&bios_dir).is_some();
+        let settings = installed && standalone::configured(emu, &dir, &bios_dir);
         let mut bytes = if installed { 0 } else { standalone::download_size(emu) };
         if !bios {
             let have = |f: &crate::api::Firmware| {
@@ -528,9 +535,10 @@ async fn emulator_item(state: &AppState, row: &cache::RomRow) -> (Item, Option<S
             };
             bytes += server_bios_bytes(state, |f| standalone::is_ps2_bios(f) && !have(f)).await.unwrap_or(0);
         }
+        let with = if emu.bios.is_some() { "BIOS and settings" } else { "its settings" };
         let detail = match (installed, bios, settings) {
-            (true, true, true) => "with BIOS and its settings".to_owned(),
-            (false, _, _) => "not on this computer yet; comes with BIOS and settings".to_owned(),
+            (true, true, true) => format!("with {with}"),
+            (false, _, _) => format!("not on this computer yet; comes with {with}"),
             (true, false, _) => "installed; BIOS not here yet".to_owned(),
             (true, true, false) => "installed; settings to apply".to_owned(),
         };
@@ -664,7 +672,7 @@ pub async fn prepare(state: &AppState, id: i64, say: impl Fn(&str) + Send + Sync
     if let Some(emu) = crate::standalone::for_platform(&row.platform_slug) {
         use crate::standalone;
         let dir = standalone::dir(&state.library_root, emu);
-        if standalone::program(&dir).is_none() || standalone::installed_version(&dir).as_deref() != Some(emu.version) {
+        if standalone::program(emu, &dir).is_none() || standalone::installed_version(&dir).as_deref() != Some(emu.version) {
             let http = crate::util::http_client(None).map_err(err)?;
             let mut last = 0u64;
             standalone::install(&http, emu, &dir, |got, total| {
@@ -678,8 +686,8 @@ pub async fn prepare(state: &AppState, id: i64, say: impl Fn(&str) + Send + Sync
             .map_err(err)?;
             done.push(format!("installed {} {}", emu.name, emu.version));
         }
-        let bios_dir = state.system_dir().join("PS2");
-        if let Some(api) = state.client.as_ref() {
+        let bios_dir = state.system_dir().join(emu.bios.unwrap_or_default());
+        if let (Some(_), Some(api)) = (emu.bios, state.client.as_ref()) {
             say("fetching BIOS files…");
             let n = standalone::fetch_bios(api, &bios_dir).await.map_err(err)?;
             if n > 0 {
@@ -687,7 +695,7 @@ pub async fn prepare(state: &AppState, id: i64, say: impl Fn(&str) + Send + Sync
             }
         }
         say(&format!("setting up {}…", emu.name));
-        standalone::configure(&dir, &bios_dir).map_err(err)?;
+        standalone::configure(emu, &dir, &bios_dir).map_err(err)?;
         return Ok(done.join("; "));
     }
 

@@ -1256,6 +1256,7 @@ fn checklist_download(ui: &AppWindow) {
             mark_installed(&ui, id, list.as_ref().is_ok_and(|l| l.game.ready));
             match (fetched, list) {
                 (Err(e), _) => {
+                    eprintln!("checklist: download failed: {e}");
                     ui.set_checklist_progress(SharedString::new());
                     ui.invoke_show_toast(format!("Download failed: {e}").into());
                 }

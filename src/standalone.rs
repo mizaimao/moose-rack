@@ -1,5 +1,6 @@
 //! Standalone emulators the desktop app installs, sets up and starts itself,
-//! for systems RetroArch can't run well. PCSX2 for the PS2 first. See
+//! for systems RetroArch can't run well: PCSX2 for the PS2, PPSSPP for the PSP
+//! (Frank, 2026-11-05: PPSSPP itself, not its RetroArch core). See
 //! `docs/server-and-client.md`, "Play, step by step".
 //!
 //! Each one lives in `<library>/emulators/<id>/` in its own portable mode, so
@@ -24,6 +25,9 @@ pub struct Emulator {
     /// Download size in bytes of the pinned release: (macOS, Windows, Linux).
     /// Shown in the launch checklist before anything is fetched.
     pub sizes: (u64, u64, u64),
+    /// The BIOS folder it needs under the system folder and the server's
+    /// `bios/` (`PS2`), or None when it needs none.
+    pub bios: Option<&'static str>,
 }
 
 pub const PCSX2: Emulator = Emulator {
@@ -33,9 +37,22 @@ pub const PCSX2: Emulator = Emulator {
     platforms: &["ps2"],
     family: Some("pcsx2"),
     sizes: (24_377_200, 25_670_075, 60_119_544),
+    bios: Some("PS2"),
 };
 
-pub const ALL: &[&Emulator] = &[&PCSX2];
+/// Its saves sync as the `ppsspp` family the Android handhelds already use, so
+/// a PSP save carries between the Nova and here.
+pub const PPSSPP: Emulator = Emulator {
+    id: "ppsspp",
+    name: "PPSSPP",
+    version: "v1.20.4",
+    platforms: &["psp"],
+    family: Some("ppsspp"),
+    sizes: (37_389_023, 20_390_334, 50_689_748),
+    bios: None,
+};
+
+pub const ALL: &[&Emulator] = &[&PCSX2, &PPSSPP];
 
 /// The folder card the app gives PCSX2. A folder rather than an 8 MB file, so
 /// each game's save syncs on its own (`docs/emulator-saves.md`).
@@ -52,8 +69,8 @@ const CARD_SUPERBLOCK: &[u8] = include_bytes!("../data/pcsx2-folder-card-superbl
 
 /// The emulator the app runs for this platform on this OS, if there is one.
 pub fn for_platform(platform: &str) -> Option<&'static Emulator> {
-    // Desktop Linux on x86_64, which is what PCSX2 builds for: not KNULLI,
-    // which is `target_os = "linux"` on an ARM handheld.
+    // Desktop Linux on x86_64, which is what these are fetched for: not
+    // KNULLI, which is `target_os = "linux"` on an ARM handheld.
     let scheme = crate::platform::current().scheme();
     let desktop_linux = scheme == "linux" && std::env::consts::ARCH == "x86_64";
     if !(matches!(scheme, "macos" | "windows") || desktop_linux) {
@@ -94,28 +111,54 @@ pub fn installed_version(dir: &Path) -> Option<String> {
 const VERSION_FILE: &str = ".moose-version";
 
 /// The Linux download, kept under one name whatever the version.
-const LINUX_APPIMAGE: &str = "PCSX2.AppImage";
-
-/// Where PCSX2 keeps its settings (`inis/`) and memory cards (`memcards/`) in
-/// its portable mode. Beside the program on macOS and Windows. On Linux the
-/// program is an AppImage, which runs from a read-only mount, so PCSX2 2.8
-/// uses a `PCSX2` folder beside the AppImage instead (`EmuFolders::
-/// SetDataDirectory`, the `APPIMAGE` case).
-pub fn data_root(dir: &Path) -> PathBuf {
-    if std::env::consts::OS == "linux" { dir.join("PCSX2") } else { dir.to_path_buf() }
+fn linux_appimage(emu: &Emulator) -> String {
+    format!("{}.AppImage", emu.name)
 }
 
-/// The app's memory card folder, which the save sync reads and writes.
+/// Where the emulator keeps its settings and saves in its portable mode.
+///
+/// PCSX2 (`inis/`, `memcards/`): beside the program on macOS and Windows. On
+/// Linux the program is an AppImage, which runs from a read-only mount, so
+/// PCSX2 2.8 uses a `PCSX2` folder beside the AppImage instead
+/// (`EmuFolders::SetDataDirectory`, the `APPIMAGE` case).
+///
+/// PPSSPP 1.20 (its "memory stick": `PSP/SYSTEM/ppsspp.ini`, `PSP/SAVEDATA`):
+/// a `memstick` folder beside the exe on Windows, which the zip is portable by
+/// (no `installed.txt`). On macOS and Linux it is `$HOME/.config/ppsspp`
+/// (`NativeApp.cpp`, `DarwinFileSystemServices.mm`), so `command` starts it
+/// with HOME set to its own folder.
+pub fn data_root(emu: &Emulator, dir: &Path) -> PathBuf {
+    match (emu.id, std::env::consts::OS) {
+        ("pcsx2", "linux") => dir.join("PCSX2"),
+        ("ppsspp", "windows") => dir.join("memstick"),
+        ("ppsspp", _) => dir.join(".config").join("ppsspp"),
+        _ => dir.to_path_buf(),
+    }
+}
+
+/// PCSX2's memory card folder, which the save sync reads and writes.
 pub fn card_dir(dir: &Path) -> PathBuf {
-    data_root(dir).join("memcards").join(CARD)
+    data_root(&PCSX2, dir).join("memcards").join(CARD)
+}
+
+/// What the save sync reads and writes for this emulator: PCSX2's folder card,
+/// PPSSPP's memory stick (which holds `PSP/SAVEDATA`).
+pub fn save_root(emu: &Emulator, dir: &Path) -> PathBuf {
+    match emu.id {
+        "pcsx2" => card_dir(dir),
+        _ => data_root(emu, dir),
+    }
 }
 
 /// The program to start, if it's installed.
-pub fn program(dir: &Path) -> Option<PathBuf> {
-    let p = match std::env::consts::OS {
-        "macos" => dir.join("PCSX2.app/Contents/MacOS/PCSX2"),
-        "linux" => dir.join(LINUX_APPIMAGE),
-        _ => dir.join("pcsx2-qt.exe"),
+pub fn program(emu: &Emulator, dir: &Path) -> Option<PathBuf> {
+    let p = match (emu.id, std::env::consts::OS) {
+        (_, "linux") => dir.join(linux_appimage(emu)),
+        ("pcsx2", "macos") => dir.join("PCSX2.app/Contents/MacOS/PCSX2"),
+        ("pcsx2", _) => dir.join("pcsx2-qt.exe"),
+        ("ppsspp", "macos") => dir.join("PPSSPPSDL.app/Contents/MacOS/PPSSPPSDL"),
+        ("ppsspp", _) => dir.join("PPSSPPWindows64.exe"),
+        _ => return None,
     };
     p.is_file().then_some(p)
 }
@@ -123,13 +166,18 @@ pub fn program(dir: &Path) -> Option<PathBuf> {
 /// The release file for this OS and the version pinned above.
 fn asset(emu: &Emulator) -> Result<(String, &'static str)> {
     let v = emu.version;
-    let name = match std::env::consts::OS {
-        "macos" => (format!("pcsx2-{v}-macos-Qt.tar.xz"), "tar.xz"),
-        "windows" => (format!("pcsx2-{v}-windows-x64-Qt.7z"), "7z"),
-        "linux" if std::env::consts::ARCH == "x86_64" => (format!("pcsx2-{v}-linux-appimage-x64-Qt.AppImage"), "AppImage"),
-        os => bail!("{} is not set up for {os} yet", emu.name),
+    let x86_64 = std::env::consts::ARCH == "x86_64";
+    let (file, kind) = match (emu.id, std::env::consts::OS) {
+        ("pcsx2", "macos") => (format!("pcsx2-{v}-macos-Qt.tar.xz"), "tar.xz"),
+        ("pcsx2", "windows") => (format!("pcsx2-{v}-windows-x64-Qt.7z"), "7z"),
+        ("pcsx2", "linux") if x86_64 => (format!("pcsx2-{v}-linux-appimage-x64-Qt.AppImage"), "AppImage"),
+        ("ppsspp", "macos") => (format!("PPSSPPSDL-macOS-{v}.zip"), "zip"),
+        ("ppsspp", "windows") => (format!("PPSSPP-{v}-Windows-x64.zip"), "zip"),
+        ("ppsspp", "linux") if x86_64 => (format!("PPSSPP-{v}-anylinux-x86_64.AppImage"), "AppImage"),
+        (_, os) => bail!("{} is not set up for {os} yet", emu.name),
     };
-    Ok((format!("https://github.com/PCSX2/pcsx2/releases/download/{v}/{}", name.0), name.1))
+    let repo = if emu.id == "ppsspp" { "hrydgard/ppsspp" } else { "PCSX2/pcsx2" };
+    Ok((format!("https://github.com/{repo}/releases/download/{v}/{file}"), kind))
 }
 
 /// Download and unpack the pinned release into `dir`.
@@ -165,8 +213,8 @@ pub async fn install(
 
     if kind == "AppImage" {
         // Linux: the AppImage is the program; nothing to unpack. Portable mode
-        // there is `-portable` on the command line (see `command`).
-        let target = dir.join(LINUX_APPIMAGE);
+        // there is on the command line (see `command`).
+        let target = dir.join(linux_appimage(emu));
         std::fs::rename(&download, &target).with_context(|| format!("moving {} into place", target.display()))?;
         #[cfg(unix)]
         {
@@ -181,19 +229,20 @@ pub async fn install(
         }
         std::fs::create_dir_all(&staging)?;
         unpack(&download, kind, &staging)?;
-        place(&staging, dir)?;
+        place(emu, &staging, dir)?;
         std::fs::remove_dir_all(&staging).ok();
         std::fs::remove_file(&download).ok();
 
         // Portable mode: PCSX2 looks for this beside the .app on macOS and
-        // beside the .exe on Windows (`EmuFolders::SetAppRoot`).
+        // beside the .exe on Windows (`EmuFolders::SetAppRoot`). PPSSPP's zip
+        // is portable as it comes on Windows, and HOME makes it so elsewhere.
         let marker = dir.join("portable.txt");
-        if !marker.exists() {
+        if emu.id == "pcsx2" && !marker.exists() {
             std::fs::write(&marker, "")?;
         }
     }
     std::fs::write(dir.join(VERSION_FILE), emu.version)?;
-    program(dir).with_context(|| format!("{} unpacked, but its program isn't in {}", emu.name, dir.display()))
+    program(emu, dir).with_context(|| format!("{} unpacked, but its program isn't in {}", emu.name, dir.display()))
 }
 
 fn unpack(archive: &Path, kind: &str, into: &Path) -> Result<()> {
@@ -213,26 +262,48 @@ fn unpack(archive: &Path, kind: &str, into: &Path) -> Result<()> {
         }
         "7z" => sevenz_rust2::decompress_file(archive, into)
             .with_context(|| format!("unpacking {}", archive.display()))?,
+        // macOS: `ditto`, which keeps the symlinks inside an app bundle's
+        // frameworks that a plain unzip flattens, and with them the signature.
+        "zip" if cfg!(target_os = "macos") => {
+            let out = std::process::Command::new("ditto")
+                .args(["-x", "-k"])
+                .arg(archive)
+                .arg(into)
+                .output()
+                .context("running ditto")?;
+            if !out.status.success() {
+                bail!("unpacking {}: {}", archive.display(), String::from_utf8_lossy(&out.stderr).trim());
+            }
+        }
+        "zip" => {
+            let file = std::fs::File::open(archive).with_context(|| format!("opening {}", archive.display()))?;
+            zip::ZipArchive::new(file)
+                .and_then(|mut z| z.extract(into))
+                .with_context(|| format!("unpacking {}", archive.display()))?;
+        }
         other => bail!("no unpacker for .{other}"),
     }
     Ok(())
 }
 
 /// Move the unpacked program into `dir`.
-fn place(staging: &Path, dir: &Path) -> Result<()> {
+fn place(emu: &Emulator, staging: &Path, dir: &Path) -> Result<()> {
     if std::env::consts::OS == "macos" {
-        // The archive holds one .app, named after the version.
+        // The archive holds one .app (PCSX2 names it after the version); it
+        // goes in under the name `program` looks for.
         let app = find(staging, &|p| p.extension().is_some_and(|e| e == "app") && p.is_dir())
-            .with_context(|| format!("no .app in the {} download", PCSX2.name))?;
-        let target = dir.join("PCSX2.app");
+            .with_context(|| format!("no .app in the {} download", emu.name))?;
+        let name = if emu.id == "ppsspp" { "PPSSPPSDL.app" } else { "PCSX2.app" };
+        let target = dir.join(name);
         if target.exists() {
             std::fs::remove_dir_all(&target).with_context(|| format!("removing the old {}", target.display()))?;
         }
         std::fs::rename(&app, &target).with_context(|| format!("moving {} into place", app.display()))?;
         return Ok(());
     }
-    let exe = find(staging, &|p| p.file_name().is_some_and(|n| n.eq_ignore_ascii_case("pcsx2-qt.exe")))
-        .with_context(|| "no pcsx2-qt.exe in the download".to_owned())?;
+    let want = if emu.id == "ppsspp" { "PPSSPPWindows64.exe" } else { "pcsx2-qt.exe" };
+    let exe = find(staging, &|p| p.file_name().is_some_and(|n| n.eq_ignore_ascii_case(want)))
+        .with_context(|| format!("no {want} in the download"))?;
     lay_over(exe.parent().unwrap_or(staging), dir)
 }
 
@@ -394,8 +465,8 @@ pub fn settings(bios_dir: &Path, bios: Option<&str>) -> Vec<(&'static str, Strin
 
 /// The app-owned settings as `Section.Key = value` lines, for a launch record's
 /// config version. The BIOS folder is this computer's path and is left out.
-pub fn config_lines(bios_dir: &Path) -> Vec<String> {
-    settings(bios_dir, pick_bios(bios_dir).as_deref())
+pub fn config_lines(emu: &Emulator, bios_dir: &Path) -> Vec<String> {
+    owned(emu, bios_dir)
         .into_iter()
         .filter(|(s, k, _)| !(*s == "Folders" && k == "Bios"))
         .map(|(s, k, v)| format!("{s}.{k} = {v}"))
@@ -471,26 +542,59 @@ pub fn set_ini(text: &str, values: &[(&'static str, String, String)]) -> String 
     out
 }
 
-/// Write the app's settings into PCSX2's ini, and make sure the memory card
-/// exists and is formatted. Returns the card's folder.
-pub fn configure(dir: &Path, bios_dir: &Path) -> Result<PathBuf> {
-    // In full: PCSX2 reads a relative folder against its own data folder, so
-    // `./library/...` from the app's point of view pointed nowhere.
-    let bios_dir = &full(bios_dir);
-    let inis = data_root(dir).join("inis");
-    std::fs::create_dir_all(&inis)?;
-    let ini = inis.join("PCSX2.ini");
+/// The settings the app owns in PPSSPP's `ppsspp.ini`: no first-run screen
+/// and no offer to update the pinned version. Fullscreen and leaving to the
+/// app from the pause menu are on its command line (`command`), not saved.
+pub fn ppsspp_settings() -> Vec<(&'static str, String, String)> {
+    vec![
+        ("General", "FirstRun".to_owned(), "False".to_owned()),
+        ("General", "CheckForNewVersion".to_owned(), "False".to_owned()),
+    ]
+}
+
+/// The settings the app owns for this emulator.
+fn owned(emu: &Emulator, bios_dir: &Path) -> Vec<(&'static str, String, String)> {
+    match emu.id {
+        "ppsspp" => ppsspp_settings(),
+        _ => {
+            let bios_dir = &full(bios_dir);
+            settings(bios_dir, pick_bios(bios_dir).as_deref())
+        }
+    }
+}
+
+/// The emulator's own settings file.
+fn ini_path(emu: &Emulator, dir: &Path) -> PathBuf {
+    match emu.id {
+        "ppsspp" => data_root(emu, dir).join("PSP/SYSTEM/ppsspp.ini"),
+        _ => data_root(emu, dir).join("inis/PCSX2.ini"),
+    }
+}
+
+/// Write the app's settings into the emulator's ini, and make sure its save
+/// folder exists: PCSX2's memory card, formatted, or PPSSPP's PSP/SAVEDATA.
+/// Returns what the save sync reads (`save_root`).
+pub fn configure(emu: &Emulator, dir: &Path, bios_dir: &Path) -> Result<PathBuf> {
+    let ini = ini_path(emu, dir);
+    if let Some(parent) = ini.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
     let old = std::fs::read_to_string(&ini).unwrap_or_default();
-    let want = settings(bios_dir, pick_bios(bios_dir).as_deref());
+    let want = owned(emu, bios_dir);
     if !holds(&old, &want) {
         std::fs::write(&ini, set_ini(&old, &want)).with_context(|| format!("writing {}", ini.display()))?;
     }
-    let card = card_dir(dir);
-    seed_card(&card)?;
-    Ok(card)
+    if emu.id == "pcsx2" {
+        seed_card(&card_dir(dir))?;
+    } else {
+        let saves = data_root(emu, dir).join("PSP/SAVEDATA");
+        std::fs::create_dir_all(&saves).with_context(|| format!("creating {}", saves.display()))?;
+    }
+    Ok(save_root(emu, dir))
 }
 
-/// `path` from the root, as PCSX2 needs it.
+/// `path` from the root, as PCSX2 needs it: it reads a relative folder
+/// against its own data folder, so `./library/...` pointed nowhere.
 fn full(path: &Path) -> PathBuf {
     std::path::absolute(path).unwrap_or_else(|_| path.to_path_buf())
 }
@@ -513,14 +617,16 @@ pub fn holds(text: &str, values: &[(&'static str, String, String)]) -> bool {
     values.iter().all(|(s, k, v)| have.get(&((*s).to_owned(), k.clone())) == Some(v))
 }
 
-/// Whether PCSX2's settings already hold everything the app owns and the
-/// card is formatted: what `configure` would leave unchanged.
-pub fn configured(dir: &Path, bios_dir: &Path) -> bool {
-    let bios_dir = &full(bios_dir);
-    let old = std::fs::read_to_string(data_root(dir).join("inis/PCSX2.ini")).unwrap_or_default();
-    let want = settings(bios_dir, pick_bios(bios_dir).as_deref());
-    let card = card_dir(dir).join("_pcsx2_superblock");
-    holds(&old, &want) && std::fs::read(card).is_ok_and(|b| b.starts_with(b"Sony PS2 Memory Card Format"))
+/// Whether the emulator's settings already hold everything the app owns and
+/// its save folder is ready: what `configure` would leave unchanged.
+pub fn configured(emu: &Emulator, dir: &Path, bios_dir: &Path) -> bool {
+    let old = std::fs::read_to_string(ini_path(emu, dir)).unwrap_or_default();
+    let ready = if emu.id == "pcsx2" {
+        std::fs::read(card_dir(dir).join("_pcsx2_superblock")).is_ok_and(|b| b.starts_with(b"Sony PS2 Memory Card Format"))
+    } else {
+        data_root(emu, dir).join("PSP/SAVEDATA").is_dir()
+    };
+    holds(&old, &owned(emu, bios_dir)) && ready
 }
 
 /// Create the folder card, or format one PCSX2 left unformatted, without
@@ -535,12 +641,29 @@ pub fn seed_card(card: &Path) -> Result<()> {
     Ok(())
 }
 
-/// The command that plays `rom`: fullscreen, no PCSX2 window around it, and
-/// PCSX2 quits when the game is shut down.
-pub fn command(program: &Path, rom: &Path) -> std::process::Command {
+/// The command that plays `rom` in `emu`, installed in `dir`.
+///
+/// PCSX2: fullscreen, no window around it, and it quits when the game is shut
+/// down. On Linux portable mode is `-portable`: no file beside an AppImage's
+/// program can be read from inside its mount.
+///
+/// PPSSPP: fullscreen, and Exit in its pause menu quits back to the app
+/// rather than to PPSSPP's own game browser. On macOS and Linux HOME (and on
+/// Linux XDG_CONFIG_HOME) is its folder, which is what makes it portable
+/// there (`data_root`).
+pub fn command(emu: &Emulator, program: &Path, rom: &Path, dir: &Path) -> std::process::Command {
     let mut cmd = std::process::Command::new(program);
-    // On Linux portable mode is this flag: no file beside an AppImage's
-    // program can be read from inside its mount.
+    if emu.id == "ppsspp" {
+        if std::env::consts::OS != "windows" {
+            let home = full(dir);
+            cmd.env("HOME", &home);
+            if std::env::consts::OS == "linux" {
+                cmd.env("XDG_CONFIG_HOME", home.join(".config"));
+            }
+        }
+        cmd.args(["--fullscreen", "--pause-menu-exit"]).arg(full(rom));
+        return cmd;
+    }
     if std::env::consts::OS == "linux" {
         cmd.arg("-portable");
     }
@@ -678,21 +801,56 @@ mod tests {
         let bios = d.join("bios");
         std::fs::create_dir_all(&bios).unwrap();
         std::fs::write(bios.join("SCPH-70004.BIN"), b"x").unwrap();
-        let root = data_root(&d);
+        let root = data_root(&PCSX2, &d);
         std::fs::create_dir_all(root.join("inis")).unwrap();
         std::fs::write(root.join("inis/PCSX2.ini"), "[UI]\nTheme = darkfusion\n").unwrap();
-        let card = configure(&d, &bios).unwrap();
+        let card = configure(&PCSX2, &d, &bios).unwrap();
         let ini = std::fs::read_to_string(root.join("inis/PCSX2.ini")).unwrap();
         assert!(ini.contains("Theme = darkfusion"));
         assert!(ini.contains("BIOS = SCPH-70004.BIN"));
         assert_eq!(card, root.join("memcards").join(CARD));
-        assert!(configured(&d, &bios), "configure's result reads back as configured");
+        assert!(configured(&PCSX2, &d, &bios), "configure's result reads back as configured");
         assert!(card.join("_pcsx2_superblock").is_file());
+    }
+
+    /// PPSSPP's settings go in its memory stick, PSP/SAVEDATA is made for the
+    /// save sync, and the user's own settings in the ini stay.
+    #[test]
+    fn ppsspp_is_set_up_in_its_own_memory_stick() {
+        let d = tmp("ppsspp");
+        let ini = data_root(&PPSSPP, &d).join("PSP/SYSTEM/ppsspp.ini");
+        std::fs::create_dir_all(ini.parent().unwrap()).unwrap();
+        std::fs::write(&ini, "[Graphics]\nInternalResolution = 3\n").unwrap();
+        assert!(!configured(&PPSSPP, &d, &d));
+        let saves = configure(&PPSSPP, &d, &d).unwrap();
+        let text = std::fs::read_to_string(&ini).unwrap();
+        assert!(text.contains("InternalResolution = 3"), "the user's setting was lost:\n{text}");
+        assert!(text.contains("FirstRun = False") && text.contains("CheckForNewVersion = False"));
+        assert_eq!(saves, data_root(&PPSSPP, &d));
+        assert!(saves.join("PSP/SAVEDATA").is_dir(), "the save sync needs PSP/SAVEDATA");
+        assert!(configured(&PPSSPP, &d, &d));
+    }
+
+    /// PPSSPP keeps its data under HOME on macOS and Linux, so the command
+    /// points HOME at its own folder; it plays fullscreen and its pause menu's
+    /// Exit comes back to the app.
+    #[test]
+    fn ppsspp_runs_fullscreen_with_its_home_in_its_folder() {
+        let cmd = command(&PPSSPP, Path::new("/e/ppsspp/PPSSPP"), Path::new("/r/Daxter (USA).iso"), Path::new("/e/ppsspp"));
+        let args: Vec<_> = cmd.get_args().map(|a| a.to_string_lossy().into_owned()).collect();
+        let rom = full(Path::new("/r/Daxter (USA).iso")).to_string_lossy().into_owned();
+        assert_eq!(args, ["--fullscreen", "--pause-menu-exit", rom.as_str()]);
+        let home = cmd.get_envs().find(|(k, _)| *k == "HOME").and_then(|(_, v)| v);
+        if std::env::consts::OS == "windows" {
+            assert_eq!(home, None, "Windows is portable by its memstick folder, not HOME");
+        } else {
+            assert_eq!(home, Some(std::ffi::OsStr::new("/e/ppsspp")));
+        }
     }
 
     #[test]
     fn the_command_plays_fullscreen_with_no_window_around_it() {
-        let cmd = command(Path::new("/e/PCSX2"), Path::new("/r/Ico (USA).chd"));
+        let cmd = command(&PCSX2, Path::new("/e/PCSX2"), Path::new("/r/Ico (USA).chd"), Path::new("/e"));
         let args: Vec<_> = cmd.get_args().map(|a| a.to_string_lossy().into_owned()).collect();
         let want: &[&str] = if std::env::consts::OS == "linux" {
             &["-portable", "-nogui", "-fullscreen", "--", "/r/Ico (USA).chd"]
@@ -713,5 +871,7 @@ mod tests {
         }
         assert!(for_platform("snes").is_none());
         assert!(by_id("pcsx2").is_some());
+        let psp = for_platform("psp").map(|e| e.id);
+        assert_eq!(psp, found.map(|_| "ppsspp"), "PSP is PPSSPP wherever PS2 is PCSX2");
     }
 }
