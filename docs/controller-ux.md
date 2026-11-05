@@ -57,12 +57,12 @@ means these rules hold; each one is written so that it can be tested.
 Steam Big Picture, the PS5 and Switch home screens and ES-DE all follow these;
 when a rule is unclear, do what they do.
 
-## Where the prototype stands (2026-11-01)
+## Where the prototype stands (2026-11-04)
 
 | Rule | State |
 | --- | --- |
 | 1 Nothing needs a pointer | Done, except search typing (rule 7) |
-| 2 Cursor never lost | **Gap:** panes do not remember their position |
+| 2 Cursor never lost | Done: each console and tab keeps its game, clearing a search returns to it, the header keeps its control, Settings its row, and closing Settings goes back to where it opened |
 | 3 D-pad goes where expected | Done by zone; not yet through `focusring` |
 | 4 Back goes up | Done |
 | 5 Fixed button jobs | **Gap:** secondary actions are header buttons, not a menu on a face button |
@@ -71,4 +71,5 @@ when a rule is unclear, do what they do.
 | 8 Readable from the sofa | Partly: bigger art in Sofa, same type size |
 | 9 Every press answers | **Gap:** no motion or sound |
 
-The gaps are fixed in the order 2, 5, 6, 7, 9.
+The gaps are fixed in the order 2, 5, 6, 7, 9. `MOOSE_SLINT_TEST_KEYS` (src-slint/README.md)
+plays a list of presses and prints where the cursor lands, to check them.

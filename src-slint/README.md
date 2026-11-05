@@ -68,6 +68,14 @@ the actions `moose_rack::binds` names, with the core's repeat timing and stick
 dead zone (`padpoll`), so the prototype moves the way the app does. The mouse
 works but nothing needs it.
 
+The cursor is never lost (rule 2 in `docs/controller-ux.md`): each console and
+tab remembers the game it was on, clearing a search goes back to it, a library
+update leaves it on the same game, the header keeps its control and Settings
+its row, and closing Settings returns to wherever it was opened from. Start
+opens and closes Settings. `MOOSE_SLINT_TEST_KEYS=right,down,settings,back`
+plays those actions (`type:zelda` types a search), prints where the cursor is
+after each, and quits.
+
 Pads are read with SDL3 (`src/pad.rs`), which reports what kind each one is
 (Xbox 360, Xbox One, PS3 to PS5, Switch Pro, Joy-Con) and what is printed on
 its buttons; the hint bar draws those, PlayStation's shapes included, and the

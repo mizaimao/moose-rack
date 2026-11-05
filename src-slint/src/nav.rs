@@ -31,6 +31,21 @@ const ZOOM_MAX: f32 = 300.0;
 /// Carry out one action. False when it meant nothing where the cursor is, so a
 /// key can fall through to whatever else wants it.
 pub fn dispatch(ui: &AppWindow, action: &str) -> bool {
+    note_header(ui);
+    let done = act(ui, action);
+    note_header(ui);
+    done
+}
+
+/// The header remembers which of its controls had the cursor, so going up to
+/// it lands there again (rule 2 in docs/controller-ux.md).
+fn note_header(ui: &AppWindow) {
+    if ui.get_focus_zone() == HEADER {
+        ui.set_header_at(ui.get_focus_index());
+    }
+}
+
+fn act(ui: &AppWindow, action: &str) -> bool {
     // The launch checklist takes every action while it is open: nothing behind
     // it moves, as in the desktop app's launch questions.
     if ui.get_checklist_open() {
@@ -53,14 +68,13 @@ pub fn dispatch(ui: &AppWindow, action: &str) -> bool {
         ui.set_focus_zone(zone);
         ui.set_focus_index(index);
     };
+    let header = ui.get_header_at();
 
     match action {
         "up" => match zone {
             GRID if sel >= cols => ui.set_selected_index(sel - cols),
-            GRID => go(HEADER, 1),
             CONSOLES if ui.get_platform_index() > 0 => ui.invoke_platform_selected(ui.get_platform_index() - 1),
-            CONSOLES => go(HEADER, 0),
-            DETAIL => go(HEADER, 1),
+            GRID | CONSOLES | DETAIL => go(HEADER, header),
             SETTINGS if at > 0 => go(SETTINGS, at - 1),
             _ => return false,
         },
@@ -104,10 +118,7 @@ pub fn dispatch(ui: &AppWindow, action: &str) -> bool {
             _ => return false,
         },
         "back" | "back2" => match zone {
-            SETTINGS => {
-                ui.set_settings_open(false);
-                go(GRID, 0);
-            }
+            SETTINGS => ui.invoke_close_settings(),
             SOFA => {
                 ui.set_sofa_detail_open(false);
                 go(GRID, 0);
@@ -126,10 +137,10 @@ pub fn dispatch(ui: &AppWindow, action: &str) -> bool {
         }
         "favorite" if count > 0 => ui.invoke_favorite_toggled(sel),
         "search" => ui.invoke_focus_search(),
-        "settings" => {
-            ui.set_settings_open(true);
-            go(SETTINGS, 0);
-        }
+        // Start opens Settings and closes it again, as the menu button does in
+        // Steam's Big Picture and ES-DE.
+        "settings" if ui.get_settings_open() => ui.invoke_close_settings(),
+        "settings" => ui.invoke_open_settings(),
         "random" => {
             ui.invoke_random_pick();
             go(GRID, 0);
@@ -174,11 +185,7 @@ fn header_action(ui: &AppWindow, at: i32) {
         4 => ui.invoke_random_pick(),
         5 => ui.invoke_sort_toggled(),
         6 => ui.invoke_show_toast("Saves synced (pretend)".into()),
-        _ => {
-            ui.set_settings_open(true);
-            ui.set_focus_zone(SETTINGS);
-            ui.set_focus_index(0);
-        }
+        _ => ui.invoke_open_settings(),
     }
 }
 
@@ -189,11 +196,7 @@ fn settings_action(ui: &AppWindow, at: i32) {
         2 => ui.set_opt_sounds(!ui.get_opt_sounds()),
         3 => ui.set_opt_theme((ui.get_opt_theme() + 1) % 3),
         4 => {}
-        _ => {
-            ui.set_settings_open(false);
-            ui.set_focus_zone(GRID);
-            ui.set_focus_index(0);
-        }
+        _ => ui.invoke_close_settings(),
     }
 }
 

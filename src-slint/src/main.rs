@@ -33,6 +33,24 @@ struct State {
     by_year: bool,
     /// Each row of the grid's model, as (platform, game) indices.
     shown: Vec<(usize, usize)>,
+    /// Each row's game id. Unlike `shown` it still holds after the library
+    /// update has replaced `platforms`.
+    shown_ids: Vec<i64>,
+    /// Which list `shown` is (`list_key`); none for search results.
+    shown_key: Option<String>,
+    /// The game the cursor was last on in each list, so coming back to a
+    /// console or tab lands there again (rule 2 in docs/controller-ux.md).
+    remembered: std::collections::HashMap<String, i64>,
+}
+
+/// Where the cursor lands when the grid's list is rebuilt.
+enum Land {
+    /// Where it last was in this list, or the top.
+    Remembered,
+    /// On the same game, or on the same row when that game has left the list.
+    Same,
+    /// On this row, or the last: the next game after one that left the list.
+    Row(usize),
 }
 
 /// Everything the window's callbacks share. It lives on the window's thread;
@@ -86,7 +104,16 @@ fn main() -> Result<(), slint::PlatformError> {
     APP.with(|a| {
         *a.borrow_mut() = Some(App {
             platforms,
-            state: State { platform: 0, tab: 0, query: String::new(), by_year: false, shown: Vec::new() },
+            state: State {
+                platform: 0,
+                tab: 0,
+                query: String::new(),
+                by_year: false,
+                shown: Vec::new(),
+                shown_ids: Vec::new(),
+                shown_key: None,
+                remembered: Default::default(),
+            },
             lib: lib.clone(),
             runtime,
             visible: (0, NEAR),
@@ -102,7 +129,7 @@ fn main() -> Result<(), slint::PlatformError> {
         with_app(|a| a.state.platform = a.platforms.iter().position(|p| p.slug == slug).unwrap_or(0));
     }
     show_platforms(&ui);
-    refresh(&ui, None);
+    refresh(&ui, Land::Remembered);
     fetch_covers(&ui);
     if lib.is_some() {
         update_library(&ui);
@@ -122,6 +149,11 @@ fn main() -> Result<(), slint::PlatformError> {
             }
         });
     }
+    // MOOSE_SLINT_TEST_KEYS=right,down,settings,back presses those actions
+    // (the names `moose_rack::binds` uses) one by one, prints where the cursor
+    // is after each, and quits; `type:zelda` types into search. For checking
+    // the controller rules in docs/controller-ux.md.
+    let _test_keys = std::env::var("MOOSE_SLINT_TEST_KEYS").ok().map(|keys| test_keys(&ui, keys));
 
     ui.on_platform_selected({
         let weak = ui.as_weak();
@@ -134,7 +166,7 @@ fn main() -> Result<(), slint::PlatformError> {
             });
             ui.set_tab_index(0);
             ui.set_query(SharedString::new());
-            refresh(&ui, None);
+            refresh(&ui, Land::Remembered);
             fetch_covers(&ui);
         }
     });
@@ -148,7 +180,7 @@ fn main() -> Result<(), slint::PlatformError> {
                 a.state.query.clear();
             });
             ui.set_query(SharedString::new());
-            refresh(&ui, None);
+            refresh(&ui, Land::Remembered);
             fetch_covers(&ui);
         }
     });
@@ -169,7 +201,7 @@ fn main() -> Result<(), slint::PlatformError> {
         move |text: SharedString| {
             let ui = weak.unwrap();
             with_app(|a| a.state.query = text.trim().to_string());
-            refresh(&ui, None);
+            refresh(&ui, Land::Remembered);
         }
     });
 
@@ -177,12 +209,8 @@ fn main() -> Result<(), slint::PlatformError> {
         let weak = ui.as_weak();
         move || {
             let ui = weak.unwrap();
-            let keep = with_app(|a| {
-                a.state.by_year = !a.state.by_year;
-                a.state.shown.get(ui.get_selected_index() as usize).copied()
-            })
-            .flatten();
-            refresh(&ui, keep);
+            with_app(|a| a.state.by_year = !a.state.by_year);
+            refresh(&ui, Land::Same);
         }
     });
 
@@ -275,8 +303,9 @@ fn main() -> Result<(), slint::PlatformError> {
             })
             .flatten();
             match toggled {
-                // Unstarring on the Favorites tab takes the game off it.
-                Some(true) => refresh(&ui, None),
+                // Unstarring on the Favorites tab takes the game off it, and
+                // the cursor moves on to the next one.
+                Some(true) => refresh(&ui, Land::Row(i as usize)),
                 Some(false) => redraw_row(&ui, i as usize),
                 None => {}
             }
@@ -300,7 +329,7 @@ fn main() -> Result<(), slint::PlatformError> {
             let ui = weak.unwrap();
             if let Some(title) = set_installed(i as usize, false) {
                 if with_app(|a| a.state.tab == 2).unwrap_or(false) {
-                    refresh(&ui, None);
+                    refresh(&ui, Land::Row(i as usize));
                 } else {
                     redraw_row(&ui, i as usize);
                 }
@@ -509,12 +538,57 @@ fn show_platforms(ui: &AppWindow) {
     ui.set_platforms(ModelRc::new(VecModel::from(rows)));
 }
 
-/// Rebuild the grid from the state. `keep` is a game to leave the cursor on, if
-/// it is still in the list.
-fn refresh(ui: &AppWindow, keep: Option<(usize, usize)>) {
+/// Runs MOOSE_SLINT_TEST_KEYS: one step every 200 ms, the first a second in.
+fn test_keys(ui: &AppWindow, keys: String) -> slint::Timer {
+    let steps: Vec<String> = keys.split(',').map(|s| s.trim().to_owned()).filter(|s| !s.is_empty()).collect();
+    let weak = ui.as_weak();
+    let mut next = 0usize;
+    let started = Instant::now();
+    let timer = slint::Timer::default();
+    timer.start(slint::TimerMode::Repeated, Duration::from_millis(200), move || {
+        let Some(ui) = weak.upgrade() else { return };
+        if started.elapsed() < Duration::from_secs(1) {
+            return;
+        }
+        let Some(step) = steps.get(next) else {
+            let _ = slint::quit_event_loop();
+            return;
+        };
+        next += 1;
+        match step.strip_prefix("type:") {
+            Some(text) => {
+                ui.set_query(text.into());
+                ui.invoke_search_edited(text.into());
+            }
+            None => {
+                nav::dispatch(&ui, step);
+            }
+        }
+        let sel = ui.get_selected_index();
+        let title = ui.get_games().row_data(sel.max(0) as usize).map(|g| g.title.to_string()).unwrap_or_default();
+        println!(
+            "{step:>12}  zone {} at {}  header {}  settings {}  {} | {sel} {title}",
+            ui.get_focus_zone(),
+            ui.get_focus_index(),
+            ui.get_header_at(),
+            ui.get_settings_open(),
+            ui.get_heading(),
+        );
+    });
+    timer
+}
+
+/// Rebuild the grid from the state, with the cursor where `land` says.
+fn refresh(ui: &AppWindow, land: Land) {
+    let at = ui.get_selected_index().max(0) as usize;
     let Some((heading, rows, cursor, by_year, platform)) = with_app(|a| {
         let s = &mut a.state;
         let platforms = &a.platforms;
+        // The list being left remembers its game.
+        let was = s.shown_ids.get(at).copied();
+        if let (Some(key), Some(id)) = (s.shown_key.take(), was) {
+            s.remembered.insert(key, id);
+        }
         if s.platform >= platforms.len() {
             s.platform = 0;
         }
@@ -556,8 +630,26 @@ fn refresh(ui: &AppWindow, keep: Option<(usize, usize)>) {
             }
         };
         let rows: Vec<GameItem> = shown.iter().map(|&(pi, gi)| item(&platforms[pi], gi)).collect();
-        let cursor = keep.and_then(|k| shown.iter().position(|&x| x == k)).unwrap_or(0);
+        let ids: Vec<i64> = shown.iter().map(|k| game(k).id).collect();
+        let key = if !query.is_empty() {
+            None
+        } else {
+            match s.tab {
+                1 => Some("favorites".to_owned()),
+                2 => Some("device".to_owned()),
+                _ => platforms.get(s.platform).map(|p| format!("console:{}", p.slug)),
+            }
+        };
+        let row_of = |id: i64| ids.iter().position(|&x| x == id);
+        let last = ids.len().saturating_sub(1);
+        let cursor = match land {
+            Land::Remembered => key.as_ref().and_then(|k| s.remembered.get(k)).and_then(|&id| row_of(id)).unwrap_or(0),
+            Land::Same => was.and_then(row_of).unwrap_or(at.min(last)),
+            Land::Row(row) => row.min(last),
+        };
         s.shown = shown;
+        s.shown_ids = ids;
+        s.shown_key = key;
         // A new list starts at the top; the grid reports where it really is.
         a.visible = (0, NEAR);
         (heading, rows, cursor, s.by_year, s.platform)
@@ -673,7 +765,8 @@ fn update_library(ui: &AppWindow) {
             })
             .unwrap_or(true);
             show_platforms(&ui);
-            refresh(&ui, None);
+            // The update runs in the background: the cursor stays on its game.
+            refresh(&ui, Land::Same);
             fetch_covers(&ui);
             match said {
                 Ok(line) => {
