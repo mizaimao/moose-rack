@@ -31,7 +31,8 @@ struct State {
     platform: usize,
     tab: i32,
     query: String,
-    by_year: bool,
+    /// The order lists are in: name, year, or recently played.
+    sort: Sort,
     /// Each row of the grid's model, as (platform, game) indices.
     shown: Vec<(usize, usize)>,
     /// Each row's game id. Unlike `shown` it still holds after the library
@@ -46,6 +47,34 @@ struct State {
     /// device, only favorites, or both.
     only_device: bool,
     only_favorites: bool,
+}
+
+/// The tabs, in the order the tab row shows them. Recent is next to Platforms,
+/// so recently played games are one press away (rule 6), as the old app's
+/// strip above the consoles and Steam's Recent Games shelf put them up front.
+const TAB_CONSOLES: i32 = 0;
+const TAB_RECENT: i32 = 1;
+const TAB_FAVORITES: i32 = 2;
+const TAB_DEVICE: i32 = 3;
+
+/// The orders Sort by offers, as the old app's sort menu (`moose_rack::gamesort`).
+#[derive(Clone, Copy, PartialEq)]
+enum Sort {
+    Name,
+    Year,
+    Played,
+}
+
+impl Sort {
+    const ALL: [Sort; 3] = [Sort::Name, Sort::Year, Sort::Played];
+
+    fn label(self) -> &'static str {
+        match self {
+            Sort::Name => "Name",
+            Sort::Year => "Year",
+            Sort::Played => "Recently played",
+        }
+    }
 }
 
 /// Where the cursor lands when the grid's list is rebuilt.
@@ -113,7 +142,7 @@ fn main() -> Result<(), slint::PlatformError> {
                 platform: 0,
                 tab: 0,
                 query: String::new(),
-                by_year: false,
+                sort: Sort::Name,
                 shown: Vec::new(),
                 shown_ids: Vec::new(),
                 shown_key: None,
@@ -217,7 +246,20 @@ fn main() -> Result<(), slint::PlatformError> {
         let weak = ui.as_weak();
         move || {
             let ui = weak.unwrap();
-            with_app(|a| a.state.by_year = !a.state.by_year);
+            with_app(|a| {
+                let at = Sort::ALL.iter().position(|&o| o == a.state.sort).unwrap_or(0);
+                a.state.sort = Sort::ALL[(at + 1) % Sort::ALL.len()];
+            });
+            refresh(&ui, Land::Same);
+        }
+    });
+
+    // Sort by's choice, by its place in `Sort::ALL`.
+    ui.on_sort_chosen({
+        let weak = ui.as_weak();
+        move |i| {
+            let ui = weak.unwrap();
+            with_app(|a| a.state.sort = Sort::ALL.get(i.max(0) as usize).copied().unwrap_or(Sort::Name));
             refresh(&ui, Land::Same);
         }
     });
@@ -307,7 +349,7 @@ fn main() -> Result<(), slint::PlatformError> {
                         }
                     });
                 }
-                Some(a.state.tab == 1)
+                Some(a.state.tab == TAB_FAVORITES)
             })
             .flatten();
             match toggled {
@@ -336,7 +378,7 @@ fn main() -> Result<(), slint::PlatformError> {
         move |i: i32| {
             let ui = weak.unwrap();
             if let Some(title) = set_installed(i as usize, false) {
-                if with_app(|a| a.state.tab == 2).unwrap_or(false) {
+                if with_app(|a| a.state.tab == TAB_DEVICE).unwrap_or(false) {
                     refresh(&ui, Land::Row(i as usize));
                 } else {
                     redraw_row(&ui, i as usize);
@@ -491,8 +533,8 @@ fn show_keyboard(ui: &AppWindow) {
 /// `MOOSE_SLINT_SNAPSHOT=out.png` sets up one scene, saves the window as a PNG
 /// and quits, so the look can be checked on a machine nobody is watching.
 /// `MOOSE_SLINT_SCENE` picks it: desk (the default), sofa, detail, list,
-/// settings, download, header, consoles, actions, options, keyboard, offline,
-/// conflict, ps5 or switch.
+/// settings, download, header, consoles, actions, options, keyboard, recent,
+/// offline, conflict, ps5 or switch.
 fn snapshot(ui: &AppWindow, path: String, scene: String) {
     match scene.as_str() {
         "sofa" => ui.set_mode(0),
@@ -513,6 +555,10 @@ fn snapshot(ui: &AppWindow, path: String, scene: String) {
         "consoles" => ui.set_focus_zone(nav::CONSOLES),
         "options" => {
             nav::dispatch(ui, "options");
+        }
+        "recent" => {
+            ui.set_tab_index(TAB_RECENT);
+            ui.invoke_tab_selected(TAB_RECENT);
         }
         "offline" => stopped(ui, 0, Default::default(), "SAVE_OFFLINE:the server didn't answer (dev.lan:8080)"),
         "conflict" => {
@@ -666,7 +712,7 @@ fn toggle_filter(ui: &AppWindow, which: &str) -> (bool, bool) {
 /// Rebuild the grid from the state, with the cursor where `land` says.
 fn refresh(ui: &AppWindow, land: Land) {
     let at = ui.get_selected_index().max(0) as usize;
-    let Some((heading, rows, cursor, by_year, platform)) = with_app(|a| {
+    let Some((heading, rows, cursor, sort, platform)) = with_app(|a| {
         let s = &mut a.state;
         let platforms = &a.platforms;
         // The list being left remembers its game.
@@ -685,8 +731,9 @@ fn refresh(ui: &AppWindow, land: Land) {
                     g.title.to_lowercase().contains(&query)
                 } else {
                     match s.tab {
-                        1 => g.favorite,
-                        2 => g.installed,
+                        TAB_RECENT => g.last_played.is_some(),
+                        TAB_FAVORITES => g.favorite,
+                        TAB_DEVICE => g.installed,
                         _ => pi == s.platform,
                     }
                 };
@@ -697,17 +744,22 @@ fn refresh(ui: &AppWindow, land: Land) {
             }
         }
         let game = |&(pi, gi): &(usize, usize)| &platforms[pi].games[gi];
-        if s.by_year {
-            shown.sort_by(|a, b| (game(a).year, &game(a).title).cmp(&(game(b).year, &game(b).title)));
-        } else {
-            shown.sort_by_cached_key(|k| game(k).title.to_lowercase());
+        // Recent is always newest first; it is what the tab is for.
+        let sort = if s.tab == TAB_RECENT && query.is_empty() { Sort::Played } else { s.sort };
+        shown.sort_by_cached_key(|k| game(k).title.to_lowercase());
+        match sort {
+            Sort::Name => {}
+            Sort::Year => shown.sort_by_key(|k| game(k).year),
+            // Newest first, then never played, each in name order (stable sort).
+            Sort::Played => shown.sort_by(|a, b| game(b).last_played.cmp(&game(a).last_played)),
         }
         let heading = if !query.is_empty() {
             format!("Results for \"{}\"", s.query)
         } else {
             match s.tab {
-                1 => "Favorites".to_string(),
-                2 => "On this device".to_string(),
+                TAB_RECENT => "Recently played".to_string(),
+                TAB_FAVORITES => "Favorites".to_string(),
+                TAB_DEVICE => "On this device".to_string(),
                 _ => match (platforms.get(s.platform), &a.library_error) {
                     (Some(p), _) => p.name.clone(),
                     (None, Some(why)) => format!("Couldn't load the library: {why}"),
@@ -723,8 +775,9 @@ fn refresh(ui: &AppWindow, land: Land) {
             None
         } else {
             match s.tab {
-                1 => Some("favorites".to_owned()),
-                2 => Some("device".to_owned()),
+                TAB_RECENT => Some("recent".to_owned()),
+                TAB_FAVORITES => Some("favorites".to_owned()),
+                TAB_DEVICE => Some("device".to_owned()),
                 _ => platforms.get(s.platform).map(|p| format!("console:{}", p.slug)),
             }
         };
@@ -740,12 +793,12 @@ fn refresh(ui: &AppWindow, land: Land) {
         s.shown_key = key;
         // A new list starts at the top; the grid reports where it really is.
         a.visible = (0, NEAR);
-        (heading, rows, cursor, s.by_year, s.platform)
+        (heading, rows, cursor, sort, s.platform)
     }) else {
         return;
     };
     ui.set_heading(heading.into());
-    ui.set_sort_label(if by_year { "Year" } else { "Name" }.into());
+    ui.set_sort_label(sort.label().into());
     ui.set_platform_index(platform as i32);
     ui.set_art_aspect(art_aspect());
     ui.set_games(ModelRc::new(VecModel::from(rows)));
@@ -757,7 +810,7 @@ fn refresh(ui: &AppWindow, land: Land) {
 /// tall box shape elsewhere. Kept between a tall box and a wide cartridge.
 fn art_aspect() -> f32 {
     with_app(|a| {
-        let on_console = a.state.tab == 0 && a.state.query.is_empty();
+        let on_console = a.state.tab == TAB_CONSOLES && a.state.query.is_empty();
         let shape = if on_console { a.platforms.get(a.state.platform).and_then(|p| p.aspect) } else { None };
         shape.unwrap_or(0.75).clamp(0.6, 1.6)
     })
@@ -1176,10 +1229,32 @@ fn start_launch_with(ui: &AppWindow, id: i64, opts: moose_rack::play::Options) {
         };
         let result = rt.block_on(moose_rack::play::launch(&lib, &busy, id, opts.clone(), say));
         let _ = weak.upgrade_in_event_loop(move |ui| match result {
-            Ok(line) => ui.invoke_show_toast(line.into()),
+            Ok(line) => {
+                mark_played(&ui, id);
+                ui.invoke_show_toast(line.into());
+            }
             Err(e) => stopped(&ui, id, opts, &e),
         });
     });
+}
+
+/// A game just played goes to the front of Recent at once, without waiting
+/// for the next library update. The time is read back from the cache, where
+/// the core wrote it, so its rule holds here too: a session under a minute
+/// is not a play (`Cache::record_play`).
+fn mark_played(ui: &AppWindow, id: i64) {
+    let shown = with_app(|a| {
+        let played = a.lib.as_ref()?.cache.lock().ok()?.rom_by_id(id).ok()??.last_played;
+        for g in a.platforms.iter_mut().flat_map(|p| p.games.iter_mut()).filter(|g| g.id == id) {
+            g.last_played = played.clone();
+        }
+        Some(a.state.tab == TAB_RECENT || a.state.sort == Sort::Played)
+    })
+    .flatten()
+    .unwrap_or(false);
+    if shown {
+        refresh(ui, Land::Same);
+    }
 }
 
 /// What a question is about, kept until it is answered.
