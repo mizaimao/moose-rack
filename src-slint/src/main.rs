@@ -1289,7 +1289,13 @@ fn mark_installed(ui: &AppWindow, id: i64, installed: bool) {
 /// recorded. On a thread of its own, because the emulator run blocks until the
 /// game ends.
 fn start_launch(ui: &AppWindow, id: i64) {
-    start_launch_with(ui, id, moose_rack::play::Options::default());
+    let opts = moose_rack::play::Options {
+        // The controller in hand, so RetroArch's hotkeys follow its autoconfig
+        // profile, as the desktop app passes the pad its page sees.
+        pad: ui.get_pad_connected().then(|| ui.get_pad_name().to_string()),
+        ..Default::default()
+    };
+    start_launch_with(ui, id, opts);
 }
 
 /// Launch with the answers given so far (play while saves can't sync, play
