@@ -22,6 +22,8 @@ pub struct Game {
     pub bytes: u64,
     pub installed: bool,
     pub favorite: bool,
+    /// When it was last played, as an ISO timestamp, which sorts as text.
+    pub last_played: Option<String>,
     /// The cover, once it's loaded. Until then the card draws a stand-in.
     pub cover: Option<slint::Image>,
 }

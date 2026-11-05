@@ -486,6 +486,8 @@ export component AppWindow inherits Window {
     // The art shape of the list on show, from `art_aspect` in main.rs.
     in property <float> art-aspect: 0.75;
     in property <string> sort-label: "Name";
+    // Sort by's choice: 0 name, 1 year, 2 recently played.
+    callback sort-chosen(int);
     in property <string> status: "Not synced yet";
     in-out property <int> platform-index: 0;
     in-out property <int> selected-index: 0;
@@ -661,7 +663,7 @@ export component AppWindow inherits Window {
 
     property <bool> has-current: root.selected-index >= 0 && root.selected-index < root.games.length;
     property <GameItem> current: root.games[root.selected-index];
-    property <[string]> tabs: ["Platforms", "Favorites", "On this device"];
+    property <[string]> tabs: ["Platforms", "Recent", "Favorites", "On this device"];
     property <bool> downloading-current: root.download-index >= 0 && root.download-index == root.selected-index;
 
     public function show-toast(text: string) {

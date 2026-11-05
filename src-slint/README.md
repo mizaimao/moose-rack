@@ -88,6 +88,9 @@ does something.
 Big lists are quick to cross (rule 6): a held direction or trigger speeds up
 the longer it is held, the triggers move a screen at a time, and Options has
 Jump to letter (left and right pick it) when the list is sorted by name.
+Recently played games are one press from Platforms: the Recent tab, newest
+first, and Recently played in Sort by. A game just played moves to the front
+at once, by the core's rule (a session under a minute is not a play).
 
 Search works with the pad alone (rule 7): with a controller connected it opens
 an on-screen keyboard along the bottom, and the results narrow above it as

@@ -37,6 +37,7 @@ pub fn load(state: &AppState) -> Vec<Platform> {
                     bytes: r.size_bytes.max(0) as u64,
                     installed: r.downloaded,
                     favorite: r.favorite,
+                    last_played: r.last_played,
                     cover: None,
                 })
                 .collect();

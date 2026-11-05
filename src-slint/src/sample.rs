@@ -175,6 +175,9 @@ pub fn platforms() -> Vec<crate::model::Platform> {
                         bytes: u64::from(p.typical_mb) * (60 + hash(g.title) % 80) / 100 * 1_000_000,
                         installed: hash(g.title) % 3 == 0,
                         favorite: FAVORITES.contains(&g.title),
+                        // A few played games, so the Recent tab has something in pictures.
+                        last_played: (hash(g.title) % 5 == 0)
+                            .then(|| format!("2026-11-0{}T20:00:00Z", 1 + hash(g.title) % 4)),
                         cover: None,
                     }
                 })

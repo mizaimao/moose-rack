@@ -401,7 +401,7 @@ fn open_menu(ui: &AppWindow, zone: i32) {
     // Jumping by letter, for a list sorted by name (rule 6): left and right
     // pick the letter.
     let games = ui.get_games();
-    if ui.get_sort_label() != "Year" && games.row_count() > 0 {
+    if ui.get_sort_label() == "Name" && games.row_count() > 0 {
         let mut letters: Vec<char> = Vec::new();
         for g in games.iter() {
             let l = letter_of(&g.title);
@@ -420,11 +420,15 @@ fn open_menu(ui: &AppWindow, zone: i32) {
     show_menu(ui, game.map(|g| g.title).unwrap_or_else(|| "Options".into()), items, 0);
 }
 
+/// The orders Sort by offers, in the order main.rs's `Sort::ALL` has them.
+const SORTS: [(&str, &str); 3] = [("sort_0", "Name"), ("sort_1", "Year"), ("sort_2", "Recently played")];
+
 /// Sort by, on Y as in Steam's library, starting on the order in use.
 fn open_sort_menu(ui: &AppWindow) {
-    let by_year = ui.get_sort_label() == "Year";
-    let items = vec![("sort_name", "Name".to_owned()), ("sort_year", "Year".to_owned())];
-    show_menu(ui, "Sort by".into(), items, by_year as i32);
+    let now = ui.get_sort_label();
+    let at = SORTS.iter().position(|&(_, label)| label == now.as_str()).unwrap_or(0);
+    let items = SORTS.iter().map(|&(id, label)| (id, label.to_owned())).collect();
+    show_menu(ui, "Sort by".into(), items, at as i32);
 }
 
 fn filter_label(which: &str, on: bool) -> String {
@@ -452,14 +456,16 @@ pub fn menu_pick(ui: &AppWindow, row: i32) {
     }
     ui.invoke_close_menu();
     let sel = ui.get_selected_index();
-    let by_year = ui.get_sort_label() == "Year";
     match id {
         "download" => ui.invoke_start_download(),
         "remove" => ui.invoke_removed(sel),
         "favorite" => ui.invoke_favorite_toggled(sel),
         "search" => open_search(ui),
-        "sort_name" if by_year => ui.invoke_sort_toggled(),
-        "sort_year" if !by_year => ui.invoke_sort_toggled(),
+        _ if id.starts_with("sort_") => {
+            if let Some(i) = SORTS.iter().position(|&(sid, _)| sid == id) {
+                ui.invoke_sort_chosen(i as i32);
+            }
+        }
         "layout" => ui.set_list_view(!ui.get_list_view()),
         "letter" => {
             let Some(letter) = LETTERS.with(|l| l.borrow().0.get(l.borrow().1).copied()) else { return };
