@@ -24,6 +24,7 @@ export global Zone {
     out property <int> settings: 4;
     out property <int> sofa: 5;
     out property <int> menu: 6;
+    out property <int> keyboard: 7;
 }
 
 component GameGrid inherits Rectangle {
@@ -348,6 +349,38 @@ component SettingRow inherits Rectangle {
     }
 }
 
+// One key of the on-screen keyboard.
+component KeyCap inherits Rectangle {
+    in property <string> text;
+    in property <bool> cursor: false;
+    in property <bool> wide: false;
+    callback clicked;
+
+    border-radius: 8px;
+    background: root.cursor ? Theme.accent : (touch.has-hover ? Theme.line : Theme.panel-2);
+    border-width: root.cursor ? 2px : 1px;
+    border-color: root.cursor ? Theme.cursor : Theme.line;
+    drop-shadow-blur: root.cursor ? 16px : 0px;
+    animate background { duration: Theme.quick; }
+
+    Text {
+        width: parent.width;
+        height: parent.height;
+        text: root.text;
+        color: Theme.text;
+        font-size: root.wide ? 15px : 20px;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
 // One row of the Options menu.
 component MenuRow inherits Rectangle {
     in property <string> text;
@@ -490,6 +523,19 @@ export component AppWindow inherits Window {
         root.focus-zone = root.menu-from-zone;
         root.focus-index = root.menu-from-index;
     }
+
+    // The on-screen keyboard for search (rule 7), opened in place of the text
+    // box while a controller is connected. Its keys are the keyboard zone's
+    // indices: 0 to 39 the characters, ten to a row, then Space, Delete, Clear
+    // and Done along the bottom (40 to 43). nav.rs moves over them.
+    in-out property <bool> osk-open: false;
+    out property <[string]> osk-keys: [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "0",
+        "q", "w", "e", "r", "t", "y", "u", "i", "o", "p",
+        "a", "s", "d", "f", "g", "h", "j", "k", "l", "'",
+        "z", "x", "c", "v", "b", "n", "m", "-", ":", "&"
+    ];
+    callback osk-pressed(int);
 
     // Leaving by Done, the last row (5), opens Settings at the top next time.
     public function close-settings() {
@@ -970,6 +1016,7 @@ export component AppWindow inherits Window {
                         text: root.focus-zone == Zone.grid ? (root.mode == 1 ? "Play" : "Open")
                             : root.focus-zone == Zone.consoles ? "Open"
                             : root.focus-zone == Zone.settings ? "Change"
+                            : root.focus-zone == Zone.keyboard ? "Type"
                             : "Select";
                     }
                     // Each hint shows only where its button does something
@@ -978,18 +1025,22 @@ export component AppWindow inherits Window {
                     if root.focus-zone != Zone.grid || root.query != "": Hint {
                         glyph: root.glyph-back;
                         text: root.focus-zone == Zone.grid ? "Clear search"
-                            : root.focus-zone == Zone.settings || root.focus-zone == Zone.sofa || root.focus-zone == Zone.menu ? "Close"
+                            : root.focus-zone == Zone.settings || root.focus-zone == Zone.sofa || root.focus-zone == Zone.menu
+                                || root.focus-zone == Zone.keyboard ? "Close"
                             : "Back";
                     }
-                    if root.focus-zone == Zone.grid || root.focus-zone == Zone.detail || root.focus-zone == Zone.sofa: Hint {
+                    // On the keyboard the left and top face buttons delete
+                    // and type a space, as on the PS5's and Steam's.
+                    if root.focus-zone == Zone.grid || root.focus-zone == Zone.detail || root.focus-zone == Zone.sofa
+                        || root.focus-zone == Zone.keyboard: Hint {
                         glyph: root.glyph-favorite;
-                        text: "Favorite";
+                        text: root.focus-zone == Zone.keyboard ? "Delete" : "Favorite";
                     }
                     if root.focus-zone != Zone.settings && root.focus-zone != Zone.menu: Hint {
                         glyph: root.glyph-options;
-                        text: "Options";
+                        text: root.focus-zone == Zone.keyboard ? "Space" : "Options";
                     }
-                    if root.focus-zone != Zone.settings && root.focus-zone != Zone.menu: HorizontalLayout {
+                    if root.focus-zone != Zone.settings && root.focus-zone != Zone.menu && root.focus-zone != Zone.keyboard: HorizontalLayout {
                         spacing: 4px;
                         Hint {
                             glyph: root.shoulder-left;
@@ -1002,7 +1053,7 @@ export component AppWindow inherits Window {
                     }
                     if root.focus-zone != Zone.menu: Hint {
                         glyph: root.start-label;
-                        text: root.settings-open ? "Close" : "Settings";
+                        text: root.settings-open ? "Close" : root.focus-zone == Zone.keyboard ? "Done" : "Settings";
                     }
                 }
             }
@@ -1056,6 +1107,112 @@ export component AppWindow inherits Window {
                     favorite => {
                         root.favorite-toggled(root.selected-index);
                     }
+                }
+            }
+        }
+
+        // The on-screen keyboard: a panel along the bottom, so the results
+        // stay in view above it as they narrow.
+        if root.osk-open: Rectangle {
+            property <length> key-w: 64px;
+            property <length> key-h: 50px;
+            property <length> gap: 6px;
+            property <length> keys-x: (self.width - 10 * self.key-w - 9 * self.gap) / 2;
+            property <length> keys-y: 72px;
+            property <length> bottom-y: self.keys-y + 4 * (self.key-h + self.gap);
+
+            // Above the hint bar (44 px), which says what the buttons do here.
+            y: parent.height - 44px - self.height;
+            height: self.bottom-y + self.key-h + 24px;
+            background: Theme.panel;
+            border-width: 1px;
+            border-color: Theme.line;
+            drop-shadow-blur: 30px;
+            drop-shadow-color: #00000080;
+
+            TouchArea { }
+
+            Rectangle {
+                x: parent.keys-x;
+                y: 18px;
+                width: 10 * parent.key-w + 9 * parent.gap;
+                height: 40px;
+                border-radius: 8px;
+                background: Theme.panel-2;
+                border-width: 1px;
+                border-color: Theme.line;
+
+                Text {
+                    x: 14px;
+                    width: parent.width - 28px;
+                    height: parent.height;
+                    text: root.query == "" ? "Search all games" : root.query + "|";
+                    color: root.query == "" ? Theme.dim : Theme.text;
+                    font-size: 18px;
+                    vertical-alignment: center;
+                    overflow: elide;
+                }
+            }
+
+            for key[i] in root.osk-keys: KeyCap {
+                x: parent.keys-x + Math.mod(i, 10) * (parent.key-w + parent.gap);
+                y: parent.keys-y + Math.floor(i / 10) * (parent.key-h + parent.gap);
+                width: parent.key-w;
+                height: parent.key-h;
+                text: key;
+                cursor: root.focus-zone == Zone.keyboard && root.focus-index == i;
+                clicked => {
+                    root.osk-pressed(i);
+                }
+            }
+
+            // Space, Delete, Clear and Done, over columns 0-3, 4-5, 6-7, 8-9.
+            KeyCap {
+                x: parent.keys-x;
+                y: parent.bottom-y;
+                width: 4 * parent.key-w + 3 * parent.gap;
+                height: parent.key-h;
+                wide: true;
+                text: "Space";
+                cursor: root.focus-zone == Zone.keyboard && root.focus-index == 40;
+                clicked => {
+                    root.osk-pressed(40);
+                }
+            }
+            KeyCap {
+                x: parent.keys-x + 4 * (parent.key-w + parent.gap);
+                y: parent.bottom-y;
+                width: 2 * parent.key-w + parent.gap;
+                height: parent.key-h;
+                wide: true;
+                text: "Delete";
+                cursor: root.focus-zone == Zone.keyboard && root.focus-index == 41;
+                clicked => {
+                    root.osk-pressed(41);
+                }
+            }
+            KeyCap {
+                x: parent.keys-x + 6 * (parent.key-w + parent.gap);
+                y: parent.bottom-y;
+                width: 2 * parent.key-w + parent.gap;
+                height: parent.key-h;
+                wide: true;
+                text: "Clear";
+                cursor: root.focus-zone == Zone.keyboard && root.focus-index == 42;
+                clicked => {
+                    root.osk-pressed(42);
+                }
+            }
+            KeyCap {
+                x: parent.keys-x + 8 * (parent.key-w + parent.gap);
+                y: parent.bottom-y;
+                width: 2 * parent.key-w + parent.gap;
+                height: parent.key-h;
+                wide: true;
+                text: "Done";
+                cursor: root.focus-zone == Zone.keyboard && root.focus-index == 43;
+                clicked => {
+                    root.osk-pressed(43);
                 }
             }
         }
