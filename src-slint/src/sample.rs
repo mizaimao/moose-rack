@@ -163,6 +163,7 @@ pub fn platforms() -> Vec<crate::model::Platform> {
             short: p.short.to_owned(),
             rgb: p.rgb,
             aspect: None,
+            logo: None,
             games: p
                 .games
                 .into_iter()

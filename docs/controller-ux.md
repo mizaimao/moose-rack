@@ -37,8 +37,10 @@ means these rules hold; each one is written so that it can be tested.
    button (Start / Options) opens Options for the game under the cursor, the
    Steam button (Guide; Xbox, PS) opens the main menu, here Settings, and the
    shoulders change section. The View button (Select) keeps the old app's job:
+   on the consoles, Console pictures (hardware, styled text...); elsewhere,
    Game pictures, which picture every card shows (cartridge, box art, 3D box,
-   miximage...). Triggers jump a page. The hint bar always says what the
+   miximage...). Settings has both, and Get console pictures, as the old
+   app's Appearance pane did. Triggers jump a page. The hint bar always says what the
    buttons do. While a game runs the pad is the game's alone, and this window
    takes it back only once every button is released (the old app's rule,
    `ui/js/gamepad.js`), so the buttons that quit a game don't act here too.

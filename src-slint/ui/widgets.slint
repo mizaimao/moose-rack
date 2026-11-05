@@ -30,6 +30,10 @@ export struct PlatformItem {
     short: string,
     count: int,
     tint: color,
+    // The console picture chosen in Settings, when one is installed; the
+    // tinted badge with `short` otherwise.
+    logo: image,
+    has-logo: bool,
 }
 
 // A word, and optionally a glyph before it.
@@ -111,6 +115,41 @@ export component IconButton inherits Rectangle {
         mouse-cursor: pointer;
         clicked => {
             root.clicked();
+        }
+    }
+}
+
+// A setting with several values, stepped through with left and right as in
+// Steam's settings: the arrows for the mouse, left and right on the pad.
+export component Stepper inherits Rectangle {
+    in property <string> text;
+    callback step(int);
+
+    width: 230px;
+    height: 32px;
+
+    HorizontalLayout {
+        spacing: 4px;
+        IconButton {
+            icon: @image-url("../../ui/icons/chevron-left.svg");
+            clicked => {
+                root.step(-1);
+            }
+        }
+        Text {
+            horizontal-stretch: 1;
+            text: root.text;
+            color: Theme.text;
+            font-size: 13px;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+            overflow: elide;
+        }
+        IconButton {
+            icon: @image-url("../../ui/icons/chevron-right.svg");
+            clicked => {
+                root.step(1);
+            }
         }
     }
 }
@@ -669,7 +708,13 @@ export component ConsoleRow inherits Rectangle {
         spacing: 10px;
         VerticalLayout {
             alignment: center;
-            Rectangle {
+            if root.item.has-logo: Image {
+                width: 44px;
+                height: 26px;
+                source: root.item.logo;
+                image-fit: contain;
+            }
+            if !root.item.has-logo: Rectangle {
                 width: 30px;
                 height: 24px;
                 border-radius: 6px;

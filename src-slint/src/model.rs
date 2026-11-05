@@ -11,6 +11,9 @@ pub struct Platform {
     /// Width over height of this console's art, once known: from the cached
     /// art at load, or measured from the first covers drawn.
     pub aspect: Option<f32>,
+    /// The console's picture in the style chosen in Settings, a file the core
+    /// found (`PlatformView::logo`); none until a set is fetched.
+    pub logo: Option<String>,
     pub games: Vec<Game>,
 }
 
