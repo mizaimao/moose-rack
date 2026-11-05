@@ -196,6 +196,19 @@ pub fn core_options(platform: &str, core: &str) -> &'static [Opt] {
         // better one everywhere it works.
         #[cfg(target_os = "macos")]
         (_, "swanstation") => &[("swanstation_GPU_Renderer", "OpenGL")],
+        // The N64 is the other way round. Mupen64Plus-Next draws with GLideN64
+        // through OpenGL by default, and on macOS that picture is black from
+        // the first frame: the game runs, the sound plays, nothing is drawn.
+        // Turning GLideN64's threaded renderer off did not help. ParaLLEl-RDP
+        // and ParaLLEl-RSP go through Vulkan (MoltenVK) and draw it, CRT
+        // shader included. Measured on macserver (M1 Max, RetroArch 1.20) on
+        // 2026-11-05 with All Star Tennis '99, after Frank saw the black
+        // screen on his laptop. Linux keeps GLideN64.
+        #[cfg(target_os = "macos")]
+        (_, "mupen64plus_next") => &[
+            ("mupen64plus-rdp-plugin", "parallel"),
+            ("mupen64plus-rsp-plugin", "parallel"),
+        ],
         // The rest have their rapid-fire buttons on always; the option only
         // sets how fast they repeat. Left alone the default is slower than
         // anyone wants from a button labelled turbo.
@@ -313,6 +326,7 @@ pub fn core_dir_name(core: &str) -> Option<&'static str> {
         "mame2003_plus" => Some("MAME 2003-Plus"),
         "mame2003" => Some("MAME 2003"),
         "swanstation" => Some("SwanStation"),
+        "mupen64plus_next" => Some("Mupen64Plus-Next"),
         "fbneo" => Some("FinalBurn Neo"),
         "dosbox_pure" => Some("DOSBox-pure"),
         _ => None,
@@ -502,6 +516,17 @@ mod tests {
         // settings under its *display* name, and a core missing from that map
         // has its options silently dropped.
         assert_eq!(core_dir_name("swanstation"), Some("SwanStation"));
+    }
+
+    /// GLideN64 draws a black screen on macOS; ParaLLEl-RDP on Vulkan draws
+    /// the game. Both halves are needed: the RDP draws, the RSP feeds it.
+    #[test]
+    #[cfg(target_os = "macos")]
+    fn n64_games_draw_through_parallel_rdp_on_macos() {
+        let opts = core_options("n64", "mupen64plus_next");
+        assert!(opts.contains(&("mupen64plus-rdp-plugin", "parallel")), "{opts:?}");
+        assert!(opts.contains(&("mupen64plus-rsp-plugin", "parallel")), "{opts:?}");
+        assert_eq!(core_dir_name("mupen64plus_next"), Some("Mupen64Plus-Next"));
     }
 
 }
