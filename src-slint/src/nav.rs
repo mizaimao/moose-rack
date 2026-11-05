@@ -85,10 +85,11 @@ fn osk(ui: &AppWindow, action: &str) {
         "down" if !wide && at < 30 => at + 10,
         "down" if !wide => OSK_SPACE + OSK_WIDE.iter().position(|&(from, to)| (from..to).contains(&col)).unwrap_or(0) as i32,
         "activate" => return osk_press(ui, at),
-        "favorite" => return osk_press(ui, OSK_DELETE),
-        "options" => return osk_press(ui, OSK_SPACE),
-        // R2 is Enter on the Steam Deck's keyboard; Start and Back close it too.
-        "scrollDown" | "settings" | "back" | "back2" => return close_osk(ui),
+        // As on the Steam Deck's keyboard: X deletes, Y types a space, R2 is
+        // Enter. The Menu button and Back close it too.
+        "filterMenu" | "favorite" => return osk_press(ui, OSK_DELETE),
+        "sortMenu" => return osk_press(ui, OSK_SPACE),
+        "scrollDown" | "options" | "settings" | "back" | "back2" => return close_osk(ui),
         _ => return,
     };
     if to < OSK_SPACE {
@@ -325,15 +326,17 @@ fn act(ui: &AppWindow, action: &str) -> bool {
         "favorite" if count > 0 && matches!(zone, GRID | DETAIL | SOFA) => ui.invoke_favorite_toggled(sel),
         "options" => open_menu(ui, zone),
         "search" => open_search(ui),
-        // Start opens Settings and closes it again, as the menu button does in
-        // Steam's Big Picture and ES-DE.
+        // The Steam button (Guide) opens Settings and closes it again, as it
+        // opens and closes the Steam menu in Big Picture.
         "settings" if ui.get_settings_open() => ui.invoke_close_settings(),
         "settings" => ui.invoke_open_settings(),
         "random" => {
             ui.invoke_random_pick();
             go(GRID, 0);
         }
-        "sortCycle" | "sortMenu" => ui.invoke_sort_toggled(),
+        "sortCycle" => ui.invoke_sort_toggled(),
+        "sortMenu" => open_sort_menu(ui),
+        "filterMenu" => open_filter_menu(ui),
         "layout" => ui.set_list_view(!ui.get_list_view()),
         "first" if count > 0 => ui.set_selected_index(0),
         "last" if count > 0 => ui.set_selected_index(count - 1),
@@ -343,7 +346,7 @@ fn act(ui: &AppWindow, action: &str) -> bool {
         "zoomIn" => ui.set_zoom((ui.get_zoom() + 10.0).min(ZOOM_MAX)),
         "zoomOut" => ui.set_zoom((ui.get_zoom() - 10.0).max(ZOOM_MIN)),
         "download" if count > 0 => ui.invoke_start_download(),
-        "help" | "video" | "pictures" | "filterMenu" | "sidebar" => {
+        "help" | "video" | "pictures" | "sidebar" => {
             ui.invoke_show_toast(format!("\"{action}\" is not in the prototype yet").into())
         }
         _ => return false,
@@ -362,22 +365,32 @@ fn detail_action(ui: &AppWindow, at: i32) {
     }
 }
 
-/// Open the Options menu for where the cursor is: the game's own actions first
-/// when it is on one, then the list's (rule 5 in docs/controller-ux.md).
+/// Show a menu: its title, what each row does (as `menu_pick` names it) with
+/// its label, and the row the cursor starts on.
+fn show_menu(ui: &AppWindow, title: SharedString, items: Vec<(&'static str, String)>, at: i32) {
+    let labels: Vec<SharedString> = items.iter().map(|(_, label)| label.as_str().into()).collect();
+    ui.set_menu_title(title);
+    ui.set_menu_items(ModelRc::new(VecModel::from(labels)));
+    MENU_ITEMS.with(|m| *m.borrow_mut() = items.into_iter().map(|(id, _)| id).collect());
+    ui.invoke_open_menu();
+    ui.set_focus_index(at);
+}
+
+/// Options, on the Menu button as in Steam's library: the game's own actions
+/// first when the cursor is on one, then the list's (rule 5 in
+/// docs/controller-ux.md).
 fn open_menu(ui: &AppWindow, zone: i32) {
     let sel = ui.get_selected_index();
     let game = if matches!(zone, GRID | DETAIL | SOFA) { ui.get_games().row_data(sel.max(0) as usize) } else { None };
-    let mut items: Vec<(&'static str, &str)> = Vec::new();
+    let mut items: Vec<(&'static str, String)> = Vec::new();
     if let Some(g) = &game {
-        items.push(if g.installed { ("remove", "Remove from this device") } else { ("download", "Take offline") });
-        items.push(("favorite", if g.favorite { "Remove from favorites" } else { "Add to favorites" }));
+        items.push(if g.installed { ("remove", "Remove from this device".into()) } else { ("download", "Take offline".into()) });
+        items.push(("favorite", if g.favorite { "Remove from favorites" } else { "Add to favorites" }.into()));
     }
-    // Jumping by letter, for a list sorted by name (rule 6), as ES-DE's
-    // options menu does it: left and right pick the letter.
-    let by_name = ui.get_sort_label() != "Year";
+    // Jumping by letter, for a list sorted by name (rule 6): left and right
+    // pick the letter.
     let games = ui.get_games();
-    let letter_row;
-    if by_name && games.row_count() > 0 {
+    if ui.get_sort_label() != "Year" && games.row_count() > 0 {
         let mut letters: Vec<char> = Vec::new();
         for g in games.iter() {
             let l = letter_of(&g.title);
@@ -387,33 +400,55 @@ fn open_menu(ui: &AppWindow, zone: i32) {
         }
         let here = games.row_data(sel.max(0) as usize).map(|g| letter_of(&g.title)).unwrap_or('#');
         let at = letters.iter().position(|&l| l == here).unwrap_or(0);
-        letter_row = letter_label(letters[at]);
+        items.push(("letter", letter_label(letters[at])));
         LETTERS.with(|l| *l.borrow_mut() = (letters, at));
-        items.push(("letter", &letter_row));
     }
-    items.push(("search", "Search"));
-    items.push(("sort", if by_name { "Sort by year" } else { "Sort by name" }));
-    items.push(("layout", if ui.get_list_view() { "Show as grid" } else { "Show as list" }));
-    items.push(("random", "Random game"));
-    ui.set_menu_title(game.map(|g| g.title).unwrap_or_else(|| "Options".into()));
-    let labels: Vec<SharedString> = items.iter().map(|&(_, label)| label.into()).collect();
-    ui.set_menu_items(ModelRc::new(VecModel::from(labels)));
-    MENU_ITEMS.with(|m| *m.borrow_mut() = items.into_iter().map(|(id, _)| id).collect());
-    ui.invoke_open_menu();
+    items.push(("search", "Search".into()));
+    items.push(("layout", if ui.get_list_view() { "Show as grid" } else { "Show as list" }.into()));
+    items.push(("random", "Random game".into()));
+    show_menu(ui, game.map(|g| g.title).unwrap_or_else(|| "Options".into()), items, 0);
 }
 
-/// Do what a row of the Options menu says, after closing it so the cursor is
-/// back where it was.
+/// Sort by, on Y as in Steam's library, starting on the order in use.
+fn open_sort_menu(ui: &AppWindow) {
+    let by_year = ui.get_sort_label() == "Year";
+    let items = vec![("sort_name", "Name".to_owned()), ("sort_year", "Year".to_owned())];
+    show_menu(ui, "Sort by".into(), items, by_year as i32);
+}
+
+fn filter_label(which: &str, on: bool) -> String {
+    let what = if which == "device" { "Only games on this device" } else { "Only favorites" };
+    format!("{what}: {}", if on { "On" } else { "Off" })
+}
+
+/// Filter, on X as in Steam's library: switches that narrow every list until
+/// switched off. The menu stays open while they are flipped.
+fn open_filter_menu(ui: &AppWindow) {
+    let (device, favorites) = crate::filters();
+    let items = vec![("filter_device", filter_label("device", device)), ("filter_favorites", filter_label("favorites", favorites))];
+    show_menu(ui, "Filter".into(), items, 0);
+}
+
+/// Do what a menu row says. A filter switch flips in place; anything else
+/// closes the menu first, so the cursor is back where it was.
 pub fn menu_pick(ui: &AppWindow, row: i32) {
     let Some(id) = MENU_ITEMS.with(|m| m.borrow().get(row.max(0) as usize).copied()) else { return };
+    if let Some(which) = id.strip_prefix("filter_") {
+        let (device, favorites) = crate::toggle_filter(ui, which);
+        let on = if which == "device" { device } else { favorites };
+        ui.get_menu_items().set_row_data(row as usize, filter_label(which, on).into());
+        return;
+    }
     ui.invoke_close_menu();
     let sel = ui.get_selected_index();
+    let by_year = ui.get_sort_label() == "Year";
     match id {
         "download" => ui.invoke_start_download(),
         "remove" => ui.invoke_removed(sel),
         "favorite" => ui.invoke_favorite_toggled(sel),
         "search" => open_search(ui),
-        "sort" => ui.invoke_sort_toggled(),
+        "sort_name" if by_year => ui.invoke_sort_toggled(),
+        "sort_year" if !by_year => ui.invoke_sort_toggled(),
         "layout" => ui.set_list_view(!ui.get_list_view()),
         "letter" => {
             let Some(letter) = LETTERS.with(|l| l.borrow().0.get(l.borrow().1).copied()) else { return };

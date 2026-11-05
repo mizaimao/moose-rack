@@ -42,6 +42,10 @@ struct State {
     /// The game the cursor was last on in each list, so coming back to a
     /// console or tab lands there again (rule 2 in docs/controller-ux.md).
     remembered: std::collections::HashMap<String, i64>,
+    /// The filter menu's switches: every list shows only games on this
+    /// device, only favorites, or both.
+    only_device: bool,
+    only_favorites: bool,
 }
 
 /// Where the cursor lands when the grid's list is rebuilt.
@@ -114,6 +118,8 @@ fn main() -> Result<(), slint::PlatformError> {
                 shown_ids: Vec::new(),
                 shown_key: None,
                 remembered: Default::default(),
+                only_device: false,
+                only_favorites: false,
             },
             lib: lib.clone(),
             runtime,
@@ -380,12 +386,17 @@ fn main() -> Result<(), slint::PlatformError> {
 /// see `read_pads`.
 fn prototype_bindings() -> binds::Bindings {
     let mut bindings = binds::Bindings::default();
-    // The left and top face buttons do the screen's secondary actions (rule 5
-    // in docs/controller-ux.md): the star, and the Options menu holding the
-    // rest. Search is in that menu and in the header.
-    bindings.set_pad("favorite", Some(2));
-    bindings.set_pad("options", Some(3));
-    bindings.set_pad("settings", Some(9));
+    // Steam's library, as Frank chose on 2026-11-05 (rule 5 in
+    // docs/controller-ux.md): X (the left face button) filters, Y (the top
+    // one) sorts, the Menu button (Start) opens Options for the game, and the
+    // Steam button (Guide; Xbox, PS) opens the main menu, here Settings.
+    // Search is in the header, as in Steam, and in Options.
+    bindings.set_pad("filterMenu", Some(2));
+    bindings.set_pad("sortMenu", Some(3));
+    bindings.set_pad("options", Some(9));
+    bindings.set_pad("settings", Some(16));
+    // View (Select) opened the picture changer, which is not built here.
+    bindings.set_pad("pictures", None);
     bindings.set_key("settings", Some(","));
     bindings
 }
@@ -453,8 +464,8 @@ fn show_pad(ui: &AppWindow, info: &pad::Info) {
     // `faces` is bottom, right, left, top; the jobs are as `read_pads` maps them.
     ui.set_glyph_confirm(info.faces[1].into());
     ui.set_glyph_back(info.faces[0].into());
-    ui.set_glyph_favorite(info.faces[2].into());
-    ui.set_glyph_options(info.faces[3].into());
+    ui.set_glyph_left(info.faces[2].into());
+    ui.set_glyph_top(info.faces[3].into());
     ui.set_shoulder_left(info.shoulders[0].into());
     ui.set_shoulder_right(info.shoulders[1].into());
     ui.set_start_label(info.start.into());
@@ -466,11 +477,11 @@ fn show_keyboard(ui: &AppWindow) {
     ui.set_pad_connected(false);
     ui.set_glyph_confirm("Enter".into());
     ui.set_glyph_back("Esc".into());
-    ui.set_glyph_favorite("*".into());
-    ui.set_glyph_options("O".into());
+    ui.set_glyph_left("F".into());
+    ui.set_glyph_top("S".into());
     ui.set_shoulder_left("Q".into());
     ui.set_shoulder_right("E".into());
-    ui.set_start_label(",".into());
+    ui.set_start_label("O".into());
 }
 
 /// `MOOSE_SLINT_SNAPSHOT=out.png` sets up one scene, saves the window as a PNG
@@ -611,6 +622,22 @@ fn test_keys(ui: &AppWindow, keys: String) -> slint::Timer {
     timer
 }
 
+/// The filter menu's switches: only on this device, only favorites.
+fn filters() -> (bool, bool) {
+    with_app(|a| (a.state.only_device, a.state.only_favorites)).unwrap_or_default()
+}
+
+/// Flip one of the filter menu's switches ("device" or "favorites") and show
+/// the list it leaves, the cursor staying on its game if that is still in it.
+fn toggle_filter(ui: &AppWindow, which: &str) -> (bool, bool) {
+    with_app(|a| match which {
+        "device" => a.state.only_device = !a.state.only_device,
+        _ => a.state.only_favorites = !a.state.only_favorites,
+    });
+    refresh(ui, Land::Same);
+    filters()
+}
+
 /// Rebuild the grid from the state, with the cursor where `land` says.
 fn refresh(ui: &AppWindow, land: Land) {
     let at = ui.get_selected_index().max(0) as usize;
@@ -638,7 +665,8 @@ fn refresh(ui: &AppWindow, land: Land) {
                         _ => pi == s.platform,
                     }
                 };
-                if wanted {
+                let passes = (!s.only_device || g.installed) && (!s.only_favorites || g.favorite);
+                if wanted && passes {
                     shown.push((pi, gi));
                 }
             }
@@ -662,6 +690,8 @@ fn refresh(ui: &AppWindow, land: Land) {
                 },
             }
         };
+        // A filtered list says so, or games would seem to be missing.
+        let heading = if s.only_device || s.only_favorites { format!("{heading} (filtered)") } else { heading };
         let rows: Vec<GameItem> = shown.iter().map(|&(pi, gi)| item(&platforms[pi], gi)).collect();
         let ids: Vec<i64> = shown.iter().map(|k| game(k).id).collect();
         let key = if !query.is_empty() {
