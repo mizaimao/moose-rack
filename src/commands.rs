@@ -2087,7 +2087,7 @@ pub fn unit_cfgs(state: &AppState) -> Vec<crate::config::UnitSourceCfg> {
             continue;
         }
         let dir = crate::standalone::dir(&state.library_root, emu);
-        let card = dir.join("memcards").join(crate::standalone::CARD);
+        let card = crate::standalone::card_dir(&dir);
         if crate::standalone::program(&dir).is_some() && card.is_dir() {
             units.push(crate::config::UnitSourceCfg {
                 family: family.to_owned(),
