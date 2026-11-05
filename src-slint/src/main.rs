@@ -427,7 +427,7 @@ fn read_pads(ui: &AppWindow, bindings: &binds::Bindings) -> Option<slint::Timer>
         let now = start.elapsed().as_secs_f64() * 1000.0;
         repeat.release(&pressed);
         for action in &pressed {
-            if repeat.fire(action, now) {
+            if repeat.fire_accelerating(action, now) {
                 nav::dispatch(&ui, action);
             }
         }

@@ -35,6 +35,8 @@ component GameGrid inherits Rectangle {
     in property <bool> list-view;
     in property <bool> lit;
     out property <int> cols: root.list-view ? 1 : Math.max(1, Math.floor((root.width - 2 * root.pad + root.gap) / (root.card-width + root.gap)));
+    // Whole rows on screen: what the triggers move by.
+    out property <int> page-rows: Math.max(1, Math.floor((root.height - 2 * root.pad + root.gap) / (root.row-height + root.gap)));
     callback picked(int);
     callback play(int);
 
@@ -437,6 +439,7 @@ export component AppWindow inherits Window {
     in-out property <int> focus-zone: Zone.grid;
     in-out property <int> focus-index: 0;
     out property <int> grid-cols: grid.cols;
+    out property <int> grid-page-rows: grid.page-rows;
 
     // Coming back to a pane lands where its cursor last was (rule 2 in
     // docs/controller-ux.md): the header's control, which Rust keeps current
