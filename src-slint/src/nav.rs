@@ -23,6 +23,37 @@ pub const SOFA: i32 = 5;
 thread_local! {
     /// What each row of the open Options menu does, as `menu_pick` names it.
     static MENU_ITEMS: RefCell<Vec<&'static str>> = const { RefCell::new(Vec::new()) };
+    /// The letters the list's titles start with, in list order, and which one
+    /// the menu's "Jump to letter" row is on.
+    static LETTERS: RefCell<(Vec<char>, usize)> = const { RefCell::new((Vec::new(), 0)) };
+}
+
+/// The letter a title is filed under when sorted by name: the first character,
+/// capitalised, or # for anything that isn't a plain letter.
+fn letter_of(title: &str) -> char {
+    match title.chars().next() {
+        Some(c) if c.is_ascii_alphabetic() => c.to_ascii_uppercase(),
+        _ => '#',
+    }
+}
+
+fn letter_label(letter: char) -> String {
+    format!("Jump to letter   \u{2039} {letter} \u{203a}")
+}
+
+/// Left and right on the "Jump to letter" row change its letter.
+fn step_letter(ui: &AppWindow, row: i32, step: i32) {
+    let label = LETTERS.with(|l| {
+        let (letters, at) = &mut *l.borrow_mut();
+        if letters.is_empty() {
+            return None;
+        }
+        *at = (*at as i32 + step).clamp(0, letters.len() as i32 - 1) as usize;
+        Some(letter_label(letters[*at]))
+    });
+    if let Some(label) = label {
+        ui.get_menu_items().set_row_data(row as usize, label.into());
+    }
 }
 
 /// The header's controls, left to right: Sofa/Desk, search, grid or list,
@@ -70,9 +101,11 @@ fn act(ui: &AppWindow, action: &str) -> bool {
     if ui.get_menu_open() {
         let at = ui.get_focus_index();
         let rows = MENU_ITEMS.with(|m| m.borrow().len()) as i32;
+        let on_letter = MENU_ITEMS.with(|m| m.borrow().get(at as usize) == Some(&"letter"));
         match action {
             "up" if at > 0 => ui.set_focus_index(at - 1),
             "down" if at + 1 < rows => ui.set_focus_index(at + 1),
+            "left" | "right" if on_letter => step_letter(ui, at, if action == "left" { -1 } else { 1 }),
             "activate" => menu_pick(ui, at),
             "back" | "back2" | "options" => ui.invoke_close_menu(),
             _ => {}
@@ -97,6 +130,7 @@ fn act(ui: &AppWindow, action: &str) -> bool {
         ui.set_focus_index(index);
     };
     let header = ui.get_header_at();
+    let page = ui.get_grid_page_rows().max(1) * cols;
 
     match action {
         "up" => match zone {
@@ -179,8 +213,9 @@ fn act(ui: &AppWindow, action: &str) -> bool {
         "layout" => ui.set_list_view(!ui.get_list_view()),
         "first" if count > 0 => ui.set_selected_index(0),
         "last" if count > 0 => ui.set_selected_index(count - 1),
-        "pageUp" | "scrollUp" if count > 0 => ui.set_selected_index((sel - cols * 3).max(0)),
-        "pageDown" | "scrollDown" if count > 0 => ui.set_selected_index((sel + cols * 3).min(count - 1)),
+        // A page is the rows on screen, in the same column (rule 6).
+        "pageUp" | "scrollUp" if count > 0 => ui.set_selected_index((sel - page).max(0)),
+        "pageDown" | "scrollDown" if count > 0 => ui.set_selected_index((sel + page).min(count - 1)),
         "zoomIn" => ui.set_zoom((ui.get_zoom() + 10.0).min(ZOOM_MAX)),
         "zoomOut" => ui.set_zoom((ui.get_zoom() - 10.0).max(ZOOM_MIN)),
         "download" if count > 0 => ui.invoke_start_download(),
@@ -213,8 +248,27 @@ fn open_menu(ui: &AppWindow, zone: i32) {
         items.push(if g.installed { ("remove", "Remove from this device") } else { ("download", "Take offline") });
         items.push(("favorite", if g.favorite { "Remove from favorites" } else { "Add to favorites" }));
     }
+    // Jumping by letter, for a list sorted by name (rule 6), as ES-DE's
+    // options menu does it: left and right pick the letter.
+    let by_name = ui.get_sort_label() != "Year";
+    let games = ui.get_games();
+    let letter_row;
+    if by_name && games.row_count() > 0 {
+        let mut letters: Vec<char> = Vec::new();
+        for g in games.iter() {
+            let l = letter_of(&g.title);
+            if !letters.contains(&l) {
+                letters.push(l);
+            }
+        }
+        let here = games.row_data(sel.max(0) as usize).map(|g| letter_of(&g.title)).unwrap_or('#');
+        let at = letters.iter().position(|&l| l == here).unwrap_or(0);
+        letter_row = letter_label(letters[at]);
+        LETTERS.with(|l| *l.borrow_mut() = (letters, at));
+        items.push(("letter", &letter_row));
+    }
     items.push(("search", "Search"));
-    items.push(("sort", if ui.get_sort_label() == "Year" { "Sort by name" } else { "Sort by year" }));
+    items.push(("sort", if by_name { "Sort by year" } else { "Sort by name" }));
     items.push(("layout", if ui.get_list_view() { "Show as grid" } else { "Show as list" }));
     items.push(("random", "Random game"));
     ui.set_menu_title(game.map(|g| g.title).unwrap_or_else(|| "Options".into()));
@@ -237,6 +291,14 @@ pub fn menu_pick(ui: &AppWindow, row: i32) {
         "search" => ui.invoke_focus_search(),
         "sort" => ui.invoke_sort_toggled(),
         "layout" => ui.set_list_view(!ui.get_list_view()),
+        "letter" => {
+            let Some(letter) = LETTERS.with(|l| l.borrow().0.get(l.borrow().1).copied()) else { return };
+            if let Some(row) = ui.get_games().iter().position(|g| letter_of(&g.title) == letter) {
+                ui.set_selected_index(row as i32);
+                ui.set_focus_zone(GRID);
+                ui.set_focus_index(0);
+            }
+        }
         "random" => {
             ui.invoke_random_pick();
             ui.set_focus_zone(GRID);

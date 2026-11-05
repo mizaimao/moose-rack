@@ -21,6 +21,13 @@ use std::collections::{BTreeMap, BTreeSet};
 pub const FIRST_REPEAT_MS: f64 = 380.0;
 pub const REPEAT_MS: f64 = 110.0;
 
+/// How fast a held direction ends up repeating with [`Repeat::fire_accelerating`],
+/// and how long it takes to get there from [`REPEAT_MS`]: about thirty moves a
+/// second after two seconds, so the 2,501-game arcade list can be crossed in a
+/// few seconds and a short hold still stops where it is aimed.
+pub const FASTEST_REPEAT_MS: f64 = 33.0;
+pub const RAMP_MS: f64 = 1500.0;
+
 /// Below this a stick is resting, or drifting. Sticks wear and center badly,
 /// and a cursor that creeps on its own is worse than one that needs a firmer
 /// push.
@@ -148,6 +155,8 @@ pub fn settle_lifted(pressed: &BTreeSet<String>, now: f64, settle_until: f64) ->
 pub struct Repeat {
     /// action -> the time it may next fire.
     held: BTreeMap<String, f64>,
+    /// action -> when it went down, for [`Repeat::fire_accelerating`].
+    since: BTreeMap<String, f64>,
 }
 
 impl Repeat {
@@ -162,6 +171,32 @@ impl Repeat {
             }
             Some(due) if now >= due && repeatable(action) => {
                 self.held.insert(action.to_owned(), now + REPEAT_MS);
+                true
+            }
+            Some(_) => false,
+        }
+    }
+
+    /// [`Repeat::fire`], except that the longer a direction is held the faster
+    /// it repeats, from [`REPEAT_MS`] down to [`FASTEST_REPEAT_MS`] over
+    /// [`RAMP_MS`]. Page moves (`scrollUp`, `scrollDown`, the triggers) repeat
+    /// and speed up too.
+    ///
+    /// The Slint front end uses it. The webview's copy in `ui/js/gamepad.js`
+    /// scrolls with the triggers instead and has no counterpart.
+    pub fn fire_accelerating(&mut self, action: &str, now: f64) -> bool {
+        let repeats = repeatable(action) || matches!(action, "scrollUp" | "scrollDown");
+        match self.held.get(action).copied() {
+            None => {
+                self.held.insert(action.to_owned(), now + FIRST_REPEAT_MS);
+                self.since.insert(action.to_owned(), now);
+                true
+            }
+            Some(due) if now >= due && repeats => {
+                let down = self.since.get(action).copied().unwrap_or(now);
+                let ramp = ((now - down - FIRST_REPEAT_MS) / RAMP_MS).clamp(0.0, 1.0);
+                let wait = REPEAT_MS + (FASTEST_REPEAT_MS - REPEAT_MS) * ramp;
+                self.held.insert(action.to_owned(), now + wait);
                 true
             }
             Some(_) => false,
@@ -185,6 +220,7 @@ impl Repeat {
     /// Forget anything no longer held, so the next press fires immediately.
     pub fn release(&mut self, pressed: &BTreeSet<String>) {
         self.held.retain(|action, _| pressed.contains(action));
+        self.since.retain(|action, _| pressed.contains(action));
     }
 
     /// Drop everything.
@@ -373,6 +409,42 @@ mod tests {
         assert!(r.fire("down", FIRST_REPEAT_MS), "it never started repeating");
         assert!(!r.fire("down", FIRST_REPEAT_MS + 10.0));
         assert!(r.fire("down", FIRST_REPEAT_MS + REPEAT_MS));
+    }
+
+    /// Every time the held action acts, from 0 to `until` ms, polled each ms.
+    fn accelerating(action: &str, until: f64) -> Vec<f64> {
+        let mut r = Repeat::default();
+        (0..=until as u32).map(f64::from).filter(|&t| r.fire_accelerating(action, t)).collect()
+    }
+
+    #[test]
+    fn a_held_direction_speeds_up_to_the_fastest_repeat() {
+        let at = accelerating("down", 4_000.0);
+        assert_eq!(&at[..2], &[0.0, FIRST_REPEAT_MS], "the press or the initial delay changed");
+        let gap = |i: usize| at[i + 1] - at[i];
+        assert!((gap(1) - REPEAT_MS).abs() <= 1.0, "it did not start at the plain repeat: {}", gap(1));
+        let last = gap(at.len() - 2);
+        assert!((last - FASTEST_REPEAT_MS).abs() <= 1.0, "it did not reach the fastest repeat: {last}");
+        assert!(at.windows(3).all(|w| w[2] - w[1] <= w[1] - w[0] + 1.0), "it slowed down while held");
+    }
+
+    #[test]
+    fn a_held_page_move_repeats_when_accelerating() {
+        assert!(accelerating("scrollDown", 1_000.0).len() > 2, "a held trigger moved only once");
+        assert_eq!(accelerating("activate", 4_000.0), vec![0.0], "Confirm repeated");
+    }
+
+    #[test]
+    fn letting_go_starts_the_speed_up_again() {
+        let mut r = Repeat::default();
+        for t in 0..3_000 {
+            r.fire_accelerating("down", f64::from(t));
+        }
+        r.release(&BTreeSet::new());
+        assert!(r.fire_accelerating("down", 3_000.0));
+        assert!(!r.fire_accelerating("down", 3_000.0 + FIRST_REPEAT_MS - 1.0), "the new press skipped the initial delay");
+        assert!(r.fire_accelerating("down", 3_000.0 + FIRST_REPEAT_MS));
+        assert!(!r.fire_accelerating("down", 3_000.0 + FIRST_REPEAT_MS + 50.0), "the new press kept the old speed");
     }
 
     /// A held Confirm that repeated would launch the same game over and over.

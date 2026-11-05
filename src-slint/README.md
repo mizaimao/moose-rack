@@ -78,7 +78,12 @@ Each button keeps its job (rule 5): the left face button stars the game, the
 top one opens Options for wherever the cursor is (take offline or remove, the
 star, search, sort, grid or list, a random game; `o` on the keyboard). Settings
 and Options take every press while open, and the hint bar shows a button only
-where it does something. `MOOSE_SLINT_TEST_KEYS=right,down,settings,back`
+where it does something.
+
+Big lists are quick to cross (rule 6): a held direction or trigger speeds up
+the longer it is held, the triggers move a screen at a time, and Options has
+Jump to letter (left and right pick it) when the list is sorted by name.
+`MOOSE_SLINT_TEST_KEYS=right,down,settings,back`
 plays those actions (`type:zelda` types a search), prints where the cursor is
 after each, and quits.
 

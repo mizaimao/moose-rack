@@ -66,7 +66,7 @@ when a rule is unclear, do what they do.
 | 3 D-pad goes where expected | Done by zone; not yet through `focusring` |
 | 4 Back goes up | Done |
 | 5 Fixed button jobs | Done: the left face button stars, the top one opens Options (take offline or remove, star, search, sort, grid or list, random); Settings and Options take the pad while open; each hint shows only where its button does something |
-| 6 Big lists | **Gap:** no page or letter jump beyond the core's repeat |
+| 6 Big lists | Mostly done: a held direction or trigger speeds up to about 30 moves a second (`padpoll::Repeat::fire_accelerating`), the triggers move a screen, and Options has Jump to letter when sorted by name. **Gap:** recently played games are not near the top yet |
 | 7 Little typing | **Gap:** no pad keyboard |
 | 8 Readable from the sofa | Partly: bigger art in Sofa, same type size |
 | 9 Every press answers | **Gap:** no motion or sound |
