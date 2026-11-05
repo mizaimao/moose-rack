@@ -10,6 +10,7 @@ use std::cell::{Cell, RefCell};
 use slint::{Model, ModelRc, SharedString, VecModel};
 
 use crate::AppWindow;
+use crate::sound::Cue;
 
 // The zones, numbered as Zone in app.slint numbers them.
 pub const HEADER: i32 = 0;
@@ -181,6 +182,15 @@ pub fn dispatch(ui: &AppWindow, action: &str) -> bool {
     note_header(ui);
     let done = act(ui, action);
     note_header(ui);
+    // Every press that did something says so (rule 9), unless Settings has
+    // turned the sounds off.
+    if done && ui.get_opt_sounds() {
+        crate::sound::play(match action {
+            "activate" => Cue::Confirm,
+            "back" | "back2" => Cue::Back,
+            _ => Cue::Move,
+        });
+    }
     done
 }
 

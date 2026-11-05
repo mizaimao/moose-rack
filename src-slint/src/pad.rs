@@ -55,6 +55,8 @@ impl Pads {
         let sdl = sdl3::init().map_err(|e| e.to_string())?;
         let subsystem = sdl.gamepad().map_err(|e| e.to_string())?;
         let pump = sdl.event_pump().map_err(|e| e.to_string())?;
+        // The menu sounds play through the same SDL.
+        crate::sound::start(&sdl);
         Ok(Self { _sdl: sdl, subsystem, pump, open: BTreeMap::new() })
     }
 

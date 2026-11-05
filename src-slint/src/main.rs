@@ -12,6 +12,7 @@ mod nav;
 #[cfg(not(target_os = "android"))]
 mod pad;
 mod sample;
+mod sound;
 
 use std::cell::RefCell;
 use std::sync::Arc;
@@ -568,6 +569,8 @@ fn show_platforms(ui: &AppWindow) {
 
 /// Runs MOOSE_SLINT_TEST_KEYS: one step every 200 ms, the first a second in.
 fn test_keys(ui: &AppWindow, keys: String) -> slint::Timer {
+    // Quiet: these run on machines nobody is listening to.
+    ui.set_opt_sounds(false);
     let steps: Vec<String> = keys.split(',').map(|s| s.trim().to_owned()).filter(|s| !s.is_empty()).collect();
     let weak = ui.as_weak();
     let mut next = 0usize;

@@ -493,13 +493,16 @@ export component CoverCard inherits Rectangle {
     property <length> pad: 8px;
     property <bool> cursor: root.selected && root.lit;
 
+    // The cursor's ring is the grid's, which slides from card to card; the
+    // card under it lifts (rule 9 in docs/controller-ux.md).
+    y: root.cursor ? -6px : 0px;
     border-radius: Theme.card-radius;
     background: root.cursor ? Theme.glass-sel : (root.selected || touch.has-hover ? Theme.glass-hover : Theme.glass-rest);
-    border-width: root.cursor ? 2px : 1px;
-    border-color: root.cursor ? Theme.cursor : (root.selected || touch.has-hover ? Theme.glass-edge-hover : Theme.glass-edge);
+    border-width: 1px;
+    border-color: root.cursor || root.selected || touch.has-hover ? Theme.glass-edge-hover : Theme.glass-edge;
     drop-shadow-blur: root.cursor ? 22px : (touch.has-hover ? 14px : 0px);
     drop-shadow-color: Theme.glow;
-    animate background, border-color, drop-shadow-blur { duration: Theme.quick; }
+    animate background, border-color, drop-shadow-blur, y { duration: Theme.quick; }
 
     art := CoverArt {
         x: root.pad;
@@ -549,10 +552,11 @@ export component ListRow inherits Rectangle {
 
     property <bool> cursor: root.selected && root.lit;
 
+    // The ring is the grid's, sliding from row to row (rule 9).
     border-radius: Theme.radius;
     background: root.cursor ? Theme.glass-sel : (root.selected || touch.has-hover ? Theme.glass-hover : Theme.glass-rest);
-    border-width: root.cursor ? 2px : 1px;
-    border-color: root.cursor ? Theme.cursor : Theme.glass-edge;
+    border-width: 1px;
+    border-color: Theme.glass-edge;
     drop-shadow-blur: root.cursor ? 16px : 0px;
     drop-shadow-color: Theme.glow;
     animate background, border-color { duration: Theme.quick; }

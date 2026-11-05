@@ -69,7 +69,7 @@ when a rule is unclear, do what they do.
 | 6 Big lists | Mostly done: a held direction or trigger speeds up to about 30 moves a second (`padpoll::Repeat::fire_accelerating`), the triggers move a screen, and Options has Jump to letter when sorted by name. **Gap:** recently played games are not near the top yet |
 | 7 Little typing | Done: with a controller connected, search opens an on-screen keyboard (QWERTY, numbers, ' - : &, then Space, Delete, Clear, Done); the results narrow behind it as each key types, the left face button deletes, the top one types a space, Start is Done. Filters are not built yet |
 | 8 Readable from the sofa | Partly: bigger art in Sofa, same type size |
-| 9 Every press answers | **Gap:** no motion or sound |
+| 9 Every press answers | Mostly done: the grid's cursor is one ring that slides from card to card, the card under it lifts, and every press that does something plays a short tone (a tick to move, rising on Confirm, falling on Back; Settings turns them off). **Gap:** 60 FPS not yet measured on a device; other panes' cursors jump rather than slide |
 
 The gaps are fixed in the order 2, 5, 6, 7, 9. `MOOSE_SLINT_TEST_KEYS` (src-slint/README.md)
 plays a list of presses and prints where the cursor lands, to check them.
