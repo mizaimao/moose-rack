@@ -99,9 +99,16 @@ Each button keeps its job, as in Steam's library (rule 5): X / Square opens
 Filter (only games on this device, only favorites; `f`), Y / Triangle opens
 Sort by (`s`), the Menu button opens Options for the game under the cursor
 (take offline or remove, the star, jump to letter, search, grid or list, a
-random game; `o`), and the Steam button (Guide) opens Settings (`,`). Menus
-take every press while open, and the hint bar shows a button only where it
-does something.
+random game, Game pictures; `o`), the Steam button (Guide) opens Settings
+(`,`), and View (Select) opens Game pictures, the old app's picture changer.
+Menus take every press while open, and the hint bar shows a button only where
+it does something. From the moment a launch starts until the game has ended
+and the pad is at rest, the window ignores the pad: SDL reads it even with the
+emulator in front.
+
+The cursor is drawn by the grid, not the cards: its ring, fill and glow are
+one piece that slides from card to card. A pointer resting on a card lights it
+only after the mouse moves; a pad or key press puts that light out.
 
 Big lists are quick to cross (rule 6): a held direction or trigger speeds up
 the longer it is held, the triggers move a screen at a time, and Options has

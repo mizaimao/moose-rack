@@ -124,6 +124,9 @@ struct App {
     /// Counts selection changes, so details that arrive late for a game the
     /// cursor has left are dropped.
     detail_gen: u64,
+    /// Counts changes of the game pictures, so covers of the old kind still
+    /// on their way when the kind changed are dropped.
+    art_gen: u64,
 }
 
 thread_local! {
@@ -172,6 +175,7 @@ fn main() -> Result<(), slint::PlatformError> {
             checking: None,
             library_error: None,
             detail_gen: 0,
+            art_gen: 0,
         })
     });
     // MOOSE_SLINT_PLATFORM=gba opens on that console, for measuring one.
@@ -510,8 +514,8 @@ fn prototype_bindings() -> binds::Bindings {
     bindings.set_pad("sortMenu", Some(3));
     bindings.set_pad("options", Some(9));
     bindings.set_pad("settings", Some(16));
-    // View (Select) opened the picture changer, which is not built here.
-    bindings.set_pad("pictures", None);
+    // View (Select) keeps the app's own job: the game pictures, as in the
+    // old app.
     bindings.set_key("settings", Some(","));
     bindings
 }
@@ -561,6 +565,21 @@ fn read_pads(ui: &AppWindow, bindings: &binds::Bindings) -> Option<slint::Timer>
         let frame = pads.frame();
         let pressed = padpoll::pressed_actions(&frame.buttons, &frame.axes, &map);
         let now = start.elapsed().as_secs_f64() * 1000.0;
+        match PAD_GATE.get() {
+            PadGate::Open => {}
+            PadGate::Suspended => {
+                repeat.clear();
+                return;
+            }
+            PadGate::Settling(until) => {
+                let until = until.saturating_duration_since(start).as_secs_f64() * 1000.0;
+                if !padpoll::settle_lifted(&pressed, now, until) {
+                    repeat.clear();
+                    return;
+                }
+                PAD_GATE.set(PadGate::Open);
+            }
+        }
         repeat.release(&pressed);
         for action in &pressed {
             if repeat.fire_accelerating(action, now) {
@@ -603,7 +622,8 @@ fn show_keyboard(ui: &AppWindow) {
 /// and quits, so the look can be checked on a machine nobody is watching.
 /// `MOOSE_SLINT_SCENE` picks it: desk (the default), sofa, detail, list,
 /// settings, download, header, consoles, actions, options, keyboard, recent,
-/// tiles (Sofa's consoles), offline, conflict, ps5 or switch.
+/// tiles (Sofa's consoles), offline, conflict, ps5, switch, moved (the cursor
+/// two cards on) or pictures (the Game pictures menu).
 fn snapshot(ui: &AppWindow, path: String, scene: String) {
     match scene.as_str() {
         "sofa" => ui.set_mode(0),
@@ -663,6 +683,20 @@ fn snapshot(ui: &AppWindow, path: String, scene: String) {
         "actions" => {
             ui.set_focus_zone(nav::DETAIL);
             ui.set_focus_index(0);
+        }
+        // The cursor two cards on, to see nothing is left lit behind it.
+        // After the first layout: until then the grid has no columns, and
+        // Right leaves it for the info pane.
+        "moved" => {
+            let weak = ui.as_weak();
+            slint::Timer::single_shot(Duration::from_millis(400), move || {
+                let Some(ui) = weak.upgrade() else { return };
+                nav::dispatch(&ui, "right");
+                nav::dispatch(&ui, "right");
+            });
+        }
+        "pictures" => {
+            nav::dispatch(ui, "pictures");
         }
         #[cfg(not(target_os = "android"))]
         "ps5" | "switch" => {
@@ -1022,7 +1056,7 @@ const COVER_WIDTH: u32 = 360;
 /// ones far from the screen. Each batch is shrunk on a background thread and
 /// drawn as it arrives.
 fn fetch_covers(ui: &AppWindow) {
-    let Some((lib, rt, ids, dropped)) = with_app(|a| {
+    let Some((lib, rt, ids, dropped, art_gen)) = with_app(|a| {
         let (first, last) = a.visible;
         let near = first.saturating_sub(NEAR)..=last + NEAR;
         let keep = first.saturating_sub(KEEP)..=last + KEEP;
@@ -1048,7 +1082,7 @@ fn fetch_covers(ui: &AppWindow) {
                 ids.push(g.id);
             }
         }
-        a.lib.clone().zip(a.runtime.clone()).map(|(l, r)| (l, r, ids, dropped))
+        a.lib.clone().zip(a.runtime.clone()).map(|(l, r)| (l, r, ids, dropped, a.art_gen))
     })
     .flatten() else {
         return;
@@ -1065,7 +1099,7 @@ fn fetch_covers(ui: &AppWindow) {
             tokio::task::spawn_blocking(move || {
                 let pictures: Vec<(i64, slint::SharedPixelBuffer<slint::Rgba8Pixel>)> =
                     found.into_iter().filter_map(|(id, path)| Some((id, shrunk(&path)?))).collect();
-                let _ = weak.upgrade_in_event_loop(move |ui| apply_covers(&ui, pictures));
+                let _ = weak.upgrade_in_event_loop(move |ui| apply_covers(&ui, art_gen, pictures));
             });
         };
         let each = weak.clone();
@@ -1078,6 +1112,40 @@ fn fetch_covers(ui: &AppWindow) {
             shrink(found, weak);
         }
     });
+}
+
+/// The game picture in use: "physicalmedia", "covers", "miximages"...
+pub(crate) fn list_art() -> Option<String> {
+    let lib = with_app(|a| a.lib.clone()).flatten()?;
+    moose_rack::commands::list_art_options(&lib).ok().map(|(_, now)| now)
+}
+
+/// Show `value` on every game's card from now on, as the old app's Pictures
+/// button did (ui/js/pictures.js): kept in config.toml by the core, and every
+/// cover drawn again in the new kind. Each console's card shape is measured
+/// again from the new pictures, since box art and cartridges differ.
+pub(crate) fn set_list_art(ui: &AppWindow, value: &str, label: &str) {
+    let Some(lib) = with_app(|a| a.lib.clone()).flatten() else {
+        ui.invoke_show_toast("No library to change the pictures of".into());
+        return;
+    };
+    if let Err(e) = moose_rack::commands::set_list_art(&lib, value.to_owned()) {
+        ui.invoke_show_toast(e.into());
+        return;
+    }
+    with_app(|a| {
+        a.art_gen += 1;
+        a.requested.clear();
+        for p in &mut a.platforms {
+            p.aspect = None;
+            for g in &mut p.games {
+                g.cover = None;
+            }
+        }
+    });
+    refresh(ui, Land::Same);
+    fetch_covers(ui);
+    ui.invoke_show_toast(format!("Game pictures: {label}").into());
 }
 
 /// A cover file, shrunk to `COVER_WIDTH` wide, ready for the window.
@@ -1094,9 +1162,13 @@ fn shrunk_to(path: &str, width: u32) -> Option<slint::SharedPixelBuffer<slint::R
 }
 
 /// Draw covers that arrived, if their games are still wanted.
-fn apply_covers(ui: &AppWindow, pictures: Vec<(i64, slint::SharedPixelBuffer<slint::Rgba8Pixel>)>) {
+fn apply_covers(ui: &AppWindow, art_gen: u64, pictures: Vec<(i64, slint::SharedPixelBuffer<slint::Rgba8Pixel>)>) {
     let rows = with_app(|a| {
         let mut rows = Vec::new();
+        // The pictures changed kind while these were on their way.
+        if art_gen != a.art_gen {
+            return (rows, false);
+        }
         for (id, pixels) in pictures {
             // Dropped while it was on its way: the screen has moved on.
             if !a.requested.contains(&id) {
@@ -1285,6 +1357,44 @@ fn mark_installed(ui: &AppWindow, id: i64, installed: bool) {
     }
 }
 
+/// Whether the controller drives this window, as the desktop app decides it
+/// (ui/js/gamepad.js, `suspendPad` and `resumePad`).
+///
+/// Off from the moment a launch starts: SDL reads the pad even with RetroArch
+/// in front (it has to, this window has no SDL window of its own to focus), so
+/// without this every button pressed in the game also moved the cursor here,
+/// and the combination that quits the game launched it again behind it.
+/// Back on once the game has ended, the pad is at rest and the short floor
+/// in `padpoll::settle_lifted` has passed, because the buttons that quit are
+/// still held when this window gets them back.
+#[derive(Clone, Copy)]
+#[cfg_attr(target_os = "android", allow(dead_code))]
+enum PadGate {
+    Open,
+    /// A launch is running: the emulator has the pad.
+    Suspended,
+    /// Back from a game: ignored until nothing is held and this has passed.
+    Settling(Instant),
+}
+
+thread_local! {
+    static PAD_GATE: std::cell::Cell<PadGate> = const { std::cell::Cell::new(PadGate::Open) };
+}
+
+/// Lifts the pad lock when a launch thread ends however it ends: played,
+/// stopped on a question, failed, or panicked. A lock left on would leave the
+/// controller dead until the app restarts.
+struct ResumePad(slint::Weak<AppWindow>);
+
+impl Drop for ResumePad {
+    fn drop(&mut self) {
+        let _ = self.0.upgrade_in_event_loop(|_| {
+            let floor = Duration::from_millis(padpoll::SETTLE_FLOOR_MS as u64);
+            PAD_GATE.set(PadGate::Settling(Instant::now() + floor));
+        });
+    }
+}
+
 /// Start the game through the shared launch (`moose_rack::play::launch`):
 /// saves checked, the emulator run and waited for, saves uploaded, the launch
 /// recorded. On a thread of its own, because the emulator run blocks until the
@@ -1304,7 +1414,12 @@ fn start_launch(ui: &AppWindow, id: i64) {
 fn start_launch_with(ui: &AppWindow, id: i64, opts: moose_rack::play::Options) {
     let Some((lib, busy)) = with_app(|a| Some((a.lib.clone()?, a.busy.clone()))).flatten() else { return };
     let weak = ui.as_weak();
+    // Quiet at once, before the thread starts: the press that launched is
+    // still down.
+    PAD_GATE.set(PadGate::Suspended);
+    let resume = ResumePad(weak.clone());
     std::thread::spawn(move || {
+        let _resume = resume;
         let Ok(rt) = tokio::runtime::Builder::new_current_thread().enable_all().build() else { return };
         let progress = weak.clone();
         let say = move |what: &str| {

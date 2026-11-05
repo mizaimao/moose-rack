@@ -7,7 +7,7 @@
 
 use std::cell::{Cell, RefCell};
 
-use slint::{Model, ModelRc, SharedString, VecModel};
+use slint::{ComponentHandle, Model, ModelRc, SharedString, VecModel};
 
 use crate::AppWindow;
 use crate::sound::Cue;
@@ -181,6 +181,8 @@ const ZOOM_MAX: f32 = 300.0;
 /// Carry out one action. False when it meant nothing where the cursor is, so a
 /// key can fall through to whatever else wants it.
 pub fn dispatch(ui: &AppWindow, action: &str) -> bool {
+    // The pad or the keys are in use: a resting pointer stops lighting cards.
+    ui.global::<crate::Pointer>().set_live(false);
     note_header(ui);
     let done = act(ui, action);
     note_header(ui);
@@ -384,7 +386,8 @@ fn act(ui: &AppWindow, action: &str) -> bool {
         "zoomIn" => ui.set_zoom((ui.get_zoom() + 10.0).min(ZOOM_MAX)),
         "zoomOut" => ui.set_zoom((ui.get_zoom() - 10.0).max(ZOOM_MIN)),
         "download" if count > 0 => ui.invoke_start_download(),
-        "help" | "video" | "pictures" | "sidebar" => {
+        "pictures" => open_pictures_menu(ui),
+        "help" | "video" | "sidebar" => {
             ui.invoke_show_toast(format!("\"{action}\" is not in the prototype yet").into())
         }
         _ => return false,
@@ -443,8 +446,21 @@ fn open_menu(ui: &AppWindow, zone: i32) {
     }
     items.push(("search", "Search".into()));
     items.push(("layout", if ui.get_list_view() { "Show as grid" } else { "Show as list" }.into()));
+    items.push(("pictures", "Game pictures".into()));
     items.push(("random", "Random game".into()));
     show_menu(ui, game.map(|g| g.title).unwrap_or_else(|| "Options".into()), items, 0);
+}
+
+/// Game pictures, on View (Select) as the old app had it (ui/js/pictures.js):
+/// which picture every game's card shows, from the core's list of kinds. The
+/// old button stepped through the seven one press at a time; here they are a
+/// menu, as Sort by is, starting on the one in use.
+fn open_pictures_menu(ui: &AppWindow) {
+    let now = crate::list_art();
+    let choices = moose_rack::media::LIST_ART_CHOICES;
+    let at = choices.iter().position(|&(key, _)| Some(key) == now.as_deref()).unwrap_or(0);
+    let items = choices.iter().map(|&(key, label)| (key, label.to_owned())).collect();
+    show_menu(ui, "Game pictures".into(), items, at as i32);
 }
 
 /// The orders Sort by offers, in the order main.rs's `Sort::ALL` has them.
@@ -494,6 +510,11 @@ pub fn menu_pick(ui: &AppWindow, row: i32) {
             }
         }
         "layout" => ui.set_list_view(!ui.get_list_view()),
+        "pictures" => open_pictures_menu(ui),
+        _ if moose_rack::media::LIST_ART_CHOICES.iter().any(|&(key, _)| key == id) => {
+            let label = moose_rack::media::LIST_ART_CHOICES.iter().find(|&&(key, _)| key == id).map_or(id, |&(_, l)| l);
+            crate::set_list_art(ui, id, label);
+        }
         "letter" => {
             let Some(letter) = LETTERS.with(|l| l.borrow().0.get(l.borrow().1).copied()) else { return };
             if let Some(row) = ui.get_games().iter().position(|g| letter_of(&g.title) == letter) {
