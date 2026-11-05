@@ -2087,11 +2087,11 @@ pub fn unit_cfgs(state: &AppState) -> Vec<crate::config::UnitSourceCfg> {
             continue;
         }
         let dir = crate::standalone::dir(&state.library_root, emu);
-        let card = crate::standalone::card_dir(&dir);
-        if crate::standalone::program(&dir).is_some() && card.is_dir() {
+        let root = crate::standalone::save_root(emu, &dir);
+        if crate::standalone::program(emu, &dir).is_some() && root.is_dir() {
             units.push(crate::config::UnitSourceCfg {
                 family: family.to_owned(),
-                root: card.to_string_lossy().into_owned(),
+                root: root.to_string_lossy().into_owned(),
                 max_mb: None,
                 skip: Vec::new(),
             });
