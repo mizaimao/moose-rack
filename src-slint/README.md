@@ -41,6 +41,14 @@ for running it where nobody is at the screen. On macserver (2026-11-03) that
 downloaded Crazy Taxi and PCSX2, booted the game and uploaded its launch
 record. The game details and the remaining controller rules are next.
 
+## Levels and Back
+
+Sofa opens on the consoles as big tiles, as the old app opened on its
+Platforms page; opening one shows its games, and Back (B, Esc, or the
+header's Back button, which the mouse needs) goes up again. Back also
+closes a game's panel and clears a search first. Desk shows the consoles as
+a column beside the games, so there is no level to go back to there.
+
 ## Settings that stay
 
 The window's choices are kept between launches in `ui.toml` beside the

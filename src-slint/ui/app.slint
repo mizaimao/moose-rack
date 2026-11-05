@@ -27,6 +27,90 @@ export global Zone {
     out property <int> keyboard: 7;
 }
 
+// Sofa's first level, as the old app's Platforms page was: the consoles as
+// big tiles. Opening one shows its games; Back from them comes here.
+component ConsoleGrid inherits Rectangle {
+    in property <[PlatformItem]> platforms;
+    in property <int> current;
+    in property <bool> lit;
+    in property <length> tile-width: 220px;
+    out property <int> cols: Math.max(1, Math.floor((root.width - 2 * root.pad + root.gap) / (root.tile-width + root.gap)));
+    callback opened(int);
+    // Rust moves the cursor by rows, so it needs the columns.
+    callback cols-known(int);
+
+    property <length> gap: 16px;
+    property <length> pad: 24px;
+    property <length> cell-width: (root.width - 2 * root.pad - (root.cols - 1) * root.gap) / root.cols;
+    property <length> cell-height: root.cell-width * 0.6;
+    property <length> sel-top: root.pad + Math.floor(root.current / root.cols) * (root.cell-height + root.gap);
+
+    init => {
+        root.cols-known(root.cols);
+    }
+    changed cols => {
+        root.cols-known(root.cols);
+    }
+    changed current => {
+        if (root.sel-top < -flick.content-y + root.pad) {
+            flick.content-y = -(root.sel-top - root.pad);
+        } else if (root.sel-top + root.cell-height > -flick.content-y + flick.height - root.pad) {
+            flick.content-y = -(root.sel-top + root.cell-height - flick.height + root.pad);
+        }
+    }
+
+    flick := Flickable {
+        content-height: 2 * root.pad + Math.ceil(root.platforms.length / root.cols) * (root.cell-height + root.gap);
+        animate content-y { duration: 160ms; easing: ease-out; }
+
+        for p[i] in root.platforms: Rectangle {
+            x: root.pad + Math.mod(i, root.cols) * (root.cell-width + root.gap);
+            y: root.pad + Math.floor(i / root.cols) * (root.cell-height + root.gap) - (root.lit && i == root.current ? 6px : 0px);
+            width: root.cell-width;
+            height: root.cell-height;
+            border-radius: Theme.card-radius;
+            background: @linear-gradient(160deg, p.tint.brighter(0.25) 0%, p.tint.darker(0.45) 100%);
+            border-width: root.lit && i == root.current ? 3px : 1px;
+            border-color: root.lit && i == root.current ? Theme.cursor : Theme.glass-edge;
+            drop-shadow-blur: root.lit && i == root.current ? 24px : 0px;
+            drop-shadow-color: Theme.glow;
+            animate y, drop-shadow-blur { duration: Theme.quick; }
+
+            Text {
+                x: 16px;
+                y: 14px;
+                text: p.short;
+                color: #ffffffc0;
+                font-size: 14px;
+                font-weight: 800;
+            }
+            Text {
+                x: 16px;
+                y: parent.height - 56px;
+                width: parent.width - 32px;
+                text: p.name;
+                color: white;
+                font-size: 20px;
+                font-weight: 700;
+                overflow: elide;
+            }
+            Text {
+                x: 16px;
+                y: parent.height - 28px;
+                text: "\{p.count} games";
+                color: #ffffffb0;
+                font-size: 12px;
+            }
+            TouchArea {
+                mouse-cursor: pointer;
+                clicked => {
+                    root.opened(i);
+                }
+            }
+        }
+    }
+}
+
 component GameGrid inherits Rectangle {
     in property <[GameItem]> games;
     // Width over height of the art on show, so the cards take its shape.
@@ -518,6 +602,18 @@ export component AppWindow inherits Window {
     }
     in-out property <bool> checklist-open: false;
 
+    // Sofa's console level: the consoles as tiles, above their games (see
+    // ConsoleGrid). Rust opens one through console-opened and goes back up
+    // through go-back, which the header's Back button calls too.
+    in-out property <bool> sofa-consoles: false;
+    in-out property <int> console-cols: 4;
+    callback console-opened(int);
+    callback go-back();
+    // Something to go back from, for a mouse: a game's panel, a search, or a
+    // console's games in Sofa.
+    property <bool> can-go-back: (root.mode == 0 && root.sofa-detail-open) || root.query != ""
+        || (root.mode == 0 && root.tab-index == 0 && !root.sofa-consoles);
+
     // A launch that stopped to ask, as Steam does rather than guess: which
     // copy of a save to keep, whether to play while saves can't sync, or
     // with a BIOS missing. Two answers side by side; Back cancels. Rust fills
@@ -780,18 +876,18 @@ export component AppWindow inherits Window {
                     padding-bottom: 10px;
                     spacing: 8px;
 
-                    if root.mode == 0 && root.sofa-detail-open: Button {
+                    if root.can-go-back: Button {
                         text: "Back";
                         has-icon: true;
                         icon: @image-url("../../ui/icons/arrow-left.svg");
                         clicked => {
-                            root.sofa-detail-open = false;
-                            root.focus-zone = Zone.grid;
+                            root.go-back();
+                            keys.focus();
                         }
                     }
 
                     Text {
-                        text: root.heading;
+                        text: root.mode == 0 && root.sofa-consoles ? "Consoles" : root.heading;
                         color: Theme.text;
                         font-size: 17px;
                         font-weight: 700;
@@ -997,8 +1093,11 @@ export component AppWindow inherits Window {
                     }
                 }
 
+                Rectangle {
+                horizontal-stretch: 1;
+
                 grid := GameGrid {
-                    horizontal-stretch: 1;
+                    visible: !(root.mode == 0 && root.sofa-consoles);
                     games: root.games;
                     art-aspect: root.art-aspect;
                     selected-index <=> root.selected-index;
@@ -1016,6 +1115,21 @@ export component AppWindow inherits Window {
                     play(i) => {
                         root.play(i);
                     }
+                }
+
+                if root.mode == 0 && root.sofa-consoles: ConsoleGrid {
+                    platforms: root.platforms;
+                    current: root.platform-index;
+                    lit: root.focus-zone == Zone.consoles;
+                    tile-width: root.zoom * 1.6 * 1px;
+                    cols-known(c) => {
+                        root.console-cols = c;
+                    }
+                    opened(i) => {
+                        root.console-opened(i);
+                        keys.focus();
+                    }
+                }
                 }
 
                 if root.mode == 1: Rectangle {
@@ -1109,10 +1223,12 @@ export component AppWindow inherits Window {
                     // Each hint shows only where its button does something
                     // (rule 5 in docs/controller-ux.md); nav.rs matches.
                     // Back does nothing on the grid unless a search is shown.
-                    if root.modal || root.focus-zone != Zone.grid || root.query != "": Hint {
+                    if root.modal || (root.focus-zone != Zone.grid && !(root.focus-zone == Zone.consoles && root.mode == 0 && root.sofa-consoles))
+                        || root.query != "" || (root.mode == 0 && root.tab-index == 0 && !root.sofa-consoles): Hint {
                         glyph: root.glyph-back;
                         text: root.modal ? "Cancel"
-                            : root.focus-zone == Zone.grid ? "Clear search"
+                            : root.focus-zone == Zone.grid && root.query != "" ? "Clear search"
+                            : root.focus-zone == Zone.grid ? "Consoles"
                             : root.focus-zone == Zone.settings || root.focus-zone == Zone.sofa || root.focus-zone == Zone.menu
                                 || root.focus-zone == Zone.keyboard ? "Close"
                             : "Back";

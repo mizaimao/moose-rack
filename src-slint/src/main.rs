@@ -220,6 +220,11 @@ fn main() -> Result<(), slint::PlatformError> {
     });
     show_platforms(&ui);
     refresh(&ui, Land::Remembered);
+    // Sofa opens on the consoles, as the old app opened on its Platforms page.
+    if ui.get_mode() == 0 {
+        ui.set_sofa_consoles(true);
+        ui.set_focus_zone(nav::CONSOLES);
+    }
     fetch_covers(&ui);
     if lib.is_some() {
         update_library(&ui);
@@ -465,6 +470,16 @@ fn main() -> Result<(), slint::PlatformError> {
         let weak = ui.as_weak();
         move |choice| answered(&weak.unwrap(), choice)
     });
+    ui.on_go_back({
+        let weak = ui.as_weak();
+        move || {
+            nav::go_back(&weak.unwrap());
+        }
+    });
+    ui.on_console_opened({
+        let weak = ui.as_weak();
+        move |i| nav::open_console(&weak.unwrap(), i)
+    });
     ui.on_menu_picked({
         let weak = ui.as_weak();
         move |row| nav::menu_pick(&weak.unwrap(), row)
@@ -588,7 +603,7 @@ fn show_keyboard(ui: &AppWindow) {
 /// and quits, so the look can be checked on a machine nobody is watching.
 /// `MOOSE_SLINT_SCENE` picks it: desk (the default), sofa, detail, list,
 /// settings, download, header, consoles, actions, options, keyboard, recent,
-/// offline, conflict, ps5 or switch.
+/// tiles (Sofa's consoles), offline, conflict, ps5 or switch.
 fn snapshot(ui: &AppWindow, path: String, scene: String) {
     match scene.as_str() {
         "sofa" => ui.set_mode(0),
@@ -609,6 +624,11 @@ fn snapshot(ui: &AppWindow, path: String, scene: String) {
         "consoles" => ui.set_focus_zone(nav::CONSOLES),
         "options" => {
             nav::dispatch(ui, "options");
+        }
+        "tiles" => {
+            ui.set_mode(0);
+            ui.set_sofa_consoles(true);
+            ui.set_focus_zone(nav::CONSOLES);
         }
         "recent" => {
             ui.set_tab_index(TAB_RECENT);
