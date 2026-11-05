@@ -2,7 +2,7 @@
 // buttons, the Sofa/Desk switch, the search box, the cover card and list row,
 // the console column's rows, the tab row, chips, a progress bar, a toast, and
 // the controls Settings is made of.
-import { Theme } from "theme.slint";
+import { Theme, Pointer } from "theme.slint";
 
 export struct GameItem {
     title: string,
@@ -492,15 +492,18 @@ export component CoverCard inherits Rectangle {
 
     property <length> pad: 8px;
     property <bool> cursor: root.selected && root.lit;
+    property <bool> hover: touch.has-hover && Pointer.live;
 
-    // The cursor's ring is the grid's, which slides from card to card; the
-    // card under it lifts (rule 9 in docs/controller-ux.md).
+    // The cursor's ring, fill and glow are the grid's, and slide from card to
+    // card together; the card under them only lifts (rule 9 in
+    // docs/controller-ux.md). A fill of the card's own faded out behind the
+    // ring, so the card just left stayed lit after the ring had moved on.
     y: root.cursor ? -6px : 0px;
     border-radius: Theme.card-radius;
-    background: root.cursor ? Theme.glass-sel : (root.selected || touch.has-hover ? Theme.glass-hover : Theme.glass-rest);
+    background: (root.selected && !root.lit) || root.hover ? Theme.glass-hover : Theme.glass-rest;
     border-width: 1px;
-    border-color: root.cursor || root.selected || touch.has-hover ? Theme.glass-edge-hover : Theme.glass-edge;
-    drop-shadow-blur: root.cursor ? 22px : (touch.has-hover ? 14px : 0px);
+    border-color: root.selected || root.hover ? Theme.glass-edge-hover : Theme.glass-edge;
+    drop-shadow-blur: root.hover && !root.cursor ? 14px : 0px;
     drop-shadow-color: Theme.glow;
     animate background, border-color, drop-shadow-blur, y { duration: Theme.quick; }
 
@@ -534,6 +537,11 @@ export component CoverCard inherits Rectangle {
 
     touch := TouchArea {
         mouse-cursor: pointer;
+        pointer-event(e) => {
+            if e.kind == PointerEventKind.move {
+                Pointer.live = true;
+            }
+        }
         clicked => {
             root.clicked();
         }
@@ -551,14 +559,13 @@ export component ListRow inherits Rectangle {
     callback double-clicked;
 
     property <bool> cursor: root.selected && root.lit;
+    property <bool> hover: touch.has-hover && Pointer.live;
 
-    // The ring is the grid's, sliding from row to row (rule 9).
+    // The ring, fill and glow are the grid's, sliding from row to row (rule 9).
     border-radius: Theme.radius;
-    background: root.cursor ? Theme.glass-sel : (root.selected || touch.has-hover ? Theme.glass-hover : Theme.glass-rest);
+    background: (root.selected && !root.lit) || root.hover ? Theme.glass-hover : Theme.glass-rest;
     border-width: 1px;
     border-color: Theme.glass-edge;
-    drop-shadow-blur: root.cursor ? 16px : 0px;
-    drop-shadow-color: Theme.glow;
     animate background, border-color { duration: Theme.quick; }
 
     HorizontalLayout {
@@ -626,6 +633,11 @@ export component ListRow inherits Rectangle {
 
     touch := TouchArea {
         mouse-cursor: pointer;
+        pointer-event(e) => {
+            if e.kind == PointerEventKind.move {
+                Pointer.live = true;
+            }
+        }
         clicked => {
             root.clicked();
         }

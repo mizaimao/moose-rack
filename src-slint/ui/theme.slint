@@ -1,5 +1,14 @@
 // The tokens from ui/style.css, so the prototype is judged against the same
 // look rather than against Slint's defaults.
+// Whether the mouse is what is in use. A pad or key press turns it off, so a
+// pointer left resting on a card stops lighting that card while the cursor
+// moves on; moving the mouse turns it back on. The old app's cards had the
+// same problem in reverse: CSS :hover kept lighting the card under a pointer
+// nobody was touching.
+export global Pointer {
+    in-out property <bool> live: true;
+}
+
 export global Theme {
     out property <color> bg: #14161a;
     out property <color> panel: #1b1e24;

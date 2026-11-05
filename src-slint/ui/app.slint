@@ -14,6 +14,7 @@ import {
 import "../../assets/fonts/NotoSans[wdth,wght].ttf";
 
 export { GameItem, PlatformItem, CheckLine }
+export { Pointer } from "theme.slint";
 
 // Where the cursor can be. Rust uses the same numbers.
 export global Zone {
@@ -167,6 +168,20 @@ component GameGrid inherits Rectangle {
         content-width: self.width;
         content-height: 2 * root.pad + root.rows * (root.row-height + root.gap) - root.gap;
         animate content-y { duration: 160ms; easing: ease-out; }
+
+        // The cursor's fill and glow, under the cards, sliding with the ring
+        // drawn over them, so all three arrive and leave together.
+        if root.lit && root.games.length > 0: Rectangle {
+            x: root.pad + Math.mod(root.selected-index, root.cols) * (root.cell-width + root.gap);
+            y: root.pad + Math.floor(root.selected-index / root.cols) * (root.row-height + root.gap) - (root.list-view ? 0px : 6px);
+            width: root.cell-width;
+            height: root.row-height;
+            border-radius: root.list-view ? Theme.radius : Theme.card-radius;
+            background: Theme.glass-sel;
+            drop-shadow-blur: root.list-view ? 16px : 22px;
+            drop-shadow-color: Theme.glow;
+            animate x, y { duration: 120ms; easing: ease-out; }
+        }
 
         for game[i] in root.games: Rectangle {
             x: root.pad + Math.mod(i, root.cols) * (root.cell-width + root.gap);
