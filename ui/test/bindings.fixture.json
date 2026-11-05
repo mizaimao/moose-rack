@@ -73,6 +73,10 @@
       "label": "Open settings"
     },
     {
+      "id": "options",
+      "label": "Options for this game"
+    },
+    {
       "id": "prevSection",
       "label": "Previous section"
     },
@@ -135,6 +139,7 @@
     "layout": "—",
     "left": "←",
     "nextSection": "E",
+    "options": "O",
     "pageDown": "PgDn",
     "pageUp": "PgUp",
     "pictures": "—",
@@ -167,6 +172,7 @@
     "layout": null,
     "left": "ArrowLeft",
     "nextSection": "e",
+    "options": "o",
     "pageDown": "PageDown",
     "pageUp": "PageUp",
     "pictures": null,
@@ -265,6 +271,7 @@
     "layout": "unset",
     "left": "D-pad left",
     "nextSection": "R1 / RB",
+    "options": "unset",
     "pageDown": "unset",
     "pageUp": "unset",
     "pictures": "Select / Share",

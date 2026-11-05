@@ -72,7 +72,13 @@ The cursor is never lost (rule 2 in `docs/controller-ux.md`): each console and
 tab remembers the game it was on, clearing a search goes back to it, a library
 update leaves it on the same game, the header keeps its control and Settings
 its row, and closing Settings returns to wherever it was opened from. Start
-opens and closes Settings. `MOOSE_SLINT_TEST_KEYS=right,down,settings,back`
+opens and closes Settings.
+
+Each button keeps its job (rule 5): the left face button stars the game, the
+top one opens Options for wherever the cursor is (take offline or remove, the
+star, search, sort, grid or list, a random game; `o` on the keyboard). Settings
+and Options take every press while open, and the hint bar shows a button only
+where it does something. `MOOSE_SLINT_TEST_KEYS=right,down,settings,back`
 plays those actions (`type:zelda` types a search), prints where the cursor is
 after each, and quits.
 

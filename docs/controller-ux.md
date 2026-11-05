@@ -65,7 +65,7 @@ when a rule is unclear, do what they do.
 | 2 Cursor never lost | Done: each console and tab keeps its game, clearing a search returns to it, the header keeps its control, Settings its row, and closing Settings goes back to where it opened |
 | 3 D-pad goes where expected | Done by zone; not yet through `focusring` |
 | 4 Back goes up | Done |
-| 5 Fixed button jobs | **Gap:** secondary actions are header buttons, not a menu on a face button |
+| 5 Fixed button jobs | Done: the left face button stars, the top one opens Options (take offline or remove, star, search, sort, grid or list, random); Settings and Options take the pad while open; each hint shows only where its button does something |
 | 6 Big lists | **Gap:** no page or letter jump beyond the core's repeat |
 | 7 Little typing | **Gap:** no pad keyboard |
 | 8 Readable from the sofa | Partly: bigger art in Sofa, same type size |

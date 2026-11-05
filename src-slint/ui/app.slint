@@ -23,6 +23,7 @@ export global Zone {
     out property <int> detail: 3;
     out property <int> settings: 4;
     out property <int> sofa: 5;
+    out property <int> menu: 6;
 }
 
 component GameGrid inherits Rectangle {
@@ -345,6 +346,38 @@ component SettingRow inherits Rectangle {
     }
 }
 
+// One row of the Options menu.
+component MenuRow inherits Rectangle {
+    in property <string> text;
+    in property <bool> cursor: false;
+    callback clicked;
+
+    height: 46px;
+    border-radius: Theme.radius;
+    background: root.cursor || touch.has-hover ? Theme.glass-hover : transparent;
+    border-width: root.cursor ? 2px : 0px;
+    border-color: Theme.cursor;
+    animate background { duration: Theme.quick; }
+
+    Text {
+        x: 14px;
+        width: parent.width - 28px;
+        height: parent.height;
+        text: root.text;
+        color: Theme.text;
+        font-size: 15px;
+        vertical-alignment: center;
+        overflow: elide;
+    }
+
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
 export component AppWindow inherits Window {
     title: "Moose Rack (Slint prototype)";
     preferred-width: 1280px;
@@ -425,6 +458,36 @@ export component AppWindow inherits Window {
         root.focus-index = root.settings-at;
     }
 
+    // The Options menu (rule 5): the screen's other actions, on the top face
+    // button. Rust fills it for wherever the cursor is; its rows are the menu
+    // zone's indices, and closing it puts the cursor back.
+    in-out property <bool> menu-open: false;
+    in property <string> menu-title;
+    in property <[string]> menu-items;
+    callback menu-picked(int);
+    property <int> menu-from-zone: Zone.grid;
+    property <int> menu-from-index: 0;
+
+    public function open-menu() {
+        if (root.menu-open || root.settings-open) {
+            return;
+        }
+        root.menu-from-zone = root.focus-zone;
+        root.menu-from-index = root.focus-index;
+        root.menu-open = true;
+        root.focus-zone = Zone.menu;
+        root.focus-index = 0;
+    }
+
+    public function close-menu() {
+        if (!root.menu-open) {
+            return;
+        }
+        root.menu-open = false;
+        root.focus-zone = root.menu-from-zone;
+        root.focus-index = root.menu-from-index;
+    }
+
     // Leaving by Done, the last row (5), opens Settings at the top next time.
     public function close-settings() {
         if (!root.settings-open) {
@@ -444,7 +507,7 @@ export component AppWindow inherits Window {
     in property <string> glyph-confirm: "Enter";
     in property <string> glyph-back: "Esc";
     in property <string> glyph-favorite: "*";
-    in property <string> glyph-search: "/";
+    in property <string> glyph-options: "O";
     in property <string> shoulder-left: "Q";
     in property <string> shoulder-right: "E";
     in property <string> start-label: ",";
@@ -906,19 +969,24 @@ export component AppWindow inherits Window {
                             : root.focus-zone == Zone.settings ? "Change"
                             : "Select";
                     }
-                    Hint {
+                    // Each hint shows only where its button does something
+                    // (rule 5 in docs/controller-ux.md); nav.rs matches.
+                    // Back does nothing on the grid unless a search is shown.
+                    if root.focus-zone != Zone.grid || root.query != "": Hint {
                         glyph: root.glyph-back;
-                        text: root.focus-zone == Zone.settings || root.focus-zone == Zone.sofa ? "Close" : "Back";
+                        text: root.focus-zone == Zone.grid ? "Clear search"
+                            : root.focus-zone == Zone.settings || root.focus-zone == Zone.sofa || root.focus-zone == Zone.menu ? "Close"
+                            : "Back";
                     }
                     if root.focus-zone == Zone.grid || root.focus-zone == Zone.detail || root.focus-zone == Zone.sofa: Hint {
                         glyph: root.glyph-favorite;
                         text: "Favorite";
                     }
-                    Hint {
-                        glyph: root.glyph-search;
-                        text: "Search";
+                    if root.focus-zone != Zone.settings && root.focus-zone != Zone.menu: Hint {
+                        glyph: root.glyph-options;
+                        text: "Options";
                     }
-                    HorizontalLayout {
+                    if root.focus-zone != Zone.settings && root.focus-zone != Zone.menu: HorizontalLayout {
                         spacing: 4px;
                         Hint {
                             glyph: root.shoulder-left;
@@ -929,9 +997,9 @@ export component AppWindow inherits Window {
                             text: "Section";
                         }
                     }
-                    Hint {
+                    if root.focus-zone != Zone.menu: Hint {
                         glyph: root.start-label;
-                        text: "Settings";
+                        text: root.settings-open ? "Close" : "Settings";
                     }
                 }
             }
@@ -984,6 +1052,56 @@ export component AppWindow inherits Window {
                     }
                     favorite => {
                         root.favorite-toggled(root.selected-index);
+                    }
+                }
+            }
+        }
+
+        // Options: its rows are the menu zone's indices.
+        if root.menu-open: Rectangle {
+            background: #0b0c0fc0;
+
+            TouchArea {
+                clicked => {
+                    root.close-menu();
+                }
+            }
+
+            Rectangle {
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+                width: 420px;
+                height: 2 * 20px + 44px + root.menu-items.length * (46px + 2px);
+                border-radius: 16px;
+                background: Theme.panel;
+                border-width: 1px;
+                border-color: Theme.line;
+                drop-shadow-blur: 40px;
+                drop-shadow-color: #00000090;
+
+                TouchArea { }
+
+                VerticalLayout {
+                    padding: 20px;
+                    spacing: 2px;
+                    alignment: start;
+
+                    Text {
+                        height: 42px;
+                        text: root.menu-title;
+                        color: Theme.text;
+                        font-size: 18px;
+                        font-weight: 700;
+                        vertical-alignment: center;
+                        overflow: elide;
+                    }
+
+                    for item[i] in root.menu-items: MenuRow {
+                        text: item;
+                        cursor: root.focus-zone == Zone.menu && root.focus-index == i;
+                        clicked => {
+                            root.menu-picked(i);
+                        }
                     }
                 }
             }
