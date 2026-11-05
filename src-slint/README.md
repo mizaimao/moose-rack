@@ -71,14 +71,16 @@ works but nothing needs it.
 The cursor is never lost (rule 2 in `docs/controller-ux.md`): each console and
 tab remembers the game it was on, clearing a search goes back to it, a library
 update leaves it on the same game, the header keeps its control and Settings
-its row, and closing Settings returns to wherever it was opened from. Start
-opens and closes Settings.
+its row, and closing Settings returns to wherever it was opened from. The
+Steam button opens and closes Settings.
 
-Each button keeps its job (rule 5): the left face button stars the game, the
-top one opens Options for wherever the cursor is (take offline or remove, the
-star, search, sort, grid or list, a random game; `o` on the keyboard). Settings
-and Options take every press while open, and the hint bar shows a button only
-where it does something.
+Each button keeps its job, as in Steam's library (rule 5): X / Square opens
+Filter (only games on this device, only favorites; `f`), Y / Triangle opens
+Sort by (`s`), the Menu button opens Options for the game under the cursor
+(take offline or remove, the star, jump to letter, search, grid or list, a
+random game; `o`), and the Steam button (Guide) opens Settings (`,`). Menus
+take every press while open, and the hint bar shows a button only where it
+does something.
 
 Big lists are quick to cross (rule 6): a held direction or trigger speeds up
 the longer it is held, the triggers move a screen at a time, and Options has
@@ -86,8 +88,9 @@ Jump to letter (left and right pick it) when the list is sorted by name.
 
 Search works with the pad alone (rule 7): with a controller connected it opens
 an on-screen keyboard along the bottom, and the results narrow above it as
-each key types. The left face button deletes, the top one types a space,
-Start or Done closes it, and a real keyboard types into it too.
+each key types. As on the Steam Deck's keyboard, X deletes, Y types a space
+and R2 finishes; the Menu button, Back or Done close it too, and a real
+keyboard types into it.
 
 Every press answers (rule 9): the grid's cursor is one ring that slides from
 card to card while the card under it lifts, and each press that does

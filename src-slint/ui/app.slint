@@ -568,11 +568,11 @@ export component AppWindow inherits Window {
     in property <string> pad-kind;
     in property <string> glyph-confirm: "Enter";
     in property <string> glyph-back: "Esc";
-    in property <string> glyph-favorite: "*";
-    in property <string> glyph-options: "O";
+    in property <string> glyph-left: "F";
+    in property <string> glyph-top: "S";
     in property <string> shoulder-left: "Q";
     in property <string> shoulder-right: "E";
-    in property <string> start-label: ",";
+    in property <string> start-label: "O";
 
     // Settings' sample controls. They change nothing yet but their own state.
     in-out property <bool> opt-autosync: true;
@@ -1042,16 +1042,15 @@ export component AppWindow inherits Window {
                                 || root.focus-zone == Zone.keyboard ? "Close"
                             : "Back";
                     }
-                    // On the keyboard the left and top face buttons delete
-                    // and type a space, as on the PS5's and Steam's.
-                    if root.focus-zone == Zone.grid || root.focus-zone == Zone.detail || root.focus-zone == Zone.sofa
-                        || root.focus-zone == Zone.keyboard: Hint {
-                        glyph: root.glyph-favorite;
-                        text: root.focus-zone == Zone.keyboard ? "Delete" : "Favorite";
+                    // As in Steam's library: X filters, Y sorts, Menu opens
+                    // Options. On the keyboard X deletes and Y types a space.
+                    if root.focus-zone != Zone.settings && root.focus-zone != Zone.menu: Hint {
+                        glyph: root.glyph-left;
+                        text: root.focus-zone == Zone.keyboard ? "Delete" : "Filter";
                     }
                     if root.focus-zone != Zone.settings && root.focus-zone != Zone.menu: Hint {
-                        glyph: root.glyph-options;
-                        text: root.focus-zone == Zone.keyboard ? "Space" : "Options";
+                        glyph: root.glyph-top;
+                        text: root.focus-zone == Zone.keyboard ? "Space" : "Sort by";
                     }
                     if root.focus-zone != Zone.settings && root.focus-zone != Zone.menu && root.focus-zone != Zone.keyboard: HorizontalLayout {
                         spacing: 4px;
@@ -1064,9 +1063,9 @@ export component AppWindow inherits Window {
                             text: "Section";
                         }
                     }
-                    if root.focus-zone != Zone.menu: Hint {
+                    if !root.settings-open: Hint {
                         glyph: root.start-label;
-                        text: root.settings-open ? "Close" : root.focus-zone == Zone.keyboard ? "Done" : "Settings";
+                        text: root.focus-zone == Zone.menu ? "Close" : root.focus-zone == Zone.keyboard ? "Done" : "Options";
                     }
                 }
             }

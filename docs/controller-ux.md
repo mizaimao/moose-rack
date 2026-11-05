@@ -32,9 +32,12 @@ means these rules hold; each one is written so that it can be tested.
 
 5. Buttons keep their jobs everywhere. Confirm is the right face button and
    back the bottom one on every pad (A on Nintendo, Circle on PlayStation, B on
-   Xbox). Shoulders change section, triggers jump a page, Start opens the menu.
-   The left and top face buttons do the screen's secondary actions, and the
-   hint bar always says what they are.
+   Xbox). The rest follow Steam's library (Frank, 2026-11-05): the left face
+   button (X / Square) filters, the top one (Y / Triangle) sorts, the Menu
+   button (Start / Options) opens Options for the game under the cursor, the
+   Steam button (Guide; Xbox, PS) opens the main menu, here Settings, and the
+   shoulders change section. Triggers jump a page. The hint bar always says
+   what the buttons do.
    *Check:* the hint bar on every screen matches what the buttons do.
 
 6. Big lists are quick to cross. Holding a direction speeds up, triggers
@@ -54,8 +57,9 @@ means these rules hold; each one is written so that it can be tested.
    optional menu sound plays, and it all runs at 60 FPS.
    *Check:* no press goes unacknowledged, no frame drops while moving.
 
-Steam Big Picture, the PS5 and Switch home screens and ES-DE all follow these;
-when a rule is unclear, do what they do.
+When a rule is unclear, do what Steam's Big Picture (the Steam Deck UI) does,
+and check it against a source rather than memory (Frank, 2026-11-05: "align to
+Steam instead of ES-DE").
 
 ## Where the prototype stands (2026-11-04)
 
@@ -65,7 +69,7 @@ when a rule is unclear, do what they do.
 | 2 Cursor never lost | Done: each console and tab keeps its game, clearing a search returns to it, the header keeps its control, Settings its row, and closing Settings goes back to where it opened |
 | 3 D-pad goes where expected | Done by zone; not yet through `focusring` |
 | 4 Back goes up | Done |
-| 5 Fixed button jobs | Done: the left face button stars, the top one opens Options (take offline or remove, star, search, sort, grid or list, random); Settings and Options take the pad while open; each hint shows only where its button does something |
+| 5 Fixed button jobs | Done, as in Steam's library: X / Square Filter (only on this device, only favorites), Y / Triangle Sort by (name, year), Menu Options (take offline or remove, star, jump to letter, search, grid or list, random), the Steam button Settings; menus take the pad while open; each hint shows only where its button does something |
 | 6 Big lists | Mostly done: a held direction or trigger speeds up to about 30 moves a second (`padpoll::Repeat::fire_accelerating`), the triggers move a screen, and Options has Jump to letter when sorted by name. **Gap:** recently played games are not near the top yet |
 | 7 Little typing | Done: with a controller connected, search opens an on-screen keyboard (QWERTY, numbers, ' - : &, then Space, Delete, Clear, Done); the results narrow behind it as each key types, the left face button deletes, the top one types a space, Start is Done. Filters are not built yet |
 | 8 Readable from the sofa | Partly: bigger art in Sofa, same type size |
