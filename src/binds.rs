@@ -59,6 +59,7 @@ pub const ACTIONS: &[Action] = &[
     action!("layout", "Toggle grid / list", None),
     action!("sidebar", "Toggle info pane", None),
     action!("settings", "Open settings", None),
+    action!("options", "Options for this game", Some("o")),
     action!("prevSection", "Previous section", Some("q")),
     action!("nextSection", "Next section", Some("e")),
     action!("scrollUp", "Scroll the list up", None),

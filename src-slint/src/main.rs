@@ -349,6 +349,10 @@ fn main() -> Result<(), slint::PlatformError> {
             bindings.action_for(&name).is_some_and(|action| nav::dispatch(&ui, action))
         }
     });
+    ui.on_menu_picked({
+        let weak = ui.as_weak();
+        move |row| nav::menu_pick(&weak.unwrap(), row)
+    });
     #[cfg(not(target_os = "android"))]
     let _pads = read_pads(&ui, &bindings);
 
@@ -366,8 +370,11 @@ fn main() -> Result<(), slint::PlatformError> {
 /// see `read_pads`.
 fn prototype_bindings() -> binds::Bindings {
     let mut bindings = binds::Bindings::default();
+    // The left and top face buttons do the screen's secondary actions (rule 5
+    // in docs/controller-ux.md): the star, and the Options menu holding the
+    // rest. Search is in that menu and in the header.
     bindings.set_pad("favorite", Some(2));
-    bindings.set_pad("search", Some(3));
+    bindings.set_pad("options", Some(3));
     bindings.set_pad("settings", Some(9));
     bindings.set_key("settings", Some(","));
     bindings
@@ -437,7 +444,7 @@ fn show_pad(ui: &AppWindow, info: &pad::Info) {
     ui.set_glyph_confirm(info.faces[1].into());
     ui.set_glyph_back(info.faces[0].into());
     ui.set_glyph_favorite(info.faces[2].into());
-    ui.set_glyph_search(info.faces[3].into());
+    ui.set_glyph_options(info.faces[3].into());
     ui.set_shoulder_left(info.shoulders[0].into());
     ui.set_shoulder_right(info.shoulders[1].into());
     ui.set_start_label(info.start.into());
@@ -450,7 +457,7 @@ fn show_keyboard(ui: &AppWindow) {
     ui.set_glyph_confirm("Enter".into());
     ui.set_glyph_back("Esc".into());
     ui.set_glyph_favorite("*".into());
-    ui.set_glyph_search("/".into());
+    ui.set_glyph_options("O".into());
     ui.set_shoulder_left("Q".into());
     ui.set_shoulder_right("E".into());
     ui.set_start_label(",".into());
@@ -459,7 +466,7 @@ fn show_keyboard(ui: &AppWindow) {
 /// `MOOSE_SLINT_SNAPSHOT=out.png` sets up one scene, saves the window as a PNG
 /// and quits, so the look can be checked on a machine nobody is watching.
 /// `MOOSE_SLINT_SCENE` picks it: desk (the default), sofa, detail, list,
-/// settings, download, header, consoles, actions, ps5 or switch.
+/// settings, download, header, consoles, actions, options, ps5 or switch.
 fn snapshot(ui: &AppWindow, path: String, scene: String) {
     match scene.as_str() {
         "sofa" => ui.set_mode(0),
@@ -478,6 +485,9 @@ fn snapshot(ui: &AppWindow, path: String, scene: String) {
             ui.set_focus_index(4);
         }
         "consoles" => ui.set_focus_zone(nav::CONSOLES),
+        "options" => {
+            nav::dispatch(ui, "options");
+        }
         "actions" => {
             ui.set_focus_zone(nav::DETAIL);
             ui.set_focus_index(0);
