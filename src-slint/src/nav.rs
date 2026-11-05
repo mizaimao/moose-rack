@@ -87,7 +87,8 @@ fn osk(ui: &AppWindow, action: &str) {
         "activate" => return osk_press(ui, at),
         "favorite" => return osk_press(ui, OSK_DELETE),
         "options" => return osk_press(ui, OSK_SPACE),
-        "settings" | "back" | "back2" => return close_osk(ui),
+        // R2 is Enter on the Steam Deck's keyboard; Start and Back close it too.
+        "scrollDown" | "settings" | "back" | "back2" => return close_osk(ui),
         _ => return,
     };
     if to < OSK_SPACE {
